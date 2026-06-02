@@ -57,6 +57,18 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
+      # Fork divergence: the E2E job builds the full AIO Docker image (Rust monolith +
+      # full monorepo + native modules) plus several sidecar containers, which exhausts
+      # the ~14GB free disk on the default hosted runner. Reclaim ~20GB of preinstalled
+      # toolchains we don't use before that build runs.
+      - name: Free up disk space
+        run: |
+          set -euo pipefail
+          echo "Disk before cleanup:"; df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          echo "Disk after cleanup:"; df -h /
+
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false

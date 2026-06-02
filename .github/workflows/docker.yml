@@ -1,180 +1,143 @@
-name: Build and Push Docker
+name: Build and Deploy
+
 on:
-  release:
+  workflow_run:
+    workflows:
+      - CI
     types:
-      - created
-  push:
+      - completed
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: build-and-deploy-main
+  cancel-in-progress: false
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [linux/amd64, linux/arm64]
-        image: [web, workers, cli, mcp, aio]
-        include:
-          - platform: linux/amd64
-            suffix: amd64
-            os: ubuntu-latest
-          - platform: linux/arm64
-            suffix: arm64
-            os: ubuntu-24.04-arm
-          - image: web
-            name: karakeep-web
-            target: web
-            tags_latest: ghcr.io/hoarder-app/hoarder-web:latest,ghcr.io/karakeep-app/karakeep-web:latest
-            tags_release: ghcr.io/hoarder-app/hoarder-web:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-web:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder-web:release,ghcr.io/karakeep-app/karakeep-web:release
-          - image: workers
-            name: karakeep-workers
-            target: workers
-            tags_latest: ghcr.io/hoarder-app/hoarder-workers:latest,ghcr.io/karakeep-app/karakeep-workers:latest
-            tags_release: ghcr.io/hoarder-app/hoarder-workers:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-workers:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder-workers:release,ghcr.io/karakeep-app/karakeep-workers:release
-          - image: cli
-            name: karakeep-cli
-            target: cli
-            tags_latest: ghcr.io/hoarder-app/hoarder-cli:latest,ghcr.io/karakeep-app/karakeep-cli:latest
-            tags_release: ghcr.io/hoarder-app/hoarder-cli:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-cli:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder-cli:release,ghcr.io/karakeep-app/karakeep-cli:release
-          - image: mcp
-            name: karakeep-mcp
-            target: mcp
-            tags_latest: ghcr.io/karakeep-app/karakeep-mcp:latest
-            tags_release: ghcr.io/karakeep-app/karakeep-mcp:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-mcp:release
-          - image: aio
-            name: karakeep-aio
-            target: aio
-            tags_latest: ghcr.io/hoarder-app/hoarder:latest,ghcr.io/karakeep-app/karakeep:latest
-            tags_release: ghcr.io/hoarder-app/hoarder:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder:release,ghcr.io/karakeep-app/karakeep:release
-    runs-on: ${{ matrix.os }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
     permissions:
-      packages: write
       contents: read
-
+      packages: write
+    outputs:
+      image_name: ${{ steps.meta.outputs.image_name }}
+      image_ref: ${{ steps.meta.outputs.image_ref }}
+      sha_tag: ${{ steps.meta.outputs.sha_tag }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Login to Github Registry
+      - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_GITHUB_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prepare tags
-        id: tags
+      - name: Prepare image metadata
+        id: meta
         run: |
           set -euo pipefail
-          add_suffix() {
-            local value="$1"
-            local out=""
-            IFS=',' read -ra items <<< "$value"
-            for item in "${items[@]}"; do
-              out+="${item}-${{ matrix.suffix }},"
-            done
-            echo "${out%,}"
-          }
+          image_name="ghcr.io/${{ github.repository_owner }}/karakeep"
+          short_sha="$(git rev-parse --short=12 HEAD)"
+          {
+            echo "image_name=${image_name}"
+            echo "image_ref=${image_name}:main"
+            echo "sha_tag=sha-${short_sha}"
+          } >> "$GITHUB_OUTPUT"
 
-          all_tags=""
-
-          # Only push 'latest' tags on pushes to main, not on releases
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            latest_with_suffix=$(add_suffix "${{ matrix.tags_latest }}")
-            all_tags="${latest_with_suffix}"
-            echo "latest=${latest_with_suffix}" >> "$GITHUB_OUTPUT"
-          fi
-
-          # Only push release-specific tags on releases
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            release_with_suffix=$(add_suffix "${{ matrix.tags_release }}")
-            all_tags="${release_with_suffix}"
-            echo "release=${release_with_suffix}" >> "$GITHUB_OUTPUT"
-          fi
-
-          echo "all=${all_tags}" >> "$GITHUB_OUTPUT"
-
-      - name: Build ${{ matrix.name }}
+      - name: Build and push AIO image
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
-          build-args: SERVER_VERSION=${{ github.event_name == 'release' && github.event.release.name || 'nightly' }}
           file: docker/Dockerfile
-          target: ${{ matrix.target }}
-          platforms: ${{ matrix.platform }}
+          target: aio
+          # Single-arch: the VPS is amd64 (Jetorbit). Building arm64 under QEMU
+          # roughly doubles build time for an image that is never run.
+          platforms: linux/amd64
+          build-args: SERVER_VERSION=main
           push: true
-          tags: ${{ steps.tags.outputs.all }}
-          cache-from: type=registry,ref=ghcr.io/karakeep-app/karakeep-build-cache:${{ matrix.target }}-${{ matrix.suffix }}
-          cache-to: type=registry,mode=max,ref=ghcr.io/karakeep-app/karakeep-build-cache:${{ matrix.target }}-${{ matrix.suffix }}
+          tags: |
+            ${{ steps.meta.outputs.image_ref }}
+            ${{ steps.meta.outputs.image_name }}:${{ steps.meta.outputs.sha_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  manifest:
+  deploy:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      packages: write
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: karakeep-web
-            tags_latest: ghcr.io/hoarder-app/hoarder-web:latest,ghcr.io/karakeep-app/karakeep-web:latest
-            tags_release: ghcr.io/hoarder-app/hoarder-web:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-web:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder-web:release,ghcr.io/karakeep-app/karakeep-web:release
-          - name: karakeep-workers
-            tags_latest: ghcr.io/hoarder-app/hoarder-workers:latest,ghcr.io/karakeep-app/karakeep-workers:latest
-            tags_release: ghcr.io/hoarder-app/hoarder-workers:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-workers:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder-workers:release,ghcr.io/karakeep-app/karakeep-workers:release
-          - name: karakeep-cli
-            tags_latest: ghcr.io/hoarder-app/hoarder-cli:latest,ghcr.io/karakeep-app/karakeep-cli:latest
-            tags_release: ghcr.io/hoarder-app/hoarder-cli:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-cli:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder-cli:release,ghcr.io/karakeep-app/karakeep-cli:release
-          - name: karakeep-mcp
-            tags_latest: ghcr.io/karakeep-app/karakeep-mcp:latest
-            tags_release: ghcr.io/karakeep-app/karakeep-mcp:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep-mcp:release
-          - name: karakeep-aio
-            tags_latest: ghcr.io/hoarder-app/hoarder:latest,ghcr.io/karakeep-app/karakeep:latest
-            tags_release: ghcr.io/hoarder-app/hoarder:${{ github.event.release.name }},ghcr.io/karakeep-app/karakeep:${{ github.event.release.name }},ghcr.io/hoarder-app/hoarder:release,ghcr.io/karakeep-app/karakeep:release
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+      GHCR_USERNAME: ${{ github.repository_owner }}
+      IMAGE_REF: ${{ needs.build.outputs.image_ref }}
     steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-
-      - name: Login to Github Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_GITHUB_PAT }}
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Create manifests for ${{ matrix.name }}
-        env:
-          TAGS_LATEST: ${{ matrix.tags_latest }}
-          TAGS_RELEASE: ${{ matrix.tags_release }}
-          IS_RELEASE: ${{ github.event_name == 'release' }}
-          IS_PUSH: ${{ github.event_name == 'push' }}
+      - name: Configure SSH
         run: |
           set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          if [ -n "${VPS_KNOWN_HOSTS:-}" ]; then
+            # Pinned host key (set the VPS_KNOWN_HOSTS secret) avoids MITM on first connect.
+            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::VPS_KNOWN_HOSTS secret not set; falling back to trust-on-first-use ssh-keyscan."
+            ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          fi
+          chmod 600 ~/.ssh/known_hosts
 
-          create_manifest() {
-            local tag="$1"
-            docker buildx imagetools create \
-              -t "${tag}" \
-              "${tag}-amd64" \
-              "${tag}-arm64"
-          }
+      - name: Ensure deploy directory exists
+        run: |
+          set -euo pipefail
+          ssh "$VPS_USER@$VPS_HOST" "mkdir -p '$DEPLOY_PATH'"
 
-          # Only create 'latest' manifests on pushes to main
-          if [[ "${IS_PUSH}" == "true" ]]; then
-            IFS=',' read -ra latest_tags <<< "${TAGS_LATEST}"
-            for tag in "${latest_tags[@]}"; do
-              create_manifest "$tag"
-            done
+      - name: Upload compose file
+        run: |
+          set -euo pipefail
+          scp deploy/docker-compose.prod.yml "$VPS_USER@$VPS_HOST:$DEPLOY_PATH/docker-compose.yml"
+
+      - name: Deploy on VPS
+        run: |
+          set -euo pipefail
+          # Secrets are passed as positional args (read on the VPS as $1..$4) instead of
+          # being interpolated into the remote command string, which is fragile to quoting.
+          ssh "$VPS_USER@$VPS_HOST" 'bash -s' -- \
+            "$DEPLOY_PATH" "$GHCR_USERNAME" "$GHCR_READ_TOKEN" "$IMAGE_REF" <<'EOF'
+          set -euo pipefail
+          DEPLOY_PATH="$1"
+          GHCR_USERNAME="$2"
+          GHCR_READ_TOKEN="$3"
+          IMAGE_REF="$4"
+
+          cd "$DEPLOY_PATH"
+
+          if [ ! -f .env ]; then
+            echo "Missing $DEPLOY_PATH/.env on the VPS"
+            exit 1
           fi
 
-          # Only create release-specific manifests on releases
-          if [[ "${IS_RELEASE}" == "true" ]]; then
-            IFS=',' read -ra release_tags <<< "${TAGS_RELEASE}"
-            for tag in "${release_tags[@]}"; do
-              create_manifest "$tag"
-            done
-          fi
+          echo "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+          KARAKEEP_IMAGE="$IMAGE_REF" docker compose pull
+          KARAKEEP_IMAGE="$IMAGE_REF" docker compose up -d --remove-orphans
+          docker image prune -f
+          EOF
