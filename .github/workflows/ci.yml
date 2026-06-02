@@ -45,6 +45,17 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
+      # Fork divergence: with no Turbo remote cache, CI typechecks all 28 packages
+      # from scratch (every task is a cache miss), which exhausts the hosted runner's
+      # ~14GB disk. Reclaim ~20GB of preinstalled toolchains we don't use first.
+      - name: Free up disk space
+        run: |
+          set -euo pipefail
+          echo "Disk before cleanup:"; df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          echo "Disk after cleanup:"; df -h /
+
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false

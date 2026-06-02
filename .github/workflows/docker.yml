@@ -1,4 +1,9 @@
-name: Build and Deploy
+name: Build and Push image
+
+# Pull-based deploy: this workflow only builds + pushes the AIO image to GHCR.
+# The VPS runs a Watchtower container that polls GHCR and redeploys when :main
+# changes, so no inbound SSH / deploy step is needed here (the VPS firewalls SSH
+# to Tailscale only). See deploy/docker-compose.prod.yml.
 
 on:
   workflow_run:
@@ -11,7 +16,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: build-and-deploy-main
+  group: build-and-push-main
   cancel-in-progress: false
 
 jobs:
@@ -21,10 +26,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    outputs:
-      image_name: ${{ steps.meta.outputs.image_name }}
-      image_ref: ${{ steps.meta.outputs.image_ref }}
-      sha_tag: ${{ steps.meta.outputs.sha_tag }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -69,75 +70,3 @@ jobs:
             ${{ steps.meta.outputs.image_name }}:${{ steps.meta.outputs.sha_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      VPS_HOST: ${{ secrets.VPS_HOST }}
-      VPS_USER: ${{ secrets.VPS_USER }}
-      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-      VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-      GHCR_USERNAME: ${{ github.repository_owner }}
-      IMAGE_REF: ${{ needs.build.outputs.image_ref }}
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Configure SSH
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          if [ -n "${VPS_KNOWN_HOSTS:-}" ]; then
-            # Pinned host key (set the VPS_KNOWN_HOSTS secret) avoids MITM on first connect.
-            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          else
-            echo "::warning::VPS_KNOWN_HOSTS secret not set; falling back to trust-on-first-use ssh-keyscan."
-            ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
-          fi
-          chmod 600 ~/.ssh/known_hosts
-
-      - name: Ensure deploy directory exists
-        run: |
-          set -euo pipefail
-          ssh "$VPS_USER@$VPS_HOST" "mkdir -p '$DEPLOY_PATH'"
-
-      - name: Upload compose file
-        run: |
-          set -euo pipefail
-          scp deploy/docker-compose.prod.yml "$VPS_USER@$VPS_HOST:$DEPLOY_PATH/docker-compose.yml"
-
-      - name: Deploy on VPS
-        run: |
-          set -euo pipefail
-          # Secrets are passed as positional args (read on the VPS as $1..$4) instead of
-          # being interpolated into the remote command string, which is fragile to quoting.
-          ssh "$VPS_USER@$VPS_HOST" 'bash -s' -- \
-            "$DEPLOY_PATH" "$GHCR_USERNAME" "$GHCR_READ_TOKEN" "$IMAGE_REF" <<'EOF'
-          set -euo pipefail
-          DEPLOY_PATH="$1"
-          GHCR_USERNAME="$2"
-          GHCR_READ_TOKEN="$3"
-          IMAGE_REF="$4"
-
-          cd "$DEPLOY_PATH"
-
-          if [ ! -f .env ]; then
-            echo "Missing $DEPLOY_PATH/.env on the VPS"
-            exit 1
-          fi
-
-          echo "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-          KARAKEEP_IMAGE="$IMAGE_REF" docker compose pull
-          KARAKEEP_IMAGE="$IMAGE_REF" docker compose up -d --remove-orphans
-          docker image prune -f
-          EOF

@@ -1,3 +1,11 @@
+# Karakeep fork — staging/prod compose (pull-based deploy via Watchtower).
+# Deploy model: GitHub Actions builds + pushes ghcr.io/absolutepraya/karakeep:main;
+# the watchtower service below polls GHCR every 60s and redeploys `web` when the
+# :main digest changes. The VPS never needs inbound SSH.
+#
+# Per-instance overrides go in a sibling .env file (auto-read by compose):
+#   KARAKEEP_PORT  host port nginx proxies to (staging: 3100, prod: 3000)
+#   NEXTAUTH_SECRET, MEILI_MASTER_KEY, NEXTAUTH_URL, DISABLE_SIGNUPS, ...
 services:
   web:
     image: ${KARAKEEP_IMAGE:-ghcr.io/absolutepraya/karakeep:main}
@@ -5,10 +13,14 @@ services:
     depends_on:
       - chrome
       - meilisearch
+    labels:
+      # Only this container is auto-updated by watchtower (label-enable mode).
+      - com.centurylinklabs.watchtower.enable=true
     volumes:
       - data:/data
     ports:
-      - 3000:3000
+      # Bound to localhost only; nginx reverse-proxies the public subdomain to it.
+      - 127.0.0.1:${KARAKEEP_PORT:-3000}:3000
     env_file:
       - .env
     environment:
@@ -36,6 +48,16 @@ services:
       MEILI_NO_ANALYTICS: "true"
     volumes:
       - meilisearch:/meili_data
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_POLL_INTERVAL: "60"
+      WATCHTOWER_CLEANUP: "true"
 
 volumes:
   data:
