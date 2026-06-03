@@ -23,7 +23,7 @@ export default async function Header() {
         <SearchInput className="rounded-md bg-muted" />
         <GlobalActions />
       </div>
-      <div className="flex items-center">
+      <div className="ml-2 flex items-center sm:ml-3">
         <ProfileOptions />
       </div>
     </header>
