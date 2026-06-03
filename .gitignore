@@ -80,3 +80,6 @@ auth_failures.log
 # Karakeep dev launcher (./start-dev.sh -d) pids + logs
 .dev/
 jean.json
+
+# superpowers brainstorm artifacts
+.superpowers/
