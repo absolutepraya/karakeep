@@ -64,8 +64,8 @@ function BottomRow({
   bookmark: ZBookmark;
 }) {
   return (
-    <div className="justify flex w-full shrink-0 justify-between text-gray-500">
-      <div className="flex items-center gap-2 overflow-hidden text-nowrap font-light">
+    <div className="flex w-full shrink-0 justify-between text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 overflow-hidden text-nowrap">
         {footer && <>{footer}•</>}
         <Link
           href={`/dashboard/preview/${bookmark.id}`}
@@ -245,12 +245,12 @@ function HoverActionBar({ bookmark }: { bookmark: ZBookmark }) {
   if (!isOwner || isBulkEditEnabled || demoMode) return null;
 
   return (
-    <div className="pointer-events-none absolute right-2 top-2 z-30 hidden gap-1 rounded bg-white/50 p-1 opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 dark:bg-black/50 [@media(pointer:fine)]:pointer-events-auto [@media(pointer:fine)]:flex">
+    <div className="pointer-events-none absolute right-2 top-2 z-30 hidden gap-1 rounded bg-white/50 p-1 opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 dark:bg-black/50 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:flex [@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:pointer-events-auto [@media(pointer:fine)]:flex">
       <button
         title={
           bookmark.favourited ? t("actions.unfavorite") : t("actions.favorite")
         }
-        className="rounded p-0.5 hover:bg-background/50"
+        className="flex items-center justify-center rounded p-0.5 hover:bg-background/50 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:p-0"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -266,7 +266,7 @@ function HoverActionBar({ bookmark }: { bookmark: ZBookmark }) {
         title={
           bookmark.archived ? t("actions.unarchive") : t("actions.archive")
         }
-        className="rounded p-0.5 hover:bg-background/50"
+        className="flex items-center justify-center rounded p-0.5 hover:bg-background/50 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:p-0"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -320,7 +320,7 @@ function ListView({
       <div className="flex h-full flex-1 flex-col justify-between gap-2 overflow-hidden">
         <div className="flex flex-col gap-2 overflow-hidden">
           {showTitle && title && (
-            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-lg">
+            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-lg font-semibold">
               {title}
             </div>
           )}
@@ -382,7 +382,7 @@ function GridView({
       <div className="flex h-full flex-col justify-between gap-2 overflow-hidden p-2">
         <div className="grow-1 flex flex-col gap-2 overflow-hidden">
           {showTitle && title && (
-            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-lg">
+            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-lg font-semibold">
               {title}
             </div>
           )}
@@ -443,18 +443,20 @@ function CompactView({
             <ImageIcon className="size-5" />
           )}
           {showTitle && (
-            <div className="shrink-1 text-md line-clamp-1 overflow-hidden text-ellipsis break-words">
+            <div className="shrink-1 line-clamp-1 overflow-hidden text-ellipsis break-words text-sm font-semibold">
               {title ?? "Untitled"}
             </div>
           )}
           {footer && (
-            <p className="flex shrink-0 gap-2 text-gray-500">•{footer}</p>
+            <p className="flex shrink-0 gap-2 text-xs text-muted-foreground">
+              •{footer}
+            </p>
           )}
-          <p className="text-gray-500">•</p>
+          <p className="text-xs text-muted-foreground">•</p>
           <Link
             href={`/dashboard/preview/${bookmark.id}`}
             suppressHydrationWarning
-            className="shrink-0 gap-2 text-gray-500"
+            className="shrink-0 gap-2 text-xs text-muted-foreground"
           >
             <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
           </Link>

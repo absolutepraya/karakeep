@@ -14,7 +14,7 @@ export default function BookmarkActionBar({
   bookmark: ZBookmark;
 }) {
   return (
-    <div className="flex text-gray-500">
+    <div className="flex text-muted-foreground">
       {bookmark.favourited && (
         <FavouritedActionIcon className="m-1 size-8 rounded p-1" favourited />
       )}

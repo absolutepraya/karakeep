@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { Archive, ArchiveRestore, Star } from "lucide-react";
 
 export function FavouritedActionIcon({
@@ -15,9 +16,7 @@ export function FavouritedActionIcon({
     <Star
       size={size}
       strokeWidth={strokeWidth}
-      className={className}
-      color="#ebb434"
-      fill="#ebb434"
+      className={cn("fill-primary text-primary", className)}
     />
   ) : (
     <Star size={size} strokeWidth={strokeWidth} className={className} />
