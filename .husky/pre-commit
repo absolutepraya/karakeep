@@ -3,6 +3,9 @@
 # affect the gating commands below.
 pnpm doctor:staged || true
 
+# apps/web is intentionally on Tailwind v4 while landing/extension/mobile/tooling
+# stay on v3 (the web UI haul). Tell sherif that tailwindcss + @tailwindcss/typography
+# version skew across the workspace is expected, not a mistake.
 pnpm preflight
-pnpm exec sherif
+pnpm exec sherif --ignore-dependency tailwindcss --ignore-dependency @tailwindcss/typography
 pnpm run --filter @karakeep/open-api check

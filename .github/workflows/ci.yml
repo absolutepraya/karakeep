@@ -37,7 +37,7 @@ jobs:
         uses: ./tooling/github/setup
 
       - name: Lint
-        run: pnpm lint && pnpm exec sherif
+        run: pnpm lint && pnpm exec sherif --ignore-dependency tailwindcss --ignore-dependency @tailwindcss/typography
 
   format:
     runs-on: ubuntu-latest
