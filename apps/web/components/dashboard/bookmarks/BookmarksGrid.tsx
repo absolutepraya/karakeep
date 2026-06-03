@@ -13,13 +13,12 @@ import {
   useBookmarkLayout,
   useGridColumns,
 } from "@/lib/userLocalSettings/bookmarksLayout";
+import { SCREENS } from "@/lib/breakpoints";
 import { cn } from "@/lib/utils";
-import tailwindConfig from "@/tailwind.config";
 import { Slot } from "@radix-ui/react-slot";
 import { ErrorBoundary } from "react-error-boundary";
 import { useInView } from "react-intersection-observer";
 import Masonry from "react-masonry-css";
-import resolveConfig from "tailwindcss/resolveConfig";
 
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import { useBookmarkListContext } from "@karakeep/shared-react/hooks/bookmark-list-context";
@@ -75,8 +74,6 @@ const BookmarkGridItem = memo(function BookmarkGridItem({
 });
 
 function getBreakpointConfig(userColumns: number) {
-  const fullConfig = resolveConfig(tailwindConfig);
-
   const breakpointColumnsObj: { [key: number]: number; default: number } = {
     default: userColumns,
   };
@@ -86,18 +83,14 @@ function getBreakpointConfig(userColumns: number) {
   const mdColumns = Math.max(1, Math.min(userColumns, 2));
   const smColumns = 1;
 
-  breakpointColumnsObj[parseInt(fullConfig.theme.screens.lg)] = lgColumns;
-  breakpointColumnsObj[parseInt(fullConfig.theme.screens.md)] = mdColumns;
-  breakpointColumnsObj[parseInt(fullConfig.theme.screens.sm)] = smColumns;
+  breakpointColumnsObj[SCREENS.lg] = lgColumns;
+  breakpointColumnsObj[SCREENS.md] = mdColumns;
+  breakpointColumnsObj[SCREENS.sm] = smColumns;
   return breakpointColumnsObj;
 }
 
 function getColumnsForViewport(userColumns: number, viewportWidth: number) {
-  const fullConfig = resolveConfig(tailwindConfig);
-  const screens = fullConfig.theme.screens;
-  const lg = parseInt(screens.lg);
-  const md = parseInt(screens.md);
-  const sm = parseInt(screens.sm);
+  const { sm, md, lg } = SCREENS;
 
   if (viewportWidth <= sm) {
     return 1;

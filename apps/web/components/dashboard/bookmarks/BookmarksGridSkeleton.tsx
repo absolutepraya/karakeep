@@ -1,18 +1,15 @@
 import type { BookmarksLayoutTypes } from "@/lib/userLocalSettings/types";
 import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SCREENS } from "@/lib/breakpoints";
 import {
   bookmarkLayoutSwitch,
   useBookmarkLayout,
   useGridColumns,
 } from "@/lib/userLocalSettings/bookmarksLayout";
-import tailwindConfig from "@/tailwind.config";
 import Masonry from "react-masonry-css";
-import resolveConfig from "tailwindcss/resolveConfig";
 
 function getBreakpointConfig(userColumns: number) {
-  const fullConfig = resolveConfig(tailwindConfig);
-
   const breakpointColumnsObj: { [key: number]: number; default: number } = {
     default: userColumns,
   };
@@ -21,9 +18,9 @@ function getBreakpointConfig(userColumns: number) {
   const mdColumns = Math.max(1, Math.min(userColumns, 2));
   const smColumns = 1;
 
-  breakpointColumnsObj[parseInt(fullConfig.theme.screens.lg)] = lgColumns;
-  breakpointColumnsObj[parseInt(fullConfig.theme.screens.md)] = mdColumns;
-  breakpointColumnsObj[parseInt(fullConfig.theme.screens.sm)] = smColumns;
+  breakpointColumnsObj[SCREENS.lg] = lgColumns;
+  breakpointColumnsObj[SCREENS.md] = mdColumns;
+  breakpointColumnsObj[SCREENS.sm] = smColumns;
   return breakpointColumnsObj;
 }
 
