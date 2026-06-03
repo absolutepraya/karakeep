@@ -26,7 +26,7 @@ export default function SidebarLayout({
       <div className="flex min-h-[calc(100vh-64px)] w-full flex-col sm:h-[calc(100dvh-64px)] sm:flex-row sm:overflow-hidden">
         <ValidAccountCheck />
         <div className="hidden flex-none sm:flex">{sidebar}</div>
-        <main className="flex-1 bg-muted sm:min-h-0 sm:overflow-y-auto">
+        <main className="flex-1 bg-muted sm:min-h-0 sm:overflow-y-auto sm:rounded-tl-lg">
           {serverConfig.demoMode && <DemoModeBanner />}
           <div className="block w-full sm:hidden">
             {mobileSidebar}
