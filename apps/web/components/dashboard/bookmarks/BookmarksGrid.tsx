@@ -242,6 +242,9 @@ export default function BookmarksGrid({
   ];
   return (
     <>
+      {bookmarks.length === 0 && showEditorCard && (
+        <NoBookmarksBanner className="mb-4" />
+      )}
       {bookmarkLayoutSwitch(layout, {
         masonry: (
           <Masonry
