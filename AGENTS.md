@@ -8,8 +8,24 @@ Karakeep is a monorepo project managed with Turborepo. It is a "read-it-later" b
 
 - **Frontend:** Next.js, React, TypeScript, Tailwind CSS
 - **Backend:** Hono (a lightweight web framework), tRPC
-- **Database:** Drizzle ORM (likely with a relational database like PostgreSQL or SQLite)
+- **Database:** Drizzle ORM over SQLite (`better-sqlite3`); the DB file and assets live under `DATA_DIR`
 - **Tooling:** Oxfmt, oxlint, Vitest, pnpm
+
+## Fork notes
+
+This repo is an **opinionated personal fork** of Karakeep (`origin`: `absolutepraya/karakeep`, `upstream`: `karakeep-app/karakeep`) focused on UX/QoL changes while staying close to upstream. Full setup details live in [`docs/abhip-fork-setup.md`](docs/abhip-fork-setup.md).
+
+### Local dev (one command)
+
+Node 24 (`.nvmrc`) + `pnpm@11.2.1` via corepack. First-time setup: `pnpm install`, then symlink the root `.env` into `apps/web`, `apps/workers`, and `packages/db` (each process loads `.env` from its own CWD), then `pnpm db:migrate`.
+
+- `./start-dev.sh` — foreground (Ctrl+C stops everything); `./start-dev.sh -d` — detached (logs in `.dev/`, frees the shell), stop with `./stop-dev.sh`. Runs `web`+`workers` natively and Meilisearch+Chrome in Docker.
+- Or run pieces directly: `pnpm web` (:3000) + `pnpm workers`. Meilisearch (search) and headless Chrome (crawling) are optional — the web app boots and degrades gracefully without them.
+- Gotcha: if `next dev` crashes at boot with `instrumentation.ts ... MODULE_UNPARSABLE`, clear the stale Turbopack cache with `rm -rf apps/web/.next` (it gets seeded by `next typegen`, which `pnpm typecheck` runs).
+
+### Deploy (pull-based)
+
+CI green on `main` → `.github/workflows/docker.yml` builds + pushes the public image `ghcr.io/<owner>/karakeep:main` → a Watchtower container on the VPS polls GHCR and redeploys. No inbound SSH (the VPS firewalls SSH to Tailscale). The canonical compose is `deploy/docker-compose.prod.yml`.
 
 ## Project Structure
 
@@ -51,7 +67,7 @@ The project is organized into `apps` and `packages`:
 
 ## Other info
 
-- This project uses shadcn/ui. The shadcn components in the web app are in `packages/web/components/ui`.
+- This project uses shadcn/ui. The shadcn components in the web app are in `apps/web/components/ui`.
 - This project uses Tailwind CSS.
 - For the mobile app, we use [expo](https://expo.dev/).
 

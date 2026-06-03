@@ -17,6 +17,8 @@
 
 Karakeep (previously Hoarder) is a self-hostable bookmark-everything app with a touch of AI for the data hoarders out there.
 
+> **Personal fork.** This is an opinionated personal fork of Karakeep focused on UX/QoL changes, kept in sync with upstream. For this fork's one-command local dev and pull-based deploy setup, see [`docs/abhip-fork-setup.md`](docs/abhip-fork-setup.md). Everything below is upstream Karakeep's README.
+
 ![homepage screenshot](https://github.com/karakeep-app/karakeep/blob/main/screenshots/homepage.png?raw=true)
 
 ## Features
