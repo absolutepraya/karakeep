@@ -473,10 +473,11 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
+            size="icon-sm"
             aria-label={t("actions.more")}
-            className="px-1 focus-visible:ring-2 focus-visible:ring-ring"
+            className="focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <MoreHorizontal />
+            <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-fit">

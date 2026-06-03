@@ -64,7 +64,7 @@ export default function BookmarkActionBar({
       <Link
         href={`/dashboard/preview/${bookmark.id}`}
         aria-label={t("actions.expand")}
-        className={cn(buttonVariants({ variant: "ghost" }), "px-2")}
+        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
       >
         <Maximize2 size={16} />
       </Link>
