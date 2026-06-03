@@ -35,6 +35,18 @@ kill_tree() {
     kill "$pid" 2>/dev/null
 }
 
+# Headless-Chrome host port: derived from BROWSER_WEB_URL in .env (default 9222), so
+# karakeep's Chrome can use a free port when another local Chrome already owns 9222.
+CHROME_PORT=9222
+if [ -f ".env" ]; then
+    _bw=$(grep "^BROWSER_WEB_URL=" .env | cut -d'=' -f2-)
+    _p="${_bw##*:}"; _p="${_p%%/*}"
+    case "$_p" in
+        ''|*[!0-9]*) ;;          # not a port number — keep the default
+        *) CHROME_PORT="$_p" ;;
+    esac
+fi
+
 # Check if Docker is installed
 if ! command_exists docker; then
     echo "Error: Docker is not installed. Please install Docker first."
@@ -56,9 +68,9 @@ else
 fi
 
 # Start Chrome if not already running
-if ! port_in_use 9222; then
-    echo "Starting headless Chrome..."
-    docker run -d -p 9222:9222 --name karakeep-chrome gcr.io/zenika-hub/alpine-chrome:124 \
+if ! port_in_use "$CHROME_PORT"; then
+    echo "Starting headless Chrome on port $CHROME_PORT..."
+    docker run -d -p "$CHROME_PORT:9222" --name karakeep-chrome gcr.io/zenika-hub/alpine-chrome:124 \
         --no-sandbox \
         --disable-gpu \
         --disable-dev-shm-usage \
@@ -66,7 +78,7 @@ if ! port_in_use 9222; then
         --remote-debugging-port=9222 \
         --hide-scrollbars
 else
-    echo "Chrome is already running on port 9222"
+    echo "Port $CHROME_PORT already in use; assuming a compatible Chrome/CDP is there"
 fi
 
 # Install dependencies if node_modules doesn't exist
@@ -130,7 +142,7 @@ echo ""
 echo "Development environment is running!"
 echo "  Web app:         http://localhost:3000"
 echo "  Meilisearch:     http://localhost:7700"
-echo "  Chrome debugger: http://localhost:9222"
+echo "  Chrome debugger: http://localhost:$CHROME_PORT"
 
 if [ "$DETACH" -eq 1 ]; then
     echo ""
