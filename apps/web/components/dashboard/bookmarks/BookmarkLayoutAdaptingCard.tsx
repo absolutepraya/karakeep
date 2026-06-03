@@ -259,7 +259,9 @@ function ListView({
               {title}
             </div>
           )}
-          {content && <div className="shrink-1 overflow-hidden">{content}</div>}
+          {content && (
+            <div className="shrink-1 max-h-40 overflow-hidden">{content}</div>
+          )}
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
           {showTags &&
             (bookmark.tags.length > 0 || isBookmarkStillTagging(bookmark)) && (
@@ -305,9 +307,9 @@ function GridView({
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-lg",
         className,
-        // Grid stays a uniform fixed height; masonry sizes to content so cards
-        // don't reserve empty vertical space below the footer.
-        layout === "grid" ? "h-96" : "max-h-96",
+        // Grid stays a uniform fixed height; masonry grows to fit its content
+        // so tags and the footer are never clipped.
+        layout === "grid" ? "h-96" : "h-auto",
       )}
       data-bookmark-index={bookmarkIndex}
     >
@@ -322,7 +324,9 @@ function GridView({
               {title}
             </div>
           )}
-          {content && <div className="shrink-1 overflow-hidden">{content}</div>}
+          {content && (
+            <div className="shrink-1 max-h-40 overflow-hidden">{content}</div>
+          )}
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
           {showTags &&
             (bookmark.tags.length > 0 || isBookmarkStillTagging(bookmark)) && (
