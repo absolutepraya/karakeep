@@ -3,7 +3,6 @@
 import type { BookmarksLayoutTypes } from "@/lib/userLocalSettings/types";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "@/lib/auth/client";
 import { BOOKMARK_DRAG_MIME } from "@/lib/bookmark-drag";
@@ -28,6 +27,7 @@ import { useTRPC } from "@karakeep/shared-react/trpc";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import {
   getBookmarkTitle,
+  getSourceUrl,
   isBookmarkStillTagging,
 } from "@karakeep/shared/utils/bookmarkUtils";
 import { switchCase } from "@karakeep/shared/utils/switch";
@@ -35,6 +35,7 @@ import { switchCase } from "@karakeep/shared/utils/switch";
 import BookmarkActionBar from "./BookmarkActionBar";
 import BookmarkFormattedCreatedAt from "./BookmarkFormattedCreatedAt";
 import BookmarkOwnerIcon from "./BookmarkOwnerIcon";
+import Favicon from "./Favicon";
 import { NotePreview } from "./NotePreview";
 import TagList from "./TagList";
 
@@ -57,9 +58,21 @@ function BottomRow({
   footer?: ReactNode;
   bookmark: ZBookmark;
 }) {
+  const sourceUrl = getSourceUrl(bookmark);
+  const storedFavicon =
+    bookmark.content.type === BookmarkTypes.LINK
+      ? bookmark.content.favicon
+      : null;
   return (
     <div className="flex w-full shrink-0 justify-between text-sm text-muted-foreground">
       <div className="flex items-center gap-2 overflow-hidden text-nowrap">
+        {sourceUrl && (
+          <Favicon
+            url={sourceUrl}
+            storedFavicon={storedFavicon}
+            className="size-4"
+          />
+        )}
         {footer && <>{footer}•</>}
         <Link
           href={`/dashboard/preview/${bookmark.id}`}
@@ -248,14 +261,15 @@ function ListView({
           )}
           {content && <div className="shrink-1 overflow-hidden">{content}</div>}
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
-          {showTags && (
-            <div className="flex shrink-0 flex-wrap gap-1 overflow-hidden">
-              <TagList
-                bookmark={bookmark}
-                loading={isBookmarkStillTagging(bookmark)}
-              />
-            </div>
-          )}
+          {showTags &&
+            (bookmark.tags.length > 0 || isBookmarkStillTagging(bookmark)) && (
+              <div className="flex shrink-0 flex-wrap gap-1 overflow-hidden">
+                <TagList
+                  bookmark={bookmark}
+                  loading={isBookmarkStillTagging(bookmark)}
+                />
+              </div>
+            )}
         </div>
         <BottomRow footer={footer} bookmark={bookmark} />
       </div>
@@ -272,7 +286,6 @@ function GridView({
   className,
   wrapTags,
   layout,
-  fitHeight = false,
   bookmarkIndex,
 }: Props & { layout: BookmarksLayoutTypes }) {
   const { showNotes, showTags, showTitle, imageFit } =
@@ -292,7 +305,9 @@ function GridView({
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-lg",
         className,
-        fitHeight && layout != "grid" ? "max-h-96" : "h-96",
+        // Grid stays a uniform fixed height; masonry sizes to content so cards
+        // don't reserve empty vertical space below the footer.
+        layout === "grid" ? "h-96" : "max-h-96",
       )}
       data-bookmark-index={bookmarkIndex}
     >
@@ -309,15 +324,16 @@ function GridView({
           )}
           {content && <div className="shrink-1 overflow-hidden">{content}</div>}
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
-          {showTags && (
-            <div className="flex shrink-0 flex-wrap gap-1 overflow-hidden">
-              <TagList
-                className={wrapTags ? undefined : "h-full"}
-                bookmark={bookmark}
-                loading={isBookmarkStillTagging(bookmark)}
-              />
-            </div>
-          )}
+          {showTags &&
+            (bookmark.tags.length > 0 || isBookmarkStillTagging(bookmark)) && (
+              <div className="flex shrink-0 flex-wrap gap-1 overflow-hidden">
+                <TagList
+                  className={wrapTags ? undefined : "h-full"}
+                  bookmark={bookmark}
+                  loading={isBookmarkStillTagging(bookmark)}
+                />
+              </div>
+            )}
         </div>
         <BottomRow footer={footer} bookmark={bookmark} />
       </div>
@@ -346,17 +362,13 @@ function CompactView({
       <OwnerIndicator bookmark={bookmark} />
       <div className="flex h-full justify-between gap-2 overflow-hidden p-2">
         <div className="flex items-center gap-2">
-          {bookmark.content.type === BookmarkTypes.LINK &&
-            bookmark.content.favicon && (
-              <Image
-                src={bookmark.content.favicon}
-                alt="favicon"
-                width={5}
-                unoptimized
-                height={5}
-                className="size-5"
-              />
-            )}
+          {bookmark.content.type === BookmarkTypes.LINK && (
+            <Favicon
+              url={bookmark.content.url}
+              storedFavicon={bookmark.content.favicon}
+              className="size-5"
+            />
+          )}
           {bookmark.content.type === BookmarkTypes.TEXT && (
             <NotebookPen className="size-5" />
           )}
