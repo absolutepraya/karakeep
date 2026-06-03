@@ -198,7 +198,7 @@ const SearchInput = React.forwardRef<
         )}
       <Command
         shouldFilter={false}
-        className="relative rounded-md bg-transparent"
+        className="shadow-xs relative rounded-lg border border-input bg-background transition-shadow focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/30 [&_[cmdk-input-wrapper]]:border-0"
         onKeyDown={handleCommandKeyDown}
       >
         <Popover open={isPopoverVisible}>

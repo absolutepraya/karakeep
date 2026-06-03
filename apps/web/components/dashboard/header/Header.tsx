@@ -20,7 +20,7 @@ export default async function Header() {
         </Link>
       </div>
       <div className="flex flex-1 gap-2">
-        <SearchInput className="rounded-md bg-muted" />
+        <SearchInput />
         <GlobalActions />
       </div>
       <div className="ml-2 flex items-center sm:ml-3">

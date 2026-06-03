@@ -256,7 +256,7 @@ export default function AllLists({
               defaultValue: "Search lists",
             })}
             startIcon={<Search className="size-3.5 text-muted-foreground" />}
-            className="h-9 border-transparent bg-muted"
+            className="shadow-xs h-8 rounded-lg focus-visible:ring-[3px]"
           />
         </li>
       )}
