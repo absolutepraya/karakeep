@@ -217,7 +217,7 @@ export default function EditorCard({ className }: { className?: string }) {
               ref={inputRef}
               disabled={isPending}
               className={cn(
-                "h-full w-full border-none bg-transparent p-0 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0",
+                "h-full w-full border-none bg-transparent p-0 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0",
                 { "resize-none": bookmarkLayout !== "list" },
               )}
               placeholder={t("editor.placeholder_v2")}
