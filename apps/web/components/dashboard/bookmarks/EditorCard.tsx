@@ -1,9 +1,8 @@
 import type { SubmitErrorHandler, SubmitHandler } from "react-hook-form";
-import React, { useImperativeHandle, useRef } from "react";
+import React, { useImperativeHandle, useMemo, useRef } from "react";
 import { ActionButton } from "@/components/ui/action-button";
 import { Form, FormControl, FormItem } from "@/components/ui/form";
 import { Kbd } from "@/components/ui/kbd";
-import MultipleChoiceDialog from "@/components/ui/multiple-choice-dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,17 +24,38 @@ import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
 import { useUploadAsset } from "../UploadDropzone";
 
-interface MultiUrlImportState {
-  urls: URL[];
-  text: string;
+/**
+ * Returns the per-line URL strings if every non-empty line is a valid http(s)
+ * URL (and there's at least one), otherwise null. Used both to decide the
+ * Save/Import label live and to import each line as its own link bookmark.
+ */
+function parseImportableUrls(text: string): string[] | null {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length === 0) {
+    return null;
+  }
+  const urls: string[] = [];
+  for (const line of lines) {
+    let parsed: URL;
+    try {
+      parsed = new URL(line);
+    } catch {
+      return null;
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    urls.push(line);
+  }
+  return urls;
 }
 
 export default function EditorCard({ className }: { className?: string }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const [multiUrlImportState, setMultiUrlImportState] =
-    React.useState<MultiUrlImportState | null>(null);
 
   const demoMode = !!useClientConfig().demoMode;
   const bookmarkLayout = useBookmarkLayout();
@@ -75,27 +95,6 @@ export default function EditorCard({ className }: { className?: string }) {
 
   const uploadAsset = useUploadAsset();
 
-  function tryToImportUrls(text: string): void {
-    const lines = text.split("\n");
-    const urls: URL[] = [];
-    for (const line of lines) {
-      // parsing can also throw an exception, but will be caught outside
-      const url = new URL(line);
-      if (url.protocol != "http:" && url.protocol != "https:") {
-        throw new Error("Invalid URL");
-      }
-      urls.push(url);
-    }
-
-    if (urls.length === 1) {
-      // Only 1 url in the textfield --> simply import it
-      mutate({ type: BookmarkTypes.LINK, url: text });
-      return;
-    }
-    // multiple urls found --> ask the user if it should be imported as multiple URLs or as a text bookmark
-    setMultiUrlImportState({ urls, text });
-  }
-
   const onInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     // Expand the textarea to a max of half the screen size in the list layout only
     if (bookmarkLayout === "list") {
@@ -114,10 +113,11 @@ export default function EditorCard({ className }: { className?: string }) {
   const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = (data) => {
     const text = data.text.trim();
     if (!text.length) return;
-    try {
-      tryToImportUrls(text);
-    } catch {
-      // Not a URL
+    const urls = parseImportableUrls(text);
+    if (urls && urls.length > 0) {
+      // Every line is a URL --> import each as its own link bookmark, no prompt.
+      urls.forEach((url) => mutate({ type: BookmarkTypes.LINK, url }));
+    } else {
       mutate({ type: BookmarkTypes.TEXT, text });
     }
   };
@@ -185,6 +185,15 @@ export default function EditorCard({ className }: { className?: string }) {
 
   const OS = getOS();
 
+  // Live-detect whether the textarea holds multiple URLs so the button can
+  // switch from "Save" to "Import N bookmarks".
+  const textValue = form.watch("text");
+  const importUrls = useMemo(
+    () => parseImportableUrls(textValue.trim()),
+    [textValue],
+  );
+  const isMultiImport = (importUrls?.length ?? 0) > 1;
+
   return (
     <Form {...form}>
       <form
@@ -244,55 +253,13 @@ export default function EditorCard({ className }: { className?: string }) {
           {form.formState.dirtyFields.text
             ? demoMode
               ? t("editor.disabled_submissions")
-              : `${t("actions.save")} (${OS === "macos" ? "⌘" : "Ctrl"} + Enter)`
+              : isMultiImport
+                ? t("editor.import_n_bookmarks", {
+                    count: importUrls?.length ?? 0,
+                  })
+                : `${t("actions.save")} (${OS === "macos" ? "⌘" : "Ctrl"} + Enter)`
             : t("actions.save")}
         </ActionButton>
-
-        {multiUrlImportState && (
-          <MultipleChoiceDialog
-            open={true}
-            title={t("editor.multiple_urls_dialog_title")}
-            description={t("editor.multiple_urls_dialog_desc")}
-            onOpenChange={(open) => {
-              if (!open) {
-                setMultiUrlImportState(null);
-              }
-            }}
-            actionButtons={[
-              () => (
-                <ActionButton
-                  type="button"
-                  variant="secondary"
-                  loading={isPending}
-                  onClick={() => {
-                    mutate({
-                      type: BookmarkTypes.TEXT,
-                      text: multiUrlImportState.text,
-                    });
-                    setMultiUrlImportState(null);
-                  }}
-                >
-                  {t("editor.import_as_text")}
-                </ActionButton>
-              ),
-              () => (
-                <ActionButton
-                  type="button"
-                  variant="destructive"
-                  loading={isPending}
-                  onClick={() => {
-                    multiUrlImportState.urls.forEach((url) =>
-                      mutate({ type: BookmarkTypes.LINK, url: url.toString() }),
-                    );
-                    setMultiUrlImportState(null);
-                  }}
-                >
-                  {t("editor.import_as_separate_bookmarks")}
-                </ActionButton>
-              ),
-            ]}
-          ></MultipleChoiceDialog>
-        )}
       </form>
     </Form>
   );

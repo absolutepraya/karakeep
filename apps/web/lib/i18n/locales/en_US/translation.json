@@ -198,7 +198,8 @@
     "placeholder": "Paste a link or an image, write a note or drag and drop an image in here…",
     "placeholder_v2": "Paste a link, write a note or drop an image…",
     "new_item": "NEW ITEM",
-    "disabled_submissions": "Submissions are disabled"
+    "disabled_submissions": "Submissions are disabled",
+    "import_n_bookmarks": "Import {{count}} bookmarks"
   },
   "bookmark_editor": {
     "title": "Edit Bookmark",
