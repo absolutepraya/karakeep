@@ -787,6 +787,8 @@
   "lists": {
     "all_lists": "All Lists",
     "favourites": "Favourites",
+    "search_placeholder": "Search lists",
+    "no_lists_found": "No lists found",
     "shared": "Shared",
     "shared_lists": "Shared Lists",
     "privacy": {

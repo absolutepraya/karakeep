@@ -10,11 +10,12 @@ import {
   CollapsibleContent,
   CollapsibleTriggerChevron,
 } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
 import { BOOKMARK_DRAG_MIME } from "@/lib/bookmark-drag";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, Search } from "lucide-react";
 
 import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 import {
@@ -181,6 +182,7 @@ export default function AllLists({
   );
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   // Fetch live lists data
   const { data: listsData } = useBookmarkLists(undefined, {
@@ -189,6 +191,20 @@ export default function AllLists({
   const lists = augmentBookmarkListsWithInitialData(
     listsData,
     initialData.lists,
+  );
+
+  // Client-side list search: all lists are already in memory, so filtering is
+  // a flat name match. An empty query falls back to the normal tree.
+  const trimmedQuery = query.trim().toLowerCase();
+  const isSearching = trimmedQuery.length > 0;
+  const filteredLists = useMemo(
+    () =>
+      isSearching
+        ? lists.data.filter((list) =>
+            list.name.toLowerCase().includes(trimmedQuery),
+          )
+        : [],
+    [isSearching, trimmedQuery, lists.data],
   );
 
   // Check if any shared list is currently being viewed
@@ -227,73 +243,114 @@ export default function AllLists({
           </Link>
         </EditListModal>
       </li>
-      <SidebarItem
-        collapseButton={<span className="size-4" />}
-        logo={<span className="text-lg">📋</span>}
-        name={t("lists.all_lists")}
-        path={`/dashboard/lists`}
-        linkClassName="py-0.5 px-1"
-        right={<InvitationNotificationBadge />}
-      />
-      <SidebarItem
-        collapseButton={<span className="size-4" />}
-        logo={<span className="text-lg">⭐️</span>}
-        name={t("lists.favourites")}
-        path={`/dashboard/favourites`}
-        linkClassName="py-0.5 px-1"
-      />
-
-      {/* Owned Lists */}
-      <CollapsibleBookmarkLists
-        listsData={lists}
-        filter={(node) => node.item.userRole === "owner"}
-        isOpenFunc={isNodeOpen}
-        render={({ node, level, open, numBookmarks }) => (
-          <DroppableListSidebarItem
-            node={node}
-            level={level}
-            open={open}
-            numBookmarks={numBookmarks}
-            selectedListId={selectedListId}
-            setSelectedListId={setSelectedListId}
+      {lists.data.length > 0 && (
+        <li className="px-1 pb-2">
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("lists.search_placeholder", {
+              defaultValue: "Search lists",
+            })}
+            aria-label={t("lists.search_placeholder", {
+              defaultValue: "Search lists",
+            })}
+            startIcon={<Search className="size-3.5 text-muted-foreground" />}
+            className="h-8"
           />
-        )}
-      />
-
-      {/* Shared Lists */}
-      {hasSharedLists && (
-        <Collapsible open={sharedListsOpen} onOpenChange={setSharedListsOpen}>
+        </li>
+      )}
+      {isSearching ? (
+        filteredLists.length > 0 ? (
+          filteredLists.map((list) => (
+            <DroppableListSidebarItem
+              key={list.id}
+              node={{ item: list, children: [] }}
+              level={0}
+              open={false}
+              selectedListId={selectedListId}
+              setSelectedListId={setSelectedListId}
+            />
+          ))
+        ) : (
+          <li className="px-2 py-1 text-xs text-muted-foreground">
+            {t("lists.no_lists_found", { defaultValue: "No lists found" })}
+          </li>
+        )
+      ) : (
+        <>
           <SidebarItem
-            collapseButton={
-              <CollapsibleTriggerChevron
-                className="size-4"
-                open={sharedListsOpen}
-              />
-            }
-            logo={<span className="text-lg">👥</span>}
-            name={t("lists.shared_lists")}
-            path="#"
+            collapseButton={<span className="size-4" />}
+            logo={<span className="text-lg">📋</span>}
+            name={t("lists.all_lists")}
+            path={`/dashboard/lists`}
+            linkClassName="py-0.5 px-1"
+            right={<InvitationNotificationBadge />}
+          />
+          <SidebarItem
+            collapseButton={<span className="size-4" />}
+            logo={<span className="text-lg">⭐️</span>}
+            name={t("lists.favourites")}
+            path={`/dashboard/favourites`}
             linkClassName="py-0.5 px-1"
           />
-          <CollapsibleContent>
-            <CollapsibleBookmarkLists
-              listsData={lists}
-              filter={(node) => node.item.userRole !== "owner"}
-              isOpenFunc={isNodeOpen}
-              indentOffset={1}
-              render={({ node, level, open, numBookmarks }) => (
-                <DroppableListSidebarItem
-                  node={node}
-                  level={level}
-                  open={open}
-                  numBookmarks={numBookmarks}
-                  selectedListId={selectedListId}
-                  setSelectedListId={setSelectedListId}
+
+          {/* Owned Lists */}
+          <CollapsibleBookmarkLists
+            listsData={lists}
+            filter={(node) => node.item.userRole === "owner"}
+            isOpenFunc={isNodeOpen}
+            render={({ node, level, open, numBookmarks }) => (
+              <DroppableListSidebarItem
+                node={node}
+                level={level}
+                open={open}
+                numBookmarks={numBookmarks}
+                selectedListId={selectedListId}
+                setSelectedListId={setSelectedListId}
+              />
+            )}
+          />
+
+          {/* Shared Lists */}
+          {hasSharedLists && (
+            <Collapsible
+              open={sharedListsOpen}
+              onOpenChange={setSharedListsOpen}
+            >
+              <SidebarItem
+                collapseButton={
+                  <CollapsibleTriggerChevron
+                    className="size-4"
+                    open={sharedListsOpen}
+                  />
+                }
+                logo={<span className="text-lg">👥</span>}
+                name={t("lists.shared_lists")}
+                path="#"
+                linkClassName="py-0.5 px-1"
+              />
+              <CollapsibleContent>
+                <CollapsibleBookmarkLists
+                  listsData={lists}
+                  filter={(node) => node.item.userRole !== "owner"}
+                  isOpenFunc={isNodeOpen}
+                  indentOffset={1}
+                  render={({ node, level, open, numBookmarks }) => (
+                    <DroppableListSidebarItem
+                      node={node}
+                      level={level}
+                      open={open}
+                      numBookmarks={numBookmarks}
+                      selectedListId={selectedListId}
+                      setSelectedListId={setSelectedListId}
+                    />
+                  )}
                 />
-              )}
-            />
-          </CollapsibleContent>
-        </Collapsible>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </>
       )}
     </ul>
   );

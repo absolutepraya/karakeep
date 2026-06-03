@@ -906,6 +906,8 @@
   "lists": {
     "all_lists": "All Lists",
     "favourites": "Favorites",
+    "search_placeholder": "Search lists",
+    "no_lists_found": "No lists found",
     "new_list": "New List",
     "edit_list": "Edit List",
     "new_nested_list": "New Nested List",
