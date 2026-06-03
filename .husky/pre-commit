@@ -1,3 +1,8 @@
+# react.doctor — advisory only: scans staged files in React packages, prints a
+# health report, and NEVER blocks the commit (`|| true`). Runs first so it can't
+# affect the gating commands below.
+pnpm doctor:staged || true
+
 pnpm preflight
 pnpm exec sherif
 pnpm run --filter @karakeep/open-api check

@@ -147,3 +147,33 @@ jobs:
           else
             echo "✅ Generated files are up to date!"
           fi
+
+  # Non-blocking quality reports: they surface findings but never fail the build
+  # (continue-on-error). Tighten to blocking once the findings are triaged.
+  knip:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: Knip (unused files / deps / exports)
+        run: pnpm knip
+
+  react-doctor:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: React Doctor (React packages, report-only)
+        run: pnpm doctor --annotations

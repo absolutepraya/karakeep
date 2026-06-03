@@ -42,6 +42,18 @@ remote cache**, so `typecheck` and `tests` rebuild everything from scratch and
 exhaust the hosted runner's disk — both jobs include a "Free up disk space" step
 that reclaims ~20GB of unused preinstalled toolchains. (Divergence from upstream.)
 
+Two extra **non-blocking** report jobs (`continue-on-error`): `knip` (`pnpm knip`)
+and `react-doctor` (`pnpm doctor --annotations`, React packages only).
+
+## Extra quality tooling
+
+- **knip** (`pnpm knip`, config `knip.json`) — unused files/deps/exports.
+- **react.doctor** (`pnpm doctor` / `pnpm doctor:staged`) — React health score, scoped
+  via `--project` to the React packages only. Wired into pre-commit **advisory-only**
+  (`|| true`, never blocks). Local + free; `--no-score` keeps it fully offline.
+- **react-grab** — dev-only AI helper in `apps/web/app/layout.tsx`.
+- **Biome** is intentionally skipped (oxlint + oxfmt already cover lint+format).
+
 ## Build + deploy (pull-based)
 
 - **`.github/workflows/docker.yml`** ("Build and Push image"): on CI success on

@@ -13,7 +13,7 @@ Karakeep is a monorepo project managed with Turborepo. It is a "read-it-later" b
 
 ## Fork notes
 
-This repo is an **opinionated personal fork** of Karakeep (`origin`: `absolutepraya/karakeep`, `upstream`: `karakeep-app/karakeep`) focused on UX/QoL changes while staying close to upstream. Full setup details live in [`docs/abhip-fork-setup.md`](docs/abhip-fork-setup.md).
+This repo is an **opinionated personal fork** of Karakeep (`origin`: `absolutepraya/karakeep`, `upstream`: `karakeep-app/karakeep`) focused on UX/QoL changes while staying close to upstream. Full setup details live in [`docs/fork-setup.md`](docs/fork-setup.md).
 
 ### Local dev (one command)
 
@@ -26,6 +26,14 @@ Node 24 (`.nvmrc`) + `pnpm@11.2.1` via corepack. First-time setup: `pnpm install
 ### Deploy (pull-based)
 
 CI green on `main` → `.github/workflows/docker.yml` builds + pushes the public image `ghcr.io/<owner>/karakeep:main` → a Watchtower container on the VPS polls GHCR and redeploys. No inbound SSH (the VPS firewalls SSH to Tailscale). The canonical compose is `deploy/docker-compose.prod.yml`.
+
+### Code quality
+
+Beyond oxlint / oxfmt / sherif / tsc / vitest:
+- `pnpm knip` — unused files / deps / exports (config: `knip.json`). Runs as a **non-blocking** CI job; not in pre-commit.
+- `pnpm doctor` — [react.doctor](https://react.doctor) React health scan (0–100), scoped via `--project` to **React packages only** (`web`, `browser-extension`, `mobile`, `landing`, `shared-react`). `pnpm doctor:staged` runs it on staged files without the remote score. The pre-commit hook runs it **advisory-only** (`|| true`) — it prints findings but never blocks a commit.
+- **react-grab** loads dev-only in `apps/web/app/layout.tsx` (hover a component + ⌘C copies its source/stack for an AI); absent from prod builds.
+- **Biome is intentionally not used** — oxlint + oxfmt (oxc) already cover lint + format.
 
 ## Project Structure
 

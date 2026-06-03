@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import "@karakeep/tailwind-config/globals.css";
@@ -67,6 +68,13 @@ export default async function RootLayout({
           </Providers>
           <Toaster />
         </NuqsAdapter>
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="https://unpkg.com/react-grab@0.1.44/dist/index.global.js"
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
       </body>
     </html>
   );
