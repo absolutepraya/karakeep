@@ -21,7 +21,6 @@ import {
   Image as ImageIcon,
   NotebookPen,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import { useBookmarkListContext } from "@karakeep/shared-react/hooks/bookmark-list-context";
@@ -117,46 +116,30 @@ function MultiBookmarkSelector({ bookmark }: { bookmark: ZBookmark }) {
   );
   const isBulkEditEnabled = useBulkActionsStore((s) => s.isBulkEditEnabled);
   const toggleBookmark = useBulkActionsStore((state) => state.toggleBookmark);
-  const { theme } = useTheme();
   const { data: session } = useSession();
 
   // Don't show selector for non-owned bookmarks or when bulk edit is disabled
   const isOwner = session?.user?.id === bookmark.userId;
   if (!isBulkEditEnabled || !isOwner) return null;
 
-  const getIconColor = () => {
-    if (theme === "dark") {
-      return isSelected ? "black" : "white";
-    }
-    return isSelected ? "white" : "black";
-  };
-
-  const getIconBackgroundColor = () => {
-    if (theme === "dark") {
-      return isSelected ? "bg-white" : "bg-white bg-opacity-10";
-    }
-    return isSelected ? "bg-black" : "bg-white bg-opacity-40";
-  };
-
   return (
     <button
       className={cn(
-        "absolute left-0 top-0 z-50 h-full w-full bg-opacity-0",
-        {
-          "bg-opacity-10": isSelected,
-        },
-        theme === "dark" ? "bg-white" : "bg-black",
+        "absolute left-0 top-0 z-50 h-full w-full transition-colors",
+        isSelected ? "bg-foreground/10" : "bg-transparent",
       )}
       onClick={() => toggleBookmark(bookmark.id)}
     >
-      <div className="absolute right-2 top-2 z-50 opacity-100">
+      <div className="absolute right-2 top-2 z-50">
         <div
           className={cn(
-            "flex h-4 w-4 items-center justify-center rounded-full border border-gray-600",
-            getIconBackgroundColor(),
+            "flex size-4 items-center justify-center rounded-full border",
+            isSelected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-muted-foreground bg-background/60 text-transparent",
           )}
         >
-          <Check size={12} color={getIconColor()} />
+          <Check size={12} />
         </div>
       </div>
     </button>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BookmarkMarkdownComponent } from "@/components/dashboard/bookmarks/BookmarkMarkdownComponent";
 import { bookmarkLayoutSwitch } from "@/lib/userLocalSettings/bookmarksLayout";
 import { cn } from "@/lib/utils";
+import { NotebookPen } from "lucide-react";
 
 import type { ZBookmarkTypeText } from "@karakeep/shared/types/bookmarks";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
@@ -62,11 +63,11 @@ export default function TextCard({
             ) : (
               <div
                 className={cn(
-                  "flex size-full items-center justify-center bg-accent text-center",
+                  "flex size-full items-center justify-center bg-accent text-muted-foreground",
                   className,
                 )}
               >
-                Note
+                <NotebookPen className="size-8" />
               </div>
             ),
           })

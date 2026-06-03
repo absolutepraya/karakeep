@@ -14,6 +14,10 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        // DESIGN "Lift": soft, navy-tinted, low. Card hover/focus only.
+        lift: "0 4px 12px rgba(2, 8, 23, 0.08)",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
