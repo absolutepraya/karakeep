@@ -1,140 +1,87 @@
 # Abhip fork setup
 
-This repo is the personal Karakeep fork for UI/QoL work.
+Personal Karakeep fork for UI/QoL work. Public repo. Deploys are **pull-based**
+(GitHub Actions builds the image; the VPS pulls it) because the VPS firewalls SSH
+to Tailscale only, so CI can't push-deploy over SSH.
 
 ## Repo layout
 
-- Local path: `~/Documents/Projects/Karakeep/karakeep`
 - `origin`: `git@github.com:absolutepraya/karakeep.git`
 - `upstream`: `git@github.com:karakeep-app/karakeep.git`
 
 ## Local development
 
-### Recommended: Docker dev stack
-
-Karakeep already ships a good dev compose stack, so use that first.
-
-1. Create a local root `.env`.
-2. Start the stack:
+Runtime: Node 24 (`.nvmrc`), `pnpm@11.2.1` (via corepack; matches `packageManager`).
 
 ```bash
-cd ~/Documents/Projects/Karakeep/karakeep
-docker compose -f docker/docker-compose.dev.yml up
-```
-
-Services:
-
-- Web: `http://localhost:3000`
-- Chrome debugger: `http://localhost:9222`
-- Meilisearch runs inside compose
-
-Stop everything:
-
-```bash
-docker compose -f docker/docker-compose.dev.yml down
-```
-
-If you want a clean rebuild:
-
-```bash
-docker compose -f docker/docker-compose.dev.yml down -v
-```
-
-### Optional: native dev
-
-If you want to run outside Docker, upstream expects:
-
-- Node `24`
-- `corepack` enabled
-- `pnpm@11.2.1`
-
-Then run:
-
-```bash
+# node 24 via mise (this machine's mise + gpg/keyboxd needs the verify bypass once):
+MISE_NODE_GPG_VERIFY=false mise install node@24.16.0
+corepack enable                 # provisions pnpm 11.2.1
 pnpm install
-./start-dev.sh
+
+# each process loads .env from its own CWD — symlink the root .env into each:
+ln -sf ../../.env apps/web/.env
+ln -sf ../../.env apps/workers/.env
+ln -sf ../../.env packages/db/.env
+
+mkdir -p "$(grep '^DATA_DIR=' .env | cut -d= -f2)"
+pnpm db:migrate                 # init the sqlite DB (not auto-run on boot)
+
+pnpm web        # http://localhost:3000
+pnpm workers    # separate terminal
 ```
 
-## Local `.env`
+Meilisearch (search) and headless Chrome (crawling) are optional — the web app
+boots without them. `./start-dev.sh` brings both up in Docker; or use the full
+Docker dev stack: `docker compose -f docker/docker-compose.dev.yml up`.
 
-A local `.env` should exist in the repo root and stay uncommitted.
+## CI (`.github/workflows/ci.yml`)
 
-Recommended values for local dev:
+`lint`, `format`, `typecheck`, `tests`, `open-api-spec`. The fork has **no Turbo
+remote cache**, so `typecheck` and `tests` rebuild everything from scratch and
+exhaust the hosted runner's disk — both jobs include a "Free up disk space" step
+that reclaims ~20GB of unused preinstalled toolchains. (Divergence from upstream.)
 
-```env
-DATA_DIR=/absolute/path/to/karakeep/.data/local
-NEXTAUTH_SECRET=<generated-secret>
-NEXTAUTH_URL=http://localhost:3000
-MEILI_ADDR=http://127.0.0.1:7700
-BROWSER_WEB_URL=http://127.0.0.1:9222
-```
+## Build + deploy (pull-based)
 
-Notes:
+- **`.github/workflows/docker.yml`** ("Build and Push image"): on CI success on
+  `main` (or manual `workflow_dispatch`), builds the `linux/amd64` `aio` image and
+  pushes `ghcr.io/<owner>/karakeep:main` (+ a `:sha-<sha>` tag). No SSH/deploy step.
+- The **GHCR package is public**, so the VPS pulls anonymously (no token).
+- On the VPS, a **watchtower** container (`ghcr.io/nicholas-fedor/watchtower` — the
+  maintained fork; the original `containrrr/watchtower` is abandoned and too old for
+  modern Docker engines) polls GHCR every 60s and recreates `web` when `:main`
+  changes. Only the labeled `web` service is auto-updated (`WATCHTOWER_LABEL_ENABLE`).
 
-- Keep local and VPS secrets separate.
-- For local work, you usually do **not** need to reuse production credentials.
-- If you want realistic data locally, export/import a DB copy from the VPS instead of pointing local dev at prod data.
+Flow: merge to `main` → CI → "Build and Push image" → new `:main` → watchtower
+redeploys `web` within ~1 min. (The image build is the slow part, ~12–20 min.)
 
-## CI/CD shape
+## Deploy compose (`deploy/docker-compose.prod.yml`)
 
-The fork now has a GitHub Actions workflow at `.github/workflows/docker.yml` that:
+Canonical compose for any instance: `web` + `chrome` + `meilisearch` + `watchtower`,
+parametrized by `KARAKEEP_PORT` (host port nginx proxies to) and `KARAKEEP_IMAGE`.
+`web` binds `127.0.0.1:${KARAKEEP_PORT}:3000` (localhost only; nginx fronts it).
 
-1. Waits for the `CI` workflow to pass on `main`
-2. Builds the `aio` Docker image
-3. Pushes it to `ghcr.io/absolutepraya/karakeep:main`
-4. SSHes into the VPS
-5. Uploads `deploy/docker-compose.prod.yml`
-6. Runs `docker compose pull && docker compose up -d`
+## Provisioning a VPS instance (staging is live; prod later)
 
-## GitHub secrets to add
-
-Add these secrets in `absolutepraya/karakeep`:
-
-- `VPS_HOST` — VPS hostname or IP
-- `VPS_USER` — SSH user
-- `VPS_SSH_KEY` — private key for the deploy user
-- `DEPLOY_PATH` — target directory on the VPS, e.g. `/opt/karakeep-fork`
-- `GHCR_READ_TOKEN` — GitHub token with `read:packages`
-
-You can add them with `gh secret set` or via the GitHub UI.
-
-## One-time VPS bootstrap
-
-On the VPS, create a deploy directory and put the production `.env` there.
-
-Example:
+The VPS already runs a staging instance at `keep-dev.<your-domain>` (compose project
+`karakeep-dev` under `~/karakeep-dev`, host port 3100, isolated volumes — separate
+from the live `~/karakeep` instance). To stand up another:
 
 ```bash
-mkdir -p /opt/karakeep-fork
-nano /opt/karakeep-fork/.env
+~/setup-subdomain.sh <sub> <port>          # nginx vhost + Let's Encrypt cert
+mkdir ~/<dir> && cd ~/<dir>
+# copy deploy/docker-compose.prod.yml here as docker-compose.yml, then:
+cat > .env <<'ENV'
+NEXTAUTH_SECRET=...        # openssl rand -base64 36
+MEILI_MASTER_KEY=...       # openssl rand -base64 36
+NEXTAUTH_URL=https://<sub>.<your-domain>
+KARAKEEP_PORT=<port>
+DISABLE_SIGNUPS=false
+ENV
+docker compose up -d
 ```
 
-Then the workflow will keep uploading `docker-compose.yml` into that folder.
-
-If you already have a working Karakeep instance, the easiest path is:
-
-1. Copy its current `.env`
-2. Review `NEXTAUTH_URL`, domain, OAuth callbacks, and any API keys
-3. Decide whether this fork replaces prod or first lands on a staging subdomain
-
-## Production compose file
-
-The deploy workflow uploads `deploy/docker-compose.prod.yml` to the VPS as `docker-compose.yml`.
-
-It uses:
-
-```env
-KARAKEEP_IMAGE=ghcr.io/absolutepraya/karakeep:main
-```
-
-at deploy time, so every merge to `main` rolls out the latest built image.
-
-## Safe rollout suggestion
-
-Do this in two stages:
-
-1. Point the workflow at a staging folder/subdomain first
-2. Test one or two real changes there
-3. Only then switch the live deployment (your production Karakeep domain) over
-
-That will save you from accidentally breaking your current working instance while the fork is still young.
+Add a Cloudflare A record for `<sub>` → server IP, **DNS-only (grey)** — matching
+the other service subdomains. (The orange proxy currently causes a redirect loop
+given the zone SSL mode + nginx's HTTPS redirect; keep services grey.)

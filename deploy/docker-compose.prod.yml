@@ -50,7 +50,9 @@ services:
       - meilisearch:/meili_data
 
   watchtower:
-    image: containrrr/watchtower
+    # Maintained fork; the original containrrr/watchtower is abandoned and its
+    # Docker client (API 1.25) is too old for modern engines (min API 1.44).
+    image: ghcr.io/nicholas-fedor/watchtower:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
