@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 
+# Karakeep dev launcher.
+#   ./start-dev.sh        foreground — logs in this terminal, Ctrl+C stops everything
+#   ./start-dev.sh -d     detached   — frees the shell, logs in .dev/, stop with ./stop-dev.sh
+
+DETACH=0
+case "${1:-}" in
+    -d|--detach) DETACH=1 ;;
+    -h|--help) echo "Usage: ./start-dev.sh [-d|--detach]"; exit 0 ;;
+    "") ;;
+    *) echo "Unknown option: $1"; echo "Usage: ./start-dev.sh [-d|--detach]"; exit 1 ;;
+esac
+
+DEV_DIR=".dev"
+mkdir -p "$DEV_DIR"
+
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -8,6 +23,16 @@ command_exists() {
 # Function to check if a port is in use
 port_in_use() {
     lsof -i :"$1" >/dev/null 2>&1
+}
+
+# Recursively terminate a process and all its descendants (portable: macOS + Linux).
+# pnpm spawns next/tsx children, so killing just the pnpm pid can leave orphans.
+kill_tree() {
+    local pid="$1" child
+    for child in $(pgrep -P "$pid" 2>/dev/null); do
+        kill_tree "$child"
+    done
+    kill "$pid" 2>/dev/null
 }
 
 # Check if Docker is installed
@@ -51,12 +76,12 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # Get DATA_DIR from environment or .env file
-if [ -z "$DATA_DIR" ] && [ -f ".env" ]; then
+if [ -z "${DATA_DIR:-}" ] && [ -f ".env" ]; then
     DATA_DIR=$(grep "^DATA_DIR=" .env | cut -d'=' -f2)
 fi
 
 # Create DATA_DIR if it doesn't exist
-if [ -n "$DATA_DIR" ] && [ ! -d "$DATA_DIR" ]; then
+if [ -n "${DATA_DIR:-}" ] && [ ! -d "$DATA_DIR" ]; then
     echo "Creating DATA_DIR at $DATA_DIR..."
     mkdir -p "$DATA_DIR"
 fi
@@ -65,15 +90,25 @@ echo "Running database migrations..."
 pnpm run db:migrate
 
 echo "Starting web app and workers..."
-pnpm web & WEB_PID=$!
-pnpm workers & WORKERS_PID=$!
+if [ "$DETACH" -eq 1 ]; then
+    nohup pnpm web > "$DEV_DIR/web.log" 2>&1 & WEB_PID=$!
+    nohup pnpm workers > "$DEV_DIR/workers.log" 2>&1 & WORKERS_PID=$!
+else
+    pnpm web & WEB_PID=$!
+    pnpm workers & WORKERS_PID=$!
+fi
+echo "$WEB_PID" > "$DEV_DIR/web.pid"
+echo "$WORKERS_PID" > "$DEV_DIR/workers.pid"
 
-# Function to handle script termination
+# Function to handle script termination (foreground mode)
 cleanup() {
+    echo ""
     echo "Shutting down services..."
-    kill $WEB_PID $WORKERS_PID 2>/dev/null
+    kill_tree "$WEB_PID"
+    kill_tree "$WORKERS_PID"
     docker stop karakeep-meilisearch karakeep-chrome 2>/dev/null
     docker rm karakeep-meilisearch karakeep-chrome 2>/dev/null
+    rm -f "$DEV_DIR/web.pid" "$DEV_DIR/workers.pid"
     exit 0
 }
 
@@ -86,19 +121,27 @@ while [ $ATTEMPT -lt 30 ]; do
     fi
     sleep 1
     ATTEMPT=$((ATTEMPT + 1))
-    if [ $ATTEMPT -eq 30 ]; then
-        echo "Warning: Web app may not have started properly after 30 seconds"
-    fi
 done
+if [ $ATTEMPT -eq 30 ]; then
+    echo "Warning: Web app may not have started properly after 30 seconds"
+fi
 
-# Set up trap to catch termination signals
-trap cleanup SIGINT SIGTERM
-
+echo ""
 echo "Development environment is running!"
-echo "Web app: http://localhost:3000"
-echo "Meilisearch: http://localhost:7700"
-echo "Chrome debugger: http://localhost:9222"
-echo "Press Ctrl+C to stop all services"
+echo "  Web app:         http://localhost:3000"
+echo "  Meilisearch:     http://localhost:7700"
+echo "  Chrome debugger: http://localhost:9222"
 
-# Wait for user interrupt
-wait 
+if [ "$DETACH" -eq 1 ]; then
+    echo ""
+    echo "Running detached (your shell is free)."
+    echo "  Logs:  tail -f $DEV_DIR/web.log $DEV_DIR/workers.log"
+    echo "  Stop:  ./stop-dev.sh"
+    exit 0
+else
+    # Set up trap to catch termination signals
+    trap cleanup SIGINT SIGTERM
+    echo "  Press Ctrl+C to stop all services"
+    # Wait for user interrupt
+    wait
+fi

@@ -5,6 +5,16 @@ on:
     branches: ["*"]
   push:
     branches: ["main"]
+    # Skip CI (and therefore the image build + staging redeploy) for changes that
+    # don't affect the app, so docs/script-only commits don't churn the pipeline.
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "deploy/**"
+      - "start-dev.sh"
+      - "stop-dev.sh"
+      - "LICENSE"
+      - ".gitignore"
   merge_group:
 
 concurrency:

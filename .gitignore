@@ -72,4 +72,7 @@ auth_failures.log
 .aicontext/
 .codex
 .claude/worktrees
+
+# Karakeep dev launcher (./start-dev.sh -d) pids + logs
+.dev/
 jean.json
