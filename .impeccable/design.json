@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-03T00:00:00Z",
+  "title": "Design System: Karakeep",
+  "extensions": {
+    "colorMeta": {
+      "midnight-ink": { "role": "primary", "displayName": "Midnight Ink", "canonical": "hsl(222.2 47.4% 11.2%)", "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "hsl(222.2 84% 4.9%)", "tonalRamp": ["#020617", "#020817", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8"] },
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "hsl(0 0% 100%)", "tonalRamp": ["#cbd5e1", "#e2e8f0", "#f1f5f9", "#f8fafc", "#fcfdfe", "#ffffff", "#ffffff", "#ffffff"] },
+      "frost": { "role": "neutral", "displayName": "Frost", "canonical": "hsl(210 40% 98%)", "tonalRamp": ["#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9", "#f8fafc", "#ffffff"] },
+      "slate-mist": { "role": "neutral", "displayName": "Slate Mist", "canonical": "hsl(210 40% 96.1%)", "tonalRamp": ["#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9"] },
+      "slate-line": { "role": "neutral", "displayName": "Slate Line", "canonical": "hsl(214.3 31.8% 91.4%)", "tonalRamp": ["#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9"] },
+      "slate-quiet": { "role": "neutral", "displayName": "Slate Quiet", "canonical": "hsl(215.4 16.3% 46.9%)", "tonalRamp": ["#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0"] },
+      "slate-deep": { "role": "neutral", "displayName": "Slate Deep", "canonical": "hsl(217.2 32.6% 17.5%)", "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1"] },
+      "slate-haze": { "role": "neutral", "displayName": "Slate Haze", "canonical": "hsl(215 20.2% 65.1%)", "tonalRamp": ["#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9"] },
+      "signal-red": { "role": "status", "displayName": "Signal Red", "canonical": "hsl(0 84.2% 60.2%)", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5"] },
+      "signal-red-deep": { "role": "status", "displayName": "Signal Red Deep", "canonical": "hsl(0 80% 45%)", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#cc1717", "#dc2626", "#ef4444", "#f87171", "#fca5a5"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Card titles, section and page headings. Inter 600 at 24px, tracking -0.025em." },
+      "title": { "displayName": "Title", "purpose": "Sub-section headers, dialog titles, list group labels. Inter 600 at 18px." },
+      "body": { "displayName": "Body", "purpose": "The workhorse: nearly all UI text. Inter 400 at 14px. Long-form notes step to 16px, capped 65-75ch." },
+      "label": { "displayName": "Label", "purpose": "Badges, tags, metadata, micro-labels. Inter 600 at 12px. Buttons use 14px/500." }
+    },
+    "shadows": [
+      { "name": "resting", "value": "none", "purpose": "Default for cards, inputs, containers. Structure comes from a 1px border, not shadow." },
+      { "name": "lift", "value": "0 4px 12px rgba(2, 8, 23, 0.08)", "purpose": "Soft navy-tinted lift on hover/focus of an interactive card." },
+      { "name": "drag", "value": "0 4px 12px rgba(0, 0, 0, 0.15)", "purpose": "Stronger shadow on the floating pill shown while dragging a bookmark." }
+    ],
+    "motion": [
+      { "name": "ease-out-standard", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default ease-out for state transitions and reveals. No bounce, no elastic." },
+      { "name": "duration-hover", "value": "200ms", "purpose": "Card action / overlay reveal on group-hover." },
+      { "name": "duration-accordion", "value": "200ms", "purpose": "Radix accordion open/close (accordion-down / accordion-up keyframes)." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1400px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The decisive action: save, confirm, apply. Midnight Ink fill, Frost text.",
+      "html": "<button class='ds-btn-primary'>Save bookmark</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; height:40px; padding:8px 16px; border:none; border-radius:6px; background:#0f172a; color:#f8fafc; font:500 14px/1 Inter, sans-serif; cursor:pointer; transition:background .2s cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background:#1e293b; } .ds-btn-primary:focus-visible { outline:none; box-shadow:0 0 0 2px #fff, 0 0 0 4px #0f172a; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Lower-emphasis action sitting beside a primary. Slate Mist fill, Midnight Ink text.",
+      "html": "<button class='ds-btn-secondary'>Cancel</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; height:40px; padding:8px 16px; border:none; border-radius:6px; background:#f1f5f9; color:#0f172a; font:500 14px/1 Inter, sans-serif; cursor:pointer; transition:background .2s cubic-bezier(0.16,1,0.3,1); } .ds-btn-secondary:hover { background:#e2e8f0; } .ds-btn-secondary:focus-visible { outline:none; box-shadow:0 0 0 2px #fff, 0 0 0 4px #0f172a; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Dense, low-chrome action for card toolbars and list rows. No fill at rest; accent tint on hover.",
+      "html": "<button class='ds-btn-ghost'>More</button>",
+      "css": ".ds-btn-ghost { display:inline-flex; align-items:center; justify-content:center; height:40px; padding:8px 16px; border:none; border-radius:6px; background:transparent; color:#0f172a; font:500 14px/1 Inter, sans-serif; cursor:pointer; transition:background .15s cubic-bezier(0.16,1,0.3,1); } .ds-btn-ghost:hover { background:#f1f5f9; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "The retrieval entry point. 40px field, hairline border, leading magnifier, quiet 1px focus ring.",
+      "html": "<div class='ds-input-search'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'></circle><path d='m21 21-4.3-4.3'></path></svg><input placeholder='Search bookmarks' /></div>",
+      "css": ".ds-input-search { display:flex; align-items:center; gap:8px; height:40px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; width:280px; } .ds-input-search svg { color:#64748b; flex:none; } .ds-input-search input { flex:1; min-width:0; border:none; outline:none; background:transparent; font:400 14px/1.4 Inter, sans-serif; color:#020817; } .ds-input-search input::placeholder { color:#64748b; } .ds-input-search:focus-within { border-color:#020817; box-shadow:0 0 0 1px #020817; }"
+    },
+    {
+      "name": "Tag",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "The spine of retrieval: a fully-rounded pill, high-contrast, never faint.",
+      "html": "<span class='ds-tag'>typescript</span>",
+      "css": ".ds-tag { display:inline-flex; align-items:center; padding:2px 10px; border:1px solid transparent; border-radius:9999px; background:#0f172a; color:#f8fafc; font:600 12px/1.4 Inter, sans-serif; transition:background .15s cubic-bezier(0.16,1,0.3,1); } .ds-tag:hover { background:#1e293b; }"
+    },
+    {
+      "name": "Bookmark Card",
+      "kind": "card",
+      "refersTo": "bookmark-card",
+      "description": "Signature component. Flat tile at rest; lift + hover-revealed action overlay on approach.",
+      "html": "<article class='ds-bookmark'><div class='ds-bookmark__actions'><button aria-label='Favorite'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11.5 2.8 14 8l5.7.8-4.1 4 1 5.7-5.1-2.7L7.3 18.5l1-5.7L4 8.8 9.7 8z'></path></svg></button><button aria-label='More'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='5' r='1'></circle><circle cx='12' cy='12' r='1'></circle><circle cx='12' cy='19' r='1'></circle></svg></button></div><div class='ds-bookmark__img'><svg width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'></rect><circle cx='9' cy='9' r='2'></circle><path d='m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21'></path></svg></div><div class='ds-bookmark__body'><h3 class='ds-bookmark__title'>Designing for retrieval, not just capture</h3><div class='ds-bookmark__meta'>example.com · 2d ago</div></div></article>",
+      "css": ".ds-bookmark { position:relative; display:flex; flex-direction:column; width:240px; overflow:hidden; border:1px solid #e2e8f0; border-radius:8px; background:#fff; transition:box-shadow .2s cubic-bezier(0.16,1,0.3,1); } .ds-bookmark:hover { box-shadow:0 4px 12px rgba(2,8,23,.08); } .ds-bookmark__img { display:flex; align-items:center; justify-content:center; height:140px; background:#f1f5f9; color:#94a3b8; } .ds-bookmark__body { padding:8px 12px 12px; } .ds-bookmark__title { margin:0 0 6px; font:600 14px/1.3 Inter, sans-serif; color:#020817; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; } .ds-bookmark__meta { font:400 12px/1 Inter, sans-serif; color:#64748b; } .ds-bookmark__actions { position:absolute; top:8px; right:8px; display:flex; gap:4px; padding:4px; border-radius:6px; background:rgba(255,255,255,.5); backdrop-filter:blur(4px); opacity:0; transition:opacity .2s cubic-bezier(0.16,1,0.3,1); } .ds-bookmark:hover .ds-bookmark__actions { opacity:1; } .ds-bookmark__actions button { display:flex; padding:3px; border:none; border-radius:4px; background:transparent; color:#0f172a; cursor:pointer; } .ds-bookmark__actions button:hover { background:rgba(255,255,255,.6); }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Vertical rail. Muted by default, accent-tint hover, full-strength active route.",
+      "html": "<ul class='ds-nav'><li class='ds-nav__item ds-nav__item--active'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'></path><path d='M9 22V12h6v10'></path></svg><span>Home</span></li><li class='ds-nav__item'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z'></path></svg><span>Bookmarks</span></li><li class='ds-nav__item'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z'></path><circle cx='7.5' cy='7.5' r='.5' fill='currentColor'></circle></svg><span>Tags</span></li></ul>",
+      "css": ".ds-nav { list-style:none; margin:0; padding:8px; width:220px; display:flex; flex-direction:column; gap:2px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; } .ds-nav__item { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; font:400 14px/1 Inter, sans-serif; color:#64748b; cursor:pointer; transition:background .15s cubic-bezier(0.16,1,0.3,1), color .15s cubic-bezier(0.16,1,0.3,1); } .ds-nav__item svg { flex:none; color:inherit; } .ds-nav__item:hover { background:#f1f5f9; color:#020817; } .ds-nav__item--active { background:#f1f5f9; color:#020817; font-weight:500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Curator's Desk",
+    "overview": "Karakeep is the desk where one person keeps everything worth keeping. Not a corporate dashboard, not a public feed: a private, premium workspace where every saved thing has a place and is fast to reach. The room is dark slate and clean paper; the light falls on the work, not the furniture. Two motions define it: dropping something onto the desk (capture, instant, no ceremony) and reaching back for it later (retrieve, reliable, fast). The system is monochromatic on purpose: navy and a quiet neutral ramp carry the entire interface, so the only saturated color on a normal screen comes from the saved content itself. The chrome recedes; the collection glows.",
+    "keyCharacteristics": [
+      "Monochrome navy + neutral chrome; saved content is the only color that matters.",
+      "Flat at rest, lifting only when touched.",
+      "Tactile, confident components with decisive states.",
+      "One typeface (Inter), hierarchy from weight and size.",
+      "Dense where density helps retrieval; calm everywhere else.",
+      "Full light/dark parity; both themes are first-class."
+    ],
+    "rules": [
+      { "name": "The Content-Is-Color Rule", "body": "The chrome is navy and neutral, full stop. The only saturated color on an ordinary screen comes from the saved bookmarks themselves: thumbnails, favicons, cover art. Never introduce a decorative accent hue.", "section": "colors" },
+      { "name": "The Red-Means-Destroy Rule", "body": "Signal Red appears only on destructive actions and error states. It is never a brand accent, never a highlight, never decorative.", "section": "colors" },
+      { "name": "The One Voice Rule", "body": "Inter is the only typeface in the product. No second display serif, no accent face, no mono except inside actual code/kbd elements. Distinctiveness is earned through weight, size, and spacing.", "section": "typography" },
+      { "name": "The Sentence-Case Rule", "body": "Labels and buttons are sentence case or short Title Case, never ALL CAPS body. Uppercase is allowed only on micro-labels of four words or fewer.", "section": "typography" },
+      { "name": "The Flat-At-Rest Rule", "body": "Surfaces carry no drop shadow at rest. If you see a shadow, the element is being hovered, focused, or dragged. A shadow that's always on is a bug, not a style.", "section": "elevation" },
+      { "name": "The Hover-Reveals Rule", "body": "Card chrome is invisible until hover. The resting state shows only content; controls appear on approach. This is how a dense wall of bookmarks stays scannable.", "section": "components" }
+    ],
+    "dos": [
+      "Do keep navy + neutral as the entire chrome, and let saved content be the only saturated color on screen.",
+      "Do separate surfaces with a 1px border and keep them flat at rest; reserve shadow for hover, focus, and drag.",
+      "Do build hierarchy from Inter weight + size alone.",
+      "Do hold metadata, captions, and placeholders to at least 4.5:1 contrast; use Slate Quiet / Slate Haze deliberately and bump toward Ink/Frost if a tint pulls them under the bar.",
+      "Do keep every animation to color/opacity with an ease-out curve, and give each a prefers-reduced-motion fallback.",
+      "Do maintain full keyboard operability with a visible focus ring, and keep light/dark at parity.",
+      "Do reserve Signal Red for destructive and error states only.",
+      "Do hide secondary card actions until hover so dense collections stay scannable."
+    ],
+    "donts": [
+      "Don't ship the untouched shadcn / slate starter look. If a screen could be any default shadcn demo, it has no identity yet.",
+      "Don't strip a screen to a bare, under-furnished minimal demo. Nice and easy to see, with substance, beats empty.",
+      "Don't build a heavy SaaS dashboard: no gradient hero-metric blocks, no endless identical icon-heading-text card grids.",
+      "Don't make it a toy: no bouncy/elastic motion, no over-rounded blobs, no emoji-as-UI.",
+      "Don't optimize a screen for long-form reading at the expense of save speed or scan/search quality.",
+      "Don't use a border-left/border-right greater than 1px as a colored accent stripe.",
+      "Don't use gradient text, and don't introduce a second decorative accent hue.",
+      "Don't apply blur/glass as decoration; the only sanctioned glass is the functional action-overlay scrim over card images.",
+      "Don't let any surface carry a permanent drop shadow, and don't use arbitrary z-index values; use the semantic scale.",
+      "Don't set sentences in ALL CAPS; reserve uppercase for micro-labels of four words or fewer."
+    ]
+  }
+}
