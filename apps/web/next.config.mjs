@@ -1,4 +1,21 @@
 import bundleAnalyzer from "@next/bundle-analyzer";
+import { execSync } from "node:child_process";
+
+// Fork versioning: surface the git commit as SERVER_VERSION so the sidebar
+// shows the build you're running. Docker builds set SERVER_VERSION via a build
+// arg; locally we derive it from git (no-op when git isn't available).
+if (!process.env.SERVER_VERSION) {
+  try {
+    process.env.SERVER_VERSION = execSync("git rev-parse --short HEAD", {
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch {
+    // No git in this environment (e.g. inside the Docker build); keep whatever
+    // SERVER_VERSION the build arg provided.
+  }
+}
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",

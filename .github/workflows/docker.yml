@@ -63,7 +63,7 @@ jobs:
           # Single-arch: the VPS is amd64 (Jetorbit). Building arm64 under QEMU
           # roughly doubles build time for an image that is never run.
           platforms: linux/amd64
-          build-args: SERVER_VERSION=main
+          build-args: SERVER_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
           push: true
           tags: |
             ${{ steps.meta.outputs.image_ref }}
