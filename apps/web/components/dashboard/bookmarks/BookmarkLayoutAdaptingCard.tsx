@@ -263,7 +263,7 @@ function ListView({
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
           {showTags &&
             (bookmark.tags.length > 0 || isBookmarkStillTagging(bookmark)) && (
-              <div className="flex shrink-0 flex-wrap gap-1 overflow-hidden">
+              <div className="flex shrink-0 flex-wrap gap-1">
                 <TagList
                   bookmark={bookmark}
                   loading={isBookmarkStillTagging(bookmark)}
@@ -315,7 +315,7 @@ function GridView({
       <OwnerIndicator bookmark={bookmark} />
       <DragHandle bookmark={bookmark} className="left-2 top-2" />
       {img && <div className="h-56 w-full shrink-0 overflow-hidden">{img}</div>}
-      <div className="flex h-full flex-col justify-between gap-1 overflow-hidden p-2">
+      <div className="flex h-full flex-col justify-between gap-1 overflow-hidden px-2 pb-1 pt-2">
         <div className="grow-1 flex flex-col gap-2 overflow-hidden">
           {showTitle && title && (
             <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-lg font-semibold">
@@ -326,7 +326,7 @@ function GridView({
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
           {showTags &&
             (bookmark.tags.length > 0 || isBookmarkStillTagging(bookmark)) && (
-              <div className="flex shrink-0 flex-wrap gap-1 overflow-hidden">
+              <div className="flex shrink-0 flex-wrap gap-1">
                 <TagList
                   className={wrapTags ? undefined : "h-full"}
                   bookmark={bookmark}
