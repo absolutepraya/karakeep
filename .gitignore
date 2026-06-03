@@ -45,6 +45,10 @@ yarn-error.log*
 **/*.db
 data
 
+# Local dev data dir (DATA_DIR) — holds the real bookmark DB + assets pulled from
+# prod. MUST stay out of the (public) repo.
+/.data/
+
 # PWA Files
 **/public/sw.js
 **/public/workbox-*.js
