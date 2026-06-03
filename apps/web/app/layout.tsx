@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Google_Sans_Code, Nunito } from "next/font/google";
 import Script from "next/script";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-import "@karakeep/tailwind-config/globals.css";
+import "./globals.css";
 import "streamdown/styles.css";
 
 import type { Viewport } from "next";
@@ -16,9 +16,18 @@ import { Toaster } from "sonner";
 
 import { clientConfig } from "@karakeep/shared/config";
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ["latin"],
-  fallback: ["sans-serif"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-nunito",
+  fallback: ["system-ui", "sans-serif"],
+});
+
+const googleSansCode = Google_Sans_Code({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-google-sans-code",
+  fallback: ["ui-monospace", "monospace"],
 });
 
 export const metadata: Metadata = {
@@ -71,9 +80,10 @@ export default async function RootLayout({
     <html
       lang={userSettings.lang}
       dir={isRTL ? "rtl" : "ltr"}
+      className={`${nunito.variable} ${googleSansCode.variable}`}
       suppressHydrationWarning
     >
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <NuqsAdapter>
           <Providers
             session={session}

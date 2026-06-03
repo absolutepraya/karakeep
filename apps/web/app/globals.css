@@ -156,16 +156,29 @@
 }
 
 @keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
 }
 @keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 @keyframes pulse-border {
-  0%, 100% { box-shadow: 0 0 0 0 gray; }
-  50% { box-shadow: 0 0 0 2px gray; }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 gray;
+  }
+  50% {
+    box-shadow: 0 0 0 2px gray;
+  }
 }
 
 /* Container utility ported from the old preset (centered, 2rem padding, 1400px cap). */
