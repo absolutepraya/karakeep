@@ -33,6 +33,23 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  icons: {
+    // Theme-aware favicon: the icon lives in the browser tab chrome, so it
+    // tracks the OS/browser color scheme. Light tab -> dark (black) logo;
+    // dark tab -> light (white) logo. favicon.ico remains the legacy fallback.
+    icon: [
+      {
+        url: "/karakeep-dark.svg",
+        media: "(prefers-color-scheme: light)",
+        type: "image/svg+xml",
+      },
+      {
+        url: "/karakeep-light.svg",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/svg+xml",
+      },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
