@@ -87,7 +87,7 @@ function ListSelectorComponent({
     >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-(--radix-popover-trigger-width) p-0"
         onWheel={(e) => e.stopPropagation()}
       >
         <Command>

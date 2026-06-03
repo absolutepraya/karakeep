@@ -368,7 +368,7 @@ export function TagsEditor({
             </div>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[--radix-popover-trigger-width] p-0"
+            className="w-(--radix-popover-trigger-width) p-0"
             align="start"
             onWheel={(e) => e.stopPropagation()}
           >
