@@ -219,7 +219,8 @@ const SearchInput = React.forwardRef<
             </div>
           </PopoverTrigger>
           <PopoverContent
-            className="w-(--radix-popover-trigger-width) p-0"
+            className="p-0"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
             onOpenAutoFocus={(e) => e.preventDefault()}
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
