@@ -199,13 +199,15 @@ export default function EditorCard({ className }: { className?: string }) {
       <form
         className={cn(
           className,
-          "relative flex flex-col gap-2 rounded-xl bg-card p-4",
+          "relative flex flex-col gap-2 rounded-xl bg-card p-4 transition-shadow focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/30",
           cardHeight,
         )}
         onSubmit={form.handleSubmit(onSubmit, onError)}
       >
         <div className="flex justify-between">
-          <p className="text-sm">{t("editor.new_item")}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {t("editor.new_item")}
+          </p>
           <Kbd>⌘ + E</Kbd>
         </div>
         <Separator />
@@ -215,7 +217,7 @@ export default function EditorCard({ className }: { className?: string }) {
               ref={inputRef}
               disabled={isPending}
               className={cn(
-                "h-full w-full border-none p-0 text-base focus-visible:ring-0",
+                "h-full w-full border-none bg-transparent p-0 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0",
                 { "resize-none": bookmarkLayout !== "list" },
               )}
               placeholder={t("editor.placeholder_v2")}
