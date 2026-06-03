@@ -1,0 +1,222 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@plugin "@tailwindcss/typography";
+
+/* Dark mode is driven by a `.dark` class on <html> (next-themes). */
+@custom-variant dark (&:is(.dark *));
+
+/* Extra class sources beyond apps/web (monorepo deps Tailwind won't auto-scan). */
+@source "../../../packages/shared-react/components";
+@source "../../../node_modules/streamdown/dist/*.js";
+@source "../../../node_modules/@streamdown/cjk/dist/*.js";
+@source "../../../node_modules/@streamdown/code/dist/*.js";
+@source "../../../node_modules/@streamdown/math/dist/*.js";
+@source "../../../node_modules/@streamdown/mermaid/dist/*.js";
+
+/* ============================================================
+   Direction A — refined monochrome (navy + cool neutral).
+   LIGHT: cool-grey canvas so white cards pop.
+   ============================================================ */
+:root {
+  --background: #eef1f6;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0f172a;
+  --primary-foreground: #f8fafc;
+  --secondary: #eef2f7;
+  --secondary-foreground: #0f172a;
+  --muted: #eef2f7;
+  --muted-foreground: #64748b;
+  --accent: #e7edf4;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0f172a;
+
+  /* status families - Direction A keeps these neutral; destructive is the only saturated break */
+  --info: #0f172a;
+  --info-foreground: #f8fafc;
+  --success: #0f172a;
+  --success-foreground: #f8fafc;
+  --warning: #0f172a;
+  --warning-foreground: #f8fafc;
+
+  /* dedicated sidebar surface (applied to the rail during Phase 2 polish) */
+  --sidebar: #f6f8fb;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #0f172a;
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: #e7edf4;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #0f172a;
+
+  --radius: 0.5rem;
+}
+
+/* DARK: deepest canvas, cards visibly elevated above it (the dead-slab fix). */
+.dark {
+  --background: #0b1120;
+  --foreground: #e6edf6;
+  --card: #16203a;
+  --card-foreground: #e6edf6;
+  --popover: #16203a;
+  --popover-foreground: #e6edf6;
+  --primary: #e8eef7;
+  --primary-foreground: #0f172a;
+  --secondary: #1c2740;
+  --secondary-foreground: #e6edf6;
+  --muted: #1c2740;
+  --muted-foreground: #8b9bb4;
+  --accent: #233152;
+  --accent-foreground: #e6edf6;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: #243149;
+  --input: #243149;
+  --ring: #cbd5e1;
+
+  --info: #e6edf6;
+  --info-foreground: #0b1120;
+  --success: #e6edf6;
+  --success-foreground: #0b1120;
+  --warning: #e6edf6;
+  --warning-foreground: #0b1120;
+
+  --sidebar: #0e1626;
+  --sidebar-foreground: #e6edf6;
+  --sidebar-primary: #e8eef7;
+  --sidebar-primary-foreground: #0f172a;
+  --sidebar-accent: #233152;
+  --sidebar-accent-foreground: #e6edf6;
+  --sidebar-border: #243149;
+  --sidebar-ring: #cbd5e1;
+}
+
+/* Map tokens to Tailwind's color/utility namespace. `inline` so .dark overrides apply. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Fonts - variables are set by next/font in layout.tsx (a later task). */
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-google-sans-code), ui-monospace, monospace;
+
+  /* Radius scale (ported from the old preset). */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* DESIGN "Lift" shadow - card hover/focus. */
+  --shadow-lift: 0 4px 12px rgb(2 8 23 / 0.08);
+
+  /* Animations ported from the old preset (used by Radix overlays + crawl indicator). */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-pulse-border: pulse-border 1s ease-in-out infinite;
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 gray; }
+  50% { box-shadow: 0 0 0 2px gray; }
+}
+
+/* Container utility ported from the old preset (centered, 2rem padding, 1400px cap). */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  width: 100%;
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Sleek scrollbar for the sidebar only (ported from the shared preset). */
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(100 116 139 / 0.15);
+    border-radius: 3px;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(100 116 139 / 0.25);
+  }
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(100 116 139 / 0.15) transparent;
+  }
+}
+
+/* Respect reduced-motion: neutralize transitions/animations app-wide while
+   keeping transitionend/animationend firing (component logic depends on them). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
