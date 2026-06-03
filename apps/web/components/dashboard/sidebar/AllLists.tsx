@@ -278,7 +278,7 @@ export default function AllLists({
                 </button>
               ) : undefined
             }
-            className="shadow-xs h-8 rounded-lg focus-visible:ring-[3px] [&::-webkit-search-cancel-button]:appearance-none"
+            className="shadow-xs h-8 rounded-lg focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 [&::-webkit-search-cancel-button]:appearance-none"
           />
         </li>
       )}
