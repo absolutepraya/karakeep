@@ -197,22 +197,25 @@ export default function AllLists({
   // a flat name match. An empty query falls back to the normal tree.
   const trimmedQuery = query.trim().toLowerCase();
   const isSearching = trimmedQuery.length > 0;
-  const filteredLists = useMemo(
-    () =>
-      isSearching
-        ? lists.data.filter((list) =>
-            list.name.toLowerCase().includes(trimmedQuery),
-          )
-        : [],
-    [isSearching, trimmedQuery, lists.data],
-  );
-
-  // True if this node's name matches, or any descendant matches - lets the
-  // search results reuse the real folder tree so folders with subfolders stay
-  // expandable, like the normal list view.
-  const subtreeMatches = (node: ZBookmarkListTreeNode): boolean =>
-    node.item.name.toLowerCase().includes(trimmedQuery) ||
-    node.children.some((child) => subtreeMatches(child));
+  // Search results start at each matched folder (the top-most match), not the
+  // tree root: searching "B" in A > B > C yields a tree rooted at B with C
+  // collapsed underneath; the ancestor A is not shown. A match nested under
+  // another match stays inside that ancestor's subtree rather than repeated.
+  const matchedRoots = useMemo(() => {
+    if (!isSearching) return [];
+    const roots: ZBookmarkListTreeNode[] = [];
+    const walk = (node: ZBookmarkListTreeNode, ancestorMatched: boolean) => {
+      const selfMatched = node.item.name.toLowerCase().includes(trimmedQuery);
+      if (selfMatched && !ancestorMatched) {
+        roots.push(node);
+      }
+      node.children.forEach((child) =>
+        walk(child, ancestorMatched || selfMatched),
+      );
+    };
+    Object.values(lists.root).forEach((node) => walk(node, false));
+    return roots;
+  }, [isSearching, trimmedQuery, lists.root]);
 
   // Check if any shared list is currently being viewed
   const isViewingSharedList = useMemo(() => {
@@ -280,11 +283,14 @@ export default function AllLists({
         </li>
       )}
       {isSearching ? (
-        filteredLists.length > 0 ? (
+        matchedRoots.length > 0 ? (
           <CollapsibleBookmarkLists
-            listsData={lists}
-            filter={(node) => subtreeMatches(node)}
-            isOpenFunc={(node) => subtreeMatches(node)}
+            listsData={{
+              ...lists,
+              root: Object.fromEntries(
+                matchedRoots.map((node) => [node.item.id, node]),
+              ),
+            }}
             render={({ node, level, open, numBookmarks }) => (
               <DroppableListSidebarItem
                 node={node}
