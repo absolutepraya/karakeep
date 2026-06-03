@@ -15,28 +15,34 @@ colors:
   signal-red-deep: "#cc1717"
 typography:
   headline:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "Nunito, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 600
     lineHeight: 1
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "Nunito, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.4
     letterSpacing: "-0.0125em"
   body:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "Nunito, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.43
     letterSpacing: "normal"
   label:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "Nunito, sans-serif"
     fontSize: "0.75rem"
     fontWeight: 600
     lineHeight: 1
+    letterSpacing: "normal"
+  mono:
+    fontFamily: "Google Sans Code, monospace"
+    fontSize: "0.8125rem"
+    fontWeight: 400
+    lineHeight: 1.5
     letterSpacing: "normal"
 rounded:
   sm: "4px"
@@ -105,13 +111,13 @@ It rejects, by name, five things from the product brief. It is not the **untouch
 - Monochrome navy + neutral chrome; saved content is the only color that matters.
 - Flat at rest, lifting only when touched.
 - Tactile, confident components with decisive states.
-- One typeface (Inter), hierarchy from weight and size.
+- One UI typeface (Nunito) with a dedicated mono (Google Sans Code) for code; hierarchy from weight and size.
 - Dense where density helps retrieval; calm everywhere else.
 - Full light/dark parity; both themes are first-class.
 
 ## 2. Colors
 
-A near-monochrome navy-and-neutral system. One brand hue (navy), one ramp of cool slate neutrals, and a single red reserved strictly for destruction. Tokens are defined as HSL CSS custom properties (`--primary`, `--background`, …); the hex values below are their resolved sRGB equivalents.
+A near-monochrome navy-and-neutral system. One brand hue (navy), one ramp of cool slate neutrals, and a single red reserved strictly for destruction. Tokens are defined as HSL CSS custom properties (`--primary`, `--background`, …); the hex values below are their resolved sRGB equivalents. The resolved tokens now live in `apps/web/app/globals.css` as the Direction-A light/dark set: a cool-grey light canvas with white cards, and a deep-navy dark canvas with elevated `#16203a` cards, still navy plus neutral monochrome with the Content-Is-Color Rule intact.
 
 ### Primary
 - **Midnight Ink** (`#0f172a` / `--primary: 222.2 47.4% 11.2%`): the signature navy. Primary buttons, badges, active emphasis, and the foreground of headings in light mode. In dark mode the roles invert: Midnight Ink becomes the resting surface and **Frost** becomes the primary fill, which is the intended shadcn inversion, not an accident.
@@ -136,18 +142,19 @@ A near-monochrome navy-and-neutral system. One brand hue (navy), one ramp of coo
 
 ## 3. Typography
 
-**Display / Body / Label Font:** Inter (with `sans-serif` fallback), loaded via `next/font`.
+**UI Font:** Nunito (with `sans-serif` fallback), loaded via `next/font`. It is the single UI typeface for both sans body text and headings. **Mono Font:** Google Sans Code (with `monospace` fallback), used for `code`, `kbd`, and `pre`.
 
-**Character:** One typeface, tuned hard. Inter is neutral, legible at dense sizes, and disappears into the content, which is exactly right for a tool you read *through*, not *at*. Hierarchy is built entirely from weight and size contrast, never from a second face. This is the discipline that keeps "precise" from tipping into "decorated."
+**Character:** One UI typeface, tuned hard. Nunito is friendly, legible at dense sizes, and disappears into the content, which is exactly right for a tool you read *through*, not *at*. Hierarchy is built from Nunito's weight range (400 to 800) plus size and color contrast, never from a second sans face. Code surfaces switch to Google Sans Code so monospaced content stays unmistakably code. This is the discipline that keeps "precise" from tipping into "decorated."
 
 ### Hierarchy
-- **Headline** (Inter 600, 1.5rem / 24px, line-height 1, letter-spacing -0.025em): card titles, section and page headings. Tight tracking gives it a deliberate, set-on-the-page feel.
-- **Title** (Inter 600, 1.125rem / 18px): sub-section headers, dialog titles, list group labels.
-- **Body** (Inter 400, 0.875rem / 14px, line-height 1.43): the workhorse. Nearly all UI text. Long-form note/markdown content steps up to 16px and is capped at 65–75ch for readability.
-- **Label** (Inter 600, 0.75rem / 12px): badges, tags, metadata, and uppercase-free micro-labels. Buttons use 14px / 500 (medium), one notch lighter than headings.
+- **Headline** (Nunito 600, 1.5rem / 24px, line-height 1, letter-spacing -0.025em): card titles, section and page headings. Tight tracking gives it a deliberate, set-on-the-page feel.
+- **Title** (Nunito 600, 1.125rem / 18px): sub-section headers, dialog titles, list group labels.
+- **Body** (Nunito 400, 0.875rem / 14px, line-height 1.43): the workhorse. Nearly all UI text. Long-form note/markdown content steps up to 16px and is capped at 65–75ch for readability.
+- **Label** (Nunito 600, 0.75rem / 12px): badges, tags, metadata, and uppercase-free micro-labels. Buttons use 14px / 500 (medium), one notch lighter than headings.
+- **Mono** (Google Sans Code 400, 0.8125rem / 13px, line-height 1.5): inline `code`, `kbd` chips, and `pre` blocks. The one place a second face is allowed.
 
 ### Named Rules
-**The One Voice Rule.** Inter is the only typeface in the product. No second display serif, no "fun" accent face, no mono except inside actual code/kbd elements. Distinctiveness is earned through weight, size, and spacing, never through font roulette.
+**The One Voice Rule.** Nunito is the single UI typeface for sans and headings: one sans voice, no font roulette. No second display serif, no "fun" accent face. The only sanctioned exception is Google Sans Code as the dedicated mono for actual code, `kbd`, and `pre` elements. Distinctiveness across the UI is earned through Nunito's weight, size, and spacing, never through swapping sans faces.
 
 **The Sentence-Case Rule.** Labels and buttons are sentence case or short Title Case, never ALL CAPS body. Uppercase is allowed only on micro-labels of ≤4 words (a `kbd` chip, a status pill), never on sentences.
 
@@ -210,7 +217,7 @@ The heart of the product: the unit of the collection. A flat, `overflow-hidden r
 ### Do:
 - **Do** keep navy + neutral as the entire chrome, and let saved content (thumbnails, favicons) be the only saturated color on screen (the Content-Is-Color Rule).
 - **Do** separate surfaces with `1px solid var(--border)` and keep them flat at rest; reserve shadow for hover, focus, and drag (the Flat-At-Rest Rule).
-- **Do** build hierarchy from Inter weight + size alone (the One Voice Rule).
+- **Do** build hierarchy from Nunito weight + size alone (the One Voice Rule).
 - **Do** hold metadata, captions, and placeholders to ≥4.5:1 contrast. Use Slate Quiet (`#64748b`) / Slate Haze (`#94a3b8`) deliberately, and bump toward Ink/Frost if a tint pulls them under the bar.
 - **Do** keep every animation to `transition-colors` / opacity with an `ease-out` curve, and give each a `prefers-reduced-motion: reduce` fallback.
 - **Do** maintain full keyboard operability with a visible `ring-2 ring-ring` focus ring, and keep light/dark at parity.
