@@ -15,7 +15,7 @@ import { toast } from "@/components/ui/sonner";
 import { BOOKMARK_DRAG_MIME } from "@/lib/bookmark-drag";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
-import { MoreHorizontal, Plus, Search } from "lucide-react";
+import { MoreHorizontal, Plus, Search, X } from "lucide-react";
 
 import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 import {
@@ -207,6 +207,13 @@ export default function AllLists({
     [isSearching, trimmedQuery, lists.data],
   );
 
+  // True if this node's name matches, or any descendant matches - lets the
+  // search results reuse the real folder tree so folders with subfolders stay
+  // expandable, like the normal list view.
+  const subtreeMatches = (node: ZBookmarkListTreeNode): boolean =>
+    node.item.name.toLowerCase().includes(trimmedQuery) ||
+    node.children.some((child) => subtreeMatches(child));
+
   // Check if any shared list is currently being viewed
   const isViewingSharedList = useMemo(() => {
     return lists.data.some(
@@ -256,22 +263,39 @@ export default function AllLists({
               defaultValue: "Search lists",
             })}
             startIcon={<Search className="size-3.5 text-muted-foreground" />}
-            className="shadow-xs h-8 rounded-lg focus-visible:ring-[3px]"
+            endIcon={
+              query ? (
+                <button
+                  type="button"
+                  aria-label={t("actions.clear", { defaultValue: "Clear" })}
+                  onClick={() => setQuery("")}
+                  className="flex items-center text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : undefined
+            }
+            className="shadow-xs h-8 rounded-lg focus-visible:ring-[3px] [&::-webkit-search-cancel-button]:appearance-none"
           />
         </li>
       )}
       {isSearching ? (
         filteredLists.length > 0 ? (
-          filteredLists.map((list) => (
-            <DroppableListSidebarItem
-              key={list.id}
-              node={{ item: list, children: [] }}
-              level={0}
-              open={false}
-              selectedListId={selectedListId}
-              setSelectedListId={setSelectedListId}
-            />
-          ))
+          <CollapsibleBookmarkLists
+            listsData={lists}
+            filter={(node) => subtreeMatches(node)}
+            isOpenFunc={(node) => subtreeMatches(node)}
+            render={({ node, level, open, numBookmarks }) => (
+              <DroppableListSidebarItem
+                node={node}
+                level={level}
+                open={open}
+                numBookmarks={numBookmarks}
+                selectedListId={selectedListId}
+                setSelectedListId={setSelectedListId}
+              />
+            )}
+          />
         ) : (
           <li className="px-2 py-1 text-xs text-muted-foreground">
             {t("lists.no_lists_found", { defaultValue: "No lists found" })}
