@@ -20,7 +20,7 @@ export default async function Sidebar({
   return (
     <aside className="bg-sidebar flex h-[calc(100vh-64px)] w-60 flex-col gap-5 p-4">
       <div>
-        <ul className="space-y-2 text-sm">
+        <ul className="space-y-1 text-sm">
           {items(t).map((item) => (
             <SidebarItem
               key={item.name}
