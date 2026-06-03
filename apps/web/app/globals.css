@@ -203,7 +203,7 @@
 @layer components {
   /* Sleek scrollbar for the sidebar only (ported from the shared preset). */
   .sidebar-scrollbar::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
   }
   .sidebar-scrollbar::-webkit-scrollbar-track {
     background: transparent;
