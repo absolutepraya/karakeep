@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { Maximize2 } from "lucide-react";
 
@@ -13,6 +14,7 @@ export default function BookmarkActionBar({
 }: {
   bookmark: ZBookmark;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex text-muted-foreground">
       {bookmark.favourited && (
@@ -20,6 +22,7 @@ export default function BookmarkActionBar({
       )}
       <Link
         href={`/dashboard/preview/${bookmark.id}`}
+        aria-label={t("actions.expand")}
         className={cn(buttonVariants({ variant: "ghost" }), "px-2")}
       >
         <Maximize2 size={16} />

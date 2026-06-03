@@ -245,9 +245,12 @@ function HoverActionBar({ bookmark }: { bookmark: ZBookmark }) {
   if (!isOwner || isBulkEditEnabled || demoMode) return null;
 
   return (
-    <div className="pointer-events-none absolute right-2 top-2 z-30 hidden gap-1 rounded bg-white/50 p-1 opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 dark:bg-black/50 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:flex [@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:pointer-events-auto [@media(pointer:fine)]:flex">
+    <div className="pointer-events-none absolute right-2 top-2 z-30 hidden gap-1 rounded bg-white/50 p-1 opacity-0 backdrop-blur-sm transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 dark:bg-black/50 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:flex [@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:pointer-events-auto [@media(pointer:fine)]:flex">
       <button
         title={
+          bookmark.favourited ? t("actions.unfavorite") : t("actions.favorite")
+        }
+        aria-label={
           bookmark.favourited ? t("actions.unfavorite") : t("actions.favorite")
         }
         className="flex items-center justify-center rounded p-0.5 hover:bg-background/50 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:p-0"
@@ -264,6 +267,9 @@ function HoverActionBar({ bookmark }: { bookmark: ZBookmark }) {
       </button>
       <button
         title={
+          bookmark.archived ? t("actions.unarchive") : t("actions.archive")
+        }
+        aria-label={
           bookmark.archived ? t("actions.unarchive") : t("actions.archive")
         }
         className="flex items-center justify-center rounded p-0.5 hover:bg-background/50 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:p-0"
