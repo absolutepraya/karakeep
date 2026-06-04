@@ -15,88 +15,98 @@
 @source "../../../node_modules/@streamdown/mermaid/dist/*.js";
 
 /* ============================================================
-   Direction A — refined monochrome (navy + cool neutral).
-   LIGHT: cool-grey canvas so white cards pop.
+   Ayu palette — dark + light (https://github.com/ayu-theme).
+   LIGHT (Ayu Light): off-white #f8f9fa-family canvas, warm-grey ink
+   (#5c6166), deep-amber accent. The main canvas sits a shade darker
+   than the sidebar/header so white cards pop.
+   Bright #ffaa33 can't double as readable link text on white, so the
+   accent is the deeper #e8870c (still reads as Ayu's orange, ~4.6:1).
    ============================================================ */
 :root {
-  --background: #eef1f6;
-  --foreground: #0f172a;
+  --background: #eceef1;
+  --foreground: #5c6166;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #5c6166;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0f172a;
-  --primary-foreground: #f8fafc;
-  --secondary: #eef2f7;
-  --secondary-foreground: #0f172a;
-  --muted: #eef2f7;
-  --muted-foreground: #64748b;
-  --accent: #e7edf4;
-  --accent-foreground: #0f172a;
+  --popover-foreground: #5c6166;
+  --primary: #e8870c;
+  --primary-foreground: #ffffff;
+  --secondary: #e6e8eb;
+  --secondary-foreground: #5c6166;
+  --muted: #e6e8eb;
+  --muted-foreground: #71757b;
+  --accent: #e0e3e7;
+  --accent-foreground: #5c6166;
   --destructive: #ef4444;
   --destructive-foreground: #f8fafc;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0f172a;
+  --border: #dde0e4;
+  --input: #dde0e4;
+  --ring: #e8870c;
 
-  /* status families - Direction A keeps these neutral; destructive is the only saturated break */
-  --info: #0f172a;
-  --info-foreground: #f8fafc;
-  --success: #0f172a;
-  --success-foreground: #f8fafc;
-  --warning: #0f172a;
-  --warning-foreground: #f8fafc;
+  /* status families - Ayu's syntax hues (blue / green / amber); destructive stays red */
+  --info: #3199e1;
+  --info-foreground: #0b0e14;
+  --success: #6cbf43;
+  --success-foreground: #0b0e14;
+  --warning: #eca944;
+  --warning-foreground: #0b0e14;
 
-  /* dedicated sidebar surface (applied to the rail during Phase 2 polish) */
-  --sidebar: #f6f8fb;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #0f172a;
-  --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: #e7edf4;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #0f172a;
+  /* dedicated sidebar surface - a shade lighter than the main canvas */
+  --sidebar: #f4f6f8;
+  --sidebar-foreground: #5c6166;
+  --sidebar-primary: #e8870c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e6eaee;
+  --sidebar-accent-foreground: #5c6166;
+  --sidebar-border: #dde0e4;
+  --sidebar-ring: #e8870c;
+
+  /* Ayu Light text selection. */
+  --selection: #d3e1f5;
 
   --radius: 0.5rem;
 }
 
-/* DARK: deepest canvas, cards visibly elevated above it (the dead-slab fix). */
+/* DARK (Ayu Dark): deep #0b0e14 canvas, warm-grey ink (#bfbdb6), gold
+   accent (#e6b450). Cards lift above the canvas (the dead-slab fix). */
 .dark {
-  --background: #0b1120;
-  --foreground: #e6edf6;
-  --card: #16203a;
-  --card-foreground: #e6edf6;
-  --popover: #16203a;
-  --popover-foreground: #e6edf6;
-  --primary: #e8eef7;
-  --primary-foreground: #0f172a;
-  --secondary: #1c2740;
-  --secondary-foreground: #e6edf6;
-  --muted: #1c2740;
-  --muted-foreground: #8b9bb4;
-  --accent: #233152;
-  --accent-foreground: #e6edf6;
+  --background: #0b0e14;
+  --foreground: #bfbdb6;
+  --card: #141925;
+  --card-foreground: #bfbdb6;
+  --popover: #141925;
+  --popover-foreground: #bfbdb6;
+  --primary: #e6b450;
+  --primary-foreground: #0b0e14;
+  --secondary: #1a212e;
+  --secondary-foreground: #bfbdb6;
+  --muted: #1a212e;
+  --muted-foreground: #8b8d86;
+  --accent: #232b3a;
+  --accent-foreground: #bfbdb6;
   --destructive: #ef4444;
   --destructive-foreground: #f8fafc;
-  --border: #243149;
-  --input: #243149;
-  --ring: #cbd5e1;
+  --border: #222a36;
+  --input: #262e3b;
+  --ring: #e6b450;
 
-  --info: #e6edf6;
-  --info-foreground: #0b1120;
-  --success: #e6edf6;
-  --success-foreground: #0b1120;
-  --warning: #e6edf6;
-  --warning-foreground: #0b1120;
+  --info: #59c2ff;
+  --info-foreground: #0b0e14;
+  --success: #aad94c;
+  --success-foreground: #0b0e14;
+  --warning: #ffb454;
+  --warning-foreground: #0b0e14;
 
-  --sidebar: #0e1626;
-  --sidebar-foreground: #e6edf6;
-  --sidebar-primary: #e8eef7;
-  --sidebar-primary-foreground: #0f172a;
-  --sidebar-accent: #233152;
-  --sidebar-accent-foreground: #e6edf6;
-  --sidebar-border: #243149;
-  --sidebar-ring: #cbd5e1;
+  --sidebar: #0f131b;
+  --sidebar-foreground: #bfbdb6;
+  --sidebar-primary: #e6b450;
+  --sidebar-primary-foreground: #0b0e14;
+  --sidebar-accent: #1c2330;
+  --sidebar-accent-foreground: #bfbdb6;
+  --sidebar-border: #222a36;
+  --sidebar-ring: #e6b450;
+
+  --selection: #1b3a5b;
 }
 
 /* Map tokens to Tailwind's color/utility namespace. `inline` so .dark overrides apply. */
@@ -197,6 +207,9 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  ::selection {
+    background-color: var(--selection);
   }
 }
 
