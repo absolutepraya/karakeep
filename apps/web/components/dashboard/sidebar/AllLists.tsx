@@ -107,6 +107,7 @@ function DroppableListSidebarItem({
   const canDrop =
     node.item.type === "manual" &&
     (node.item.userRole === "owner" || node.item.userRole === "editor");
+  const showBookmarkCount = numBookmarks !== undefined && numBookmarks > 0;
   const { dropHighlight, onDragOver, onDragEnter, onDragLeave, onDrop } =
     useDropTarget(node.item.id, node.item.name);
 
@@ -145,16 +146,16 @@ function DroppableListSidebarItem({
                 selectedListId == node.item.id ? "opacity-100" : "opacity-0",
               )}
             />
-            <span
-              className={cn(
-                "px-2.5 text-xs font-light text-muted-foreground opacity-100 transition-opacity duration-100 group-hover:opacity-0",
-                selectedListId == node.item.id || numBookmarks === undefined
-                  ? "opacity-0"
-                  : "opacity-100",
-              )}
-            >
-              {numBookmarks}
-            </span>
+            {showBookmarkCount && (
+              <span
+                className={cn(
+                  "px-2.5 text-xs font-light text-muted-foreground opacity-100 transition-opacity duration-100 group-hover:opacity-0",
+                  selectedListId == node.item.id ? "opacity-0" : "opacity-100",
+                )}
+              >
+                {numBookmarks}
+              </span>
+            )}
           </Button>
         </ListOptions>
       }
@@ -238,150 +239,209 @@ export default function AllLists({
     }
   }, [isViewingSharedList, sharedListsOpen]);
 
+  // Drive the top/bottom gradient fades off the actual scroll position: the top
+  // fade only shows once scrolled away from the top, the bottom fade hides once
+  // scrolled to the very bottom.
+  const scrollRef = useRef<HTMLUListElement | null>(null);
+  const [edges, setEdges] = useState({ top: false, bottom: false });
+  const syncEdges = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const overflowing = scrollHeight - clientHeight > 1;
+    setEdges({
+      top: overflowing && scrollTop > 1,
+      bottom: overflowing && scrollTop + clientHeight < scrollHeight - 1,
+    });
+  }, []);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    syncEdges();
+    // ResizeObserver catches viewport/sidebar resizes; MutationObserver catches
+    // content-height changes (folders expanding, lists loading in) that don't
+    // re-render this component.
+    const ro = new ResizeObserver(syncEdges);
+    ro.observe(el);
+    const mo = new MutationObserver(syncEdges);
+    mo.observe(el, { childList: true, subtree: true });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [syncEdges]);
+
   return (
-    <ul className="sidebar-scrollbar max-h-full gap-y-2 overflow-auto pr-2 text-sm">
-      <li className="flex justify-between pb-3">
-        <p className="pl-2 text-xs uppercase tracking-wider text-muted-foreground">
-          Lists
-        </p>
-        <EditListModal>
-          <Link href="#">
-            <Plus
-              className="mr-2 size-4 text-muted-foreground"
-              strokeWidth={1.5}
+    <div className="flex max-h-full min-h-0 flex-col">
+      {/* Pinned header: the "Lists" label + search stay put while the list
+          scrolls underneath them. */}
+      <div className="shrink-0">
+        <div className="flex justify-between pb-3">
+          <p className="pl-2 text-xs uppercase tracking-wider text-muted-foreground">
+            Lists
+          </p>
+          <EditListModal>
+            <Link href="#">
+              <Plus
+                className="mr-2 size-4 text-muted-foreground"
+                strokeWidth={1.5}
+              />
+            </Link>
+          </EditListModal>
+        </div>
+        {lists.data.length > 0 && (
+          <div className="px-1 pb-2">
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("lists.search_placeholder", {
+                defaultValue: "Search lists",
+              })}
+              aria-label={t("lists.search_placeholder", {
+                defaultValue: "Search lists",
+              })}
+              startIcon={<Search className="size-3.5 text-muted-foreground" />}
+              endIcon={
+                query ? (
+                  <button
+                    type="button"
+                    aria-label={t("actions.clear", { defaultValue: "Clear" })}
+                    onClick={() => setQuery("")}
+                    className="flex items-center text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                ) : undefined
+              }
+              className="shadow-xs h-8 rounded-lg focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 [&::-webkit-search-cancel-button]:appearance-none"
             />
-          </Link>
-        </EditListModal>
-      </li>
-      {lists.data.length > 0 && (
-        <li className="px-1 pb-2">
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("lists.search_placeholder", {
-              defaultValue: "Search lists",
-            })}
-            aria-label={t("lists.search_placeholder", {
-              defaultValue: "Search lists",
-            })}
-            startIcon={<Search className="size-3.5 text-muted-foreground" />}
-            endIcon={
-              query ? (
-                <button
-                  type="button"
-                  aria-label={t("actions.clear", { defaultValue: "Clear" })}
-                  onClick={() => setQuery("")}
-                  className="flex items-center text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <X className="size-3.5" />
-                </button>
-              ) : undefined
-            }
-            className="shadow-xs h-8 rounded-lg focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 [&::-webkit-search-cancel-button]:appearance-none"
-          />
-        </li>
-      )}
-      {isSearching ? (
-        matchedRoots.length > 0 ? (
-          <CollapsibleBookmarkLists
-            listsData={{
-              ...lists,
-              root: Object.fromEntries(
-                matchedRoots.map((node) => [node.item.id, node]),
-              ),
-            }}
-            render={({ node, level, open, numBookmarks }) => (
-              <DroppableListSidebarItem
-                node={node}
-                level={level}
-                open={open}
-                numBookmarks={numBookmarks}
-                selectedListId={selectedListId}
-                setSelectedListId={setSelectedListId}
-              />
-            )}
-          />
-        ) : (
-          <li className="px-2 py-1 text-xs text-muted-foreground">
-            {t("lists.no_lists_found", { defaultValue: "No lists found" })}
-          </li>
-        )
-      ) : (
-        <>
-          <SidebarItem
-            collapseButton={<span className="size-4" />}
-            logo={<span className="text-lg">📋</span>}
-            name={t("lists.all_lists")}
-            path={`/dashboard/lists`}
-            linkClassName="py-0.5 px-1"
-            right={<InvitationNotificationBadge />}
-          />
-          <SidebarItem
-            collapseButton={<span className="size-4" />}
-            logo={<span className="text-lg">⭐️</span>}
-            name={t("lists.favourites")}
-            path={`/dashboard/favourites`}
-            linkClassName="py-0.5 px-1"
-          />
+          </div>
+        )}
+      </div>
 
-          {/* Owned Lists */}
-          <CollapsibleBookmarkLists
-            listsData={lists}
-            filter={(node) => node.item.userRole === "owner"}
-            isOpenFunc={isNodeOpen}
-            render={({ node, level, open, numBookmarks }) => (
-              <DroppableListSidebarItem
-                node={node}
-                level={level}
-                open={open}
-                numBookmarks={numBookmarks}
-                selectedListId={selectedListId}
-                setSelectedListId={setSelectedListId}
-              />
-            )}
-          />
-
-          {/* Shared Lists */}
-          {hasSharedLists && (
-            <Collapsible
-              open={sharedListsOpen}
-              onOpenChange={setSharedListsOpen}
-            >
-              <SidebarItem
-                collapseButton={
-                  <CollapsibleTriggerChevron
-                    className="size-4"
-                    open={sharedListsOpen}
+      {/* Scroll viewport with gradient fades top + bottom, so content melts
+          into the sidebar at both edges instead of cutting off hard. */}
+      <div className="relative min-h-0 flex-1">
+        <div
+          className={cn(
+            "from-sidebar pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b to-transparent transition-opacity duration-200",
+            edges.top ? "opacity-100" : "opacity-0",
+          )}
+        />
+        <ul
+          ref={scrollRef}
+          onScroll={syncEdges}
+          className="sidebar-scrollbar h-full gap-y-2 overflow-auto pr-2 text-sm"
+        >
+          {isSearching ? (
+            matchedRoots.length > 0 ? (
+              <CollapsibleBookmarkLists
+                listsData={{
+                  ...lists,
+                  root: Object.fromEntries(
+                    matchedRoots.map((node) => [node.item.id, node]),
+                  ),
+                }}
+                render={({ node, level, open, numBookmarks }) => (
+                  <DroppableListSidebarItem
+                    node={node}
+                    level={level}
+                    open={open}
+                    numBookmarks={numBookmarks}
+                    selectedListId={selectedListId}
+                    setSelectedListId={setSelectedListId}
                   />
-                }
-                logo={<span className="text-lg">👥</span>}
-                name={t("lists.shared_lists")}
-                path="#"
+                )}
+              />
+            ) : (
+              <li className="px-2 py-1 text-xs text-muted-foreground">
+                {t("lists.no_lists_found", { defaultValue: "No lists found" })}
+              </li>
+            )
+          ) : (
+            <>
+              <SidebarItem
+                collapseButton={<span className="size-4" />}
+                logo={<span className="text-lg">📋</span>}
+                name={t("lists.all_lists")}
+                path={`/dashboard/lists`}
+                linkClassName="py-0.5 px-1"
+                right={<InvitationNotificationBadge />}
+              />
+              <SidebarItem
+                collapseButton={<span className="size-4" />}
+                logo={<span className="text-lg">⭐️</span>}
+                name={t("lists.favourites")}
+                path={`/dashboard/favourites`}
                 linkClassName="py-0.5 px-1"
               />
-              <CollapsibleContent>
-                <CollapsibleBookmarkLists
-                  listsData={lists}
-                  filter={(node) => node.item.userRole !== "owner"}
-                  isOpenFunc={isNodeOpen}
-                  indentOffset={1}
-                  render={({ node, level, open, numBookmarks }) => (
-                    <DroppableListSidebarItem
-                      node={node}
-                      level={level}
-                      open={open}
-                      numBookmarks={numBookmarks}
-                      selectedListId={selectedListId}
-                      setSelectedListId={setSelectedListId}
+
+              {/* Owned Lists */}
+              <CollapsibleBookmarkLists
+                listsData={lists}
+                filter={(node) => node.item.userRole === "owner"}
+                isOpenFunc={isNodeOpen}
+                render={({ node, level, open, numBookmarks }) => (
+                  <DroppableListSidebarItem
+                    node={node}
+                    level={level}
+                    open={open}
+                    numBookmarks={numBookmarks}
+                    selectedListId={selectedListId}
+                    setSelectedListId={setSelectedListId}
+                  />
+                )}
+              />
+
+              {/* Shared Lists */}
+              {hasSharedLists && (
+                <Collapsible
+                  open={sharedListsOpen}
+                  onOpenChange={setSharedListsOpen}
+                >
+                  <SidebarItem
+                    collapseButton={
+                      <CollapsibleTriggerChevron
+                        className="size-4"
+                        open={sharedListsOpen}
+                      />
+                    }
+                    logo={<span className="text-lg">👥</span>}
+                    name={t("lists.shared_lists")}
+                    path="#"
+                    linkClassName="py-0.5 px-1"
+                  />
+                  <CollapsibleContent>
+                    <CollapsibleBookmarkLists
+                      listsData={lists}
+                      filter={(node) => node.item.userRole !== "owner"}
+                      isOpenFunc={isNodeOpen}
+                      indentOffset={1}
+                      render={({ node, level, open, numBookmarks }) => (
+                        <DroppableListSidebarItem
+                          node={node}
+                          level={level}
+                          open={open}
+                          numBookmarks={numBookmarks}
+                          selectedListId={selectedListId}
+                          setSelectedListId={setSelectedListId}
+                        />
+                      )}
                     />
-                  )}
-                />
-              </CollapsibleContent>
-            </Collapsible>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </>
           )}
-        </>
-      )}
-    </ul>
+        </ul>
+        <div
+          className={cn(
+            "from-sidebar pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t to-transparent transition-opacity duration-200",
+            edges.bottom ? "opacity-100" : "opacity-0",
+          )}
+        />
+      </div>
+    </div>
   );
 }

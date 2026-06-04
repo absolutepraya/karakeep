@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { Github } from "lucide-react";
 
-// This is a fork, so the sidebar shows the git commit it was built from and
-// links to the fork's repo rather than upstream Karakeep release tags.
-const FORK_REPO_URL = "https://github.com/absolutepraya/karakeep";
+// This is a fork: the sidebar links to the fork's repo and shows the git commit
+// it was built from (linking to that commit) rather than upstream Karakeep tags.
+const FORK_REPO = "absolutepraya/karakeep";
+const FORK_REPO_URL = `https://github.com/${FORK_REPO}`;
 
 function isCommitSha(value?: string): value is string {
   return !!value && /^[0-9a-f]{7,40}$/i.test(value);
@@ -19,19 +21,35 @@ interface SidebarVersionProps {
 export default function SidebarVersion({ serverVersion }: SidebarVersionProps) {
   const commit = serverVersion ?? "unknown";
   const isSha = isCommitSha(commit);
-  const href = isSha ? `${FORK_REPO_URL}/commit/${commit}` : FORK_REPO_URL;
 
   return (
-    <Link
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={isSha ? `Fork build ${commit}` : undefined}
-      className="mt-auto flex items-center gap-1.5 border-t pt-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
-    >
-      <span>Karakeep fork</span>
-      <span aria-hidden>·</span>
-      <span className="font-mono">{isSha ? commit.slice(0, 7) : commit}</span>
-    </Link>
+    <div className="mt-auto flex items-center gap-2.5 border-t pt-2 text-xs">
+      <Github aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <div className="flex min-w-0 flex-col leading-tight">
+        <Link
+          href={FORK_REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="truncate text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {FORK_REPO}
+        </Link>
+        {isSha ? (
+          <Link
+            href={`${FORK_REPO_URL}/commit/${commit}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Fork build ${commit}`}
+            className="truncate font-mono text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {commit.slice(0, 7)}
+          </Link>
+        ) : (
+          <span className="truncate font-mono text-muted-foreground">
+            {commit}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
