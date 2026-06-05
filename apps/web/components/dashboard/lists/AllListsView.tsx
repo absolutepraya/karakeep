@@ -187,7 +187,7 @@ export default function AllListsView({
           height, pinned so they stay reachable while the tree scrolls. On
           mobile the page header is sticky (h-16) so we offset below it; on
           desktop the header sits outside the scroll area, so top-0. */}
-      <div className="sticky top-16 z-20 flex flex-col gap-2 bg-background pb-2 pt-1 sm:top-0 sm:flex-row sm:items-center">
+      <div className="sticky top-16 z-20 flex flex-col gap-2 bg-background pb-2 pt-2 sm:top-0 sm:flex-row sm:items-center">
         <Input
           type="search"
           value={query}
