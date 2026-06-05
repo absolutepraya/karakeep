@@ -197,11 +197,13 @@ export function ChangePassword() {
             />
           </div>
 
-          <div className="flex justify-end">
-            <ActionButton type="submit" loading={mutator.isPending}>
-              {t("actions.save")}
-            </ActionButton>
-          </div>
+          <ActionButton
+            type="submit"
+            loading={mutator.isPending}
+            className="w-full"
+          >
+            {t("actions.save")}
+          </ActionButton>
         </form>
       </Form>
     </SettingsSection>

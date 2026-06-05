@@ -156,7 +156,7 @@ export default function ReaderSettings() {
                     variant="outline"
                     size="sm"
                     onClick={handleClearLocalOverrides}
-                    className="w-fit"
+                    className="w-full"
                   >
                     <Laptop className="mr-2 h-4 w-4" />
                     {t("settings.info.reader_settings.clear_local_overrides")}

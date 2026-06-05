@@ -72,7 +72,7 @@ export default function UserAvatar() {
       title={t("settings.info.avatar.title")}
       description={t("settings.info.avatar.description")}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <div className="flex size-16 items-center justify-center overflow-hidden rounded-full border bg-muted">
             <UserAvatarImage
@@ -89,19 +89,20 @@ export default function UserAvatar() {
             className="hidden"
             onChange={handleFileChange}
           />
-          <ActionButton
-            type="button"
-            variant="secondary"
-            onClick={handleSelectFile}
-            loading={upload.isPending}
-            disabled={isBusy}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            {image
-              ? t("settings.info.avatar.change")
-              : t("settings.info.avatar.upload")}
-          </ActionButton>
         </div>
+        <ActionButton
+          type="button"
+          variant="secondary"
+          onClick={handleSelectFile}
+          loading={upload.isPending}
+          disabled={isBusy}
+          className="w-full"
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          {image
+            ? t("settings.info.avatar.change")
+            : t("settings.info.avatar.upload")}
+        </ActionButton>
         <ActionConfirmingDialog
           title={t("settings.info.avatar.remove_confirm_title")}
           description={
@@ -130,7 +131,12 @@ export default function UserAvatar() {
             </ActionButton>
           )}
         >
-          <Button type="button" variant="outline" disabled={!image || isBusy}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!image || isBusy}
+            className="w-full"
+          >
             <X className="mr-2 h-4 w-4" />
             {t("settings.info.avatar.remove")}
           </Button>
