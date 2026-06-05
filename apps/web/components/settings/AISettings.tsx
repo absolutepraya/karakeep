@@ -39,7 +39,7 @@ import { useUserSettings } from "@/lib/userSettings";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Info, Plus, Save, Trash2 } from "lucide-react";
+import { Info, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -875,7 +875,10 @@ export function PromptDemo() {
 export default function AISettings() {
   const { t } = useTranslation();
   return (
-    <SettingsPage title={t("settings.ai.ai_settings")}>
+    <SettingsPage
+      title={t("settings.ai.ai_settings")}
+      icon={<Sparkles className="size-6 shrink-0 text-muted-foreground" />}
+    >
       <AIPreferences />
       <TagStyleSelector />
       <CuratedTagsSelector />

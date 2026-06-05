@@ -11,21 +11,26 @@ import {
 export function SettingsPage({
   title,
   description,
+  icon,
   action,
   children,
 }: {
   title: string;
   description?: string;
+  icon?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
+            {icon}
+            {title}
+          </h1>
           {description && (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </div>
         {action && <div className="shrink-0">{action}</div>}

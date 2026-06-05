@@ -4,6 +4,7 @@ import ApiKeySettings from "@/components/settings/ApiKeySettings";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { useTranslation } from "@/lib/i18n/server";
 import { getServerAuthSession } from "@/server/auth";
+import { KeyRound } from "lucide-react";
 
 export async function generateMetadata(): Promise<Metadata> {
   // oxlint-disable-next-line rules-of-hooks
@@ -21,6 +22,7 @@ export default async function ApiKeysPage() {
   return (
     <SettingsPage
       title={t("settings.api_keys.api_keys")}
+      icon={<KeyRound className="size-6 shrink-0 text-muted-foreground" />}
       action={<AddApiKey isAdmin={isAdmin} />}
     >
       <ApiKeySettings isAdmin={isAdmin} />

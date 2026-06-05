@@ -23,6 +23,7 @@ import {
   PlusCircle,
   Save,
   Trash2,
+  Webhook,
   X,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -498,6 +499,7 @@ export default function WebhookSettings() {
     <SettingsPage
       title={t("settings.webhooks.webhooks")}
       description={t("settings.webhooks.description")}
+      icon={<Webhook className="size-6 shrink-0 text-muted-foreground" />}
       action={<WebhooksEditorDialog />}
     >
       <SettingsSection>

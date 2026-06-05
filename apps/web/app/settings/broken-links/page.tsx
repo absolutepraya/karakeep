@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Trash2 } from "lucide-react";
+import { Link as LinkIcon, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -69,7 +69,10 @@ export default function BrokenLinksPage() {
     });
 
   return (
-    <SettingsPage title={t("settings.broken_links.broken_links")}>
+    <SettingsPage
+      title={t("settings.broken_links.broken_links")}
+      icon={<LinkIcon className="size-6 shrink-0 text-muted-foreground" />}
+    >
       <SettingsSection>
         {isPending && <FullPageSpinner />}
         {!isPending && data && data.bookmarks.length == 0 && (

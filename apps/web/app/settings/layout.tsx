@@ -142,7 +142,9 @@ export default async function SettingsLayout({
           sidebar={<Sidebar items={settingsSidebarItems} />}
           mobileSidebar={<MobileSidebar items={settingsSidebarItems} />}
         >
-          {children}
+          {/* Keep settings in a focused, centered reading column instead of
+              stretching forms across the full 1400px content container. */}
+          <div className="mx-auto w-full max-w-4xl">{children}</div>
         </SidebarLayout>
       </ReaderSettingsProvider>
     </UserSettingsContextProvider>

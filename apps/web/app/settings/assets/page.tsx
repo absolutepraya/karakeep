@@ -22,7 +22,7 @@ import { ASSET_TYPE_TO_ICON } from "@/lib/attachments";
 import { useTranslation } from "@/lib/i18n/client";
 import { formatBytes } from "@/lib/utils";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ExternalLink, Trash2 } from "lucide-react";
+import { ExternalLink, Image as ImageIcon, Trash2 } from "lucide-react";
 
 import { useDetachBookmarkAsset } from "@karakeep/shared-react/hooks/assets";
 import { useTRPC } from "@karakeep/shared-react/trpc";
@@ -73,7 +73,10 @@ export default function AssetsSettingsPage() {
   }
 
   return (
-    <SettingsPage title={t("settings.manage_assets.manage_assets")}>
+    <SettingsPage
+      title={t("settings.manage_assets.manage_assets")}
+      icon={<ImageIcon className="size-6 shrink-0 text-muted-foreground" />}
+    >
       <SettingsSection>
         {assets.length === 0 && (
           <p className="rounded-md bg-muted p-3 text-center text-sm text-muted-foreground">

@@ -27,6 +27,7 @@ import {
   CirclePlus,
   Edit,
   Plus,
+  Rss,
   Save,
   Trash2,
   XCircle,
@@ -476,6 +477,7 @@ export default function FeedSettings() {
   return (
     <SettingsPage
       title={t("settings.feeds.rss_subscriptions")}
+      icon={<Rss className="size-6 shrink-0 text-muted-foreground" />}
       action={<FeedsEditorDialog />}
     >
       <SettingsSection>

@@ -189,6 +189,7 @@ export default function StatsPage() {
       <SettingsPage
         title={t("settings.stats.usage_statistics")}
         description={t("settings.stats.insights_description")}
+        icon={<BarChart3 className="size-6 shrink-0 text-muted-foreground" />}
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -221,6 +222,7 @@ export default function StatsPage() {
     <SettingsPage
       title={t("settings.stats.usage_statistics")}
       description="Insights into your bookmarking habits and collection"
+      icon={<BarChart3 className="size-6 shrink-0 text-muted-foreground" />}
     >
       {/* Overview Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

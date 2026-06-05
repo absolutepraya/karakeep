@@ -4,6 +4,7 @@ import { SettingsPage } from "@/components/settings/SettingsPage";
 import SubscriptionSettings from "@/components/settings/SubscriptionSettings";
 import { QuotaProgress } from "@/components/subscription/QuotaProgress";
 import { useTranslation } from "@/lib/i18n/server";
+import { CreditCard } from "lucide-react";
 
 import serverConfig from "@karakeep/shared/config";
 
@@ -24,7 +25,10 @@ export default async function SubscriptionPage() {
   const { t } = await useTranslation();
 
   return (
-    <SettingsPage title={t("settings.subscription.subscription")}>
+    <SettingsPage
+      title={t("settings.subscription.subscription")}
+      icon={<CreditCard className="size-6 shrink-0 text-muted-foreground" />}
+    >
       <SubscriptionSettings />
       <QuotaProgress />
     </SettingsPage>

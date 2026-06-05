@@ -366,7 +366,10 @@ export function ImportExportRow() {
 export default function ImportExport() {
   const { t } = useTranslation();
   return (
-    <SettingsPage title={t("settings.import.import_export")}>
+    <SettingsPage
+      title={t("settings.import.import_export")}
+      icon={<Download className="size-6 shrink-0 text-muted-foreground" />}
+    >
       <SettingsSection title={t("settings.import.import_export_bookmarks")}>
         <ImportExportRow />
       </SettingsSection>

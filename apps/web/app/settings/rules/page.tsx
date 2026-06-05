@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { FullPageSpinner } from "@/components/ui/full-page-spinner";
 import { useTranslation } from "@/lib/i18n/client";
 import { useQuery } from "@tanstack/react-query";
-import { PlusCircle } from "lucide-react";
+import { GitBranch, PlusCircle } from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { RuleEngineRule } from "@karakeep/shared/types/rules";
@@ -54,6 +54,7 @@ export default function RulesSettingsPage() {
     <SettingsPage
       title={t("settings.rules.rules")}
       description={t("settings.rules.description")}
+      icon={<GitBranch className="size-6 shrink-0 text-muted-foreground" />}
       action={
         <Button onClick={handleCreateRule} variant="default">
           <PlusCircle className="mr-2 h-4 w-4" />
