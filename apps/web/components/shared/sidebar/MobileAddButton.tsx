@@ -27,7 +27,7 @@ export default function MobileAddButton() {
           onClick={haptic}
           aria-label={label}
           title={label}
-          className="flex w-full flex-col items-center justify-center gap-0.5 rounded-xl bg-primary px-1 py-1 text-primary-foreground transition-opacity active:opacity-90"
+          className="flex w-full flex-col items-center justify-center gap-0.5 rounded-xl bg-primary px-1 py-1.5 text-primary-foreground transition-opacity active:opacity-90"
         >
           <Plus size={18} />
           <span className="text-[0.5625rem] font-medium leading-none">
