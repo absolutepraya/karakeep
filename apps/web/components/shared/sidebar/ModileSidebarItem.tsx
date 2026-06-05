@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { haptic } from "@/lib/haptic";
@@ -16,8 +17,20 @@ export default function MobileSidebarItem({
 }) {
   const currentPath = usePathname();
   const isActive = path == currentPath;
+  const ref = useRef<HTMLLIElement>(null);
+
+  // When the nav scrolls horizontally (dense settings nav), keep the active
+  // tab in view so the user can always see where they are.
+  useEffect(() => {
+    if (isActive) {
+      ref.current?.scrollIntoView({ inline: "center", block: "nearest" });
+    }
+  }, [isActive]);
+
   return (
-    <li className="flex flex-1">
+    // basis lets items keep a comfortable min width and scroll when there are
+    // many; grow makes the few-item dashboard nav spread to fill the bar.
+    <li ref={ref} className="flex shrink-0 grow basis-[3.25rem]">
       <Link
         onClick={haptic}
         href={path}

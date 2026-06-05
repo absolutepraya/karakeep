@@ -21,7 +21,7 @@ export default function MobileAddButton() {
   const label = t("editor.new_item", { defaultValue: "New item" });
 
   return (
-    <li className="flex flex-1">
+    <li className="flex shrink-0 grow basis-[3.25rem]">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
           onClick={haptic}
