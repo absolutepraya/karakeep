@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Google_Sans_Code, Nunito } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
@@ -17,17 +17,17 @@ import { Toaster } from "sonner";
 
 import { clientConfig } from "@karakeep/shared/config";
 
-const nunito = Nunito({
+// Inter + JetBrains Mono are variable fonts, so we load the full weight range
+// (no `weight` needed). Theme preset fonts; emoji stays in the fallback chain.
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-nunito",
+  variable: "--font-inter",
   fallback: ["Noto Color Emoji", "system-ui", "sans-serif"],
 });
 
-const googleSansCode = Google_Sans_Code({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-google-sans-code",
+  variable: "--font-jetbrains-mono",
   fallback: ["Noto Color Emoji", "ui-monospace", "monospace"],
 });
 
@@ -81,7 +81,7 @@ export default async function RootLayout({
     <html
       lang={userSettings.lang}
       dir={isRTL ? "rtl" : "ltr"}
-      className={`${nunito.variable} ${googleSansCode.variable}`}
+      className={`${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
