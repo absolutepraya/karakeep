@@ -257,7 +257,10 @@ export default function AllTagsView() {
       )}
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-          <span className="text-xl sm:text-2xl">{t("tags.all_tags")}</span>
+          <h1 className="flex items-center gap-2 text-2xl tracking-normal text-foreground">
+            <Tag className="size-6 shrink-0 text-muted-foreground" />
+            {t("tags.all_tags")}
+          </h1>
           {/* Controls collapse to icon-only on mobile so the header stays a
               single compact row; labels return at sm. */}
           <div className="flex items-center justify-end gap-1.5 sm:gap-2">
