@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/lib/i18n/server";
 import { api } from "@/server/api/client";
-import { Mail } from "lucide-react";
+import { Mail, User } from "lucide-react";
 
 import { Label } from "../ui/label";
 import { SettingsSection } from "./SettingsPage";
@@ -13,15 +13,19 @@ export default async function UserDetails() {
 
   return (
     <SettingsSection title={t("settings.info.basic_details")}>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-sm font-medium">
+          <Label
+            htmlFor="name"
+            className="flex items-center gap-2 text-sm font-medium"
+          >
+            <User className="h-4 w-4" />
             {t("common.name")}
           </Label>
           <Input
             id="name"
             defaultValue={whoami.name ?? ""}
-            className="h-11"
+            className="h-9"
             disabled
           />
         </div>
@@ -38,7 +42,7 @@ export default async function UserDetails() {
               id="email"
               type="email"
               defaultValue={whoami.email ?? ""}
-              className="h-11"
+              className="h-9"
               disabled
             />
           </div>

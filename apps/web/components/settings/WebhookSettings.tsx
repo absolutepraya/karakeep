@@ -510,7 +510,7 @@ export default function WebhookSettings() {
           </p>
         )}
         {webhooks && webhooks.webhooks.length > 0 && (
-          <Table className="table-auto">
+          <Table className="table-auto whitespace-nowrap">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.url")}</TableHead>

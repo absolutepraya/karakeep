@@ -22,7 +22,7 @@ export function SettingsPage({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
           <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
@@ -53,12 +53,13 @@ export function SettingsSection({
   children: React.ReactNode;
   variant?: "default" | "danger";
 }) {
+  const hasHeader = !!(title || description || action);
   return (
     <Card
       className={variant === "danger" ? "border-destructive/20" : undefined}
     >
-      {(title || description || action) && (
-        <CardHeader>
+      {hasHeader && (
+        <CardHeader className="p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
               {title && (
@@ -77,9 +78,7 @@ export function SettingsSection({
           </div>
         </CardHeader>
       )}
-      <CardContent
-        className={cn("space-y-4", !(title || description || action) && "pt-6")}
-      >
+      <CardContent className={cn("space-y-3 p-4", hasHeader && "pt-0")}>
         {children}
       </CardContent>
     </Card>

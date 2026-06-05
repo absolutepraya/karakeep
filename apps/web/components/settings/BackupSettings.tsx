@@ -92,7 +92,7 @@ function BackupConfigurationForm() {
     <SettingsSection title={t("settings.backups.configuration.title")}>
       <Form {...form}>
         <form
-          className="space-y-4"
+          className="space-y-3"
           onSubmit={form.handleSubmit((value) => {
             updateSettings(value);
           })}
@@ -390,7 +390,7 @@ function BackupsList() {
       )}
 
       {backups && backups.backups.length > 0 && (
-        <Table>
+        <Table className="whitespace-nowrap">
           <TableHeader>
             <TableRow>
               <TableHead>

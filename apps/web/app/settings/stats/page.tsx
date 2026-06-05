@@ -146,11 +146,11 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon}
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-0">
         <div className="text-2xl font-bold">{value}</div>
         {description && (
           <p className="text-xs text-muted-foreground">{description}</p>
@@ -194,10 +194,10 @@ export default function StatsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader className="space-y-0 pb-2">
+              <CardHeader className="space-y-0 p-4 pb-2">
                 <Skeleton className="h-4 w-24" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 pt-0">
                 <Skeleton className="mb-2 h-8 w-16" />
                 <Skeleton className="h-3 w-32" />
               </CardContent>
@@ -275,16 +275,16 @@ export default function StatsPage() {
           description={t("settings.stats.overview.bookmarks_added")}
         />
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Bookmark Types */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
               {t("settings.stats.bookmark_types.title")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 pt-0">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -353,13 +353,13 @@ export default function StatsPage() {
 
         {/* Recent Activity */}
         <Card className="flex flex-col">
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               {t("settings.stats.recent_activity.title")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-1 items-center">
+          <CardContent className="flex flex-1 items-center p-4 pt-0">
             <div className="grid w-full grid-cols-3 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-green-600">
@@ -391,13 +391,13 @@ export default function StatsPage() {
 
         {/* Top Domains */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
               {t("settings.stats.top_domains.title")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             {stats.topDomains.length > 0 ? (
               <div className="space-y-3">
                 {stats.topDomains
@@ -437,13 +437,13 @@ export default function StatsPage() {
 
         {/* Top Tags */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <Hash className="h-5 w-5" />
               {t("settings.stats.most_used_tags.title")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             {stats.tagUsage.length > 0 ? (
               <div className="space-y-3">
                 {stats.tagUsage
@@ -480,13 +480,13 @@ export default function StatsPage() {
 
         {/* Bookmark Sources */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5" />
               {t("settings.stats.bookmark_sources.title")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             {stats.bookmarksBySource.length > 0 ? (
               <div className="space-y-3">
                 {stats.bookmarksBySource.map(
@@ -518,10 +518,10 @@ export default function StatsPage() {
         </Card>
       </div>
       {/* Activity Patterns */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Hourly Activity */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               {t("settings.stats.activity_patterns.activity_by_hour")}
@@ -532,7 +532,7 @@ export default function StatsPage() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <SimpleBarChart
               data={stats.bookmarkingActivity.byHour.map(
                 (h: { hour: number; count: number }) => h.count,
@@ -545,7 +545,7 @@ export default function StatsPage() {
 
         {/* Daily Activity */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
               {t("settings.stats.activity_patterns.activity_by_day")}
@@ -556,7 +556,7 @@ export default function StatsPage() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <SimpleBarChart
               data={stats.bookmarkingActivity.byDayOfWeek.map(
                 (d: { day: number; count: number }) => d.count,
@@ -570,13 +570,13 @@ export default function StatsPage() {
       {/* Asset Storage */}
       {stats.assetsByType.length > 0 && (
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4">
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
               {t("settings.stats.storage_breakdown.title")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {stats.assetsByType.map(
                 (asset: { type: string; count: number; totalSize: number }) => (

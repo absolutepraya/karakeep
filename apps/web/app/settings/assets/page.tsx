@@ -84,7 +84,7 @@ export default function AssetsSettingsPage() {
           </p>
         )}
         {assets.length > 0 && (
-          <Table>
+          <Table className="whitespace-nowrap">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("settings.manage_assets.asset_type")}</TableHead>
@@ -99,11 +99,13 @@ export default function AssetsSettingsPage() {
             <TableBody>
               {assets.map((asset) => (
                 <TableRow key={asset.id}>
-                  <TableCell className="flex items-center gap-2">
-                    {ASSET_TYPE_TO_ICON[asset.assetType]}
-                    <span>
-                      {humanFriendlyNameForAssertType(asset.assetType)}
-                    </span>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {ASSET_TYPE_TO_ICON[asset.assetType]}
+                      <span>
+                        {humanFriendlyNameForAssertType(asset.assetType)}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>{formatBytes(asset.size)}</TableCell>
                   <TableCell>

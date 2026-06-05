@@ -72,7 +72,7 @@ export function ChangePassword() {
   return (
     <SettingsSection title="Security">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
           <FormField
             control={form.control}
             name="currentPassword"
@@ -90,7 +90,7 @@ export function ChangePassword() {
                       id="current-password"
                       type={showCurrentPassword ? "text" : "password"}
                       placeholder={t("settings.info.current_password")}
-                      className="h-11 pr-10"
+                      className="h-9 pr-10"
                       {...field}
                     />
                   </FormControl>
@@ -113,7 +113,7 @@ export function ChangePassword() {
             )}
           />
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
             <FormField
               control={form.control}
               name="newPassword"
@@ -131,7 +131,7 @@ export function ChangePassword() {
                         id="new-password"
                         type={showNewPassword ? "text" : "password"}
                         placeholder={t("settings.info.new_password")}
-                        className="h-11 pr-10"
+                        className="h-9 pr-10"
                         {...field}
                       />
                     </FormControl>
@@ -171,7 +171,7 @@ export function ChangePassword() {
                         id="confirm-password"
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder={t("settings.info.confirm_new_password")}
-                        className="h-11 pr-10"
+                        className="h-9 pr-10"
                         {...field}
                       />
                     </FormControl>

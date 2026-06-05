@@ -1,6 +1,8 @@
 import type { SubmitErrorHandler, SubmitHandler } from "react-hook-form";
-import React, { useImperativeHandle, useMemo, useRef } from "react";
+import React, { useImperativeHandle, useMemo, useRef, useState } from "react";
+import { BookmarkListSelector } from "@/components/dashboard/lists/BookmarkListSelector";
 import { ActionButton } from "@/components/ui/action-button";
+import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormItem } from "@/components/ui/form";
 import { Kbd } from "@/components/ui/kbd";
 import { Separator } from "@/components/ui/separator";
@@ -15,11 +17,13 @@ import {
 } from "@/lib/userLocalSettings/bookmarksLayout";
 import { cn, getOS } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useHotkeys } from "react-hotkeys-hook";
 import { z } from "zod";
 
 import { useCreateBookmarkWithPostHook } from "@karakeep/shared-react/hooks/bookmarks";
+import { useAddBookmarkToList } from "@karakeep/shared-react/hooks/lists";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
 import { useUploadAsset } from "../UploadDropzone";
@@ -80,12 +84,39 @@ export default function EditorCard({
     inputRef.current?.focus();
   });
 
+  // Optional destination folder for newly created bookmarks. Defaults to null
+  // (no folder / home). A ref mirrors the state so the create-success handler
+  // always reads the current selection, even when a multi-URL paste fires many
+  // creations in a row.
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const selectedListIdRef = useRef<string | null>(null);
+  const updateSelectedList = (listId: string | null) => {
+    setSelectedListId(listId);
+    selectedListIdRef.current = listId;
+  };
+
+  const { mutateAsync: addToList } = useAddBookmarkToList({
+    onError: () => {
+      toast({
+        description: t("common.something_went_wrong"),
+        variant: "destructive",
+      });
+    },
+  });
+
   const { mutate, isPending } = useCreateBookmarkWithPostHook({
     onSuccess: (resp) => {
       if (resp.alreadyExists) {
         toast({
           description: <BookmarkAlreadyExistsToast bookmarkId={resp.id} />,
           variant: "default",
+        });
+      }
+      // File the new bookmark into the chosen folder, if any.
+      if (selectedListIdRef.current) {
+        void addToList({
+          bookmarkId: resp.id,
+          listId: selectedListIdRef.current,
         });
       }
       form.reset();
@@ -139,7 +170,9 @@ export default function EditorCard({
   };
   const cardHeight = useBookmarkLayoutSwitch({
     grid: "h-96",
-    masonry: "h-48",
+    // A touch taller than the old h-48 so the destination-folder row and the
+    // Save button both fit inside the compact masonry card.
+    masonry: "h-60",
     list: undefined,
     compact: undefined,
   });
@@ -218,7 +251,7 @@ export default function EditorCard({
           <Kbd>⌘ + E</Kbd>
         </div>
         <Separator />
-        <FormItem className="flex-1">
+        <FormItem className="min-h-0 flex-1">
           <FormControl>
             <Textarea
               ref={inputRef}
@@ -253,6 +286,31 @@ export default function EditorCard({
             />
           </FormControl>
         </FormItem>
+        {/* Optional destination folder, sitting right above Save. Empty by
+            default, in which case new bookmarks land in no folder (home). */}
+        <div className="flex items-center gap-2">
+          <BookmarkListSelector
+            value={selectedListId}
+            onChange={updateSelectedList}
+            listTypes={["manual"]}
+            placeholder={t("actions.add_to_list")}
+            disabled={isPending || demoMode}
+            className="flex-1"
+          />
+          {selectedListId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              aria-label={t("actions.clear", { defaultValue: "Clear" })}
+              disabled={isPending}
+              onClick={() => updateSelectedList(null)}
+            >
+              <X className="size-4" />
+            </Button>
+          )}
+        </div>
         <ActionButton
           disabled={!form.formState.dirtyFields.text}
           loading={isPending}

@@ -476,7 +476,7 @@ export default function FeedSettings() {
   const { data: feeds, isLoading } = useQuery(api.feeds.list.queryOptions());
   return (
     <SettingsPage
-      title={t("settings.feeds.rss_subscriptions")}
+      title="RSS"
       icon={<Rss className="size-6 shrink-0 text-muted-foreground" />}
       action={<FeedsEditorDialog />}
     >
@@ -488,7 +488,7 @@ export default function FeedSettings() {
           </p>
         )}
         {feeds && feeds.feeds.length > 0 && (
-          <Table>
+          <Table className="whitespace-nowrap">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>

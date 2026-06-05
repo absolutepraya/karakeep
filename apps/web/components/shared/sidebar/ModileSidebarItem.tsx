@@ -30,7 +30,7 @@ export default function MobileSidebarItem({
   return (
     // basis lets items keep a comfortable min width and scroll when there are
     // many; grow makes the few-item dashboard nav spread to fill the bar.
-    <li ref={ref} className="flex shrink-0 grow basis-[3.25rem]">
+    <li ref={ref} className="flex min-w-0 shrink-0 grow basis-[3.25rem]">
       <Link
         onClick={haptic}
         href={path}

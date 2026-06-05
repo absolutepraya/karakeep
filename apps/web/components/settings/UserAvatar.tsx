@@ -72,8 +72,8 @@ export default function UserAvatar() {
       title={t("settings.info.avatar.title")}
       description={t("settings.info.avatar.description")}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-center gap-4">
           <div className="flex size-16 items-center justify-center overflow-hidden rounded-full border bg-muted">
             <UserAvatarImage
               image={image}

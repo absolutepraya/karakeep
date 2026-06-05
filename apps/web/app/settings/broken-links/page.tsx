@@ -81,7 +81,7 @@ export default function BrokenLinksPage() {
           </p>
         )}
         {!isPending && data && data.bookmarks.length > 0 && (
-          <Table>
+          <Table className="whitespace-nowrap">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.url")}</TableHead>

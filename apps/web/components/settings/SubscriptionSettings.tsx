@@ -117,7 +117,7 @@ export default function SubscriptionSettings() {
       description={t("settings.subscription.manage_subscription")}
     >
       {isQueryLoading ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Skeleton className="h-4 w-24" />
@@ -175,7 +175,7 @@ export default function SubscriptionSettings() {
           <div className="space-y-4">
             {!subscriptionStatus?.hasActiveSubscription ? (
               <div className="space-y-4">
-                <div className="rounded-lg border p-6">
+                <div className="rounded-lg border p-4">
                   <h3 className="font-semibold">
                     {t("settings.subscription.paid_plan")}
                   </h3>

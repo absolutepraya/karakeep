@@ -102,7 +102,7 @@ export default function ReaderSettings() {
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4">
           <CollapsibleTrigger className="flex w-full items-center justify-between [&[data-state=open]>svg]:rotate-180">
             <div className="flex flex-col items-start gap-1 text-left">
               <CardTitle className="text-lg">
@@ -116,7 +116,7 @@ export default function ReaderSettings() {
           </CollapsibleTrigger>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 p-4 pt-0">
             {/* Local Overrides Warning */}
             {hasLocalOverrides && (
               <Alert>
@@ -181,7 +181,7 @@ export default function ReaderSettings() {
                   }
                 }}
               >
-                <SelectTrigger className="h-11">
+                <SelectTrigger className="h-9">
                   <SelectValue
                     placeholder={t("settings.info.reader_settings.not_set")}
                   />

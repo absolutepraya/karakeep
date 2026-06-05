@@ -115,7 +115,7 @@ export function ImportSessionCard({ session }: ImportSessionCardProps) {
 
   return (
     <Card className="transition-all hover:shadow-md">
-      <CardHeader className="pb-3">
+      <CardHeader className="p-4 pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h3 className="font-medium">{session.name}</h3>
@@ -140,7 +140,7 @@ export function ImportSessionCard({ session }: ImportSessionCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="p-4 pt-0">
         <div className="space-y-3">
           {/* Progress Section */}
           <div className="space-y-3">

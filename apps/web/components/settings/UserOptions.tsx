@@ -8,7 +8,7 @@ import { useInterfaceLang } from "@/lib/userLocalSettings/bookmarksLayout";
 import { updateInterfaceLang } from "@/lib/userLocalSettings/userLocalSettings";
 import { useUserSettings } from "@/lib/userSettings";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Archive, Bookmark, Clock } from "lucide-react";
+import { Archive, Bookmark, Clock, Languages } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -39,7 +39,7 @@ const LanguageSelect = () => {
         await updateInterfaceLang(val);
       }}
     >
-      <SelectTrigger className="h-11">
+      <SelectTrigger className="h-9">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -141,7 +141,8 @@ export default function UserOptions() {
     <Form {...form}>
       <SettingsSection title={t("settings.info.options")}>
         <div className="space-y-2">
-          <Label className="text-sm font-medium">
+          <Label className="flex items-center gap-2 text-sm font-medium">
+            <Languages className="h-4 w-4" />
             {t("settings.info.interface_lang")}
           </Label>
           <LanguageSelect />
@@ -165,7 +166,7 @@ export default function UserOptions() {
                   });
                 }}
               >
-                <SelectTrigger className="h-11">
+                <SelectTrigger className="h-9">
                   <SelectValue>
                     {timezones?.find(
                       (tz: { value: string; label: string }) =>
@@ -185,7 +186,7 @@ export default function UserOptions() {
           )}
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           <FormField
             control={form.control}
             name="bookmarkClickAction"
@@ -205,7 +206,7 @@ export default function UserOptions() {
                     });
                   }}
                 >
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-9">
                     <SelectValue>
                       {bookmarkClickActionTranslation[field.value]}
                     </SelectValue>
@@ -245,7 +246,7 @@ export default function UserOptions() {
                     });
                   }}
                 >
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-9">
                     <SelectValue>
                       {archiveDisplayBehaviourTranslation[field.value]}
                     </SelectValue>

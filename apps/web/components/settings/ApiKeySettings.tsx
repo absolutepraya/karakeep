@@ -22,7 +22,7 @@ export default async function ApiKeys({ isAdmin }: { isAdmin: boolean }) {
   const keys = await api.apiKeys.list();
   return (
     <SettingsSection>
-      <Table>
+      <Table className="whitespace-nowrap">
         <TableHeader>
           <TableRow>
             <TableHead>{t("common.name")}</TableHead>

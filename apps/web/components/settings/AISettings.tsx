@@ -204,7 +204,7 @@ export function AIPreferences() {
             />
           )}
 
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end pt-2">
             <ActionButton type="submit" loading={isPending} variant="default">
               <Save className="mr-2 size-4" />
               {t("actions.save")}
@@ -809,7 +809,7 @@ export function PromptDemo() {
       title={t("settings.ai.prompt_preview")}
       description="Preview the actual prompts sent to AI based on your settings"
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div>
           <p className="mb-2 text-sm font-medium">
             {t("settings.ai.text_prompt")}
