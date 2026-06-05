@@ -1,6 +1,7 @@
 import { useTranslation } from "@/lib/i18n/server";
 import { TFunction } from "i18next";
 
+import MobileAddButton from "./MobileAddButton";
 import MobileSidebarItem from "./ModileSidebarItem";
 import { TSidebarItem } from "./TSidebarItem";
 
@@ -12,8 +13,11 @@ export default async function MobileSidebar({
   // oxlint-disable-next-line rules-of-hooks
   const { t } = await useTranslation();
   return (
-    <aside className="w-full overflow-x-auto">
-      <ul className="flex justify-between space-x-2 border-b-black px-5 py-2 pt-5">
+    <nav
+      className="fixed inset-x-3 bottom-0 z-40 sm:hidden"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+    >
+      <ul className="flex items-center gap-0.5 rounded-2xl border bg-card/90 p-1 shadow-lg backdrop-blur-md">
         {items(t).map((item) => (
           <MobileSidebarItem
             key={item.name}
@@ -22,7 +26,8 @@ export default async function MobileSidebar({
             path={item.path}
           />
         ))}
+        <MobileAddButton />
       </ul>
-    </aside>
+    </nav>
   );
 }

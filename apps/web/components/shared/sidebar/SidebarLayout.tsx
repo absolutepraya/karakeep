@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import ErrorFallback from "@/components/dashboard/ErrorFallback";
 import Header from "@/components/dashboard/header/Header";
 import DemoModeBanner from "@/components/DemoModeBanner";
-import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/spinner";
 import ValidAccountCheck from "@/components/utils/ValidAccountCheck";
 import { ErrorBoundary } from "react-error-boundary";
@@ -28,16 +27,15 @@ export default function SidebarLayout({
         <div className="hidden flex-none sm:flex">{sidebar}</div>
         <main className="flex-1 bg-background sm:min-h-0 sm:overflow-y-auto sm:rounded-tl-lg sm:border-l sm:border-t">
           {serverConfig.demoMode && <DemoModeBanner />}
-          <div className="block w-full sm:hidden">
-            {mobileSidebar}
-            <Separator />
-          </div>
           {modal}
-          <div className="min-h-30 container p-4">
+          {/* Extra bottom padding on mobile so the floating nav never covers
+              the last row of content. */}
+          <div className="min-h-30 container p-4 pb-20 sm:pb-4">
             <ErrorBoundary fallback={<ErrorFallback />}>
               <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
             </ErrorBoundary>
           </div>
+          {mobileSidebar}
         </main>
       </div>
     </div>

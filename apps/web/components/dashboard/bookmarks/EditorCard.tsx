@@ -53,7 +53,13 @@ function parseImportableUrls(text: string): string[] | null {
   return urls;
 }
 
-export default function EditorCard({ className }: { className?: string }) {
+export default function EditorCard({
+  className,
+  onCreated,
+}: {
+  className?: string;
+  onCreated?: () => void;
+}) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -87,6 +93,7 @@ export default function EditorCard({ className }: { className?: string }) {
       if (bookmarkLayout === "list" && inputRef?.current?.style) {
         inputRef.current.style.height = "auto";
       }
+      onCreated?.();
     },
     onError: (e) => {
       toast({ description: e.message, variant: "destructive" });

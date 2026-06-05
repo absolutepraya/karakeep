@@ -22,15 +22,16 @@ export default function MobileSidebarItem({
         onClick={haptic}
         href={path}
         title={name}
+        aria-label={name}
         className={cn(
-          "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 transition-colors active:bg-accent",
+          "flex w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 transition-colors active:bg-accent",
           isActive
             ? "bg-accent text-foreground"
             : "text-muted-foreground hover:bg-accent hover:text-foreground",
         )}
       >
         {logo}
-        <span className="max-w-full truncate text-[0.625rem] leading-tight">
+        <span className="max-w-full truncate text-[0.5625rem] leading-none">
           {name}
         </span>
       </Link>
