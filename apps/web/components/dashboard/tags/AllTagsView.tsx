@@ -190,9 +190,9 @@ export default function AllTagsView() {
       ) => {
         if (isLoading && tags.length === 0) {
           return (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               {Array.from({ length: 15 }).map((_, index) => (
-                <Skeleton key={`tag-skeleton-${index}`} className="h-9 w-24" />
+                <Skeleton key={`tag-skeleton-${index}`} className="h-6 w-16" />
               ))}
             </div>
           );
@@ -210,7 +210,7 @@ export default function AllTagsView() {
         }
 
         return (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {tags.map((t) =>
               bulkEditEnabled ? (
                 <MultiTagSelector
@@ -234,7 +234,7 @@ export default function AllTagsView() {
               Array.from({ length: 3 }).map((_, index) => (
                 <Skeleton
                   key={`tag-skeleton-loading-${index}`}
-                  className="h-9 w-24"
+                  className="h-6 w-16"
                 />
               ))}
           </div>
@@ -257,8 +257,10 @@ export default function AllTagsView() {
       )}
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-          <span className="text-2xl">{t("tags.all_tags")}</span>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="text-xl sm:text-2xl">{t("tags.all_tags")}</span>
+          {/* Controls collapse to icon-only on mobile so the header stays a
+              single compact row; labels return at sm. */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
             <CreateTagModal />
             <BulkTagAction />
             <Toggle
@@ -269,9 +271,15 @@ export default function AllTagsView() {
               onPressedChange={toggleDraggingEnabled}
               disabled={isBulkEditEnabled}
             >
-              <Combine className="mr-2 size-4" />
-              {t("tags.drag_and_drop_merging")}
-              <InfoTooltip size={15} className="my-auto ml-2" variant="explain">
+              <Combine className="size-4 sm:mr-2" />
+              <span className="hidden sm:inline">
+                {t("tags.drag_and_drop_merging")}
+              </span>
+              <InfoTooltip
+                size={15}
+                className="my-auto ml-2 hidden sm:block"
+                variant="explain"
+              >
                 <p>{t("tags.drag_and_drop_merging_info")}</p>
               </InfoTooltip>
             </Toggle>

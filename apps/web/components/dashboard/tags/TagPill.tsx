@@ -79,14 +79,14 @@ export const TagPill = React.memo(function TagPill({
     >
       <Link
         className={
-          "flex gap-2 rounded-md border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
+          "flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-0.5 text-xs text-foreground hover:bg-foreground hover:text-background"
         }
         href={`/dashboard/tags/${id}`}
         data-id={id}
         draggable={false}
         prefetch={false}
       >
-        {name} <Separator orientation="vertical" /> {count}
+        {name} <Separator orientation="vertical" className="h-3" /> {count}
       </Link>
 
       {isHovered && !isDraggable && (

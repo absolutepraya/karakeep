@@ -119,8 +119,8 @@ export default function BulkTagAction() {
           pressed={isBulkEditEnabled}
           onPressedChange={setIsBulkEditEnabled}
         >
-          <Pencil className="mr-2 size-4" />
-          {t("actions.bulk_edit")}
+          <Pencil className="size-4 sm:mr-2" />
+          <span className="hidden sm:inline">{t("actions.bulk_edit")}</span>
         </Toggle>
       ) : (
         <div className="flex items-center rounded-md bg-background">
