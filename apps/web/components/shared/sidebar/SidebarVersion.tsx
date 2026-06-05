@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Github } from "lucide-react";
 
 // This is a fork: the sidebar links to the fork's repo and shows the git commit
 // it was built from (linking to that commit) rather than upstream Karakeep tags.
@@ -24,7 +23,6 @@ export default function SidebarVersion({ serverVersion }: SidebarVersionProps) {
 
   return (
     <div className="mt-auto flex items-center gap-2.5 border-t pt-2 text-xs">
-      <Github aria-hidden className="size-4 shrink-0 text-muted-foreground" />
       <div className="flex min-w-0 flex-col leading-tight">
         <Link
           href={FORK_REPO_URL}

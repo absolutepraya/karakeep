@@ -262,6 +262,11 @@ export default function AllLists({
     const el = scrollRef.current;
     if (!el) return;
     syncEdges();
+    // Re-measure after the first frame (initial layout settles) and once web
+    // fonts finish loading: a font swap reflows the rows taller without firing
+    // either observer below, which would otherwise leave the fades stale.
+    const raf = requestAnimationFrame(syncEdges);
+    void document.fonts?.ready.then(syncEdges);
     // ResizeObserver catches viewport/sidebar resizes; MutationObserver catches
     // content-height changes (folders expanding, lists loading in) that don't
     // re-render this component.
@@ -270,6 +275,7 @@ export default function AllLists({
     const mo = new MutationObserver(syncEdges);
     mo.observe(el, { childList: true, subtree: true });
     return () => {
+      cancelAnimationFrame(raf);
       ro.disconnect();
       mo.disconnect();
     };
