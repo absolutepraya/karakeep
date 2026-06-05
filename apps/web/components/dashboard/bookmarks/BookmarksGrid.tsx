@@ -38,7 +38,7 @@ function StyledBookmarkCard({
   return (
     <Slot
       className={cn(
-        "mb-4 border border-border bg-card transition-shadow hover:shadow-lift",
+        "mb-2 border border-border bg-card transition-shadow hover:shadow-lift sm:mb-4",
         className,
       )}
       {...props}
@@ -78,10 +78,11 @@ function getBreakpointConfig(userColumns: number) {
     default: userColumns,
   };
 
-  // Responsive behavior: reduce columns on smaller screens
+  // Responsive behavior: reduce columns on smaller screens. Phones keep up to
+  // 2 columns (instead of collapsing to 1) so masonry stays two-up by default.
   const lgColumns = Math.max(1, Math.min(userColumns, userColumns - 1));
   const mdColumns = Math.max(1, Math.min(userColumns, 2));
-  const smColumns = 1;
+  const smColumns = Math.max(1, Math.min(userColumns, 2));
 
   breakpointColumnsObj[SCREENS.lg] = lgColumns;
   breakpointColumnsObj[SCREENS.md] = mdColumns;
@@ -93,7 +94,7 @@ function getColumnsForViewport(userColumns: number, viewportWidth: number) {
   const { sm, md, lg } = SCREENS;
 
   if (viewportWidth <= sm) {
-    return 1;
+    return Math.max(1, Math.min(userColumns, 2));
   }
   if (viewportWidth <= md) {
     return Math.max(1, Math.min(userColumns, 2));
@@ -225,9 +226,13 @@ export default function BookmarksGrid({
 
   const children = [
     showEditorCard && (
-      <StyledBookmarkCard key={"editor"}>
-        <EditorCard />
-      </StyledBookmarkCard>
+      // The mobile nav has its own + button + capture modal, so the inline
+      // editor card is desktop-only.
+      <div key={"editor"} className="hidden sm:block">
+        <StyledBookmarkCard>
+          <EditorCard />
+        </StyledBookmarkCard>
+      </div>
     ),
     ...bookmarks.map((bookmark, index) => (
       <BookmarkGridItem key={bookmark.id} bookmark={bookmark} index={index} />
@@ -241,8 +246,8 @@ export default function BookmarksGrid({
       {bookmarkLayoutSwitch(layout, {
         masonry: (
           <Masonry
-            className="-ml-4 flex w-auto"
-            columnClassName="pl-4"
+            className="-ml-2 flex w-auto sm:-ml-4"
+            columnClassName="pl-2 sm:pl-4"
             breakpointCols={breakpointConfig}
           >
             {children}
@@ -250,8 +255,8 @@ export default function BookmarksGrid({
         ),
         grid: (
           <Masonry
-            className="-ml-4 flex w-auto"
-            columnClassName="pl-4"
+            className="-ml-2 flex w-auto sm:-ml-4"
+            columnClassName="pl-2 sm:pl-4"
             breakpointCols={breakpointConfig}
           >
             {children}

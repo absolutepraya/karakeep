@@ -2,7 +2,6 @@
 
 import type { z } from "zod";
 import { createContext, useContext } from "react";
-import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { fallbackLng } from "@/lib/i18n/settings";
 
 import type { BookmarksLayoutTypes, zUserLocalSettings } from "./types";
@@ -36,17 +35,11 @@ export function useBookmarkDisplaySettings() {
 }
 
 export function useBookmarkLayout() {
-  const settings = useUserLocalSettings();
-  const isMobile = useIsMobile();
-  const layout = settings.bookmarkGridLayout;
-  // On small screens, collapse the image-heavy multi-column layouts (masonry,
-  // grid) to the dense compact view for faster scanning. The list and compact
-  // layouts pass through, so switching still works on mobile and the user's
-  // stored layout is preserved for larger screens.
-  if (isMobile && (layout === "masonry" || layout === "grid")) {
-    return "compact";
-  }
-  return layout;
+  // The stored layout applies on every screen size. Multi-column layouts
+  // (masonry/grid) just render fewer columns on smaller viewports (capped at 2
+  // on phones - see BookmarksGrid), so mobile defaults to a 2-column masonry
+  // and the user can still switch layouts via the view options.
+  return useUserLocalSettings().bookmarkGridLayout;
 }
 
 export function useInterfaceLang() {
