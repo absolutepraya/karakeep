@@ -1,0 +1,26 @@
+diff --git a/dist/main.js b/dist/main.js
+index c37516f6d96edc7bd0b3fd0a71a7ee78a1d17c1f..ed55a1f8122d4a8ae972d595a0099160054ca618 100644
+--- a/dist/main.js
++++ b/dist/main.js
+@@ -3037,7 +3037,7 @@ function $4229cb2d7488f9c8$export$2e2bcd8739ae039(props) {
+         }) : props.set == "native" ? /*#__PURE__*/ (0, $55ec52987511209e$export$34b9dba7ce09269b)("span", {
+             style: {
+                 fontSize: props.size,
+-                fontFamily: '"EmojiMart", "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI", "Apple Color Emoji", "Twemoji Mozilla", "Noto Color Emoji", "Android Emoji"'
++                fontFamily: '"Noto Color Emoji", "EmojiMart", "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI", "Apple Color Emoji", "Twemoji Mozilla", "Android Emoji"'
+             },
+             children: emojiSkin.native
+         }) : /*#__PURE__*/ (0, $55ec52987511209e$export$34b9dba7ce09269b)("span", {
+diff --git a/dist/module.js b/dist/module.js
+index d6ac04912fa640598fedf98a76e9f0bd86db0cc9..5725503eddc5935288311fb0f1433c9a7081913f 100644
+--- a/dist/module.js
++++ b/dist/module.js
+@@ -1244,7 +1244,7 @@ function $254755d3f438722f$export$2e2bcd8739ae039(props) {
+         }) : props.set == "native" ? /*#__PURE__*/ (0, $bd9dd35321b03dd4$export$34b9dba7ce09269b)("span", {
+             style: {
+                 fontSize: props.size,
+-                fontFamily: '"EmojiMart", "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI", "Apple Color Emoji", "Twemoji Mozilla", "Noto Color Emoji", "Android Emoji"'
++                fontFamily: '"Noto Color Emoji", "EmojiMart", "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI", "Apple Color Emoji", "Twemoji Mozilla", "Android Emoji"'
+             },
+             children: emojiSkin.native
+         }) : /*#__PURE__*/ (0, $bd9dd35321b03dd4$export$34b9dba7ce09269b)("span", {

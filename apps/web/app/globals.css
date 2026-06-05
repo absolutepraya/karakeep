@@ -147,9 +147,14 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* Fonts - variables are set by next/font in layout.tsx (a later task). */
-  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-google-sans-code), ui-monospace, monospace;
+  --font-emoji:
+    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-sans:
+    var(--font-nunito), var(--font-emoji), ui-sans-serif, system-ui, sans-serif;
+  --font-heading:
+    var(--font-nunito), var(--font-emoji), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    var(--font-google-sans-code), var(--font-emoji), ui-monospace, monospace;
 
   /* Radius scale (ported from the old preset). */
   --radius-lg: var(--radius);
@@ -205,8 +210,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body {
+    font-family:
+      var(--font-nunito), var(--font-emoji), ui-sans-serif, system-ui,
+      sans-serif;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+  emoji-picker,
+  em-emoji-picker,
+  .emoji,
+  [data-emoji],
+  [class*="emoji"] {
+    font-family: var(--font-emoji);
   }
   ::selection {
     background-color: var(--selection);

@@ -139,7 +139,11 @@ function DroppableListSidebarItem({
           }}
           list={node.item}
         >
-          <Button size="none" variant="ghost" className="relative">
+          <Button
+            size="none"
+            variant="ghost"
+            className="relative h-6 min-w-8 shrink-0 px-1"
+          >
             <MoreHorizontal
               className={cn(
                 "absolute inset-0 m-auto size-4 opacity-0 transition-opacity duration-100 group-hover:opacity-100",
@@ -149,7 +153,7 @@ function DroppableListSidebarItem({
             {showBookmarkCount && (
               <span
                 className={cn(
-                  "px-2.5 text-xs font-light text-muted-foreground opacity-100 transition-opacity duration-100 group-hover:opacity-0",
+                  "px-1 text-xs font-light text-muted-foreground opacity-100 transition-opacity duration-100 group-hover:opacity-0",
                   selectedListId == node.item.id ? "opacity-0" : "opacity-100",
                 )}
               >
@@ -332,7 +336,7 @@ export default function AllLists({
         <ul
           ref={scrollRef}
           onScroll={syncEdges}
-          className="sidebar-scrollbar h-full gap-y-2 overflow-auto pr-2 text-sm"
+          className="sidebar-scrollbar h-full gap-y-2 overflow-y-auto overflow-x-hidden pr-2 text-sm"
         >
           {isSearching ? (
             matchedRoots.length > 0 ? (

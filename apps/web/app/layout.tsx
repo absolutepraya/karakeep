@@ -4,6 +4,7 @@ import Script from "next/script";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import "./globals.css";
+import "@fontsource/noto-color-emoji/emoji.css";
 import "streamdown/styles.css";
 
 import type { Viewport } from "next";
@@ -20,14 +21,14 @@ const nunito = Nunito({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-nunito",
-  fallback: ["system-ui", "sans-serif"],
+  fallback: ["Noto Color Emoji", "system-ui", "sans-serif"],
 });
 
 const googleSansCode = Google_Sans_Code({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-google-sans-code",
-  fallback: ["ui-monospace", "monospace"],
+  fallback: ["Noto Color Emoji", "ui-monospace", "monospace"],
 });
 
 export const metadata: Metadata = {

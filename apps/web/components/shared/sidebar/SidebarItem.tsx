@@ -38,7 +38,7 @@ export default function SidebarItem({
   return (
     <li
       className={cn(
-        "relative flex justify-between rounded-lg text-sm transition-colors hover:bg-accent",
+        "relative flex min-w-0 items-center justify-between rounded-lg text-sm transition-colors hover:bg-accent",
         path == currentPath
           ? "bg-accent/50 text-foreground"
           : "text-muted-foreground",
@@ -51,17 +51,17 @@ export default function SidebarItem({
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
     >
-      <div className="flex flex-1 items-center">
+      <div className="flex min-w-0 flex-1 items-center">
         {collapseButton}
         <Link
           href={path}
           className={cn(
-            "flex flex-1 items-center gap-x-2 rounded-[inherit] px-3 py-2",
+            "flex min-w-0 flex-1 items-center gap-x-2 rounded-[inherit] px-3 py-2",
             linkClassName,
           )}
         >
           {logo}
-          <span title={name} className="line-clamp-1 break-all">
+          <span title={name} className="min-w-0 truncate">
             {name}
           </span>
         </Link>
