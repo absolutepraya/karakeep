@@ -23,7 +23,7 @@ export default function SidebarVersion({ serverVersion }: SidebarVersionProps) {
   const isSha = isCommitSha(commit);
 
   return (
-    <div className="mt-auto flex min-w-0 flex-col gap-0.5 border-t pt-2 text-xs leading-tight">
+    <div className="mt-auto flex min-w-0 flex-col gap-0.5 border-t pt-4 text-xs leading-tight">
       <Link
         href={FORK_REPO_URL}
         target="_blank"
