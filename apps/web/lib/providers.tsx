@@ -19,6 +19,7 @@ import {
 
 import { ClientConfigCtx } from "./clientConfig";
 import CustomI18nextProvider from "./i18n/provider";
+import { ServerHintsCtx } from "./serverHints";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -53,11 +54,13 @@ export default function Providers({
   session,
   clientConfig,
   userLocalSettings,
+  isMobile = false,
 }: {
   children: React.ReactNode;
   session: Session | null;
   clientConfig: ClientConfig;
   userLocalSettings: UserLocalSettings;
+  isMobile?: boolean;
 }) {
   const queryClient = getQueryClient();
 
@@ -81,26 +84,28 @@ export default function Providers({
 
   return (
     <ClientConfigCtx.Provider value={clientConfig}>
-      <UserLocalSettingsCtx.Provider value={userLocalSettings}>
-        <SessionProvider session={session}>
-          <QueryClientProvider client={queryClient}>
-            <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-              <CustomI18nextProvider lang={userLocalSettings.lang}>
-                <ThemeProvider
-                  attribute="class"
-                  defaultTheme="system"
-                  enableSystem
-                  disableTransitionOnChange
-                >
-                  <TooltipProvider delayDuration={0}>
-                    {children}
-                  </TooltipProvider>
-                </ThemeProvider>
-              </CustomI18nextProvider>
-            </TRPCProvider>
-          </QueryClientProvider>
-        </SessionProvider>
-      </UserLocalSettingsCtx.Provider>
+      <ServerHintsCtx.Provider value={{ isMobile }}>
+        <UserLocalSettingsCtx.Provider value={userLocalSettings}>
+          <SessionProvider session={session}>
+            <QueryClientProvider client={queryClient}>
+              <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+                <CustomI18nextProvider lang={userLocalSettings.lang}>
+                  <ThemeProvider
+                    attribute="class"
+                    defaultTheme="system"
+                    enableSystem
+                    disableTransitionOnChange
+                  >
+                    <TooltipProvider delayDuration={0}>
+                      {children}
+                    </TooltipProvider>
+                  </ThemeProvider>
+                </CustomI18nextProvider>
+              </TRPCProvider>
+            </QueryClientProvider>
+          </SessionProvider>
+        </UserLocalSettingsCtx.Provider>
+      </ServerHintsCtx.Provider>
     </ClientConfigCtx.Provider>
   );
 }

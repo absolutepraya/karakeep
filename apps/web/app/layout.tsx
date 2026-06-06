@@ -8,6 +8,7 @@ import "@fontsource/noto-color-emoji/emoji.css";
 import "streamdown/styles.css";
 
 import type { Viewport } from "next";
+import { headers } from "next/headers";
 import React from "react";
 import Providers from "@/lib/providers";
 import { getUserLocalSettings } from "@/lib/userLocalSettings/userLocalSettings";
@@ -77,6 +78,12 @@ export default async function RootLayout({
   const session = await getServerAuthSession();
   const userSettings = await getUserLocalSettings();
   const isRTL = userSettings.lang === "ar";
+  // Coarse phone detection so the masonry grid can server-render the right
+  // column count on the first paint (phones get <=2 cols) instead of flashing
+  // down from the desktop default after hydration. The client still measures
+  // the real viewport, so this is only a first-paint hint.
+  const userAgent = (await headers()).get("user-agent") ?? "";
+  const isMobile = /Mobi/i.test(userAgent);
   return (
     <html
       lang={userSettings.lang}
@@ -89,7 +96,8 @@ export default async function RootLayout({
           <Providers
             session={session}
             clientConfig={clientConfig}
-            userLocalSettings={await getUserLocalSettings()}
+            userLocalSettings={userSettings}
+            isMobile={isMobile}
           >
             {children}
             <ReactQueryDevtools initialIsOpen={false} />

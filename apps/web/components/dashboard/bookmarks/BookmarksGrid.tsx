@@ -14,6 +14,7 @@ import {
   useGridColumns,
 } from "@/lib/userLocalSettings/bookmarksLayout";
 import { SCREENS } from "@/lib/breakpoints";
+import { useServerIsMobile } from "@/lib/serverHints";
 import { cn } from "@/lib/utils";
 import { Slot } from "@radix-ui/react-slot";
 import { ErrorBoundary } from "react-error-boundary";
@@ -73,16 +74,21 @@ const BookmarkGridItem = memo(function BookmarkGridItem({
   );
 });
 
-function getBreakpointConfig(userColumns: number) {
+function getBreakpointConfig(userColumns: number, isMobile: boolean) {
+  const phoneColumns = Math.max(1, Math.min(userColumns, 2));
   const breakpointColumnsObj: { [key: number]: number; default: number } = {
-    default: userColumns,
+    // `default` is what react-masonry-css renders before it can measure the
+    // viewport — i.e. the server-rendered first paint. On phones the server
+    // can't know the width, so seed it with the phone column count to avoid a
+    // 3->2 column flash on load; the client still measures and adjusts below.
+    default: isMobile ? phoneColumns : userColumns,
   };
 
   // Responsive behavior: reduce columns on smaller screens. Phones keep up to
   // 2 columns (instead of collapsing to 1) so masonry stays two-up by default.
   const lgColumns = Math.max(1, Math.min(userColumns, userColumns - 1));
-  const mdColumns = Math.max(1, Math.min(userColumns, 2));
-  const smColumns = Math.max(1, Math.min(userColumns, 2));
+  const mdColumns = phoneColumns;
+  const smColumns = phoneColumns;
 
   breakpointColumnsObj[SCREENS.lg] = lgColumns;
   breakpointColumnsObj[SCREENS.md] = mdColumns;
@@ -153,6 +159,7 @@ export default function BookmarksGrid({
   const { t } = useTranslation();
   const layout = useBookmarkLayout();
   const gridColumns = useGridColumns();
+  const serverIsMobile = useServerIsMobile();
   const activeGridColumns = useActiveGridColumns(gridColumns);
   const setVisibleBookmarks = useBulkActionsStore(
     (state) => state.setVisibleBookmarks,
@@ -163,8 +170,8 @@ export default function BookmarksGrid({
   );
   const withinListContext = useBookmarkListContext();
   const breakpointConfig = useMemo(
-    () => getBreakpointConfig(gridColumns),
-    [gridColumns],
+    () => getBreakpointConfig(gridColumns, serverIsMobile),
+    [gridColumns, serverIsMobile],
   );
   const { ref: loadMoreRef, inView: loadMoreButtonInView } = useInView();
 
