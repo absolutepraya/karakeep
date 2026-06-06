@@ -28,6 +28,7 @@ function AssetImage({
             alt="asset"
             src={getAssetUrl(bookmarkedAsset.assetId)}
             fill={true}
+            sizes="(max-width: 768px) 100vw, 33vw"
             unoptimized
             className={className}
           />
@@ -54,6 +55,7 @@ function AssetImage({
             alt="asset"
             src={getAssetUrl(screenshotAssetId)}
             fill={true}
+            sizes="(max-width: 768px) 100vw, 33vw"
             unoptimized
             className={className}
           />

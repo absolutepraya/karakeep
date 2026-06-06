@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -33,6 +33,7 @@ interface ListSelectorComponentProps extends DataProps {
   setOpen: (open: boolean) => void;
   children: ReactNode;
   disabled?: boolean;
+  listboxId: string;
 }
 
 interface SingleSelectionProps {
@@ -71,6 +72,7 @@ function ListSelectorComponent({
   isPending,
   allPaths,
   disabled,
+  listboxId,
 }: ListSelectorComponentProps) {
   if (isPending) {
     return <LoadingSpinner />;
@@ -93,7 +95,7 @@ function ListSelectorComponent({
       >
         <Command>
           <CommandInput placeholder="Search lists..." />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>
               {allPaths && allPaths.length === 0
                 ? "You don't currently have any lists."
@@ -139,6 +141,7 @@ function BookmarkListSingleSelector({
   disabled,
 }: SingleSelectionProps & DataProps) {
   const [open, setOpen] = useState(false);
+  const listboxId = useId();
   const onSelect = (currentValue: string) => {
     onChange(currentValue);
     setOpen(false);
@@ -162,11 +165,13 @@ function BookmarkListSingleSelector({
       isPending={isPending}
       allPaths={allPaths}
       disabled={disabled}
+      listboxId={listboxId}
     >
       <Button
         variant="outline"
         role="combobox"
         aria-expanded={open}
+        aria-controls={listboxId}
         className={cn("w-full justify-between", className)}
         disabled={disabled}
       >
@@ -187,6 +192,7 @@ function BookmarkListMultiSelector({
   disabled,
 }: MultiSelectionProps & DataProps & { disabled?: boolean }) {
   const [open, setOpen] = useState(false);
+  const listboxId = useId();
   const onSelect = (currentValue: string) => {
     if (disabled) {
       return;
@@ -216,12 +222,14 @@ function BookmarkListMultiSelector({
       isPending={isPending}
       allPaths={allPaths}
       disabled={disabled}
+      listboxId={listboxId}
     >
       <div
         role="combobox"
         tabIndex={disabled ? -1 : 0}
         aria-disabled={disabled}
         aria-expanded={disabled ? false : open}
+        aria-controls={listboxId}
         className={cn(
           "relative flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-2 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background transition-colors",
           disabled && "cursor-not-allowed opacity-50",

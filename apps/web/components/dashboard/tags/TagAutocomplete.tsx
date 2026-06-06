@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -34,6 +34,7 @@ export function TagAutocomplete({
   className,
 }: TagAutocompleteProps) {
   const api = useTRPC();
+  const listboxId = useId();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchQueryDebounced = useDebounce(searchQuery, 500);
@@ -78,6 +79,7 @@ export function TagAutocomplete({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           className={cn("justify-between", className)}
         >
           {selectedTag ? (
@@ -108,7 +110,7 @@ export function TagAutocomplete({
             onValueChange={setSearchQuery}
             className={cn("h-9", className)}
           />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>No tags found.</CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
               {tags.map((tag) => (

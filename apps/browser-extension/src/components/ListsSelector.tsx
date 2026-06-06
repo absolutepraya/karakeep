@@ -27,6 +27,7 @@ export function ListsSelector({ bookmarkId }: { bookmarkId: string }) {
   const api = useTRPC();
   const currentlyUpdating = useSet<string>();
   const [open, setOpen] = React.useState(false);
+  const listboxId = React.useId();
 
   const { mutate: addToList } = useAddBookmarkToList();
   const { mutate: removeFromList } = useRemoveBookmarkFromList();
@@ -66,6 +67,7 @@ export function ListsSelector({ bookmarkId }: { bookmarkId: string }) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           className="justify-between"
         >
           Add to List...
@@ -75,7 +77,7 @@ export function ListsSelector({ bookmarkId }: { bookmarkId: string }) {
       <DynamicPopoverContent className="w-[320px] p-0">
         <Command>
           <CommandInput placeholder="Search Lists ..." />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>You don&apos;t have any lists.</CommandEmpty>
             <CommandGroup>
               {allLists?.allPaths

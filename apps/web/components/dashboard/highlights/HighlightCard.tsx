@@ -8,6 +8,26 @@ import { ZHighlight } from "@karakeep/shared/types/highlights";
 
 import { HIGHLIGHT_COLOR_MAP } from "../preview/highlights";
 
+function HighlightWrapper({
+  clickable,
+  onClick,
+  className,
+  children,
+}: {
+  clickable: boolean;
+  onClick: () => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return clickable ? (
+    <button type="button" className={className} onClick={onClick}>
+      {children}
+    </button>
+  ) : (
+    <div className={className}>{children}</div>
+  );
+}
+
 export default function HighlightCard({
   highlight,
   clickable,
@@ -44,24 +64,13 @@ export default function HighlightCard({
       });
   };
 
-  const Wrapper = ({
-    className,
-    children,
-  }: {
-    className?: string;
-    children: React.ReactNode;
-  }) =>
-    clickable ? (
-      <button className={className} onClick={onBookmarkClick}>
-        {children}
-      </button>
-    ) : (
-      <div className={className}>{children}</div>
-    );
-
   return (
     <div className={cn("flex items-center justify-between", className)}>
-      <Wrapper className="flex flex-col gap-2 text-left">
+      <HighlightWrapper
+        clickable={clickable}
+        onClick={onBookmarkClick}
+        className="flex flex-col gap-2 text-left"
+      >
         <blockquote
           cite={highlight.bookmarkId}
           className={cn(
@@ -76,7 +85,7 @@ export default function HighlightCard({
             {highlight.note}
           </span>
         )}
-      </Wrapper>
+      </HighlightWrapper>
       {!readOnly && (
         <div className="flex gap-2">
           <ActionButton

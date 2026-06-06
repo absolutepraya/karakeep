@@ -238,6 +238,7 @@ export default function BookmarkPreview({
         <div className="flex min-h-0 flex-1">
           <div className="relative h-full flex-1 overflow-auto px-4 py-4">
             <button
+              type="button"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="absolute right-4 top-4 z-10 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
             >

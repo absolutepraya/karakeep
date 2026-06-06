@@ -137,6 +137,7 @@ function MultiBookmarkSelector({ bookmark }: { bookmark: ZBookmark }) {
 
   return (
     <button
+      type="button"
       className={cn(
         "absolute left-0 top-0 z-50 h-full w-full transition-colors",
         isSelected ? "bg-foreground/10" : "bg-transparent",

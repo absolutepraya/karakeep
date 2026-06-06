@@ -65,83 +65,7 @@ export default function InvitesList() {
   );
 
   const activeInvites = invites?.invites || [];
-
-  const InviteTable = ({
-    invites: inviteList,
-    title,
-  }: {
-    invites: NonNullable<typeof invites>["invites"];
-    title: string;
-  }) => (
-    <div className="mb-6">
-      {inviteList.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          No {title.toLowerCase()} invites
-        </p>
-      ) : (
-        <Table>
-          <TableHeader className="bg-gray-200">
-            <TableHead>Email</TableHead>
-            <TableHead>Invited By</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableHeader>
-          <TableBody>
-            {inviteList.map((invite) => (
-              <TableRow key={invite.id}>
-                <TableCell className="py-2">{invite.email}</TableCell>
-                <TableCell className="py-2">{invite.invitedBy.name}</TableCell>
-                <TableCell className="py-2">
-                  {formatDistanceToNow(new Date(invite.createdAt), {
-                    addSuffix: true,
-                  })}
-                </TableCell>
-                <TableCell className="flex gap-1 py-2">
-                  {
-                    <>
-                      <ButtonWithTooltip
-                        tooltip="Resend Invite"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => resendInvite({ inviteId: invite.id })}
-                        disabled={isResendPending}
-                      >
-                        <Mail size={14} />
-                      </ButtonWithTooltip>
-                      <ActionConfirmingDialog
-                        title="Revoke Invite"
-                        description={`Are you sure you want to revoke the invite for ${invite.email}? This action cannot be undone.`}
-                        actionButton={(setDialogOpen) => (
-                          <ActionButton
-                            variant="destructive"
-                            loading={isRevokePending}
-                            onClick={async () => {
-                              await revokeInvite({ inviteId: invite.id });
-                              setDialogOpen(false);
-                            }}
-                          >
-                            Revoke
-                          </ActionButton>
-                        )}
-                      >
-                        <ButtonWithTooltip
-                          tooltip="Revoke Invite"
-                          variant="outline"
-                          size="sm"
-                        >
-                          <MailX size={14} color="red" />
-                        </ButtonWithTooltip>
-                      </ActionConfirmingDialog>
-                    </>
-                  }
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </div>
-  );
+  const title = "Invites";
 
   return (
     <AdminCard>
@@ -155,7 +79,78 @@ export default function InvitesList() {
           </CreateInviteDialog>
         </div>
 
-        <InviteTable invites={activeInvites} title="Invites" />
+        <div className="mb-6">
+          {activeInvites.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No {title.toLowerCase()} invites
+            </p>
+          ) : (
+            <Table>
+              <TableHeader className="bg-gray-200">
+                <TableHead>Email</TableHead>
+                <TableHead>Invited By</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableHeader>
+              <TableBody>
+                {activeInvites.map((invite) => (
+                  <TableRow key={invite.id}>
+                    <TableCell className="py-2">{invite.email}</TableCell>
+                    <TableCell className="py-2">
+                      {invite.invitedBy.name}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {formatDistanceToNow(new Date(invite.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </TableCell>
+                    <TableCell className="flex gap-1 py-2">
+                      {
+                        <>
+                          <ButtonWithTooltip
+                            tooltip="Resend Invite"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              resendInvite({ inviteId: invite.id })
+                            }
+                            disabled={isResendPending}
+                          >
+                            <Mail size={14} />
+                          </ButtonWithTooltip>
+                          <ActionConfirmingDialog
+                            title="Revoke Invite"
+                            description={`Are you sure you want to revoke the invite for ${invite.email}? This action cannot be undone.`}
+                            actionButton={(setDialogOpen) => (
+                              <ActionButton
+                                variant="destructive"
+                                loading={isRevokePending}
+                                onClick={async () => {
+                                  await revokeInvite({ inviteId: invite.id });
+                                  setDialogOpen(false);
+                                }}
+                              >
+                                Revoke
+                              </ActionButton>
+                            )}
+                          >
+                            <ButtonWithTooltip
+                              tooltip="Revoke Invite"
+                              variant="outline"
+                              size="sm"
+                            >
+                              <MailX size={14} color="red" />
+                            </ButtonWithTooltip>
+                          </ActionConfirmingDialog>
+                        </>
+                      }
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </div>
     </AdminCard>
   );

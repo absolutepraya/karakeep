@@ -97,6 +97,7 @@ function PricingHeader({
       </p>
       <div className="mt-8 inline-flex items-center rounded-lg bg-gray-100 p-1">
         <button
+          type="button"
           onClick={() => setBillingPeriod("monthly")}
           className={cn(
             "rounded-md px-4 py-2 text-sm font-medium transition-colors",
@@ -108,6 +109,7 @@ function PricingHeader({
           Monthly
         </button>
         <button
+          type="button"
           onClick={() => setBillingPeriod("yearly")}
           className={cn(
             "rounded-md px-4 py-2 text-sm font-medium transition-colors",

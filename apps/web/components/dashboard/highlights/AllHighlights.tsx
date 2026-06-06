@@ -110,6 +110,7 @@ export default function AllHighlights({
           endIcon={
             searchInput && (
               <button
+                type="button"
                 onClick={() => setSearchInput("")}
                 className="text-muted-foreground hover:text-foreground"
               >

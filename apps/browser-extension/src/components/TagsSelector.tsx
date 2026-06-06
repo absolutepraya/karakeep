@@ -31,6 +31,7 @@ export function TagsSelector({ bookmarkId }: { bookmarkId: string }) {
 
   const [input, setInput] = React.useState("");
   const [open, setOpen] = React.useState(false);
+  const listboxId = React.useId();
   const currentlyUpdating = useSet<string>();
 
   const { mutate } = useUpdateBookmarkTags({
@@ -62,6 +63,7 @@ export function TagsSelector({ bookmarkId }: { bookmarkId: string }) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           className="justify-between"
         >
           Add Tags...
@@ -75,7 +77,7 @@ export function TagsSelector({ bookmarkId }: { bookmarkId: string }) {
             onValueChange={setInput}
             placeholder="Search Tags ..."
           />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandGroup>
               <CommandItem
                 onSelect={() =>

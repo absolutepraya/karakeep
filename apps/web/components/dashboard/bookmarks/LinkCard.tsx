@@ -55,6 +55,7 @@ function LinkImage({
       className={className}
       alt="card banner"
       fill={true}
+      sizes="(max-width: 768px) 100vw, 33vw"
       src={url}
     />
   );

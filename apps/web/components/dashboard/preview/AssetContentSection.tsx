@@ -51,6 +51,7 @@ function PDFContentSection({ bookmark }: { bookmark: ZBookmark }) {
           alt="screenshot"
           src={getAssetUrl(screenshot)}
           fill={true}
+          sizes="100vw"
           unoptimized
           className="object-contain"
         />
@@ -96,6 +97,7 @@ function ImageContentSection({ bookmark }: { bookmark: ZBookmark }) {
         <Image
           alt="asset"
           fill={true}
+          sizes="100vw"
           unoptimized
           className="object-contain"
           src={getAssetUrl(bookmark.content.assetId)}

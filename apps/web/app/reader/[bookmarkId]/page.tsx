@@ -85,6 +85,7 @@ export default function ReaderViewPage() {
         {/* Mobile backdrop */}
         {showHighlights && (
           <button
+            type="button"
             className="fixed inset-0 top-14 z-40 bg-black/50 lg:hidden"
             onClick={() => setShowHighlights(false)}
             onKeyDown={(e) => {

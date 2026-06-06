@@ -86,6 +86,7 @@ function AISummary({
                 </>
               )}
               <button
+                type="button"
                 className="rounded-full bg-muted p-1 text-muted-foreground"
                 aria-label="Collapse"
                 onClick={() => setIsExpanded(false)}

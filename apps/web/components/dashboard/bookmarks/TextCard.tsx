@@ -54,6 +54,7 @@ export default function TextCard({
                   <Image
                     alt="card banner"
                     fill={true}
+                    sizes="(max-width: 768px) 100vw, 33vw"
                     unoptimized
                     className={cn("flex-1", className)}
                     src={getAssetUrl(banner.id)}

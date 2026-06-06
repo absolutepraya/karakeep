@@ -25,12 +25,14 @@ export default function ReadingProgressBanner({
         <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="truncate text-muted-foreground">{message}</span>
         <button
+          type="button"
           onClick={onContinue}
           className="shrink-0 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-opacity hover:opacity-80"
         >
           {t("preview.continue_button")}
         </button>
         <button
+          type="button"
           onClick={onDismiss}
           className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground"
           aria-label="Dismiss"

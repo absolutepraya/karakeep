@@ -1,3 +1,4 @@
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -26,12 +27,16 @@ export function WebhookEventSelector({
   value: ZWebhookEvent[];
   onChange: (value: ZWebhookEvent[]) => void;
 }) {
+  const listboxId = useId();
+  const [open, setOpen] = useState(false);
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
           className="w-full justify-between"
         >
           {value.length > 0 ? value.join(", ") : "Select events"}
@@ -41,7 +46,7 @@ export function WebhookEventSelector({
       <PopoverContent>
         <Command>
           <CommandInput placeholder="Search events..." />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>No events found.</CommandEmpty>
             <CommandGroup>
               {zWebhookEventSchema.options.map((eventType) => (

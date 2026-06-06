@@ -35,6 +35,7 @@ export const MultiTagSelector = React.memo(function MultiTagSelector({
   const pill = (
     <div className="group relative flex">
       <button
+        type="button"
         className={cn(
           "flex gap-2 rounded-md border border-border px-2 py-1",
           isSelected

@@ -27,6 +27,7 @@ import {
   Tag,
   Trash2,
 } from "lucide-react";
+import { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -44,6 +45,71 @@ interface ConditionBuilderProps {
   eventType: RuleEngineEvent["type"];
   level?: number;
   onRemove?: () => void;
+}
+
+function ConditionSelector({
+  type,
+  onValueChange,
+  showTitleConditions,
+  t,
+}: {
+  type: RuleEngineCondition["type"];
+  onValueChange: (type: RuleEngineCondition["type"]) => void;
+  showTitleConditions: boolean;
+  t: TFunction;
+}) {
+  return (
+    <Select value={type} onValueChange={onValueChange}>
+      <SelectTrigger className="ml-2 h-8 border-none bg-transparent px-2">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="alwaysTrue">
+          {t("settings.rules.conditions_types.always")}
+        </SelectItem>
+        <SelectItem value="and">
+          {t("settings.rules.conditions_types.and")}
+        </SelectItem>
+        <SelectItem value="or">
+          {t("settings.rules.conditions_types.or")}
+        </SelectItem>
+        <SelectItem value="urlContains">
+          {t("settings.rules.conditions_types.url_contains")}
+        </SelectItem>
+        <SelectItem value="urlDoesNotContain">
+          {t("settings.rules.conditions_types.url_does_not_contain")}
+        </SelectItem>
+        {showTitleConditions && (
+          <SelectItem value="titleContains">
+            {t("settings.rules.conditions_types.title_contains")}
+          </SelectItem>
+        )}
+        {showTitleConditions && (
+          <SelectItem value="titleDoesNotContain">
+            {t("settings.rules.conditions_types.title_does_not_contain")}
+          </SelectItem>
+        )}
+        <SelectItem value="importedFromFeed">
+          {t("settings.rules.conditions_types.imported_from_feed")}
+        </SelectItem>
+        <SelectItem value="bookmarkTypeIs">
+          {t("settings.rules.conditions_types.bookmark_type_is")}
+        </SelectItem>
+        <SelectItem value="bookmarkSourceIs">
+          {t("settings.rules.conditions_types.bookmark_source_is")}
+        </SelectItem>
+        <SelectItem value="hasTag">
+          {t("settings.rules.conditions_types.has_tag")}
+        </SelectItem>
+        <SelectItem value="isFavourited">
+          {t("settings.rules.conditions_types.is_favourited")}
+        </SelectItem>
+        <SelectItem value="isArchived">
+          {t("settings.rules.conditions_types.is_archived")}
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  );
 }
 
 export function ConditionBuilder({
@@ -310,59 +376,6 @@ export function ConditionBuilder({
   // titles are not available at bookmark creation time (they're fetched during crawling)
   const showTitleConditions = eventType !== "bookmarkAdded";
 
-  const ConditionSelector = () => (
-    <Select value={value.type} onValueChange={handleTypeChange}>
-      <SelectTrigger className="ml-2 h-8 border-none bg-transparent px-2">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="alwaysTrue">
-          {t("settings.rules.conditions_types.always")}
-        </SelectItem>
-        <SelectItem value="and">
-          {t("settings.rules.conditions_types.and")}
-        </SelectItem>
-        <SelectItem value="or">
-          {t("settings.rules.conditions_types.or")}
-        </SelectItem>
-        <SelectItem value="urlContains">
-          {t("settings.rules.conditions_types.url_contains")}
-        </SelectItem>
-        <SelectItem value="urlDoesNotContain">
-          {t("settings.rules.conditions_types.url_does_not_contain")}
-        </SelectItem>
-        {showTitleConditions && (
-          <SelectItem value="titleContains">
-            {t("settings.rules.conditions_types.title_contains")}
-          </SelectItem>
-        )}
-        {showTitleConditions && (
-          <SelectItem value="titleDoesNotContain">
-            {t("settings.rules.conditions_types.title_does_not_contain")}
-          </SelectItem>
-        )}
-        <SelectItem value="importedFromFeed">
-          {t("settings.rules.conditions_types.imported_from_feed")}
-        </SelectItem>
-        <SelectItem value="bookmarkTypeIs">
-          {t("settings.rules.conditions_types.bookmark_type_is")}
-        </SelectItem>
-        <SelectItem value="bookmarkSourceIs">
-          {t("settings.rules.conditions_types.bookmark_source_is")}
-        </SelectItem>
-        <SelectItem value="hasTag">
-          {t("settings.rules.conditions_types.has_tag")}
-        </SelectItem>
-        <SelectItem value="isFavourited">
-          {t("settings.rules.conditions_types.is_favourited")}
-        </SelectItem>
-        <SelectItem value="isArchived">
-          {t("settings.rules.conditions_types.is_archived")}
-        </SelectItem>
-      </SelectContent>
-    </Select>
-  );
-
   return (
     <Card
       className={`border-l-4 ${value.type === "and" ? "border-l-emerald-500" : value.type === "or" ? "border-l-amber-500" : "border-l-slate-300"}`}
@@ -381,7 +394,12 @@ export function ConditionBuilder({
                     )}
                   </Button>
                 </CollapsibleTrigger>
-                <ConditionSelector />
+                <ConditionSelector
+                  type={value.type}
+                  onValueChange={handleTypeChange}
+                  showTitleConditions={showTitleConditions}
+                  t={t}
+                />
                 <span className="ml-1 text-sm text-muted-foreground">
                   {value.conditions.length} condition
                   {value.conditions.length !== 1 ? "s" : ""}
@@ -407,7 +425,12 @@ export function ConditionBuilder({
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 {renderConditionIcon(value.type)}
-                <ConditionSelector />
+                <ConditionSelector
+                  type={value.type}
+                  onValueChange={handleTypeChange}
+                  showTitleConditions={showTitleConditions}
+                  t={t}
+                />
               </div>
 
               {onRemove && (

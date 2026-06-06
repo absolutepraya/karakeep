@@ -518,6 +518,7 @@ export default function BookmarkDebugger() {
             {debugInfo.linkInfo && debugInfo.linkInfo.htmlContentPreview && (
               <div className="rounded-lg border bg-muted/30 p-4">
                 <button
+                  type="button"
                   onClick={() => setShowHtmlPreview(!showHtmlPreview)}
                   className="flex w-full items-center gap-2 text-sm font-semibold hover:opacity-70"
                 >
