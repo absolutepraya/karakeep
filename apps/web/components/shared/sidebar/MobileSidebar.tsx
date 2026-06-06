@@ -12,10 +12,14 @@ export default async function MobileSidebar({
 }) {
   // oxlint-disable-next-line rules-of-hooks
   const { t } = await useTranslation();
+  // Lift the floating pill clear of the phone's home-indicator / gesture
+  // handle: the device safe-area inset when it resolves (iOS standalone), plus
+  // a comfortable static gap so there's breathing room even in plain browser
+  // tabs where `env()` reports 0.
   return (
     <nav
       className="fixed inset-x-3 bottom-0 z-40 sm:hidden"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
     >
       {/* Horizontally scrollable so dense navs (e.g. settings, 13 items) don't
           overflow the viewport; the few-item dashboard nav still spreads to
