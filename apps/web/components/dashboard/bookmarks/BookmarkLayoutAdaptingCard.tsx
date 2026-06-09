@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "@/lib/auth/client";
-import { BOOKMARK_DRAG_MIME } from "@/lib/bookmark-drag";
+import {
+  BOOKMARK_DRAG_MIME,
+  BOOKMARK_SOURCE_LIST_MIME,
+} from "@/lib/bookmark-drag";
 import useBulkActionsStore from "@/lib/bulkActions";
 import {
   bookmarkLayoutSwitch,
@@ -168,11 +171,23 @@ function DragHandle({
   className?: string;
 }) {
   const { isBulkEditEnabled } = useBulkActionsStore();
+  // The list this card is currently being viewed in, if any. When it's a manual
+  // list, dropping onto another list becomes a move (remove from here) rather
+  // than a copy.
+  const listContext = useBookmarkListContext();
+  const sourceListId =
+    listContext?.type === "manual" ? listContext.id : undefined;
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
       e.stopPropagation();
       e.dataTransfer.setData(BOOKMARK_DRAG_MIME, bookmark.id);
-      e.dataTransfer.effectAllowed = "copy";
+      if (sourceListId) {
+        e.dataTransfer.setData(BOOKMARK_SOURCE_LIST_MIME, sourceListId);
+        // Allow the drop target to choose "move" (remove from the source list).
+        e.dataTransfer.effectAllowed = "copyMove";
+      } else {
+        e.dataTransfer.effectAllowed = "copy";
+      }
 
       // Create a small pill element as the drag preview
       const pill = document.createElement("div");
@@ -200,7 +215,7 @@ function DragHandle({
       e.dataTransfer.setDragImage(pill, 0, 0);
       requestAnimationFrame(() => pill.remove());
     },
-    [bookmark],
+    [bookmark, sourceListId],
   );
 
   if (isBulkEditEnabled) return null;

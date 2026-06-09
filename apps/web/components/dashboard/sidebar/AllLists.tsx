@@ -12,7 +12,10 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
-import { BOOKMARK_DRAG_MIME } from "@/lib/bookmark-drag";
+import {
+  BOOKMARK_DRAG_MIME,
+  BOOKMARK_SOURCE_LIST_MIME,
+} from "@/lib/bookmark-drag";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { MoreHorizontal, Plus, Search, X } from "lucide-react";
@@ -22,6 +25,7 @@ import {
   augmentBookmarkListsWithInitialData,
   useAddBookmarkToList,
   useBookmarkLists,
+  useRemoveBookmarkFromList,
 } from "@karakeep/shared-react/hooks/lists";
 import { ZBookmarkListTreeNode } from "@karakeep/shared/utils/listUtils";
 
@@ -32,6 +36,7 @@ import { InvitationNotificationBadge } from "./InvitationNotificationBadge";
 
 function useDropTarget(listId: string, listName: string) {
   const { mutateAsync: addToList } = useAddBookmarkToList();
+  const { mutateAsync: removeFromList } = useRemoveBookmarkFromList();
   const [dropHighlight, setDropHighlight] = useState(false);
   const dragCounterRef = useRef(0);
   const { t } = useTranslation();
@@ -39,7 +44,13 @@ function useDropTarget(listId: string, listName: string) {
   const onDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes(BOOKMARK_DRAG_MIME)) {
       e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
+      // Dragging out of a (manual) list moves it here; otherwise it's a copy.
+      // Only the MIME *types* are readable during dragover, not the data.
+      e.dataTransfer.dropEffect = e.dataTransfer.types.includes(
+        BOOKMARK_SOURCE_LIST_MIME,
+      )
+        ? "move"
+        : "copy";
     }
   }, []);
 
@@ -66,13 +77,25 @@ function useDropTarget(listId: string, listName: string) {
       const bookmarkId = e.dataTransfer.getData(BOOKMARK_DRAG_MIME);
       if (!bookmarkId) return;
       e.preventDefault();
+      // When the bookmark was dragged out of another manual list, move it:
+      // add it here, then remove it from where it came from.
+      const sourceListId = e.dataTransfer.getData(BOOKMARK_SOURCE_LIST_MIME);
+      const isMove = !!sourceListId && sourceListId !== listId;
       try {
         await addToList({ bookmarkId, listId });
+        if (isMove) {
+          await removeFromList({ bookmarkId, listId: sourceListId });
+        }
         toast({
-          description: t("lists.add_to_list_success", {
-            list: listName,
-            defaultValue: `Added to "${listName}"`,
-          }),
+          description: isMove
+            ? t("lists.move_to_list_success", {
+                list: listName,
+                defaultValue: `Moved to "${listName}"`,
+              })
+            : t("lists.add_to_list_success", {
+                list: listName,
+                defaultValue: `Added to "${listName}"`,
+              }),
         });
       } catch {
         toast({
@@ -83,7 +106,7 @@ function useDropTarget(listId: string, listName: string) {
         });
       }
     },
-    [addToList, listId, listName, t],
+    [addToList, removeFromList, listId, listName, t],
   );
 
   return { dropHighlight, onDragOver, onDragEnter, onDragLeave, onDrop };
