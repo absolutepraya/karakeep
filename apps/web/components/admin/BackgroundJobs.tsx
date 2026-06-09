@@ -244,7 +244,12 @@ function JobCard({
                     </ActionButton>
                   )}
                 >
-                  <Button variant="secondary">{action.label}</Button>
+                  <Button
+                    variant="secondary"
+                    className="h-auto w-full whitespace-normal py-2 text-center"
+                  >
+                    {action.label}
+                  </Button>
                 </ActionConfirmingDialog>
               ))}
             </div>
