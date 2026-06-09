@@ -330,3 +330,62 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   Visual-viewport vars — kept in sync by <VisualViewportSync> so dialogs
+   can re-center above the iOS on-screen keyboard. Fallbacks match the old
+   full-viewport centering for SSR / no-JS / desktop.
+   ============================================================ */
+:root {
+  --vvh: 100dvh;
+  --vvo: 0px;
+}
+
+/* Center a fixed dialog within the *visible* viewport (above the keyboard on
+   iOS, where the layout viewport doesn't shrink) and cap its height so long
+   dialogs scroll internally instead of spilling under the keyboard. Paired
+   with `translate-y-[-50%]` on the element. */
+@layer components {
+  .dialog-vv-center {
+    top: calc(var(--vvo) + var(--vvh) / 2);
+    max-height: var(--vvh);
+  }
+}
+
+/* ============================================================
+   Mobile / touch / PWA ergonomics. Deliberately UNLAYERED: cascade layers
+   rank unlayered rules above any @layer, so the 16px form-control size below
+   beats Tailwind's `text-sm` utility — which is what stops iOS Safari from
+   zooming in when a field is focused.
+   ============================================================ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* No double-tap-to-zoom (and the ~300ms tap arbitration it implies in plain
+   Safari tabs); no grey tap-flash on press. */
+a,
+button,
+summary,
+label,
+select,
+input,
+textarea,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+.cursor-pointer {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* iOS auto-zooms into any focused field whose text is < 16px. Force 16px on
+   phones; >= sm keeps the denser 14px. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

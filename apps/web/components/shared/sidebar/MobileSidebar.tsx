@@ -19,13 +19,13 @@ export default async function MobileSidebar({
   return (
     <nav
       className="fixed inset-x-3 bottom-0 z-40 sm:hidden"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
     >
       {/* Horizontally scrollable so dense navs (e.g. settings, 13 items) don't
           overflow the viewport; the few-item dashboard nav still spreads to
           fill since each item can grow past its basis. Scrollbar is hidden for
           the clean floating-pill look. */}
-      <ul className="flex items-center gap-0.5 overflow-x-auto overscroll-x-contain rounded-2xl border bg-card/90 p-1 shadow-lg backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="flex items-center gap-0.5 overflow-x-auto overscroll-x-contain rounded-2xl border bg-card p-1 shadow-lg [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items(t).map((item) => (
           <MobileSidebarItem
             key={item.name}

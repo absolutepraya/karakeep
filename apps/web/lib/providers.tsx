@@ -4,6 +4,7 @@ import type { UserLocalSettings } from "@/lib/userLocalSettings/types";
 import React, { useState } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import VisualViewportSync from "@/components/VisualViewportSync";
 import { Session, SessionProvider } from "@/lib/auth/client";
 import { UserLocalSettingsCtx } from "@/lib/userLocalSettings/bookmarksLayout";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -84,6 +85,7 @@ export default function Providers({
 
   return (
     <ClientConfigCtx.Provider value={clientConfig}>
+      <VisualViewportSync />
       <ServerHintsCtx.Provider value={{ isMobile }}>
         <UserLocalSettingsCtx.Provider value={userLocalSettings}>
           <SessionProvider session={session}>
