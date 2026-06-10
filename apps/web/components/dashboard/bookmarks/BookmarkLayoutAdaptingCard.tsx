@@ -80,6 +80,7 @@ function BottomRow({
         <Link
           href={`/dashboard/preview/${bookmark.id}`}
           suppressHydrationWarning
+          className="transition-colors hover:text-foreground"
         >
           <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
         </Link>
@@ -389,7 +390,7 @@ function GridView({
             <Link
               href={`/dashboard/preview/${bookmark.id}`}
               suppressHydrationWarning
-              className="hidden text-nowrap sm:block"
+              className="hidden text-nowrap transition-colors hover:text-foreground sm:block"
             >
               <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
             </Link>
@@ -398,7 +399,7 @@ function GridView({
             <Link
               href={`/dashboard/preview/${bookmark.id}`}
               suppressHydrationWarning
-              className="text-nowrap sm:hidden"
+              className="text-nowrap transition-colors hover:text-foreground sm:hidden"
             >
               <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
             </Link>
@@ -460,7 +461,7 @@ function CompactView({
           <Link
             href={`/dashboard/preview/${bookmark.id}`}
             suppressHydrationWarning
-            className="shrink-0 gap-2 text-xs text-muted-foreground"
+            className="shrink-0 gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
           </Link>

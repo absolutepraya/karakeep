@@ -44,7 +44,7 @@ export default function BookmarkActionBar({
           type="button"
           aria-label={favLabel}
           title={favLabel}
-          className="flex size-8 items-center justify-center rounded p-1 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex size-8 items-center justify-center rounded p-1 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

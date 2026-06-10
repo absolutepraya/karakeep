@@ -12,14 +12,18 @@ export function FavouritedActionIcon({
   size?: number;
   strokeWidth?: number;
 }) {
-  return favourited ? (
+  // Single element with fill-transparent <-> fill-primary so the toggle
+  // crossfades (fill: none wouldn't interpolate).
+  return (
     <Star
       size={size}
       strokeWidth={strokeWidth}
-      className={cn("fill-primary text-primary", className)}
+      className={cn(
+        "transition-colors",
+        favourited ? "fill-primary text-primary" : "fill-transparent",
+        className,
+      )}
     />
-  ) : (
-    <Star size={size} strokeWidth={strokeWidth} className={className} />
   );
 }
 
