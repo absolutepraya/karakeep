@@ -49,10 +49,7 @@ function ListRow({
     >
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         {collapsible ? (
-          <CollapsibleTriggerChevron
-            className="size-4 shrink-0 text-muted-foreground transition-transform hover:text-foreground"
-            open={open ?? false}
-          />
+          <CollapsibleTriggerChevron className="size-4" open={open ?? false} />
         ) : (
           <span className="size-4 shrink-0" />
         )}
@@ -67,13 +64,15 @@ function ListRow({
       {/* Count sits at the far right in every row; for editable lists the
           options button is absolutely positioned so it doesn't shift the count
           (keeping All Lists counts aligned with the Pinned ones), fading in
-          over the count on hover. */}
+          over the count on hover. Touch devices never hover, so on coarse
+          pointers the button sits in-flow next to the count instead. */}
       <div className="relative flex shrink-0 items-center text-muted-foreground">
         {itemCount !== undefined && itemCount > 0 && (
           <span
             className={cn(
               "px-1 text-xs tabular-nums",
-              list && "transition-opacity group-hover/list-row:opacity-0",
+              list &&
+                "pointer-fine:group-hover/list-row:opacity-0 pointer-fine:group-focus-within/list-row:opacity-0 transition-opacity",
             )}
           >
             {itemCount.toLocaleString()}
@@ -84,7 +83,7 @@ function ListRow({
             <Button
               size="none"
               variant="ghost"
-              className="absolute inset-y-0 right-0 my-auto flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity group-hover/list-row:opacity-100"
+              className="pointer-coarse:static pointer-coarse:opacity-100 absolute inset-y-0 right-0 my-auto flex size-7 items-center justify-center rounded-md opacity-0 focus-visible:opacity-100 group-hover/list-row:opacity-100"
             >
               <MoreHorizontal className="size-4" />
             </Button>
@@ -186,8 +185,9 @@ export default function AllListsView({
       {/* Sticky toolbar: a list search above a New List button, both the same
           height, pinned so they stay reachable while the tree scrolls. On
           mobile the page header is sticky (h-16) so we offset below it; on
-          desktop the header sits outside the scroll area, so top-0. */}
-      <div className="sticky top-16 z-20 flex flex-col gap-2 bg-background pb-2 pt-2 sm:top-0 sm:flex-row sm:items-center">
+          desktop the header sits outside the scroll area, so top-0. The
+          ::after gradient softens the edge rows scroll under. */}
+      <div className="sticky top-16 z-20 flex flex-col gap-2 bg-background pb-2 pt-2 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-3 after:bg-gradient-to-b after:from-background after:to-transparent sm:top-0 sm:flex-row sm:items-center">
         <Input
           type="search"
           value={query}
@@ -200,16 +200,23 @@ export default function AllListsView({
           })}
           startIcon={<Search className="size-4 text-muted-foreground" />}
           endIcon={
-            query ? (
-              <button
-                type="button"
-                aria-label={t("actions.clear", { defaultValue: "Clear" })}
-                onClick={() => setQuery("")}
-                className="flex items-center text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            ) : undefined
+            // Always mounted so it fades/scales instead of popping in and out
+            // on the first/last character typed.
+            <button
+              type="button"
+              aria-label={t("actions.clear", { defaultValue: "Clear" })}
+              onClick={() => setQuery("")}
+              tabIndex={query ? 0 : -1}
+              aria-hidden={query ? undefined : true}
+              className={cn(
+                "flex items-center text-muted-foreground transition-[opacity,scale,color] duration-150 ease-out hover:text-foreground",
+                query
+                  ? "scale-100 opacity-100"
+                  : "pointer-events-none scale-90 opacity-0",
+              )}
+            >
+              <X className="size-4" />
+            </button>
           }
           className="shadow-xs h-11 rounded-lg focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 sm:flex-1 [&::-webkit-search-cancel-button]:appearance-none"
         />
@@ -258,13 +265,29 @@ export default function AllListsView({
             />
           </Section>
 
-          {hasOwnedLists && (
+          {hasOwnedLists ? (
             <Section title={t("lists.all_lists")}>
               <CollapsibleBookmarkLists
                 listsData={lists}
                 filter={(node) => node.item.userRole === "owner"}
                 render={renderRow}
               />
+            </Section>
+          ) : (
+            <Section title={t("lists.all_lists")}>
+              <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {t("lists.no_lists_yet", {
+                    defaultValue: "You don't have any lists yet.",
+                  })}
+                </p>
+                <EditListModal>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Plus className="size-4" />
+                    {t("lists.new_list")}
+                  </Button>
+                </EditListModal>
+              </div>
             </Section>
           )}
 
