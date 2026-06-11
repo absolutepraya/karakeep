@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { ActionButton } from "@/components/ui/action-button";
 import FormattedDate from "@/components/ui/formatted-date";
 import {
@@ -23,13 +23,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
-import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/lib/i18n/client";
 import { useUserSettings } from "@/lib/userSettings";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle,
+  CloudDownload,
   Download,
   Play,
   Save,
@@ -46,6 +46,7 @@ import { zUpdateBackupSettingsSchema } from "@karakeep/shared/types/users";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 
 import ActionConfirmingDialog from "../ui/action-confirming-dialog";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
   Table,
@@ -55,6 +56,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { Switch } from "../ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { SettingsSection } from "./SettingsPage";
 
@@ -89,10 +91,13 @@ function BackupConfigurationForm() {
   });
 
   return (
-    <SettingsSection title={t("settings.backups.configuration.title")}>
+    <SettingsSection
+      title={t("settings.backups.configuration.title")}
+      description="Choose how often backups should run and how long completed archives stay available."
+    >
       <Form {...form}>
         <form
-          className="space-y-3"
+          className="space-y-4"
           onSubmit={form.handleSubmit((value) => {
             updateSettings(value);
           })}
@@ -101,8 +106,8 @@ function BackupConfigurationForm() {
             control={form.control}
             name="backupsEnabled"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
+              <FormItem className="shadow-xs flex flex-row items-center justify-between gap-4 rounded-xl border border-border/70 bg-background/80 p-4">
+                <div className="space-y-1">
                   <FormLabel>
                     {t(
                       "settings.backups.configuration.enable_automatic_backups",
@@ -124,73 +129,76 @@ function BackupConfigurationForm() {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="backupsFrequency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {t("settings.backups.configuration.backup_frequency")}
-                </FormLabel>
-                <FormControl>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    {...field}
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={t(
-                          "settings.backups.configuration.select_frequency",
-                        )}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">
-                        {t("settings.backups.configuration.frequency.daily")}
-                      </SelectItem>
-                      <SelectItem value="weekly">
-                        {t("settings.backups.configuration.frequency.weekly")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormDescription>
-                  {t(
-                    "settings.backups.configuration.backup_frequency_description",
-                  )}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="backupsFrequency"
+              render={({ field }) => (
+                <FormItem className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4">
+                  <FormLabel>
+                    {t("settings.backups.configuration.backup_frequency")}
+                  </FormLabel>
+                  <FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      {...field}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue
+                          placeholder={t(
+                            "settings.backups.configuration.select_frequency",
+                          )}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">
+                          {t("settings.backups.configuration.frequency.daily")}
+                        </SelectItem>
+                        <SelectItem value="weekly">
+                          {t("settings.backups.configuration.frequency.weekly")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormDescription className="mt-2">
+                    {t(
+                      "settings.backups.configuration.backup_frequency_description",
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="backupsRetentionDays"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {t("settings.backups.configuration.retention_period")}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={365}
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                  />
-                </FormControl>
-                <FormDescription>
-                  {t(
-                    "settings.backups.configuration.retention_period_description",
-                  )}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="backupsRetentionDays"
+              render={({ field }) => (
+                <FormItem className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4">
+                  <FormLabel>
+                    {t("settings.backups.configuration.retention_period")}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      className="mt-2"
+                      type="number"
+                      min={1}
+                      max={365}
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormDescription className="mt-2">
+                    {t(
+                      "settings.backups.configuration.retention_period_description",
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <ActionButton
             type="submit"
@@ -249,85 +257,95 @@ function BackupRow({ backup }: { backup: z.infer<typeof zBackupSchema> }) {
       </TableCell>
       <TableCell>
         {backup.status === "success" ? (
-          <span
-            title={t("settings.backups.list.status.success")}
-            className="flex items-center gap-1"
+          <Badge
+            variant="secondary"
+            className="border-success/20 bg-success/10 text-success gap-1.5 border"
           >
-            <CheckCircle className="size-4 text-green-600" />
+            <CheckCircle className="size-3.5" />
             {t("settings.backups.list.status.success")}
-          </span>
+          </Badge>
         ) : backup.status === "failure" ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span
-                title={
-                  backup.errorMessage ||
-                  t("settings.backups.list.status.failed")
-                }
-                className="flex items-center gap-1"
-              >
-                <XCircle className="size-4 text-red-600" />
-                {t("settings.backups.list.status.failed")}
-              </span>
+              <div>
+                <Badge
+                  variant="secondary"
+                  className="gap-1.5 border border-destructive/20 bg-destructive/10 text-destructive"
+                >
+                  <XCircle className="size-3.5" />
+                  {t("settings.backups.list.status.failed")}
+                </Badge>
+              </div>
             </TooltipTrigger>
             <TooltipContent>{backup.errorMessage}</TooltipContent>
           </Tooltip>
         ) : (
-          <span className="flex items-center gap-1">
-            <div className="size-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+          <Badge
+            variant="secondary"
+            className="gap-1.5 border border-border/70 bg-muted/70 text-muted-foreground"
+          >
             {t("settings.backups.list.status.pending")}
-          </span>
+          </Badge>
         )}
       </TableCell>
-      <TableCell className="flex items-center gap-2">
-        {backup.assetId && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                variant="ghost"
-                className="items-center"
-                disabled={backup.status !== "success"}
-              >
-                <Link
-                  href={getAssetUrl(backup.assetId)}
-                  download
-                  prefetch={false}
-                  className={
-                    backup.status !== "success"
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
+      <TableCell>
+        <div className="flex items-center gap-2">
+          {backup.assetId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  disabled={backup.status !== "success"}
                 >
-                  <Download className="size-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t("settings.backups.list.actions.download_backup")}
-            </TooltipContent>
-          </Tooltip>
-        )}
-        <ActionConfirmingDialog
-          title={t("settings.backups.dialogs.delete_backup_title")}
-          description={t("settings.backups.dialogs.delete_backup_description")}
-          actionButton={() => (
-            <ActionButton
-              loading={isDeleting}
-              variant="destructive"
-              onClick={() => deleteBackup({ backupId: backup.id })}
-              className="items-center"
-              type="button"
-            >
-              <Trash2 className="mr-2 size-4" />
-              {t("settings.backups.list.actions.delete_backup")}
-            </ActionButton>
+                  <Link
+                    href={getAssetUrl(backup.assetId)}
+                    download
+                    prefetch={false}
+                    className={
+                      backup.status !== "success"
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }
+                  >
+                    <Download className="size-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("settings.backups.list.actions.download_backup")}
+              </TooltipContent>
+            </Tooltip>
           )}
-        >
-          <Button variant="ghostDestructive" disabled={isDeleting}>
-            <Trash2 className="size-4" />
-          </Button>
-        </ActionConfirmingDialog>
+          <ActionConfirmingDialog
+            title={t("settings.backups.dialogs.delete_backup_title")}
+            description={t(
+              "settings.backups.dialogs.delete_backup_description",
+            )}
+            actionButton={() => (
+              <ActionButton
+                loading={isDeleting}
+                variant="destructive"
+                onClick={() => deleteBackup({ backupId: backup.id })}
+                className="items-center"
+                type="button"
+              >
+                <Trash2 className="mr-2 size-4" />
+                {t("settings.backups.list.actions.delete_backup")}
+              </ActionButton>
+            )}
+          >
+            <Button
+              variant="ghostDestructive"
+              size="icon"
+              disabled={isDeleting}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </ActionConfirmingDialog>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -341,7 +359,6 @@ function BackupsList() {
     api.backups.list.queryOptions(undefined, {
       refetchInterval: (query) => {
         const data = query.state.data;
-        // Poll every 3 seconds if there's a pending backup, otherwise don't poll
         return data?.backups.some((backup) => backup.status === "pending")
           ? 3000
           : false;
@@ -369,6 +386,7 @@ function BackupsList() {
   return (
     <SettingsSection
       title={t("settings.backups.list.title")}
+      description="Create a fresh backup now, then review completed archives and remove anything you no longer need."
       action={
         <ActionButton
           onClick={() => triggerBackup()}
@@ -381,35 +399,47 @@ function BackupsList() {
         </ActionButton>
       }
     >
-      {isLoading && <FullPageSpinner />}
+      {isLoading && (
+        <div className="flex min-h-40 items-center justify-center rounded-xl border border-border/70 bg-background/80">
+          <FullPageSpinner />
+        </div>
+      )}
 
       {backups && backups.backups.length === 0 && (
-        <p className="rounded-md bg-muted p-3 text-center text-sm text-muted-foreground">
-          {t("settings.backups.list.no_backups")}
-        </p>
+        <EmptyState
+          compact
+          icon={<CloudDownload className="size-6" />}
+          title={t("settings.backups.list.no_backups")}
+          description="Your first successful backup will appear here once it has been generated."
+          className="bg-background/70"
+        />
       )}
 
       {backups && backups.backups.length > 0 && (
-        <Table className="whitespace-nowrap">
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                {t("settings.backups.list.table.created_at")}
-              </TableHead>
-              <TableHead>
-                {t("settings.backups.list.table.bookmarks")}
-              </TableHead>
-              <TableHead>{t("settings.backups.list.table.size")}</TableHead>
-              <TableHead>{t("settings.backups.list.table.status")}</TableHead>
-              <TableHead>{t("settings.backups.list.table.actions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {backups.backups.map((backup) => (
-              <BackupRow key={backup.id} backup={backup} />
-            ))}
-          </TableBody>
-        </Table>
+        <div className="shadow-xs overflow-hidden rounded-xl border border-border/70 bg-background/80">
+          <Table className="whitespace-nowrap">
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  {t("settings.backups.list.table.created_at")}
+                </TableHead>
+                <TableHead>
+                  {t("settings.backups.list.table.bookmarks")}
+                </TableHead>
+                <TableHead>{t("settings.backups.list.table.size")}</TableHead>
+                <TableHead>{t("settings.backups.list.table.status")}</TableHead>
+                <TableHead>
+                  {t("settings.backups.list.table.actions")}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {backups.backups.map((backup) => (
+                <BackupRow key={backup.id} backup={backup} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </SettingsSection>
   );

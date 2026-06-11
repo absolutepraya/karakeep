@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/shared/PageHeader";
 import { cn } from "@/lib/utils";
 
 import {
@@ -22,19 +23,13 @@ export function SettingsPage({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-            {icon}
-            {title}
-          </h1>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-        </div>
-        {action && <div className="shrink-0">{action}</div>}
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title={title}
+        description={description}
+        icon={icon}
+        action={action}
+      />
       {children}
     </div>
   );
@@ -46,39 +41,56 @@ export function SettingsSection({
   action,
   children,
   variant = "default",
+  className,
+  contentClassName,
 }: {
   title?: string;
   description?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   variant?: "default" | "danger";
+  className?: string;
+  contentClassName?: string;
 }) {
   const hasHeader = !!(title || description || action);
+
   return (
     <Card
-      className={variant === "danger" ? "border-destructive/20" : undefined}
+      className={cn(
+        "shadow-xs rounded-2xl border border-border/70 bg-card/90",
+        variant === "danger" && "border-destructive/25 bg-destructive/[0.03]",
+        className,
+      )}
     >
       {hasHeader && (
-        <CardHeader className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              {title && (
-                <CardTitle
-                  className={cn(
-                    "text-lg",
-                    variant === "danger" && "text-destructive",
-                  )}
-                >
-                  {title}
-                </CardTitle>
-              )}
-              {description && <CardDescription>{description}</CardDescription>}
-            </div>
-            {action && <div className="shrink-0">{action}</div>}
+        <CardHeader className="gap-3 border-b border-border/70 px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+          <div className="min-w-0 space-y-1">
+            {title && (
+              <CardTitle
+                className={cn(
+                  "text-base font-semibold tracking-tight",
+                  variant === "danger" && "text-destructive",
+                )}
+              >
+                {title}
+              </CardTitle>
+            )}
+            {description && (
+              <CardDescription className="max-w-2xl leading-6">
+                {description}
+              </CardDescription>
+            )}
           </div>
+          {action && <div className="shrink-0">{action}</div>}
         </CardHeader>
       )}
-      <CardContent className={cn("space-y-3 p-4", hasHeader && "pt-0")}>
+      <CardContent
+        className={cn(
+          "space-y-4 px-5 py-5",
+          hasHeader && "pt-5",
+          contentClassName,
+        )}
+      >
         {children}
       </CardContent>
     </Card>

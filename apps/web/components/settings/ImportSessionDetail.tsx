@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  SettingsPage,
+  SettingsSection,
+} from "@/components/settings/SettingsPage";
 import { ActionButton } from "@/components/ui/action-button";
 import ActionConfirmingDialog from "@/components/ui/action-confirming-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   useDeleteImportSession,
   useFinalizeImportStaging,
@@ -72,22 +77,22 @@ interface ImportSessionResultItem {
   resultBookmarkId: string | null;
 }
 
-function getStatusColor(status: string) {
+function getStatusTone(status: string) {
   switch (status) {
     case "staging":
-      return "bg-purple-500/10 text-purple-700 dark:text-purple-400";
+      return "border-primary/20 bg-primary/10 text-primary";
     case "pending":
-      return "bg-muted text-muted-foreground";
+      return "border-border/70 bg-muted/70 text-muted-foreground";
     case "running":
-      return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
+      return "border-info/20 bg-info/10 text-info";
     case "paused":
-      return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+      return "border-warning/25 bg-warning/10 text-warning";
     case "completed":
-      return "bg-green-500/10 text-green-700 dark:text-green-400";
+      return "border-success/25 bg-success/10 text-success";
     case "failed":
-      return "bg-destructive/10 text-destructive";
+      return "border-destructive/20 bg-destructive/10 text-destructive";
     default:
-      return "bg-muted text-muted-foreground";
+      return "border-border/70 bg-muted/70 text-muted-foreground";
   }
 }
 
@@ -119,7 +124,7 @@ function getResultBadge(
     return (
       <Badge
         variant="secondary"
-        className="bg-muted text-muted-foreground hover:bg-muted"
+        className="border border-border/70 bg-muted/70 text-muted-foreground"
       >
         <Clock className="mr-1 h-3 w-3" />
         {t("settings.import_sessions.detail.result_pending")}
@@ -130,7 +135,7 @@ function getResultBadge(
     return (
       <Badge
         variant="secondary"
-        className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/10 dark:text-blue-400"
+        className="border-info/20 bg-info/10 text-info border"
       >
         <Loader2 className="mr-1 h-3 w-3 animate-spin" />
         {t("settings.import_sessions.detail.result_processing")}
@@ -142,7 +147,7 @@ function getResultBadge(
       return (
         <Badge
           variant="secondary"
-          className="bg-green-500/10 text-green-700 hover:bg-green-500/10 dark:text-green-400"
+          className="border-success/20 bg-success/10 text-success border"
         >
           <CheckCircle2 className="mr-1 h-3 w-3" />
           {t("settings.import_sessions.detail.result_accepted")}
@@ -152,7 +157,7 @@ function getResultBadge(
       return (
         <Badge
           variant="secondary"
-          className="bg-destructive/10 text-destructive hover:bg-destructive/10"
+          className="border border-destructive/20 bg-destructive/10 text-destructive"
         >
           <AlertCircle className="mr-1 h-3 w-3" />
           {t("settings.import_sessions.detail.result_rejected")}
@@ -162,14 +167,17 @@ function getResultBadge(
       return (
         <Badge
           variant="secondary"
-          className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+          className="border-warning/20 bg-warning/10 text-warning border"
         >
           {t("settings.import_sessions.detail.result_skipped_duplicate")}
         </Badge>
       );
     default:
       return (
-        <Badge variant="secondary" className="bg-muted hover:bg-muted">
+        <Badge
+          variant="secondary"
+          className="border border-border/70 bg-muted/70 text-muted-foreground"
+        >
           —
         </Badge>
       );
@@ -229,6 +237,36 @@ function getTitleDisplay(
     }
   }
   return noTitleLabel;
+}
+
+function MetricPill({
+  label,
+  value,
+  tone = "muted",
+}: {
+  label: string;
+  value: number;
+  tone?: "muted" | "success" | "warning" | "destructive" | "info";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border px-3 py-2",
+        tone === "muted" && "border-border/70 bg-background/70",
+        tone === "success" && "border-success/20 bg-success/10",
+        tone === "warning" && "border-warning/20 bg-warning/10",
+        tone === "destructive" && "border-destructive/20 bg-destructive/10",
+        tone === "info" && "border-info/20 bg-info/10",
+      )}
+    >
+      <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 export default function ImportSessionDetail({
@@ -308,117 +346,36 @@ export default function ImportSessionDetail({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Back link */}
+    <div className="space-y-4">
       <Link
         href="/settings/import"
-        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         {t("settings.import_sessions.detail.back_to_import")}
       </Link>
 
-      {/* Header */}
-      <div className="rounded-md border bg-background p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h2 className="text-lg font-medium">{stats.name}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("settings.import_sessions.created_at", {
-                  time: formatDistanceToNow(stats.createdAt, {
-                    addSuffix: true,
-                  }),
-                })}
-              </p>
-            </div>
-            <Badge
-              className={`${getStatusColor(stats.status)} hover:bg-inherit`}
-            >
-              {getStatusIcon(stats.status)}
-              <span className="ml-1 capitalize">
-                {statusLabels(stats.status)}
-              </span>
-            </Badge>
-          </div>
-
-          {/* Progress bar + stats */}
-          {stats.totalBookmarks > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  {t("settings.import_sessions.progress")}
-                </h4>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    {stats.completedBookmarks + stats.failedBookmarks} /{" "}
-                    {stats.totalBookmarks}
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {Math.round(progress)}%
-                  </Badge>
-                </div>
-              </div>
-              <Progress value={progress} className="h-3" />
-              <div className="flex flex-wrap gap-2">
-                {stats.completedBookmarks > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-green-500/10 text-green-700 hover:bg-green-500/10 dark:text-green-400"
-                  >
-                    <CheckCircle2 className="mr-1.5 h-3 w-3" />
-                    {t("settings.import_sessions.badges.completed", {
-                      count: stats.completedBookmarks,
-                    })}
-                  </Badge>
-                )}
-                {stats.failedBookmarks > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-destructive/10 text-destructive hover:bg-destructive/10"
-                  >
-                    <AlertCircle className="mr-1.5 h-3 w-3" />
-                    {t("settings.import_sessions.badges.failed", {
-                      count: stats.failedBookmarks,
-                    })}
-                  </Badge>
-                )}
-                {stats.pendingBookmarks > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
-                  >
-                    <Clock className="mr-1.5 h-3 w-3" />
-                    {t("settings.import_sessions.badges.pending", {
-                      count: stats.pendingBookmarks,
-                    })}
-                  </Badge>
-                )}
-                {stats.processingBookmarks > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/10 dark:text-blue-400"
-                  >
-                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                    {t("settings.import_sessions.badges.processing", {
-                      count: stats.processingBookmarks,
-                    })}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Message */}
-          {stats.message && (
-            <div className="rounded-lg border bg-muted/50 p-3 text-sm text-muted-foreground dark:bg-muted/20">
-              {stats.message}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex items-center justify-end">
-            <div className="flex items-center gap-2">
+      <SettingsPage
+        title={stats.name}
+        description={`Created ${formatDistanceToNow(stats.createdAt, {
+          addSuffix: true,
+        })}`}
+        icon={<Upload className="size-6 shrink-0 text-muted-foreground" />}
+        action={
+          <Badge
+            variant="secondary"
+            className={cn("gap-1.5 border", getStatusTone(stats.status))}
+          >
+            {getStatusIcon(stats.status)}
+            <span>{statusLabels(stats.status)}</span>
+          </Badge>
+        }
+      >
+        <SettingsSection
+          title="Session overview"
+          description="Track progress, inspect the final destination list, and manage the session lifecycle."
+          action={
+            <div className="flex flex-wrap items-center gap-2">
               {canPause && (
                 <Button
                   variant="outline"
@@ -502,7 +459,7 @@ export default function ImportSessionDetail({
                   )}
                 >
                   <Button
-                    variant="destructive"
+                    variant="destructiveOutline"
                     size="sm"
                     disabled={deleteSession.isPending}
                   >
@@ -512,122 +469,214 @@ export default function ImportSessionDetail({
                 </ActionConfirmingDialog>
               )}
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter tabs + Results table */}
-      <div className="rounded-md border bg-background p-4">
-        <Tabs
-          value={filter}
-          onValueChange={(v) => setFilter(v as FilterType)}
-          className="w-full"
+          }
         >
-          <TabsList className="mb-4 flex w-full flex-wrap">
-            <TabsTrigger value="all">
-              {t("settings.import_sessions.detail.filter_all")}
-            </TabsTrigger>
-            <TabsTrigger value="accepted">
-              {t("settings.import_sessions.detail.filter_accepted")}
-            </TabsTrigger>
-            <TabsTrigger value="rejected">
-              {t("settings.import_sessions.detail.filter_rejected")}
-            </TabsTrigger>
-            <TabsTrigger value="skipped_duplicate">
-              {t("settings.import_sessions.detail.filter_duplicates")}
-            </TabsTrigger>
-            <TabsTrigger value="pending">
-              {t("settings.import_sessions.detail.filter_pending")}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {isResultsLoading ? (
-          <FullPageSpinner />
-        ) : items.length === 0 ? (
-          <p className="rounded-md bg-muted p-4 text-center text-sm text-muted-foreground">
-            {t("settings.import_sessions.detail.no_results")}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    {t("settings.import_sessions.detail.table_title")}
-                  </TableHead>
-                  <TableHead className="w-[80px]">
-                    {t("settings.import_sessions.detail.table_type")}
-                  </TableHead>
-                  <TableHead className="w-[120px]">
-                    {t("settings.import_sessions.detail.table_result")}
-                  </TableHead>
-                  <TableHead>
-                    {t("settings.import_sessions.detail.table_reason")}
-                  </TableHead>
-                  <TableHead className="w-[100px]">
-                    {t("settings.import_sessions.detail.table_bookmark")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="max-w-[300px] truncate font-medium">
-                      {getTitleDisplay(
-                        item,
-                        t("settings.import_sessions.detail.no_title"),
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className="flex w-fit items-center gap-1 text-xs"
-                      >
-                        {getTypeIcon(item.type)}
-                        {getTypeLabel(item.type, t)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {getResultBadge(item.status, item.result, t)}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                      {item.resultReason || "—"}
-                    </TableCell>
-                    <TableCell>
-                      {item.resultBookmarkId ? (
-                        <Link
-                          href={`/dashboard/preview/${item.resultBookmarkId}`}
-                          className="flex items-center gap-1 text-sm text-primary hover:text-primary/80"
-                          prefetch={false}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          {t("settings.import_sessions.detail.view_bookmark")}
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {hasNextPage && (
-              <div className="flex justify-center">
-                <ActionButton
-                  ref={loadMoreRef}
-                  ignoreDemoMode={true}
-                  loading={isFetchingNextPage}
-                  onClick={() => fetchNextPage()}
-                  variant="ghost"
+          <div className="space-y-4">
+            <div className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t("settings.import_sessions.progress")}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.completedBookmarks + stats.failedBookmarks} of{" "}
+                    {stats.totalBookmarks} processed
+                  </p>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className="bg-muted/60 text-muted-foreground"
                 >
-                  {t("settings.import_sessions.detail.load_more")}
-                </ActionButton>
+                  {Math.round(progress)}%
+                </Badge>
+              </div>
+              {stats.totalBookmarks > 0 ? (
+                <Progress value={progress} className="h-2.5" />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Waiting for bookmarks to be staged into this session.
+                </p>
+              )}
+            </div>
+
+            {stats.totalBookmarks > 0 && (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricPill
+                  label="Pending"
+                  value={stats.pendingBookmarks}
+                  tone="warning"
+                />
+                <MetricPill
+                  label="Processing"
+                  value={stats.processingBookmarks}
+                  tone="info"
+                />
+                <MetricPill
+                  label="Completed"
+                  value={stats.completedBookmarks}
+                  tone="success"
+                />
+                <MetricPill
+                  label="Failed"
+                  value={stats.failedBookmarks}
+                  tone="destructive"
+                />
+              </div>
+            )}
+
+            {(stats.rootListId || stats.message) && (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {stats.rootListId && (
+                  <div className="rounded-xl border border-border/70 bg-background/70 p-4 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Globe className="h-4 w-4" />
+                      <span>{t("settings.import_sessions.imported_to")}</span>
+                    </div>
+                    <Link
+                      href={`/dashboard/lists/${stats.rootListId}`}
+                      className="mt-2 inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+                      target="_blank"
+                    >
+                      {t("settings.import_sessions.view_list")}
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )}
+                {stats.message && (
+                  <div className="rounded-xl border border-border/70 bg-background/70 p-4 text-sm text-muted-foreground">
+                    {stats.message}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
+        </SettingsSection>
+
+        <SettingsSection
+          title="Imported items"
+          description="Filter the run, inspect decisions, and jump directly to the created bookmark when available."
+        >
+          <div className="space-y-4">
+            <Tabs
+              value={filter}
+              onValueChange={(value) => setFilter(value as FilterType)}
+              className="w-full"
+            >
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-border/70 bg-background/80 p-1 sm:grid-cols-5">
+                <TabsTrigger value="all">
+                  {t("settings.import_sessions.detail.filter_all")}
+                </TabsTrigger>
+                <TabsTrigger value="accepted">
+                  {t("settings.import_sessions.detail.filter_accepted")}
+                </TabsTrigger>
+                <TabsTrigger value="rejected">
+                  {t("settings.import_sessions.detail.filter_rejected")}
+                </TabsTrigger>
+                <TabsTrigger value="skipped_duplicate">
+                  {t("settings.import_sessions.detail.filter_duplicates")}
+                </TabsTrigger>
+                <TabsTrigger value="pending">
+                  {t("settings.import_sessions.detail.filter_pending")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="shadow-xs overflow-hidden rounded-xl border border-border/70 bg-background/80">
+              {isResultsLoading ? (
+                <div className="flex min-h-40 items-center justify-center">
+                  <FullPageSpinner />
+                </div>
+              ) : items.length === 0 ? (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  {t("settings.import_sessions.detail.no_results")}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 p-1">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          {t("settings.import_sessions.detail.table_title")}
+                        </TableHead>
+                        <TableHead className="w-[96px]">
+                          {t("settings.import_sessions.detail.table_type")}
+                        </TableHead>
+                        <TableHead className="w-[150px]">
+                          {t("settings.import_sessions.detail.table_result")}
+                        </TableHead>
+                        <TableHead>
+                          {t("settings.import_sessions.detail.table_reason")}
+                        </TableHead>
+                        <TableHead className="w-[120px]">
+                          {t("settings.import_sessions.detail.table_bookmark")}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="max-w-[300px] truncate font-medium">
+                            {getTitleDisplay(
+                              item,
+                              t("settings.import_sessions.detail.no_title"),
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="flex w-fit items-center gap-1 border-border/70 bg-background/70 text-xs"
+                            >
+                              {getTypeIcon(item.type)}
+                              {getTypeLabel(item.type, t)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {getResultBadge(item.status, item.result, t)}
+                          </TableCell>
+                          <TableCell className="max-w-[220px] truncate text-sm text-muted-foreground">
+                            {item.resultReason || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {item.resultBookmarkId ? (
+                              <Link
+                                href={`/dashboard/preview/${item.resultBookmarkId}`}
+                                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80"
+                                prefetch={false}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                {t(
+                                  "settings.import_sessions.detail.view_bookmark",
+                                )}
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {hasNextPage && (
+                    <div className="flex justify-center pb-2 pt-1">
+                      <ActionButton
+                        ref={loadMoreRef}
+                        ignoreDemoMode={true}
+                        loading={isFetchingNextPage}
+                        onClick={() => fetchNextPage()}
+                        variant="ghost"
+                      >
+                        {t("settings.import_sessions.detail.load_more")}
+                      </ActionButton>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </SettingsSection>
+      </SettingsPage>
     </div>
   );
 }

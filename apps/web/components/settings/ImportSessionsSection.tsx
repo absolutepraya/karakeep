@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { useListImportSessions } from "@/lib/hooks/useImportSessions";
 import { useTranslation } from "@/lib/i18n/client";
-import { Package } from "lucide-react";
+import { AlertCircle, Package } from "lucide-react";
 
 import { FullPageSpinner } from "../ui/full-page-spinner";
 import { ImportSessionCard } from "./ImportSessionCard";
@@ -19,7 +19,9 @@ export function ImportSessionsSection() {
         title={t("settings.import_sessions.title")}
         description={t("settings.import_sessions.description")}
       >
-        <FullPageSpinner />
+        <div className="flex min-h-40 items-center justify-center rounded-xl border border-border/70 bg-background/80">
+          <FullPageSpinner />
+        </div>
       </SettingsSection>
     );
   }
@@ -30,13 +32,13 @@ export function ImportSessionsSection() {
         title={t("settings.import_sessions.title")}
         description={t("settings.import_sessions.description")}
       >
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <p className="text-gray-600">
-              {t("settings.import_sessions.load_error")}
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          compact
+          icon={<AlertCircle className="size-6" />}
+          title={t("settings.import_sessions.load_error")}
+          description="Try again in a moment. Your existing import runs are still preserved."
+          className="border-destructive/20 bg-destructive/[0.03]"
+        />
       </SettingsSection>
     );
   }
@@ -47,23 +49,19 @@ export function ImportSessionsSection() {
       description={t("settings.import_sessions.description")}
     >
       {sessions && sessions.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {sessions.map((session) => (
             <ImportSessionCard key={session.id} session={session} />
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="mb-4 h-12 w-12 text-gray-400" />
-            <p className="mb-2 text-center text-gray-600">
-              {t("settings.import_sessions.no_sessions")}
-            </p>
-            <p className="text-center text-sm text-gray-500">
-              {t("settings.import_sessions.no_sessions_detail")}
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          compact
+          icon={<Package className="size-6" />}
+          title={t("settings.import_sessions.no_sessions")}
+          description={t("settings.import_sessions.no_sessions_detail")}
+          className="bg-background/70"
+        />
       )}
     </SettingsSection>
   );

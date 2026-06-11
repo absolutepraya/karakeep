@@ -22,6 +22,7 @@ export default async function ApiKeysPage() {
   return (
     <SettingsPage
       title={t("settings.api_keys.api_keys")}
+      description="Create, scope, rotate, and revoke keys for scripts, agents, and external integrations."
       icon={<KeyRound className="size-6 shrink-0 text-muted-foreground" />}
       action={<AddApiKey isAdmin={isAdmin} />}
     >
