@@ -15,7 +15,6 @@ export default async function ListsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title={t("lists.all_lists")}
-        description="Organize your collection into focused lists, shared spaces, and quick-access pinned views."
         icon={<ClipboardList />}
         meta={
           <>

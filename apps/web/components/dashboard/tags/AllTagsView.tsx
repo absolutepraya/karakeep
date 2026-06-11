@@ -271,7 +271,6 @@ export default function AllTagsView() {
       <div className="flex flex-col gap-4">
         <PageHeader
           title={t("tags.all_tags")}
-          description="Keep your collection easy to browse with personal tags, AI suggestions, and quick cleanup tools."
           icon={<Tag />}
           action={
             <>

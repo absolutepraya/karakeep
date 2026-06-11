@@ -19,11 +19,7 @@ export default async function HighlightsPage() {
   const highlights = await api.highlights.getAll({});
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title={t("common.highlights")}
-        description="Search and revisit every passage you’ve highlighted across your saved reading."
-        icon={<Highlighter />}
-      />
+      <PageHeader title={t("common.highlights")} icon={<Highlighter />} />
       <div className="flex flex-col gap-6 rounded-xl border bg-card p-4 sm:p-5">
         <AllHighlights highlights={highlights} />
       </div>

@@ -165,7 +165,7 @@ function DroppableListSidebarItem({
           <Button
             size="none"
             variant="ghost"
-            className="relative h-6 min-w-8 shrink-0 px-1"
+            className="relative h-8 min-w-8 shrink-0 px-1.5"
           >
             <MoreHorizontal
               className={cn(
@@ -186,7 +186,7 @@ function DroppableListSidebarItem({
           </Button>
         </ListOptions>
       }
-      linkClassName="py-0.5 px-1"
+      linkClassName="px-1.5 py-1.5"
       style={{ marginLeft: `${level * 1}rem` }}
       dropHighlight={canDrop && dropHighlight}
       onDragOver={canDrop ? onDragOver : undefined}
@@ -365,7 +365,7 @@ export default function AllLists({
         <ul
           ref={scrollRef}
           onScroll={syncEdges}
-          className="sidebar-scrollbar h-full gap-y-2 overflow-y-auto overflow-x-hidden pr-2 text-sm"
+          className="sidebar-scrollbar h-full space-y-1.5 overflow-y-auto overflow-x-hidden pr-2 text-sm"
         >
           {isSearching ? (
             matchedRoots.length > 0 ? (
@@ -399,7 +399,7 @@ export default function AllLists({
                 logo={<span className="text-lg">📋</span>}
                 name={t("lists.all_lists")}
                 path={`/dashboard/lists`}
-                linkClassName="py-0.5 px-1"
+                linkClassName="px-1.5 py-1.5"
                 right={<InvitationNotificationBadge />}
               />
               <SidebarItem
@@ -407,7 +407,7 @@ export default function AllLists({
                 logo={<span className="text-lg">⭐️</span>}
                 name={t("lists.favourites")}
                 path={`/dashboard/favourites`}
-                linkClassName="py-0.5 px-1"
+                linkClassName="px-1.5 py-1.5"
               />
 
               {/* Owned Lists */}
@@ -443,7 +443,7 @@ export default function AllLists({
                     logo={<span className="text-lg">👥</span>}
                     name={t("lists.shared_lists")}
                     path="#"
-                    linkClassName="py-0.5 px-1"
+                    linkClassName="px-1.5 py-1.5"
                   />
                   <CollapsibleContent>
                     <CollapsibleBookmarkLists

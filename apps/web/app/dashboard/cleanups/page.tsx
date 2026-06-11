@@ -10,11 +10,7 @@ export default async function Cleanups() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title={t("cleanups.cleanups")}
-        description="Tidy up your collection with focused maintenance tools that keep your organization clean and consistent."
-        icon={<Paintbrush />}
-      />
+      <PageHeader title={t("cleanups.cleanups")} icon={<Paintbrush />} />
       <div className="rounded-xl border bg-card p-4 sm:p-5">
         <div className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <Tags className="size-5 text-muted-foreground" />

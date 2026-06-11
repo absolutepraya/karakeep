@@ -15,13 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ArchivedBookmarkPage() {
   return (
     <Bookmarks
-      header={
-        <PageHeader
-          title="Archive"
-          description="Archived bookmarks stay out of your main feed while remaining searchable and easy to revisit."
-          icon={<Archive />}
-        />
-      }
+      header={<PageHeader title="Archive" icon={<Archive />} />}
       query={{ archived: true }}
       showDivider={true}
       showEditorCard={true}

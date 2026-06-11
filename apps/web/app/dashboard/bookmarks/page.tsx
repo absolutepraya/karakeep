@@ -10,13 +10,7 @@ export default async function BookmarksPage() {
 
   return (
     <Bookmarks
-      header={
-        <PageHeader
-          title={t("common.home")}
-          description="Your latest saves, notes, and reading queue in one place."
-          icon={<Home />}
-        />
-      }
+      header={<PageHeader title={t("common.home")} icon={<Home />} />}
       query={{ archived: false }}
       showDivider={true}
       showEditorCard={true}

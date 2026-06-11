@@ -15,6 +15,8 @@ export function PageHeader({
   action?: React.ReactNode;
   className?: string;
 }) {
+  const hasSupportingText = Boolean(description || meta);
+
   return (
     <div
       className={cn(
@@ -23,13 +25,27 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "flex gap-4",
+            hasSupportingText ? "items-start" : "items-center",
+          )}
+        >
           {icon && (
-            <div className="shadow-xs mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground [&_svg]:size-5">
+            <div
+              className={cn(
+                "shrink-0 items-center justify-center bg-muted text-muted-foreground",
+                hasSupportingText
+                  ? "mt-0.5 flex size-14 rounded-2xl [&_svg]:size-7"
+                  : "flex size-11 rounded-xl [&_svg]:size-[1.375rem]",
+              )}
+            >
               {icon}
             </div>
           )}
-          <div className="min-w-0 space-y-1.5">
+          <div
+            className={cn("min-w-0", hasSupportingText && "space-y-1.5 pt-0.5")}
+          >
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {title}
             </h1>

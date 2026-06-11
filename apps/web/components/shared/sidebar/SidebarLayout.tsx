@@ -22,7 +22,7 @@ export default function SidebarLayout({
   return (
     <div className="sm:fixed sm:inset-0 sm:overflow-hidden">
       <Header />
-      <div className="flex min-h-[calc(100vh-64px)] w-full flex-col sm:h-[calc(100dvh-64px)] sm:flex-row sm:overflow-hidden">
+      <div className="sm:bg-sidebar/95 flex min-h-[calc(100vh-64px)] w-full flex-col sm:h-[calc(100dvh-64px)] sm:flex-row sm:overflow-hidden">
         <ValidAccountCheck />
         <div className="hidden flex-none sm:flex">{sidebar}</div>
         <main className="flex-1 bg-background sm:min-h-0 sm:overflow-y-auto sm:rounded-tl-2xl sm:border-l sm:border-t sm:border-border/70">

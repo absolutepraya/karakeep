@@ -13,7 +13,7 @@ export default async function Header() {
   }
 
   return (
-    <header className="bg-sidebar/95 border-sidebar-border/70 supports-[backdrop-filter]:bg-sidebar/85 sticky left-0 right-0 top-0 z-50 border-b backdrop-blur">
+    <header className="bg-sidebar/95 supports-[backdrop-filter]:bg-sidebar/85 sticky left-0 right-0 top-0 z-50 backdrop-blur">
       <div className="flex h-16 items-center gap-3 overflow-x-auto overflow-y-hidden px-3 sm:px-4">
         <div className="hidden shrink-0 items-center sm:flex">
           <Link
