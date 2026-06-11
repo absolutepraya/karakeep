@@ -56,7 +56,10 @@ export default function TextCard({
                     fill={true}
                     sizes="(max-width: 768px) 100vw, 33vw"
                     unoptimized
-                    className={cn("flex-1", className)}
+                    className={cn(
+                      "ease-(--ease-out) flex-1 transition-transform duration-300 group-hover:scale-[1.02]",
+                      className,
+                    )}
                     src={getAssetUrl(banner.id)}
                   />
                 </Link>
@@ -64,7 +67,7 @@ export default function TextCard({
             ) : (
               <div
                 className={cn(
-                  "flex size-full items-center justify-center bg-accent text-muted-foreground",
+                  "flex size-full items-center justify-center bg-muted/40 text-muted-foreground",
                   className,
                 )}
               >

@@ -33,7 +33,12 @@ function LinkTitle({ bookmark }: { bookmark: ZBookmarkTypeLink }) {
   const { onClickUrl, urlTarget } = useOnClickUrl(bookmark);
   const parsedUrl = new URL(bookmark.content.url);
   return (
-    <Link href={onClickUrl} target={urlTarget} rel="noreferrer">
+    <Link
+      href={onClickUrl}
+      target={urlTarget}
+      rel="noreferrer"
+      className="ease-(--ease-out) transition-colors duration-150 hover:text-primary"
+    >
       {getBookmarkTitle(bookmark) ?? parsedUrl.host}
     </Link>
   );
@@ -52,7 +57,7 @@ function LinkImage({
   const imgComponent = (url: string, unoptimized: boolean) => (
     <Image
       unoptimized={unoptimized}
-      className={className}
+      className={`${className ?? ""} ease-(--ease-out) transition-transform duration-300 group-hover:scale-[1.02]`}
       alt="card banner"
       fill={true}
       sizes="(max-width: 768px) 100vw, 33vw"

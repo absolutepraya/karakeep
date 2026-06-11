@@ -239,13 +239,13 @@ export default function EditorCard({
       <form
         className={cn(
           className,
-          "relative flex flex-col gap-2 rounded-xl bg-card p-4 transition-shadow focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/30",
+          "shadow-xs ease-(--ease-out) relative flex flex-col gap-3 rounded-2xl border border-dashed border-border/80 bg-card/90 p-4 transition-[border-color,box-shadow,background-color] duration-150 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/30 hover:border-border",
           cardHeight,
         )}
         onSubmit={form.handleSubmit(onSubmit, onError)}
       >
         <div className="flex justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {t("editor.new_item")}
           </p>
           <Kbd>⌘ + E</Kbd>
@@ -315,7 +315,7 @@ export default function EditorCard({
           disabled={!form.formState.dirtyFields.text}
           loading={isPending}
           type="submit"
-          variant="secondary"
+          variant="default"
         >
           {form.formState.dirtyFields.text
             ? demoMode

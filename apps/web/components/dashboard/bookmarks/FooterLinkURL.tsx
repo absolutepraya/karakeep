@@ -5,14 +5,15 @@ export default function FooterLinkURL({ url }: { url: string | null }) {
     return null;
   }
   const parsedUrl = new URL(url);
+  const host = parsedUrl.host.replace(/^www\./, "");
   return (
     <Link
-      className="line-clamp-1 hover:text-foreground"
+      className="ease-(--ease-out) line-clamp-1 max-w-full font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground"
       href={url}
       target="_blank"
       rel="noreferrer"
     >
-      {parsedUrl.host}
+      {host}
     </Link>
   );
 }

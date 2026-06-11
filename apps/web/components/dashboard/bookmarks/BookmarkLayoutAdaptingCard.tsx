@@ -67,20 +67,25 @@ function BottomRow({
       ? bookmark.content.favicon
       : null;
   return (
-    <div className="flex w-full shrink-0 justify-between text-xs text-muted-foreground sm:text-sm">
-      <div className="flex items-center gap-1.5 overflow-hidden text-nowrap sm:gap-2">
+    <div className="flex w-full shrink-0 items-center justify-between gap-3 text-xs text-muted-foreground sm:text-sm">
+      <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-nowrap sm:gap-2">
         {sourceUrl && (
           <Favicon
             url={sourceUrl}
             storedFavicon={storedFavicon}
-            className="size-4"
+            className="size-4 shrink-0"
           />
         )}
-        {footer && <>{footer}•</>}
+        {footer && (
+          <>
+            <div className="min-w-0 overflow-hidden">{footer}</div>
+            <span aria-hidden>•</span>
+          </>
+        )}
         <Link
           href={`/dashboard/preview/${bookmark.id}`}
           suppressHydrationWarning
-          className="transition-colors hover:text-foreground"
+          className="ease-(--ease-out) shrink-0 transition-colors duration-150 hover:text-foreground"
         >
           <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
         </Link>
@@ -255,7 +260,7 @@ function ListView({
   return (
     <div
       className={cn(
-        "group relative flex max-h-96 gap-4 overflow-hidden rounded-lg p-2",
+        "group relative flex max-h-96 gap-4 overflow-hidden rounded-2xl p-3 sm:p-3.5",
         className,
       )}
       data-bookmark-index={bookmarkIndex}
@@ -266,18 +271,20 @@ function ListView({
         bookmark={bookmark}
         className="left-1 top-1/2 -translate-y-1/2"
       />
-      <div className="flex size-32 items-center justify-center overflow-hidden">
-        {image("list", cn("size-32 rounded-lg", imgFitClass))}
+      <div className="flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted/25">
+        {image("list", cn("size-32 rounded-xl", imgFitClass))}
       </div>
-      <div className="flex h-full flex-1 flex-col justify-between gap-2 overflow-hidden">
-        <div className="flex flex-col gap-2 overflow-hidden">
+      <div className="flex h-full flex-1 flex-col justify-between gap-3 overflow-hidden">
+        <div className="flex flex-col gap-2.5 overflow-hidden">
           {showTitle && title && (
-            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-lg font-semibold">
+            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-lg font-semibold leading-snug tracking-tight">
               {title}
             </div>
           )}
           {content && (
-            <div className="shrink-1 max-h-40 overflow-hidden">{content}</div>
+            <div className="shrink-1 max-h-40 overflow-hidden text-sm text-foreground/90">
+              {content}
+            </div>
           )}
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
           {showTags &&
@@ -318,7 +325,7 @@ function GridView({
   // columns there); the `sm:` sizes restore the roomier desktop card.
   const img = image(
     "grid",
-    cn("h-40 min-h-40 w-full rounded-t-lg sm:h-56 sm:min-h-56", imgFitClass),
+    cn("h-40 min-h-40 w-full rounded-t-2xl sm:h-56 sm:min-h-56", imgFitClass),
   );
   const sourceUrl = getSourceUrl(bookmark);
   const storedFavicon =
@@ -329,7 +336,7 @@ function GridView({
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-lg",
+        "group relative flex flex-col overflow-hidden rounded-2xl",
         className,
         // Grid stays a uniform fixed height; masonry grows to fit its content
         // so tags and the footer are never clipped.
@@ -341,26 +348,26 @@ function GridView({
       <OwnerIndicator bookmark={bookmark} />
       <DragHandle bookmark={bookmark} className="left-2 top-2" />
       {img && (
-        <div className="h-40 w-full shrink-0 overflow-hidden sm:h-56">
+        <div className="h-40 w-full shrink-0 overflow-hidden border-b border-border/60 bg-muted/20 sm:h-56">
           {img}
         </div>
       )}
-      <div className="flex h-full flex-col justify-between gap-1.5 overflow-hidden p-2 sm:gap-2">
-        <div className="grow-1 flex flex-col gap-1.5 overflow-hidden sm:gap-2">
+      <div className="flex h-full flex-col justify-between gap-2 overflow-hidden p-3 sm:gap-2.5 sm:p-3.5">
+        <div className="grow-1 flex flex-col gap-2 overflow-hidden">
           {showTitle && title && (
-            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-sm font-semibold sm:text-lg">
+            <div className="line-clamp-2 flex-none shrink-0 overflow-hidden text-ellipsis break-words text-base font-semibold leading-snug tracking-tight sm:text-lg">
               {title}
             </div>
           )}
           {content && (
-            <div className="shrink-1 max-h-32 overflow-hidden text-sm sm:max-h-40 sm:text-base">
+            <div className="shrink-1 max-h-32 overflow-hidden text-sm leading-6 text-foreground/90 sm:max-h-40 sm:text-base">
               {content}
             </div>
           )}
           {note && <NotePreview note={note} bookmarkId={bookmark.id} />}
           {showTags &&
             (bookmark.tags.length > 0 || isBookmarkStillTagging(bookmark)) && (
-              <div className="hidden shrink-0 flex-wrap gap-1 sm:flex">
+              <div className="hidden shrink-0 flex-wrap gap-1.5 sm:flex">
                 <TagList
                   className={wrapTags ? undefined : "h-full"}
                   bookmark={bookmark}
@@ -373,7 +380,7 @@ function GridView({
             row (date left, actions right). Desktop: url + date inline on the
             left, actions on the right. The date is rendered in both spots and
             toggled per breakpoint since it regroups between the two. */}
-        <div className="flex w-full shrink-0 flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:text-sm">
+        <div className="flex w-full shrink-0 flex-col gap-1.5 border-t border-border/60 pt-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:pt-2.5 sm:text-sm">
           <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
             {(sourceUrl || footer) && (
               <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-nowrap">
@@ -390,7 +397,7 @@ function GridView({
             <Link
               href={`/dashboard/preview/${bookmark.id}`}
               suppressHydrationWarning
-              className="hidden text-nowrap transition-colors hover:text-foreground sm:block"
+              className="ease-(--ease-out) hidden text-nowrap transition-colors duration-150 hover:text-foreground sm:block"
             >
               <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
             </Link>
@@ -399,7 +406,7 @@ function GridView({
             <Link
               href={`/dashboard/preview/${bookmark.id}`}
               suppressHydrationWarning
-              className="text-nowrap transition-colors hover:text-foreground sm:hidden"
+              className="ease-(--ease-out) text-nowrap transition-colors duration-150 hover:text-foreground sm:hidden"
             >
               <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
             </Link>
@@ -424,7 +431,7 @@ function CompactView({
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-lg",
+        "group relative flex flex-col overflow-hidden rounded-2xl",
         className,
         "max-h-96",
       )}
@@ -432,8 +439,8 @@ function CompactView({
     >
       <MultiBookmarkSelector bookmark={bookmark} />
       <OwnerIndicator bookmark={bookmark} />
-      <div className="flex h-full justify-between gap-2 overflow-hidden p-2">
-        <div className="flex items-center gap-2">
+      <div className="flex h-full items-center justify-between gap-3 overflow-hidden p-3">
+        <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
           {bookmark.content.type === BookmarkTypes.LINK && (
             <Favicon
               url={bookmark.content.url}
@@ -448,20 +455,21 @@ function CompactView({
             <ImageIcon className="size-5" />
           )}
           {showTitle && (
-            <div className="shrink-1 line-clamp-1 overflow-hidden text-ellipsis break-words text-sm font-semibold">
+            <div className="shrink-1 line-clamp-1 overflow-hidden text-ellipsis break-words text-sm font-semibold tracking-tight">
               {title ?? "Untitled"}
             </div>
           )}
           {footer && (
-            <p className="flex shrink-0 gap-2 text-xs text-muted-foreground">
-              •{footer}
+            <p className="flex min-w-0 shrink gap-2 overflow-hidden text-xs text-muted-foreground">
+              <span aria-hidden>•</span>
+              <span className="truncate">{footer}</span>
             </p>
           )}
           <p className="text-xs text-muted-foreground">•</p>
           <Link
             href={`/dashboard/preview/${bookmark.id}`}
             suppressHydrationWarning
-            className="shrink-0 gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="ease-(--ease-out) shrink-0 gap-2 text-xs text-muted-foreground transition-colors duration-150 hover:text-foreground"
           >
             <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
           </Link>

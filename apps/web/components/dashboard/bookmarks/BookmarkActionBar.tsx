@@ -37,14 +37,17 @@ export default function BookmarkActionBar({
     ? t("actions.unfavorite")
     : t("actions.favorite");
 
+  const actionButtonClass =
+    "flex size-8 items-center justify-center rounded-full text-muted-foreground transition-[transform,background-color,color,opacity] duration-150 ease-(--ease-out) hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]";
+
   return (
-    <div className="flex items-center text-muted-foreground">
+    <div className="pointer-coarse:opacity-100 ease-(--ease-out) pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 flex items-center gap-0.5 text-muted-foreground transition-opacity duration-150">
       {canFavourite ? (
         <button
           type="button"
           aria-label={favLabel}
           title={favLabel}
-          className="flex size-8 items-center justify-center rounded p-1 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
+          className={actionButtonClass}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -58,13 +61,18 @@ export default function BookmarkActionBar({
         </button>
       ) : (
         bookmark.favourited && (
-          <FavouritedActionIcon className="m-1 size-8 rounded p-1" favourited />
+          <div className="flex size-8 items-center justify-center rounded-full text-muted-foreground/80">
+            <FavouritedActionIcon favourited size={16} />
+          </div>
         )
       )}
       <Link
         href={`/dashboard/preview/${bookmark.id}`}
         aria-label={t("actions.expand")}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "icon-sm" }),
+          "ease-(--ease-out) rounded-full text-muted-foreground transition-[transform,background-color,color] duration-150 hover:text-foreground active:scale-[0.97]",
+        )}
       >
         <Maximize2 size={16} />
       </Link>

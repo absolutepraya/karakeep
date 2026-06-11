@@ -475,7 +475,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
             variant="ghost"
             size="icon-sm"
             aria-label={t("actions.more")}
-            className="focus-visible:ring-2 focus-visible:ring-ring"
+            className="ease-(--ease-out) rounded-full text-muted-foreground transition-[transform,background-color,color,opacity] duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
           >
             <MoreHorizontal className="size-4" />
           </Button>

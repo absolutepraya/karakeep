@@ -30,7 +30,7 @@ function AssetImage({
             fill={true}
             sizes="(max-width: 768px) 100vw, 33vw"
             unoptimized
-            className={className}
+            className={`${className ?? ""} ease-(--ease-out) transition-transform duration-300 group-hover:scale-[1.02]`}
           />
         </Link>
       );
@@ -57,7 +57,7 @@ function AssetImage({
             fill={true}
             sizes="(max-width: 768px) 100vw, 33vw"
             unoptimized
-            className={className}
+            className={`${className ?? ""} ease-(--ease-out) transition-transform duration-300 group-hover:scale-[1.02]`}
           />
         </Link>
       );
