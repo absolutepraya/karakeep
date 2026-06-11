@@ -18,24 +18,26 @@ export default function GlobalActions() {
   const setShortcutsDialogOpen = useKeyboardNavigationStore(
     (state) => state.setShortcutsDialogOpen,
   );
+  if (!inBookmarkGrid) {
+    return null;
+  }
+
   return (
-    <div className="flex min-w-max flex-wrap overflow-hidden">
-      {inBookmarkGrid && <ViewOptions />}
-      {inBookmarkGrid && <BulkBookmarksAction />}
-      {inBookmarkGrid && <SortOrderToggle />}
-      {inBookmarkGrid && (
-        <span className="hidden sm:inline-flex">
-          <ButtonWithTooltip
-            variant="ghost"
-            onClick={() => setShortcutsDialogOpen(true)}
-            tooltip={t("keyboard_shortcuts.title")}
-            delayDuration={100}
-            aria-label={t("keyboard_shortcuts.title")}
-          >
-            <Keyboard size={18} />
-          </ButtonWithTooltip>
-        </span>
-      )}
+    <div className="shadow-xs flex min-w-max flex-wrap items-center gap-0.5 rounded-xl border border-border/70 bg-background/80 p-1 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <ViewOptions />
+      <BulkBookmarksAction />
+      <SortOrderToggle />
+      <span className="hidden sm:inline-flex">
+        <ButtonWithTooltip
+          variant="ghost"
+          onClick={() => setShortcutsDialogOpen(true)}
+          tooltip={t("keyboard_shortcuts.title")}
+          delayDuration={100}
+          aria-label={t("keyboard_shortcuts.title")}
+        >
+          <Keyboard size={18} />
+        </ButtonWithTooltip>
+      </span>
     </div>
   );
 }

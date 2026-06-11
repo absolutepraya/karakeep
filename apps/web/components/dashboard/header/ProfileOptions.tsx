@@ -69,7 +69,7 @@ export default function SidebarProfileOptions() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          className="border-new-gray-200 aspect-square rounded-full border-4 bg-black p-0 text-white"
+          className="shadow-xs ease-(--ease-out) aspect-square size-10 rounded-full border border-border/70 bg-background p-0 text-foreground transition-[background-color,border-color,box-shadow] duration-150 hover:bg-accent/70"
           variant="ghost"
         >
           <UserAvatar
@@ -79,18 +79,22 @@ export default function SidebarProfileOptions() {
           />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="mr-2 min-w-64 p-2">
-        <div className="flex gap-2">
-          <div className="border-new-gray-200 flex aspect-square size-11 items-center justify-center overflow-hidden rounded-full border-4 bg-black p-0 text-white">
+      <DropdownMenuContent className="mr-2 w-72 rounded-xl p-2">
+        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+          <div className="shadow-xs flex aspect-square size-11 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-card">
             <UserAvatar
               image={avatarUrl}
               name={session.user.name}
               className="h-full w-full"
             />
           </div>
-          <div className="flex flex-col">
-            <p>{session.user.name}</p>
-            <p className="text-sm text-gray-400">{session.user.email}</p>
+          <div className="flex min-w-0 flex-col">
+            <p className="truncate font-medium text-foreground">
+              {session.user.name}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">
+              {session.user.email}
+            </p>
           </div>
         </div>
         <Separator className="my-2" />

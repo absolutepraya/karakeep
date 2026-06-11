@@ -25,12 +25,12 @@ export default function SidebarLayout({
       <div className="flex min-h-[calc(100vh-64px)] w-full flex-col sm:h-[calc(100dvh-64px)] sm:flex-row sm:overflow-hidden">
         <ValidAccountCheck />
         <div className="hidden flex-none sm:flex">{sidebar}</div>
-        <main className="flex-1 bg-background sm:min-h-0 sm:overflow-y-auto sm:rounded-tl-lg sm:border-l sm:border-t">
+        <main className="flex-1 bg-background sm:min-h-0 sm:overflow-y-auto sm:rounded-tl-2xl sm:border-l sm:border-t sm:border-border/70">
           {serverConfig.demoMode && <DemoModeBanner />}
           {modal}
           {/* Extra bottom padding on mobile so the floating nav never covers
               the last row of content. */}
-          <div className="min-h-30 container p-4 pb-20 sm:pb-4">
+          <div className="min-h-30 container p-4 pb-20 sm:p-5 sm:pb-5">
             <ErrorBoundary fallback={<ErrorFallback />}>
               <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
             </ErrorBoundary>

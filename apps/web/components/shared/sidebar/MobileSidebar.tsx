@@ -25,7 +25,7 @@ export default async function MobileSidebar({
           overflow the viewport; the few-item dashboard nav still spreads to
           fill since each item can grow past its basis. Scrollbar is hidden for
           the clean floating-pill look. */}
-      <ul className="flex items-center gap-0.5 overflow-x-auto overscroll-x-contain rounded-2xl border bg-card p-1 shadow-lg [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="flex items-center gap-1 overflow-x-auto overscroll-x-contain rounded-[1.35rem] border border-border/80 bg-card/95 p-1.5 shadow-lg shadow-black/5 backdrop-blur [-ms-overflow-style:none] [scrollbar-width:none] supports-[backdrop-filter]:bg-card/80 [&::-webkit-scrollbar]:hidden">
         {items(t).map((item) => (
           <MobileSidebarItem
             key={item.name}

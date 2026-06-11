@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Command,
   CommandGroup,
@@ -16,6 +17,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { CircleHelp } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -169,7 +171,7 @@ const SearchInput = React.forwardRef<
   }, [value, addTerm]);
 
   return (
-    <div className={cn("relative flex-1", className)}>
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>
       <EditListModal
         open={newNestedListModalOpen}
         setOpen={setNewNestedListModalOpen}
@@ -178,99 +180,123 @@ const SearchInput = React.forwardRef<
           query: value,
         }}
       />
-      <Link
-        href="https://docs.karakeep.app/Guides/search-query-language"
-        target="_blank"
-        className="-translate-1/2 absolute right-1.5 top-2 z-50 stroke-foreground px-0.5"
-      >
-        <QueryExplainerTooltip parsedSearchQuery={parsedSearchQuery} />
-      </Link>
-      {parsedSearchQuery.result === "full" &&
-        parsedSearchQuery.text.length == 0 && (
-          <Button
-            onClick={() => setNewNestedListModalOpen(true)}
-            size="none"
-            variant="secondary"
-            className="absolute right-10 top-2 z-50 px-2 py-1 text-xs"
-          >
-            {t("actions.save")}
-          </Button>
-        )}
-      <Command
-        shouldFilter={false}
-        className="shadow-xs relative rounded-lg border border-input bg-background transition-shadow focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/30 [&_[cmdk-input-wrapper]]:border-0"
-        onKeyDown={handleCommandKeyDown}
-      >
-        <Popover open={isPopoverVisible}>
-          <PopoverTrigger asChild>
-            <div className="relative">
-              <CommandInput
-                ref={inputRef}
-                placeholder={t("common.search")}
-                value={value}
-                onValueChange={handleValueChange}
-                onCompositionStart={handleCompositionStart}
-                onCompositionEnd={handleCompositionEnd}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                className={cn("h-10", className)}
-                {...props}
-              />
-            </div>
-          </PopoverTrigger>
-          <PopoverContent
-            className="p-0"
-            style={{ width: "var(--radix-popover-trigger-width)" }}
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <CommandList className="max-h-96 overflow-y-auto">
-              {hasSuggestions && <CommandItem value="-" className="hidden" />}
-              {suggestionGroups.map((group) => (
-                <CommandGroup key={group.id} heading={group.label}>
-                  {group.items.map((item) => {
-                    if (item.type === "history") {
+      <div className="min-w-0 flex-1">
+        <Command
+          shouldFilter={false}
+          className="shadow-xs ease-(--ease-out) relative rounded-xl border border-input/80 bg-background/90 transition-[border-color,box-shadow,background-color] duration-150 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/25 [&_[cmdk-input-wrapper]]:border-0"
+          onKeyDown={handleCommandKeyDown}
+        >
+          <Popover open={isPopoverVisible}>
+            <PopoverTrigger asChild>
+              <div className="relative">
+                <CommandInput
+                  ref={inputRef}
+                  placeholder={t("common.search")}
+                  value={value}
+                  onValueChange={handleValueChange}
+                  onCompositionStart={handleCompositionStart}
+                  onCompositionEnd={handleCompositionEnd}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  className="h-10"
+                  {...props}
+                />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent
+              className="p-0"
+              style={{ width: "var(--radix-popover-trigger-width)" }}
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <CommandList className="max-h-96 overflow-y-auto">
+                {hasSuggestions && <CommandItem value="-" className="hidden" />}
+                {suggestionGroups.map((group) => (
+                  <CommandGroup key={group.id} heading={group.label}>
+                    {group.items.map((item) => {
+                      if (item.type === "history") {
+                        return (
+                          <CommandItem
+                            key={item.id}
+                            value={item.label}
+                            onSelect={() => handleHistorySelect(item.term)}
+                            onMouseDown={() => {
+                              isHistorySelected.current = true;
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <item.Icon className="mr-2 h-4 w-4" />
+                            <span>{item.label}</span>
+                          </CommandItem>
+                        );
+                      }
+
                       return (
                         <CommandItem
                           key={item.id}
                           value={item.label}
-                          onSelect={() => handleHistorySelect(item.term)}
-                          onMouseDown={() => {
-                            isHistorySelected.current = true;
-                          }}
+                          onSelect={() => handleSuggestionSelect(item)}
                           className="cursor-pointer"
                         >
                           <item.Icon className="mr-2 h-4 w-4" />
-                          <span>{item.label}</span>
+                          <div className="flex flex-col">
+                            <span>{item.label}</span>
+                            {item.description && (
+                              <span className="text-xs text-muted-foreground">
+                                {item.description}
+                              </span>
+                            )}
+                          </div>
                         </CommandItem>
                       );
-                    }
+                    })}
+                  </CommandGroup>
+                ))}
+              </CommandList>
+            </PopoverContent>
+          </Popover>
+        </Command>
+      </div>
 
-                    return (
-                      <CommandItem
-                        key={item.id}
-                        value={item.label}
-                        onSelect={() => handleSuggestionSelect(item)}
-                        className="cursor-pointer"
-                      >
-                        <item.Icon className="mr-2 h-4 w-4" />
-                        <div className="flex flex-col">
-                          <span>{item.label}</span>
-                          {item.description && (
-                            <span className="text-xs text-muted-foreground">
-                              {item.description}
-                            </span>
-                          )}
-                        </div>
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
-              ))}
-            </CommandList>
-          </PopoverContent>
-        </Popover>
-      </Command>
+      <div className="hidden items-center gap-2 sm:flex">
+        {parsedSearchQuery.result === "invalid" ? (
+          <Link
+            href="https://docs.karakeep.app/Guides/search-query-language"
+            target="_blank"
+            className="ease-(--ease-out) shrink-0 rounded-lg border border-border/70 bg-background/80 p-2 text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-150 hover:bg-accent hover:text-foreground"
+          >
+            <CircleHelp className="size-4" />
+          </Link>
+        ) : (
+          <QueryExplainerTooltip
+            parsedSearchQuery={parsedSearchQuery}
+            trigger={
+              <Link
+                href="https://docs.karakeep.app/Guides/search-query-language"
+                target="_blank"
+                className="ease-(--ease-out) shrink-0 rounded-lg border border-border/70 bg-background/80 p-2 text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-150 hover:bg-accent hover:text-foreground"
+              >
+                <CircleHelp className="size-4" />
+              </Link>
+            }
+          />
+        )}
+
+        {parsedSearchQuery.result === "full" &&
+          parsedSearchQuery.text.length == 0 && (
+            <>
+              <Separator orientation="vertical" className="h-6" />
+              <Button
+                onClick={() => setNewNestedListModalOpen(true)}
+                size="sm"
+                variant="secondary"
+                className="shrink-0 rounded-lg"
+              >
+                {t("actions.save")}
+              </Button>
+            </>
+          )}
+      </div>
     </div>
   );
 });

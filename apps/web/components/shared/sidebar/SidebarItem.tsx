@@ -35,13 +35,15 @@ export default function SidebarItem({
   onDragLeave?: React.DragEventHandler;
 }) {
   const currentPath = usePathname();
+  const isActive = path == currentPath;
+
   return (
     <li
       className={cn(
-        "relative flex min-w-0 items-center justify-between rounded-lg text-sm transition-colors hover:bg-accent",
-        path == currentPath
-          ? "bg-accent/50 text-foreground"
-          : "text-muted-foreground",
+        "ease-(--ease-out) group relative flex min-w-0 items-center justify-between rounded-xl text-sm transition-[background-color,color,box-shadow] duration-150",
+        isActive
+          ? "shadow-xs bg-background text-foreground ring-1 ring-border/70"
+          : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
         dropHighlight && "bg-accent ring-2 ring-primary",
         className,
       )}
@@ -56,12 +58,19 @@ export default function SidebarItem({
         <Link
           href={path}
           className={cn(
-            "flex min-w-0 flex-1 items-center gap-x-2 rounded-[inherit] px-3 py-2",
+            "flex min-w-0 flex-1 items-center gap-x-2 rounded-[inherit] px-3 py-2.5",
             linkClassName,
           )}
         >
-          {logo}
-          <span title={name} className="min-w-0 truncate">
+          <span
+            className={cn(
+              "ease-(--ease-out) flex size-5 shrink-0 items-center justify-center text-muted-foreground transition-colors duration-150",
+              isActive ? "text-foreground" : "group-hover:text-foreground",
+            )}
+          >
+            {logo}
+          </span>
+          <span title={name} className="min-w-0 truncate font-medium">
             {name}
           </span>
         </Link>
