@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { ActionButton } from "@/components/ui/action-button";
 import ActionConfirmingDialog from "@/components/ui/action-confirming-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +29,14 @@ import Spinner from "@/components/ui/spinner";
 import { Toggle } from "@/components/ui/toggle";
 import useBulkTagActionsStore from "@/lib/bulkTagActions";
 import { useTranslation } from "@/lib/i18n/client";
-import { ArrowDownAZ, ChevronDown, Combine, Search, Tag } from "lucide-react";
+import {
+  ArrowDownAZ,
+  ChevronDown,
+  Combine,
+  Search,
+  SearchX,
+  Tag,
+} from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
 import type { ZGetTagResponse, ZTagBasic } from "@karakeep/shared/types/tags";
@@ -200,12 +209,16 @@ export default function AllTagsView() {
 
         if (tags.length === 0) {
           return (
-            <div className="py-8 text-center">
-              <Tag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-              <p className="mb-4 text-gray-500">
-                {hasActiveSearch ? searchEmptyMessage : emptyMessage}
-              </p>
-            </div>
+            <EmptyState
+              compact={true}
+              icon={hasActiveSearch ? <SearchX /> : <Tag />}
+              title={hasActiveSearch ? searchEmptyMessage : emptyMessage}
+              description={
+                hasActiveSearch
+                  ? "Try a different keyword or clear the search to browse all tags again."
+                  : undefined
+              }
+            />
           );
         }
 
@@ -256,38 +269,37 @@ export default function AllTagsView() {
         />
       )}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-          <h1 className="flex items-center gap-2 text-2xl tracking-normal text-foreground">
-            <Tag className="size-6 shrink-0 text-muted-foreground" />
-            {t("tags.all_tags")}
-          </h1>
-          {/* Controls collapse to icon-only on mobile so the header stays a
-              single compact row; labels return at sm. */}
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-            <CreateTagModal />
-            <BulkTagAction />
-            <Toggle
-              variant="outline"
-              className="bg-background"
-              aria-label={t("tags.drag_and_drop_merging")}
-              pressed={draggingEnabled}
-              onPressedChange={toggleDraggingEnabled}
-              disabled={isBulkEditEnabled}
-            >
-              <Combine className="size-4 sm:mr-2" />
-              <span className="hidden sm:inline">
-                {t("tags.drag_and_drop_merging")}
-              </span>
-              <InfoTooltip
-                size={15}
-                className="my-auto ml-2 hidden sm:block"
-                variant="explain"
+        <PageHeader
+          title={t("tags.all_tags")}
+          description="Keep your collection easy to browse with personal tags, AI suggestions, and quick cleanup tools."
+          icon={<Tag />}
+          action={
+            <>
+              <CreateTagModal />
+              <BulkTagAction />
+              <Toggle
+                variant="outline"
+                className="bg-background"
+                aria-label={t("tags.drag_and_drop_merging")}
+                pressed={draggingEnabled}
+                onPressedChange={toggleDraggingEnabled}
+                disabled={isBulkEditEnabled}
               >
-                <p>{t("tags.drag_and_drop_merging_info")}</p>
-              </InfoTooltip>
-            </Toggle>
-          </div>
-        </div>
+                <Combine className="size-4 sm:mr-2" />
+                <span className="hidden sm:inline">
+                  {t("tags.drag_and_drop_merging")}
+                </span>
+                <InfoTooltip
+                  size={15}
+                  className="my-auto ml-2 hidden sm:block"
+                  variant="explain"
+                >
+                  <p>{t("tags.drag_and_drop_merging_info")}</p>
+                </InfoTooltip>
+              </Toggle>
+            </>
+          }
+        />
         <div className="flex flex-col gap-3">
           <div className="flex w-full items-center gap-2">
             <div className="flex-1">

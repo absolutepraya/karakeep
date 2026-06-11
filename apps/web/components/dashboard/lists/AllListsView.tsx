@@ -2,12 +2,20 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { CollapsibleTriggerChevron } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
-import { MoreHorizontal, Plus, Search, X } from "lucide-react";
+import {
+  ClipboardList,
+  MoreHorizontal,
+  Plus,
+  Search,
+  SearchX,
+  X,
+} from "lucide-react";
 
 import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 import {
@@ -242,9 +250,14 @@ export default function AllListsView({
             />
           </div>
         ) : (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {t("lists.no_lists_found", { defaultValue: "No lists found" })}
-          </p>
+          <EmptyState
+            compact={true}
+            icon={<SearchX />}
+            title={t("lists.no_lists_found", {
+              defaultValue: "No lists found",
+            })}
+            description="Try a different name or clear the search to browse your full list tree."
+          />
         )
       ) : (
         <>
@@ -275,19 +288,22 @@ export default function AllListsView({
             </Section>
           ) : (
             <Section title={t("lists.all_lists")}>
-              <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-                <p className="text-sm text-muted-foreground">
-                  {t("lists.no_lists_yet", {
-                    defaultValue: "You don't have any lists yet.",
-                  })}
-                </p>
-                <EditListModal>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Plus className="size-4" />
-                    {t("lists.new_list")}
-                  </Button>
-                </EditListModal>
-              </div>
+              <EmptyState
+                compact={true}
+                icon={<ClipboardList />}
+                title={t("lists.no_lists_yet", {
+                  defaultValue: "You don't have any lists yet.",
+                })}
+                description="Create your first list to group related bookmarks, projects, or shared reading."
+                action={
+                  <EditListModal>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Plus className="size-4" />
+                      {t("lists.new_list")}
+                    </Button>
+                  </EditListModal>
+                }
+              />
             </Section>
           )}
 

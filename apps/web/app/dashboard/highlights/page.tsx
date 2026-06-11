@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AllHighlights from "@/components/dashboard/highlights/AllHighlights";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { useTranslation } from "@/lib/i18n/server";
 import { api } from "@/server/api/client";
 import { Highlighter } from "lucide-react";
@@ -18,11 +19,12 @@ export default async function HighlightsPage() {
   const highlights = await api.highlights.getAll({});
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center">
-        <Highlighter className="mr-2" />
-        <p className="text-2xl">{t("common.highlights")}</p>
-      </div>
-      <div className="flex flex-col gap-8 rounded-md border bg-background p-4">
+      <PageHeader
+        title={t("common.highlights")}
+        description="Search and revisit every passage you’ve highlighted across your saved reading."
+        icon={<Highlighter />}
+      />
+      <div className="flex flex-col gap-6 rounded-xl border bg-card p-4 sm:p-5">
         <AllHighlights highlights={highlights} />
       </div>
     </div>

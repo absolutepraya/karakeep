@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { ActionButton } from "@/components/ui/action-button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import useRelativeTime from "@/lib/hooks/relative-time";
-import { Separator } from "@radix-ui/react-dropdown-menu";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Dot, LinkIcon, Search, X } from "lucide-react";
+import { Dot, Highlighter, LinkIcon, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useInView } from "react-intersection-observer";
 
@@ -29,7 +30,7 @@ function Highlight({ highlight }: { highlight: ZHighlight }) {
   return (
     <div className="flex flex-col gap-2">
       <HighlightCard highlight={highlight} clickable={false} readOnly={false} />
-      <span className="flex items-center gap-0.5 text-xs italic text-gray-400">
+      <span className="flex items-center gap-0.5 text-xs italic text-muted-foreground">
         <span title={localCreatedAt}>{fromNow}</span>
         <Dot />
         <Link
@@ -129,13 +130,24 @@ export default function AllHighlights({
           allHighlights.map((h) => (
             <React.Fragment key={h.id}>
               <Highlight highlight={h} />
-              <Separator className="m-2 h-0.5 bg-gray-100 last:hidden" />
+              <Separator className="m-2 last:hidden" />
             </React.Fragment>
           ))}
         {allHighlights && allHighlights.length == 0 && (
-          <p className="rounded-md bg-muted p-2 text-sm text-muted-foreground">
-            {t("highlights.no_highlights")}
-          </p>
+          <EmptyState
+            compact={true}
+            icon={<Highlighter />}
+            title={
+              useSearchQuery
+                ? "No highlights match your search"
+                : t("highlights.no_highlights")
+            }
+            description={
+              useSearchQuery
+                ? "Try a different keyword or clear the search to see every saved highlight."
+                : "Highlights from your saved reading will appear here once you start collecting them."
+            }
+          />
         )}
         {hasNextPage && (
           <div className="flex justify-center">
