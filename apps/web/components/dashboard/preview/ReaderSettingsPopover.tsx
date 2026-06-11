@@ -112,28 +112,37 @@ export default function ReaderSettingsPopover({
         side="bottom"
         align="center"
         collisionPadding={32}
-        className="flex w-80 flex-col overflow-hidden p-0"
+        className="flex w-[22rem] flex-col overflow-hidden rounded-2xl p-0"
         style={{
           maxHeight: "var(--radix-popover-content-available-height)",
         }}
       >
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-          <div className="flex items-center justify-between pb-2">
-            <div className="flex items-center gap-2">
-              <Type className="h-4 w-4" />
-              <h3 className="font-semibold">
-                {t("settings.info.reader_settings.title")}
-              </h3>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="shadow-xs flex size-8 items-center justify-center rounded-lg bg-background text-muted-foreground">
+                  <Type className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">
+                    {t("settings.info.reader_settings.title")}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Tune typography for a calmer reading experience.
+                  </p>
+                </div>
+              </div>
+              {hasSessionChanges && (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                  {t("settings.info.reader_settings.preview")}
+                </span>
+              )}
             </div>
-            {hasSessionChanges && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                {t("settings.info.reader_settings.preview")}
-              </span>
-            )}
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
+          <div className="space-y-3">
+            <div className="space-y-2 rounded-xl border border-border/70 bg-background p-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">
                   {t("settings.info.reader_settings.font_family")}
@@ -205,7 +214,7 @@ export default function ReaderSettingsPopover({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border border-border/70 bg-background p-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">
                   {t("settings.info.reader_settings.font_size")}
@@ -299,7 +308,7 @@ export default function ReaderSettingsPopover({
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border border-border/70 bg-background p-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">
                   {t("settings.info.reader_settings.line_height")}
@@ -403,7 +412,7 @@ export default function ReaderSettingsPopover({
               <>
                 <Separator />
 
-                <div className="space-y-2">
+                <div className="space-y-2 rounded-xl border border-border/70 bg-muted/15 p-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -445,7 +454,7 @@ export default function ReaderSettingsPopover({
             )}
 
             {!hasSessionChanges && (
-              <p className="text-center text-xs text-muted-foreground">
+              <p className="rounded-xl border border-border/70 bg-muted/15 px-3 py-2 text-center text-xs text-muted-foreground">
                 {t("settings.info.reader_settings.adjust_hint")}
               </p>
             )}

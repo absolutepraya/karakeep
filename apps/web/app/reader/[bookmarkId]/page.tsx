@@ -12,7 +12,12 @@ import { useSession } from "@/lib/auth/client";
 import { useReaderSettings } from "@/lib/readerSettings";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { HighlighterIcon as Highlight, Printer, X } from "lucide-react";
+import {
+  ExternalLink,
+  HighlighterIcon as Highlight,
+  Printer,
+  X,
+} from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
@@ -52,20 +57,55 @@ export default function ReaderViewPage() {
     window.print();
   };
 
+  const sourceUrl =
+    bookmark?.content.type === BookmarkTypes.LINK ? bookmark.content.url : null;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 print:hidden">
-        <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onClose}>
+      <header className="bg-background/92 sticky top-0 z-40 border-b border-border/70 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
+        <div className="flex h-14 items-center justify-between gap-3 px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={onClose}
+            >
               <X className="h-4 w-4" />
             </Button>
-            <span className="text-sm text-muted-foreground">Reader View</span>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">Reader View</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {bookmark ? getBookmarkTitle(bookmark) : "Loading article…"}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handlePrint}>
+          <div className="shadow-xs flex items-center gap-1 rounded-full border border-border/70 bg-card/80 p-1">
+            {sourceUrl && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                asChild
+              >
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open original"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={handlePrint}
+            >
               <Printer className="h-4 w-4" />
             </Button>
 
@@ -74,6 +114,7 @@ export default function ReaderViewPage() {
             <Button
               variant={showHighlights ? "default" : "ghost"}
               size="icon"
+              className="rounded-full"
               onClick={() => setShowHighlights(!showHighlights)}
             >
               <Highlight className="h-4 w-4" />
@@ -100,11 +141,11 @@ export default function ReaderViewPage() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-x-hidden">
-          <article className="mx-auto max-w-3xl overflow-x-hidden px-4 py-8 sm:px-6">
+          <article className="mx-auto max-w-[46rem] overflow-x-hidden px-4 py-8 sm:px-6 sm:py-10">
             {bookmark ? (
               <>
                 {/* Article Header */}
-                <header className="mb-8 space-y-4">
+                <header className="shadow-xs mb-10 space-y-4 rounded-2xl border border-border/70 bg-card/50 p-5 sm:p-6">
                   <h1
                     className="font-bold leading-tight"
                     style={{
@@ -115,12 +156,28 @@ export default function ReaderViewPage() {
                   >
                     {getBookmarkTitle(bookmark)}
                   </h1>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {bookmark.content.type == BookmarkTypes.LINK && (
-                      <span>By {bookmark.content.author}</span>
-                    )}
-                    <Separator orientation="vertical" className="h-4" />
-                    <span>8 min</span>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                    {bookmark.content.type == BookmarkTypes.LINK &&
+                      bookmark.content.author && (
+                        <span>By {bookmark.content.author}</span>
+                      )}
+                    {bookmark.content.type == BookmarkTypes.LINK &&
+                      bookmark.content.publisher && (
+                        <>
+                          <Separator
+                            orientation="vertical"
+                            className="hidden h-4 sm:block"
+                          />
+                          <span>{bookmark.content.publisher}</span>
+                        </>
+                      )}
+                    <>
+                      <Separator
+                        orientation="vertical"
+                        className="hidden h-4 sm:block"
+                      />
+                      <span>Saved for focused reading</span>
+                    </>
                   </div>
                 </header>
 
@@ -151,14 +208,14 @@ export default function ReaderViewPage() {
           <aside
             aria-hidden={!showHighlights}
             className={cn(
-              "ease-(--ease-out) fixed right-0 top-14 z-50 h-[calc(100vh-3.5rem)] w-full border-l bg-background transition-[transform,opacity] duration-200 sm:w-80 lg:bg-background/95 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-background/60 print:hidden",
+              "ease-(--ease-out) fixed right-0 top-14 z-50 h-[calc(100vh-3.5rem)] w-full border-l border-border/70 bg-card/95 transition-[transform,opacity] duration-200 sm:w-80 lg:bg-card/85 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-card/75 print:hidden",
               showHighlights
                 ? "translate-x-0 opacity-100"
                 : "pointer-events-none translate-x-full opacity-0",
             )}
           >
             <div className="flex h-full flex-col">
-              <div className="border-b p-4">
+              <div className="border-b border-border/70 p-4">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold">Highlights</h2>
                   <div className="flex items-center gap-2">

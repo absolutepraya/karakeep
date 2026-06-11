@@ -49,8 +49,11 @@ export default function ActionBar({ bookmark }: { bookmark: ZBookmark }) {
       onError,
     });
 
+  const actionButtonClass =
+    "size-10 rounded-xl border border-border/70 bg-background/90 text-muted-foreground shadow-xs transition-[transform,background-color,color,border-color,box-shadow] duration-150 ease-(--ease-out) hover:bg-accent hover:text-foreground active:scale-[0.97]";
+
   return (
-    <div className="flex items-center justify-center gap-3 text-muted-foreground">
+    <div className="grid grid-cols-4 gap-2 text-muted-foreground">
       <Tooltip delayDuration={0}>
         <EditBookmarkDialog
           bookmark={bookmark}
@@ -62,7 +65,7 @@ export default function ActionBar({ bookmark }: { bookmark: ZBookmark }) {
           <Button
             variant="ghost"
             size="none"
-            className="size-8 rounded-md"
+            className={actionButtonClass}
             onClick={() => {
               setEditBookmarkDialogOpen(true);
             }}
@@ -77,7 +80,7 @@ export default function ActionBar({ bookmark }: { bookmark: ZBookmark }) {
           <ActionButton
             variant="ghost"
             size="none"
-            className="size-8 rounded-md"
+            className={actionButtonClass}
             loading={pendingFav}
             onClick={() => {
               favBookmark({
@@ -105,7 +108,7 @@ export default function ActionBar({ bookmark }: { bookmark: ZBookmark }) {
             variant="ghost"
             size="none"
             loading={pendingArchive}
-            className="size-8 rounded-md"
+            className={actionButtonClass}
             onClick={() => {
               archiveBookmark({
                 bookmarkId: bookmark.id,
@@ -132,7 +135,7 @@ export default function ActionBar({ bookmark }: { bookmark: ZBookmark }) {
         />
         <TooltipTrigger asChild>
           <Button
-            className="size-8 rounded-md"
+            className={actionButtonClass}
             variant="ghost"
             size="none"
             onClick={() => setDeleteBookmarkDialogOpen(true)}

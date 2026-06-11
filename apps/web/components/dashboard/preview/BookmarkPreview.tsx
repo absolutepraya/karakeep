@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { BookmarkTagsEditor } from "@/components/dashboard/bookmarks/BookmarkTagsEditor";
 import { FullPageSpinner } from "@/components/ui/full-page-spinner";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -47,9 +47,9 @@ import { TextContentSection } from "./TextContentSection";
 function ContentLoading() {
   const { t } = useTranslation();
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4">
-      <Globe className="h-12 w-12 animate-bounce text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-2xl border border-border/70 bg-card/60 p-8 text-center">
+      <Globe className="h-10 w-10 animate-pulse text-muted-foreground" />
+      <p className="max-w-sm text-sm text-muted-foreground">
         {t("preview.crawling_in_progress")}
       </p>
     </div>
@@ -73,6 +73,30 @@ function CreationTime({ createdAt }: { createdAt: Date }) {
   );
 }
 
+function DetailSection({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-xl border border-border/70 bg-background/80 px-3 py-3",
+        className,
+      )}
+    >
+      <p className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        {title}
+      </p>
+      {children}
+    </section>
+  );
+}
+
 function BookmarkMetadata({ bookmark }: { bookmark: ZBookmark }) {
   let { author, publisher, datePublished } =
     bookmark.content.type !== BookmarkTypes.LINK
@@ -84,7 +108,7 @@ function BookmarkMetadata({ bookmark }: { bookmark: ZBookmark }) {
       : bookmark.content;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       <CreationTime createdAt={bookmark.createdAt} />
       {author && (
         <div className="flex w-fit items-center gap-2 text-sm text-muted-foreground">
@@ -190,57 +214,56 @@ export default function BookmarkPreview({
   );
 
   const detailsSection = (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <p className="line-clamp-2 text-ellipsis break-words text-lg font-medium">
-          {!title ? "Untitled" : title}
-        </p>
-        {sourceUrl && (
-          <Link
-            href={sourceUrl}
-            target="_blank"
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <ExternalLink className="size-3" />
-            <span>{t("preview.view_original")}</span>
-          </Link>
-        )}
+    <div className="flex flex-col gap-3">
+      <div className="shadow-xs rounded-2xl border border-border/70 bg-background/90 p-4">
+        <div className="flex flex-col gap-1.5">
+          <p className="line-clamp-3 text-ellipsis break-words text-xl font-semibold leading-snug tracking-tight text-foreground">
+            {!title ? "Untitled" : title}
+          </p>
+          {sourceUrl && (
+            <Link
+              href={sourceUrl}
+              target="_blank"
+              className="ease-(--ease-out) inline-flex w-fit items-center gap-1 rounded-full border border-border/70 bg-muted/20 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-[background-color,color,border-color] duration-150 hover:bg-accent hover:text-foreground"
+            >
+              <ExternalLink className="size-3" />
+              <span>{t("preview.view_original")}</span>
+            </Link>
+          )}
+        </div>
       </div>
-      <Separator />
-      <BookmarkMetadata bookmark={bookmark} />
-      <SummarizeBookmarkArea bookmark={bookmark} readOnly={!isOwner} />
-      <Separator />
-      <div className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t("common.tags")}
-        </p>
+      <DetailSection title="Metadata">
+        <BookmarkMetadata bookmark={bookmark} />
+      </DetailSection>
+      <DetailSection title="Summary">
+        <SummarizeBookmarkArea bookmark={bookmark} readOnly={!isOwner} />
+      </DetailSection>
+      <DetailSection title={t("common.tags")}>
         <BookmarkTagsEditor bookmark={bookmark} disabled={!isOwner} />
-      </div>
-      <Separator />
-      <div className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t("common.note")}
-        </p>
+      </DetailSection>
+      <DetailSection title={t("common.note")}>
         <NoteEditor bookmark={bookmark} disabled={!isOwner} />
-      </div>
-      <Separator />
+      </DetailSection>
       <AttachmentBox bookmark={bookmark} readOnly={!isOwner} />
       <HighlightsBox bookmarkId={bookmark.id} readOnly={!isOwner} />
-      <Separator />
-      {isOwner && <ActionBar bookmark={bookmark} />}
+      {isOwner && (
+        <DetailSection title="Actions">
+          <ActionBar bookmark={bookmark} />
+        </DetailSection>
+      )}
     </div>
   );
 
   return (
     <>
       {/* Render original layout for wide screens */}
-      <div className="hidden h-full flex-col overflow-hidden bg-background lg:flex">
+      <div className="hidden h-full flex-col overflow-hidden bg-muted/10 lg:flex">
         <div className="flex min-h-0 flex-1">
-          <div className="relative h-full flex-1 overflow-auto px-4 py-4">
+          <div className="relative h-full flex-1 overflow-auto px-6 py-5 xl:px-8 xl:py-6">
             <button
               type="button"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="absolute right-4 top-4 z-10 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="shadow-xs ease-(--ease-out) absolute right-5 top-5 z-10 rounded-full border border-border/70 bg-background/90 p-2 text-muted-foreground transition-[background-color,color,border-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-[0.97]"
             >
               {sidebarCollapsed ? (
                 <PanelRightOpen size={20} />
@@ -251,7 +274,7 @@ export default function BookmarkPreview({
             {contentSection}
           </div>
           {!sidebarCollapsed && (
-            <div className="flex w-1/3 flex-col gap-3 overflow-auto border-l bg-muted/40 p-5">
+            <div className="flex w-[24rem] shrink-0 flex-col gap-3 overflow-auto border-l border-border/70 bg-card/55 p-4 xl:w-[26rem] xl:p-5">
               {detailsSection}
             </div>
           )}
@@ -264,14 +287,16 @@ export default function BookmarkPreview({
           onValueChange={setActiveTab}
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          <TabsList className="z-10 mx-4 mt-2 grid w-auto grid-cols-2">
-            <TabsTrigger value="content">
-              {t("preview.tabs.content")}
-            </TabsTrigger>
-            <TabsTrigger value="details">
-              {t("preview.tabs.details")}
-            </TabsTrigger>
-          </TabsList>
+          <div className="sticky top-0 z-10 bg-background/95 px-4 pb-2 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl border border-border/70 bg-card/80 p-1">
+              <TabsTrigger value="content">
+                {t("preview.tabs.content")}
+              </TabsTrigger>
+              <TabsTrigger value="details">
+                {t("preview.tabs.details")}
+              </TabsTrigger>
+            </TabsList>
+          </div>
           <TabsContent
             value="content"
             className="h-full flex-1 overflow-hidden overflow-y-auto bg-background px-4 py-3 data-[state=inactive]:hidden"
@@ -280,7 +305,7 @@ export default function BookmarkPreview({
           </TabsContent>
           <TabsContent
             value="details"
-            className="h-full overflow-y-auto bg-background px-4 py-3 data-[state=inactive]:hidden"
+            className="h-full overflow-y-auto bg-muted/10 px-4 py-3 data-[state=inactive]:hidden"
           >
             {detailsSection}
           </TabsContent>

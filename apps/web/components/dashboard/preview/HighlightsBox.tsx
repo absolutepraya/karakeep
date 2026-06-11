@@ -4,8 +4,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 import { useTranslation } from "@/lib/i18n/client";
-import { Separator } from "@radix-ui/react-dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronsDownUp } from "lucide-react";
 
@@ -33,22 +33,32 @@ export default function HighlightsBox({
 
   return (
     <Collapsible defaultOpen={true}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {t("common.highlights")}
-        <ChevronsDownUp className="size-4" />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="group flex flex-col py-3 text-sm">
-        {highlights.highlights.map((highlight) => (
-          <Fragment key={highlight.id}>
-            <HighlightCard
-              highlight={highlight}
-              clickable
-              readOnly={readOnly}
-            />
-            <Separator className="m-2 h-0.5 bg-gray-200 last:hidden" />
-          </Fragment>
-        ))}
-      </CollapsibleContent>
+      <div className="rounded-xl border border-border/70 bg-muted/15 px-3 py-3">
+        <CollapsibleTrigger className="flex w-full items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {t("common.highlights")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {highlights.highlights.length} saved passage
+              {highlights.highlights.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <ChevronsDownUp className="size-4 text-muted-foreground" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="group mt-3 flex flex-col text-sm">
+          {highlights.highlights.map((highlight) => (
+            <Fragment key={highlight.id}>
+              <HighlightCard
+                highlight={highlight}
+                clickable
+                readOnly={readOnly}
+              />
+              <Separator className="my-3 last:hidden" />
+            </Fragment>
+          ))}
+        </CollapsibleContent>
+      </div>
     </Collapsible>
   );
 }
