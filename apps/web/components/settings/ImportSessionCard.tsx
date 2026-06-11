@@ -114,7 +114,7 @@ export function ImportSessionCard({ session }: ImportSessionCardProps) {
   const canResume = stats.status === "paused";
 
   return (
-    <Card className="transition-all hover:shadow-md">
+    <Card className="ease-(--ease-out) transition-shadow duration-200 hover:shadow-md">
       <CardHeader className="p-4 pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">

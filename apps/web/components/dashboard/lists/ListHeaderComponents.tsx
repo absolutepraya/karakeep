@@ -61,7 +61,7 @@ export function ListCollaboratorsIcons({
         {collaboratorsData.owner && (
           <Tooltip>
             <TooltipTrigger>
-              <div className="-mr-2 transition-all duration-300 ease-out group-hover:mr-1">
+              <div className="ease-(--ease-out) -mr-2 transition-[margin-right] duration-200 group-hover:mr-1">
                 <UserAvatar
                   name={collaboratorsData.owner.name}
                   image={collaboratorsData.owner.image}
@@ -77,7 +77,7 @@ export function ListCollaboratorsIcons({
         {collaboratorsData.collaborators.map((collab) => (
           <Tooltip key={collab.userId}>
             <TooltipTrigger>
-              <div className="-mr-2 transition-all duration-300 ease-out group-hover:mr-1">
+              <div className="ease-(--ease-out) -mr-2 transition-[margin-right] duration-200 group-hover:mr-1">
                 <UserAvatar
                   name={collab.user.name}
                   image={collab.user.image}

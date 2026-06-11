@@ -98,7 +98,10 @@ export default function Providers({
                     enableSystem
                     disableTransitionOnChange
                   >
-                    <TooltipProvider delayDuration={0}>
+                    <TooltipProvider
+                      delayDuration={450}
+                      skipDelayDuration={200}
+                    >
                       {children}
                     </TooltipProvider>
                   </ThemeProvider>

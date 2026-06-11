@@ -41,6 +41,11 @@
   --input: oklch(0.9013 0.0156 257.2001);
   --ring: oklch(0.6503 0.022 257.4949);
 
+  /* Motion tokens */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
   /* status families (kept for any toast/badge use; functional blue/green/amber) */
   --info: oklch(0.6231 0.188 259.8145);
   --info-foreground: oklch(1 0 0);

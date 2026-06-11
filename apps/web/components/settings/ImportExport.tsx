@@ -33,7 +33,7 @@ function ImportCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="transition-all hover:shadow-md">
+    <Card className="ease-(--ease-out) transition-shadow duration-200 hover:shadow-md">
       <CardContent className="flex items-center gap-3 p-4">
         <div className="rounded-full bg-primary/10 p-2">
           <Download className="h-5 w-5 text-primary" />
@@ -94,7 +94,7 @@ function ExportButton() {
   }, [refetch]);
 
   return (
-    <Card className="transition-all hover:shadow-md">
+    <Card className="ease-(--ease-out) transition-shadow duration-200 hover:shadow-md">
       <CardContent className="flex items-center gap-3 p-4">
         <div className="rounded-full bg-primary/10 p-2">
           <Upload className="h-5 w-5 text-primary" />

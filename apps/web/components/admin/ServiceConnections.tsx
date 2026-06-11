@@ -45,7 +45,7 @@ function ConnectionStatus({
 
   return (
     <div
-      className={`rounded-lg border ${borderColor} bg-background p-5 shadow-sm transition-all`}
+      className={`rounded-lg border ${borderColor} ease-(--ease-out) bg-background p-5 shadow-sm transition-[border-color,background-color,box-shadow] duration-200`}
     >
       <div className="mb-3 flex items-center justify-between">
         <div>

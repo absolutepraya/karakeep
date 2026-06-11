@@ -141,7 +141,7 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
   };
 
   return (
-    <Card className="group mb-3 border-0 shadow-sm transition-all duration-200 hover:shadow-lg">
+    <Card className="ease-(--ease-out) group mb-3 border-0 shadow-sm transition-shadow duration-200 hover:shadow-lg">
       <CardContent className="p-3">
         {renderContent()}
 

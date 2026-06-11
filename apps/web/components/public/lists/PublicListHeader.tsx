@@ -17,13 +17,13 @@ export default function PublicListHeader({
 }) {
   const rssLink = `/api/v1/rss/lists/${list.id}`;
   return (
-    <div className="rounded-lg border bg-gradient-to-br from-purple-50/50 via-purple-100/30 to-purple-200/40 p-6 transition-all duration-300 dark:from-purple-950/20 dark:via-purple-900/15 dark:to-purple-800/20">
+    <div className="rounded-lg border bg-gradient-to-br from-purple-50/50 via-purple-100/30 to-purple-200/40 p-6 dark:from-purple-950/20 dark:via-purple-900/15 dark:to-purple-800/20">
       <div className="space-y-4">
         <KarakeepLogo height={38} />
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           {/* Header */}
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <span className="text-3xl transition-transform duration-200 hover:scale-110">
+            <span className="ease-(--ease-out) text-3xl transition-transform duration-200 hover:scale-110">
               {list.icon}
             </span>
             <div className="min-w-0 flex-1">
@@ -39,7 +39,7 @@ export default function PublicListHeader({
           </div>
           {/* Created by */}
           <div className="flex gap-3 md:justify-end">
-            <div className="flex aspect-square size-10 flex-col items-center justify-center rounded-full bg-primary font-medium text-primary-foreground transition-all duration-200 hover:scale-105 hover:shadow-md">
+            <div className="ease-(--ease-out) flex aspect-square size-10 flex-col items-center justify-center rounded-full bg-primary font-medium text-primary-foreground transition-[transform,box-shadow] duration-200 hover:scale-105 hover:shadow-md">
               {list.ownerName[0]?.toUpperCase()}
             </div>
             <div>
@@ -50,7 +50,7 @@ export default function PublicListHeader({
         </div>
         {/* Options */}
         <div className="flex items-center justify-start gap-1 md:justify-end">
-          <div className="flex items-center gap-1 text-xs font-light uppercase text-gray-500 transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300">
+          <div className="ease-(--ease-out) flex items-center gap-1 text-xs font-light uppercase text-gray-500 transition-colors duration-150 hover:text-gray-700 dark:hover:text-gray-300">
             <BookmarkIcon
               size={12}
               className="transition-transform duration-200 hover:scale-110"

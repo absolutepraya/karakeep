@@ -118,7 +118,7 @@ function SimpleBarChart({
           </div>
           <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
+              className="ease-(--ease-out) h-full rounded-full bg-primary transition-[width] duration-300"
               style={{
                 width: `${maxValue > 0 ? (value / maxValue) * 100 : 0}%`,
               }}

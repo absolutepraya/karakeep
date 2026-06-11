@@ -10,6 +10,7 @@ import { FullPageSpinner } from "@/components/ui/full-page-spinner";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/lib/auth/client";
 import { useReaderSettings } from "@/lib/readerSettings";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { HighlighterIcon as Highlight, Printer, X } from "lucide-react";
 
@@ -98,9 +99,7 @@ export default function ReaderViewPage() {
         )}
 
         {/* Main Content */}
-        <main
-          className={`flex-1 overflow-x-hidden transition-all duration-300 ${showHighlights ? "lg:mr-80" : ""}`}
-        >
+        <main className="flex-1 overflow-x-hidden">
           <article className="mx-auto max-w-3xl overflow-x-hidden px-4 py-8 sm:px-6">
             {bookmark ? (
               <>
@@ -148,16 +147,26 @@ export default function ReaderViewPage() {
         </main>
 
         {/* Highlights Sidebar */}
-        {showHighlights && highlights && (
-          <aside className="fixed right-0 top-14 z-50 h-[calc(100vh-3.5rem)] w-full border-l bg-background sm:w-80 lg:z-auto lg:bg-background/95 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-background/60 print:hidden">
+        {(highlights || showHighlights) && (
+          <aside
+            aria-hidden={!showHighlights}
+            className={cn(
+              "ease-(--ease-out) fixed right-0 top-14 z-50 h-[calc(100vh-3.5rem)] w-full border-l bg-background transition-[transform,opacity] duration-200 sm:w-80 lg:bg-background/95 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-background/60 print:hidden",
+              showHighlights
+                ? "translate-x-0 opacity-100"
+                : "pointer-events-none translate-x-full opacity-0",
+            )}
+          >
             <div className="flex h-full flex-col">
               <div className="border-b p-4">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold">Highlights</h2>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {highlights.highlights.length} saved
-                    </span>
+                    {highlights && (
+                      <span className="text-sm text-muted-foreground">
+                        {highlights.highlights.length} saved
+                      </span>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -171,16 +180,20 @@ export default function ReaderViewPage() {
               </div>
 
               <div className="flex-1 overflow-auto p-4">
-                <div className="space-y-4">
-                  {highlights.highlights.map((highlight) => (
-                    <HighlightCard
-                      key={highlight.id}
-                      highlight={highlight}
-                      clickable={true}
-                      readOnly={!isOwner}
-                    />
-                  ))}
-                </div>
+                {highlights ? (
+                  <div className="space-y-4">
+                    {highlights.highlights.map((highlight) => (
+                      <HighlightCard
+                        key={highlight.id}
+                        highlight={highlight}
+                        clickable={true}
+                        readOnly={!isOwner}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  showHighlights && <FullPageSpinner />
+                )}
               </div>
             </div>
           </aside>

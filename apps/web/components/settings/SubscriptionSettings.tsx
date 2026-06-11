@@ -264,7 +264,7 @@ export default function SubscriptionSettings() {
                       }
                       disabled={isLoading}
                       size="lg"
-                      className="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
+                      className="ease-(--ease-out) shadow-md transition-[transform,box-shadow] duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
                     >
                       {isLoading && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

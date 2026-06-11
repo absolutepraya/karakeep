@@ -46,7 +46,7 @@ function AISummary({
     <div className="w-full p-1">
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
-        className={`relative overflow-hidden rounded-lg p-4 transition-all duration-300 ease-in-out ${isExpanded ? "h-auto" : "cursor-pointer"} border border-muted-foreground/20 p-[2px]`}
+        className={`ease-(--ease-out) relative overflow-hidden rounded-lg border border-muted-foreground/20 p-[2px] transition-shadow duration-200 ${isExpanded ? "h-auto" : "cursor-pointer"}`}
         onClick={() => !isExpanded && setIsExpanded(true)}
       >
         <div className="h-full rounded-lg bg-accent p-2">
@@ -140,7 +140,7 @@ export default function SummarizeBookmarkArea({
           onClick={() => mutate({ bookmarkId: bookmark.id })}
           variant="secondary"
           className={cn(
-            `w-full text-muted-foreground transition-all duration-300 hover:text-foreground`,
+            `ease-(--ease-out) w-full text-muted-foreground transition-colors duration-150 hover:text-foreground`,
           )}
           loading={isPending}
         >
