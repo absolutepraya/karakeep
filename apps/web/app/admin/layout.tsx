@@ -57,7 +57,7 @@ export default async function AdminLayout({
       sidebar={<Sidebar items={adminSidebarItems} />}
       mobileSidebar={<MobileSidebar items={adminSidebarItems} />}
     >
-      <div className="flex flex-col gap-1">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
         <AdminNotices />
         {children}
       </div>

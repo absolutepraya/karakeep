@@ -4,9 +4,11 @@ import InvitesList from "@/components/admin/InvitesList";
 import InvitesListSkeleton from "@/components/admin/InvitesListSkeleton";
 import UserList from "@/components/admin/UserList";
 import UserListSkeleton from "@/components/admin/UserListSkeleton";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { useTranslation } from "@/lib/i18n/server";
 import { getQueryClient, serverTrpc } from "@/server/api/trpc";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { Users } from "lucide-react";
 
 export async function generateMetadata(): Promise<Metadata> {
   // oxlint-disable-next-line rules-of-hooks
@@ -26,7 +28,12 @@ export default async function AdminUsersPage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
+        <PageHeader
+          title="Users"
+          description="Manage accounts, quotas, invitations, and recovery actions from a calmer admin workspace."
+          icon={<Users className="size-5" />}
+        />
         <Suspense fallback={<UserListSkeleton />}>
           <UserList />
         </Suspense>

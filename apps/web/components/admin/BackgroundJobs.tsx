@@ -34,7 +34,6 @@ import {
 import { useTRPC } from "@karakeep/shared-react/trpc";
 
 import { Button } from "../ui/button";
-import { AdminCard } from "./AdminCard";
 
 interface JobStats {
   queued: number;
@@ -52,50 +51,50 @@ function JobStatusExplanation() {
   const { t } = useTranslation();
 
   return (
-    <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-900/10">
+    <Card className="shadow-xs rounded-2xl border border-border/70 bg-card/90">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg text-blue-900 dark:text-blue-200">
-          <HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+          <HelpCircle className="text-info h-5 w-5" />
           {t("admin.background_jobs.status.title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center">
-              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <div className="border-info/20 bg-info/10 flex items-start gap-3 rounded-xl border p-4">
+            <div className="text-info flex h-8 w-8 items-center justify-center">
+              <Clock className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="font-medium text-blue-900 dark:text-blue-200">
+              <h4 className="font-medium text-foreground">
                 {t("admin.background_jobs.status.queued.title")}
               </h4>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
+              <p className="text-sm text-muted-foreground">
                 {t("admin.background_jobs.status.queued.description")}
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center">
-              <RefreshCw className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <div className="border-warning/20 bg-warning/10 flex items-start gap-3 rounded-xl border p-4">
+            <div className="text-warning flex h-8 w-8 items-center justify-center">
+              <RefreshCw className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="font-medium text-yellow-900 dark:text-yellow-400">
+              <h4 className="font-medium text-foreground">
                 {t("admin.background_jobs.status.unprocessed.title")}
               </h4>
-              <p className="text-sm text-yellow-700 dark:text-yellow-500">
+              <p className="text-sm text-muted-foreground">
                 {t("admin.background_jobs.status.unprocessed.description")}
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center">
-              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-500" />
+          <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-4">
+            <div className="flex h-8 w-8 items-center justify-center text-destructive">
+              <AlertTriangle className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="font-medium text-red-900 dark:text-red-500">
+              <h4 className="font-medium text-foreground">
                 {t("admin.background_jobs.status.failed.title")}
               </h4>
-              <p className="text-sm text-red-700 dark:text-red-500">
+              <p className="text-sm text-muted-foreground">
                 {t("admin.background_jobs.status.failed.description")}
               </p>
             </div>
@@ -108,7 +107,7 @@ function JobStatusExplanation() {
 
 function JobCardSkeleton() {
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="shadow-xs relative overflow-hidden rounded-2xl border border-border/70 bg-card/90">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -171,7 +170,7 @@ function JobCard({
   const hasActivity = total > 0;
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="shadow-xs relative overflow-hidden rounded-2xl border border-border/70 bg-card/90">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -194,7 +193,7 @@ function JobCard({
       <CardContent className="space-y-5">
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-blue-500" />
+            <Clock className="text-info h-4 w-4" />
             <span className="font-medium">
               {t("admin.background_jobs.status.queued.title")}
             </span>
@@ -202,7 +201,7 @@ function JobCard({
           </div>
           {stats.pending !== undefined && (
             <div className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 text-yellow-500" />
+              <RefreshCw className="text-warning h-4 w-4" />
               <span className="font-medium">
                 {t("admin.background_jobs.status.unprocessed.title")}
               </span>
@@ -211,7 +210,7 @@ function JobCard({
           )}
           {stats.failed !== undefined && stats.failed > 0 && (
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <AlertTriangle className="h-4 w-4 text-destructive" />
               <span className="font-medium">
                 {t("admin.background_jobs.status.failed.title")}
               </span>
@@ -628,18 +627,7 @@ export default function BackgroundJobs() {
 
   return (
     <div className="space-y-6">
-      <AdminCard className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {t("admin.background_jobs.background_jobs")}
-          </h2>
-          <p className="text-muted-foreground">
-            {t("admin.background_jobs.monitor_and_manage")}
-          </p>
-        </div>
-
-        <JobStatusExplanation />
-      </AdminCard>
+      <JobStatusExplanation />
 
       <div className="grid gap-6 xl:grid-cols-2">
         {jobs.map((job, index) => (

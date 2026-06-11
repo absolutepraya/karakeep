@@ -8,7 +8,12 @@ export function AdminCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("rounded-md border bg-background p-4", className)}>
+    <div
+      className={cn(
+        "shadow-xs rounded-2xl border border-border/70 bg-card/90 p-5",
+        className,
+      )}
+    >
       {children}
     </div>
   );

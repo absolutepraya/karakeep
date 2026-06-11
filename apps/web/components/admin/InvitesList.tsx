@@ -2,6 +2,7 @@
 
 import { ActionButton } from "@/components/ui/action-button";
 import { ButtonWithTooltip } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "@/components/ui/sonner";
 import {
   Table,
@@ -65,13 +66,20 @@ export default function InvitesList() {
   );
 
   const activeInvites = invites?.invites || [];
-  const title = "Invites";
 
   return (
     <AdminCard>
-      <div className="flex flex-col gap-4">
-        <div className="mb-2 flex items-center justify-between text-xl font-medium">
-          <span>User Invitations ({activeInvites.length})</span>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              User invitations ({activeInvites.length})
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Track pending invites, resend them when needed, or revoke access
+              before it is accepted.
+            </p>
+          </div>
           <CreateInviteDialog>
             <ButtonWithTooltip tooltip="Send Invite" variant="outline">
               <UserPlus size={16} />
@@ -79,12 +87,16 @@ export default function InvitesList() {
           </CreateInviteDialog>
         </div>
 
-        <div className="mb-6">
-          {activeInvites.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              No {title.toLowerCase()} invites
-            </p>
-          ) : (
+        {activeInvites.length === 0 ? (
+          <EmptyState
+            compact
+            icon={<Mail className="size-6" />}
+            title="No pending invites"
+            description="Create an invite when you want to onboard another user to the instance."
+            className="bg-background/70"
+          />
+        ) : (
+          <div className="shadow-xs overflow-hidden rounded-xl border border-border/70 bg-background/80">
             <Table className="whitespace-nowrap">
               <TableHeader>
                 <TableRow>
@@ -97,15 +109,19 @@ export default function InvitesList() {
               <TableBody>
                 {activeInvites.map((invite) => (
                   <TableRow key={invite.id}>
-                    <TableCell>{invite.email}</TableCell>
-                    <TableCell>{invite.invitedBy.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      {invite.email}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {invite.invitedBy.name}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {formatDistanceToNow(new Date(invite.createdAt), {
                         addSuffix: true,
                       })}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <ButtonWithTooltip
                           tooltip="Resend Invite"
                           variant="outline"
@@ -136,7 +152,7 @@ export default function InvitesList() {
                             variant="outline"
                             size="sm"
                           >
-                            <MailX size={14} color="red" />
+                            <MailX size={14} />
                           </ButtonWithTooltip>
                         </ActionConfirmingDialog>
                       </div>
@@ -145,8 +161,8 @@ export default function InvitesList() {
                 ))}
               </TableBody>
             </Table>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </AdminCard>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import KarakeepLogo from "@/components/KarakeepIcon";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { BookmarkIcon, RssIcon } from "lucide-react";
 
 export default function PublicListHeader({
@@ -16,54 +17,70 @@ export default function PublicListHeader({
   };
 }) {
   const rssLink = `/api/v1/rss/lists/${list.id}`;
+
   return (
-    <div className="rounded-lg border bg-gradient-to-br from-purple-50/50 via-purple-100/30 to-purple-200/40 p-6 dark:from-purple-950/20 dark:via-purple-900/15 dark:to-purple-800/20">
-      <div className="space-y-4">
-        <KarakeepLogo height={38} />
-        <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-          {/* Header */}
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <span className="ease-(--ease-out) text-3xl transition-transform duration-200 hover:scale-110">
-              {list.icon}
-            </span>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-3xl font-bold leading-tight text-foreground">
+    <div className="shadow-xs rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/[0.04] p-6 sm:p-7">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <KarakeepLogo height={36} />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="shadow-xs rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Public list
+            </div>
+            <Link
+              href={rssLink}
+              target="_blank"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "gap-2",
+              )}
+            >
+              <RssIcon className="size-4" />
+              RSS
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 flex-1 items-start gap-4">
+            <div className="shadow-xs flex size-16 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-background/85 text-3xl sm:size-[4.5rem] sm:text-4xl">
+              <span>{list.icon}</span>
+            </div>
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 {list.name}
               </h1>
               {list.description && list.description.length > 0 && (
-                <p className="mt-2 text-lg leading-relaxed text-muted-foreground">
+                <p className="max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
                   {list.description}
                 </p>
               )}
             </div>
           </div>
-          {/* Created by */}
-          <div className="flex gap-3 md:justify-end">
-            <div className="ease-(--ease-out) flex aspect-square size-10 flex-col items-center justify-center rounded-full bg-primary font-medium text-primary-foreground transition-[transform,box-shadow] duration-200 hover:scale-105 hover:shadow-md">
-              {list.ownerName[0]?.toUpperCase()}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Created by</p>
-              <p className="font-medium text-foreground">{list.ownerName}</p>
+
+          <div className="shadow-xs rounded-2xl border border-border/70 bg-background/85 px-4 py-3 lg:min-w-64">
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Curated by
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="shadow-xs flex aspect-square size-10 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground">
+                {list.ownerName[0]?.toUpperCase()}
+              </div>
+              <div>
+                <p className="font-medium text-foreground">{list.ownerName}</p>
+                <p className="text-sm text-muted-foreground">
+                  Shared from Karakeep
+                </p>
+              </div>
             </div>
           </div>
         </div>
-        {/* Options */}
-        <div className="flex items-center justify-start gap-1 md:justify-end">
-          <div className="ease-(--ease-out) flex items-center gap-1 text-xs font-light uppercase text-gray-500 transition-colors duration-150 hover:text-gray-700 dark:hover:text-gray-300">
-            <BookmarkIcon
-              size={12}
-              className="transition-transform duration-200 hover:scale-110"
-            />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="shadow-xs inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-3 py-1.5 text-sm text-muted-foreground">
+            <BookmarkIcon className="size-4" />
             <span>{list.numItems} bookmarks</span>
           </div>
-          <Link
-            href={rssLink}
-            target="_blank"
-            className={buttonVariants({ variant: "none", size: "icon" })}
-          >
-            <RssIcon className="size-3 text-gray-500" />
-          </Link>
         </div>
       </div>
     </div>

@@ -1,9 +1,12 @@
 "use client";
 
 import { AdminCard } from "@/components/admin/AdminCard";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useClientConfig } from "@/lib/clientConfig";
 import { useTranslation } from "@/lib/i18n/client";
 import { useQuery } from "@tanstack/react-query";
+import { BookOpen, Download, Users } from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 
@@ -31,26 +34,49 @@ function useLatestRelease() {
 function ReleaseInfo() {
   const currentRelease = useClientConfig().serverVersion ?? "NA";
   const latestRelease = useLatestRelease();
+  const hasUpdate = latestRelease && currentRelease !== latestRelease;
 
-  let newRelease;
-  if (latestRelease && currentRelease != latestRelease) {
-    newRelease = (
-      // oxlint-disable-next-line no-html-link-for-pages
-      <a
-        href={REPO_RELEASE_PAGE}
-        target="_blank"
-        className="text-blue-500"
-        rel="noreferrer"
-        title="Update available"
-      >
-        ({latestRelease}⬆️)
-      </a>
-    );
-  }
   return (
-    <div className="text-nowrap">
-      <span className="text-3xl font-semibold">{currentRelease}</span>
-      <span className="ml-1 text-sm">{newRelease}</span>
+    <div className="space-y-2">
+      <p className="text-3xl font-semibold tracking-tight text-foreground">
+        {currentRelease}
+      </p>
+      {hasUpdate && (
+        <a
+          href={REPO_RELEASE_PAGE}
+          target="_blank"
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80"
+          rel="noreferrer"
+          title="Update available"
+        >
+          Update available
+          <Badge variant="secondary" className="bg-primary/10 text-primary">
+            {latestRelease}
+          </Badge>
+        </a>
+      )}
+    </div>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <div className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground [&_svg]:size-4">
+          {icon}
+        </div>
+      </div>
+      {value}
     </div>
   );
 }
@@ -58,12 +84,18 @@ function ReleaseInfo() {
 function StatsSkeleton() {
   return (
     <AdminCard>
-      <div className="mb-4 h-7 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
-      <div className="flex flex-col gap-4 sm:flex-row">
+      <div className="mb-4 space-y-2">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-md border bg-background p-4 sm:w-1/4">
-            <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
-            <div className="h-9 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div
+            key={i}
+            className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4"
+          >
+            <Skeleton className="mb-4 h-4 w-24" />
+            <Skeleton className="h-8 w-16" />
           </div>
         ))}
       </div>
@@ -86,30 +118,38 @@ export default function BasicStats() {
 
   return (
     <AdminCard>
-      <div className="mb-4 text-xl font-medium">
-        {t("admin.server_stats.server_stats")}
+      <div className="mb-4 space-y-1">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          {t("admin.server_stats.server_stats")}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Core usage and release signals for the current instance.
+        </p>
       </div>
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="rounded-md border bg-background p-4 sm:w-1/4">
-          <div className="text-sm font-medium text-gray-400">
-            {t("admin.server_stats.total_users")}
-          </div>
-          <div className="text-3xl font-semibold">{serverStats.numUsers}</div>
-        </div>
-        <div className="rounded-md border bg-background p-4 sm:w-1/4">
-          <div className="text-sm font-medium text-gray-400">
-            {t("admin.server_stats.total_bookmarks")}
-          </div>
-          <div className="text-3xl font-semibold">
-            {serverStats.numBookmarks}
-          </div>
-        </div>
-        <div className="rounded-md border bg-background p-4 sm:w-1/4">
-          <div className="text-sm font-medium text-gray-400">
-            {t("admin.server_stats.server_version")}
-          </div>
-          <ReleaseInfo />
-        </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <MetricTile
+          label={t("admin.server_stats.total_users")}
+          value={
+            <p className="text-3xl font-semibold tracking-tight text-foreground">
+              {serverStats.numUsers}
+            </p>
+          }
+          icon={<Users className="h-4 w-4" />}
+        />
+        <MetricTile
+          label={t("admin.server_stats.total_bookmarks")}
+          value={
+            <p className="text-3xl font-semibold tracking-tight text-foreground">
+              {serverStats.numBookmarks}
+            </p>
+          }
+          icon={<BookOpen className="h-4 w-4" />}
+        />
+        <MetricTile
+          label={t("admin.server_stats.server_version")}
+          value={<ReleaseInfo />}
+          icon={<Download className="h-4 w-4" />}
+        />
       </div>
     </AdminCard>
   );

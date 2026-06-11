@@ -7,6 +7,7 @@ import { BookmarkMarkdownComponent } from "@/components/dashboard/bookmarks/Book
 import FooterLinkURL from "@/components/dashboard/bookmarks/FooterLinkURL";
 import { ActionButton } from "@/components/ui/action-button";
 import { badgeVariants } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SCREENS } from "@/lib/breakpoints";
@@ -28,7 +29,7 @@ function TagPill({ tag }: { tag: string }) {
     <div
       className={cn(
         badgeVariants({ variant: "secondary" }),
-        "text-nowrap font-light text-gray-700 hover:bg-foreground hover:text-secondary dark:text-gray-400",
+        "ease-(--ease-out) border border-border/70 bg-muted/40 font-medium text-muted-foreground transition-[background-color,color,border-color] duration-150 hover:bg-accent hover:text-foreground",
       )}
       key={tag}
     >
@@ -42,15 +43,15 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
     switch (bookmark.content.type) {
       case BookmarkTypes.LINK:
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {bookmark.bannerImageUrl && (
-              <div className="aspect-video w-full overflow-hidden rounded bg-gray-100">
+              <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
                 <Link href={bookmark.content.url} target="_blank">
                   {/* oxlint-disable-next-line no-img-element */}
                   <img
                     src={bookmark.bannerImageUrl}
                     alt={bookmark.title ?? "Link preview"}
-                    className="h-full w-full object-cover"
+                    className="ease-(--ease-out) h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                   />
                 </Link>
               </div>
@@ -59,9 +60,9 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
               <Link
                 href={bookmark.content.url}
                 target="_blank"
-                className="line-clamp-2 text-ellipsis text-lg font-medium leading-tight"
+                className="line-clamp-2 text-ellipsis text-lg font-semibold leading-snug tracking-tight text-foreground"
               >
-                {bookmark.title}
+                {bookmark.title || "Untitled"}
               </Link>
             </div>
           </div>
@@ -69,26 +70,34 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
 
       case BookmarkTypes.TEXT:
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {bookmark.title && (
-              <h3 className="line-clamp-2 text-ellipsis text-lg font-medium leading-tight">
+              <h3 className="line-clamp-2 text-ellipsis text-lg font-semibold leading-snug tracking-tight text-foreground">
                 {bookmark.title}
               </h3>
             )}
-            <div className="group relative max-h-64 overflow-hidden">
-              <BookmarkMarkdownComponent readOnly={true}>
-                {{
-                  id: bookmark.id,
-                  content: {
-                    text: bookmark.content.text,
-                  },
-                }}
-              </BookmarkMarkdownComponent>
+            <div className="group relative rounded-xl border border-border/70 bg-background/70 p-3">
+              <div className="max-h-64 overflow-hidden">
+                <BookmarkMarkdownComponent readOnly={true}>
+                  {{
+                    id: bookmark.id,
+                    content: {
+                      text: bookmark.content.text,
+                    },
+                  }}
+                </BookmarkMarkdownComponent>
+              </div>
               <Dialog>
-                <DialogTrigger className="absolute bottom-2 right-2 z-50 h-4 w-4 opacity-0 group-hover:opacity-100">
-                  <Expand className="h-4 w-4" />
+                <DialogTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="shadow-xs absolute bottom-3 right-3 size-8 rounded-full border border-border/70 bg-background/90 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                  >
+                    <Expand className="h-4 w-4" />
+                  </Button>
                 </DialogTrigger>
-                <DialogContent className="max-h-96 max-w-3xl overflow-auto">
+                <DialogContent className="max-h-[80vh] max-w-3xl overflow-auto">
                   <BookmarkMarkdownComponent readOnly={true}>
                     {{
                       id: bookmark.id,
@@ -105,24 +114,24 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
 
       case BookmarkTypes.ASSET:
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {bookmark.bannerImageUrl ? (
-              <div className="aspect-video w-full overflow-hidden rounded bg-gray-100">
+              <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
                 <Link href={bookmark.content.assetUrl} target="_blank">
                   {/* oxlint-disable-next-line no-img-element */}
                   <img
                     src={bookmark.bannerImageUrl}
                     alt={bookmark.title ?? "Asset preview"}
-                    className="h-full w-full object-cover"
+                    className="ease-(--ease-out) h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                   />
                 </Link>
               </div>
             ) : (
-              <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded bg-gray-100">
+              <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted/30 text-muted-foreground">
                 {bookmark.content.assetType === "image" ? (
-                  <ImageIcon className="h-8 w-8 text-gray-400" />
+                  <ImageIcon className="h-8 w-8" />
                 ) : (
-                  <FileIcon className="h-8 w-8 text-gray-400" />
+                  <FileIcon className="h-8 w-8" />
                 )}
               </div>
             )}
@@ -130,9 +139,9 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
               <Link
                 href={bookmark.content.assetUrl}
                 target="_blank"
-                className="line-clamp-2 text-ellipsis text-lg font-medium leading-tight"
+                className="line-clamp-2 text-ellipsis text-lg font-semibold leading-snug tracking-tight text-foreground"
               >
-                {bookmark.title}
+                {bookmark.title || "Untitled"}
               </Link>
             </div>
           </div>
@@ -141,26 +150,24 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
   };
 
   return (
-    <Card className="ease-(--ease-out) group mb-3 border-0 shadow-sm transition-shadow duration-200 hover:shadow-lg">
-      <CardContent className="p-3">
+    <Card className="ease-(--ease-out) shadow-xs mb-4 rounded-2xl border border-border/70 bg-card/95 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+      <CardContent className="space-y-3 p-3.5">
         {renderContent()}
 
-        {/* Tags */}
         {bookmark.tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {bookmark.tags.map((tag, index) => (
               <TagPill key={index} tag={tag} />
             ))}
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-3 flex items-center justify-between pt-2">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {bookmark.content.type === BookmarkTypes.LINK && (
               <>
                 <FooterLinkURL url={bookmark.content.url} />
-                <span>•</span>
+                <span className="text-border">•</span>
               </>
             )}
             <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
@@ -219,13 +226,14 @@ export default function PublicBookmarkGrid({
     if (loadMoreButtonInView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [loadMoreButtonInView]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, loadMoreButtonInView]);
 
   const breakpointConfig = useMemo(() => getBreakpointConfig(), []);
 
   const bookmarks = useMemo(() => {
     return data.pages.flatMap((b) => b.bookmarks);
   }, [data]);
+
   return (
     <>
       <Masonry
@@ -238,7 +246,7 @@ export default function PublicBookmarkGrid({
         ))}
       </Masonry>
       {hasNextPage && (
-        <div className="flex justify-center">
+        <div className="flex justify-center pt-2">
           <ActionButton
             ref={loadMoreRef}
             ignoreDemoMode={true}

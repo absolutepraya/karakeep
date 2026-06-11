@@ -1,6 +1,9 @@
 "use client";
 
 import { AdminCard } from "@/components/admin/AdminCard";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -22,34 +25,23 @@ function ConnectionStatus({
   const { t } = useTranslation();
 
   let statusText = t("admin.service_connections.status.not_configured");
-  let badgeColor =
-    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
-  let iconColor = "text-gray-400";
-  let borderColor = "border-gray-200 dark:border-gray-700";
+  let tone = "border-border/70 bg-background/80 text-muted-foreground";
 
   if (configured) {
     if (connected) {
       statusText = t("admin.service_connections.status.connected");
-      badgeColor =
-        "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400";
-      iconColor = "text-green-500";
-      borderColor = "border-green-200 dark:border-green-800";
+      tone = "border-success/20 bg-success/10 text-success";
     } else {
       statusText = t("admin.service_connections.status.disconnected");
-      badgeColor =
-        "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400";
-      iconColor = "text-red-500";
-      borderColor = "border-red-200 dark:border-red-800";
+      tone = "border-destructive/20 bg-destructive/10 text-destructive";
     }
   }
 
   return (
-    <div
-      className={`rounded-lg border ${borderColor} ease-(--ease-out) bg-background p-5 shadow-sm transition-[border-color,background-color,box-shadow] duration-200`}
-    >
-      <div className="mb-3 flex items-center justify-between">
+    <div className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <div className="text-base font-semibold">{label}</div>
+          <div className="text-sm font-semibold text-foreground">{label}</div>
           {pluginName && (
             <div className="mt-1 text-xs text-muted-foreground">
               {pluginName}
@@ -57,24 +49,23 @@ function ConnectionStatus({
           )}
         </div>
         <div
-          className={`flex h-2 w-2 items-center justify-center rounded-full ${iconColor}`}
-        >
-          <div
-            className={`h-2 w-2 rounded-full ${connected && configured ? "animate-pulse" : ""} bg-current`}
-          ></div>
-        </div>
+          className={cn(
+            "mt-1 size-2 rounded-full",
+            configured && connected
+              ? "bg-success"
+              : configured
+                ? "bg-destructive"
+                : "bg-muted-foreground/40",
+          )}
+        />
       </div>
-      <div className="mb-2">
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeColor}`}
-        >
-          {statusText}
-        </span>
-      </div>
+      <Badge variant="secondary" className={cn("border", tone)}>
+        {statusText}
+      </Badge>
       {error && (
-        <div className="mt-3 rounded-md bg-red-50 p-2 dark:bg-red-900/10">
-          <p className="text-xs text-red-600 dark:text-red-400" title={error}>
-            {error.length > 60 ? `${error.substring(0, 60)}...` : error}
+        <div className="mt-3 rounded-lg border border-destructive/15 bg-destructive/5 px-3 py-2 text-xs text-muted-foreground">
+          <p title={error}>
+            {error.length > 80 ? `${error.substring(0, 80)}…` : error}
           </p>
         </div>
       )}
@@ -85,20 +76,21 @@ function ConnectionStatus({
 function ConnectionsSkeleton() {
   return (
     <AdminCard>
-      <div className="mb-4 h-7 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+      <div className="mb-4 space-y-2">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-4 w-80" />
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="rounded-lg border border-gray-200 bg-background p-5 shadow-sm dark:border-gray-700"
+            className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4"
           >
             <div className="mb-3 flex items-center justify-between">
-              <div className="h-5 w-28 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
-              <div className="h-2 w-2 animate-pulse rounded-full bg-gray-300 dark:bg-gray-600"></div>
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-2 w-2 rounded-full" />
             </div>
-            <div className="mb-2">
-              <div className="h-5 w-20 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
-            </div>
+            <Skeleton className="h-5 w-24 rounded-full" />
           </div>
         ))}
       </div>
@@ -121,12 +113,14 @@ export default function ServiceConnections() {
 
   return (
     <AdminCard>
-      <div className="mb-2 text-xl font-medium">
-        {t("admin.service_connections.title")}
+      <div className="mb-4 space-y-1">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          {t("admin.service_connections.title")}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {t("admin.service_connections.description")}
+        </p>
       </div>
-      <p className="mb-4 text-sm text-muted-foreground">
-        {t("admin.service_connections.description")}
-      </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <ConnectionStatus
           label={t("admin.service_connections.search_engine")}

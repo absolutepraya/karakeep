@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import NoBookmarksBanner from "@/components/dashboard/bookmarks/NoBookmarksBanner";
+import { EmptyState } from "@/components/shared/EmptyState";
 import PublicBookmarkGrid from "@/components/public/lists/PublicBookmarkGrid";
 import PublicListHeader from "@/components/public/lists/PublicListHeader";
+import { BookmarkIcon } from "lucide-react";
 import { api } from "@/server/api/client";
 import { TRPCError } from "@trpc/server";
 
@@ -47,7 +48,7 @@ export default async function PublicListPage(props: {
         listId: params.listId,
       });
     return (
-      <div className="space-y-3">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
         <PublicListHeader
           list={{
             id: params.listId,
@@ -72,7 +73,12 @@ export default async function PublicListPage(props: {
             nextCursor={nextCursor}
           />
         ) : (
-          <NoBookmarksBanner />
+          <EmptyState
+            icon={<BookmarkIcon className="size-7" />}
+            title="This public list is empty"
+            description="The list has been shared, but it does not have any bookmarks in it yet."
+            className="shadow-xs rounded-2xl border-border/70 bg-card/90"
+          />
         )}
       </div>
     );

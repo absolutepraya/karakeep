@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionButton } from "@/components/ui/action-button";
+import { Badge } from "@/components/ui/badge";
 import { ButtonWithTooltip } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -65,9 +66,16 @@ export default function UsersSection() {
 
   return (
     <AdminCard>
-      <div className="flex flex-col gap-4">
-        <div className="mb-2 flex items-center justify-between text-xl font-medium">
-          <span>{t("admin.users_list.users_list")}</span>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              {t("admin.users_list.users_list")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Review account roles, quotas, storage usage, and recovery actions.
+            </p>
+          </div>
           <AddUserDialog>
             <ButtonWithTooltip tooltip="Create User" variant="outline">
               <UserPlus size={16} />
@@ -75,95 +83,126 @@ export default function UsersSection() {
           </AddUserDialog>
         </div>
 
-        <Table className="whitespace-nowrap">
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("common.name")}</TableHead>
-              <TableHead>{t("common.email")}</TableHead>
-              <TableHead>{t("admin.users_list.num_bookmarks")}</TableHead>
-              <TableHead>{t("admin.users_list.asset_sizes")}</TableHead>
-              <TableHead>{t("common.role")}</TableHead>
-              <TableHead>{t("admin.users_list.local_user")}</TableHead>
-              <TableHead>{t("common.actions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell>{u.name}</TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell>
-                  {userStats[u.id].numBookmarks} /{" "}
-                  {u.bookmarkQuota ?? t("admin.users_list.unlimited")}
-                </TableCell>
-                <TableCell>
-                  {toHumanReadableSize(userStats[u.id].assetSizes)} /{" "}
-                  {u.storageQuota
-                    ? toHumanReadableSize(u.storageQuota)
-                    : t("admin.users_list.unlimited")}
-                </TableCell>
-                <TableCell>{u.role && t(`common.roles.${u.role}`)}</TableCell>
-                <TableCell>{u.localUser ? <Check /> : <X />}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <ActionConfirmingDialog
-                      title={t("admin.users_list.delete_user")}
-                      description={t(
-                        "admin.users_list.delete_user_confirm_description",
-                        {
-                          name: u.name ?? "this user",
-                        },
-                      )}
-                      actionButton={(setDialogOpen) => (
-                        <ActionButton
-                          variant="destructive"
-                          loading={isDeletionPending}
-                          onClick={async () => {
-                            await deleteUser({ userId: u.id });
-                            setDialogOpen(false);
-                          }}
-                        >
-                          Delete
-                        </ActionButton>
-                      )}
-                    >
-                      <ButtonWithTooltip
-                        tooltip={t("admin.users_list.delete_user")}
-                        variant="outline"
-                        disabled={session!.user.id == u.id}
-                      >
-                        <Trash size={16} color="red" />
-                      </ButtonWithTooltip>
-                    </ActionConfirmingDialog>
-                    <ResetPasswordDialog userId={u.id}>
-                      <ButtonWithTooltip
-                        tooltip={t("admin.users_list.reset_password")}
-                        variant="outline"
-                        disabled={session!.user.id == u.id || !u.localUser}
-                      >
-                        <KeyRound size={16} color="red" />
-                      </ButtonWithTooltip>
-                    </ResetPasswordDialog>
-                    <UpdateUserDialog
-                      userId={u.id}
-                      currentRole={u.role!}
-                      currentQuota={u.bookmarkQuota}
-                      currentStorageQuota={u.storageQuota}
-                    >
-                      <ButtonWithTooltip
-                        tooltip="Edit User"
-                        variant="outline"
-                        disabled={session!.user.id == u.id}
-                      >
-                        <Pencil size={16} color="red" />
-                      </ButtonWithTooltip>
-                    </UpdateUserDialog>
-                  </div>
-                </TableCell>
+        <div className="shadow-xs overflow-hidden rounded-xl border border-border/70 bg-background/80">
+          <Table className="whitespace-nowrap">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("common.email")}</TableHead>
+                <TableHead>{t("admin.users_list.num_bookmarks")}</TableHead>
+                <TableHead>{t("admin.users_list.asset_sizes")}</TableHead>
+                <TableHead>{t("common.role")}</TableHead>
+                <TableHead>{t("admin.users_list.local_user")}</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {users.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium text-foreground">
+                    {u.name}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {u.email}
+                  </TableCell>
+                  <TableCell>
+                    {userStats[u.id].numBookmarks} /{" "}
+                    {u.bookmarkQuota ?? t("admin.users_list.unlimited")}
+                  </TableCell>
+                  <TableCell>
+                    {toHumanReadableSize(userStats[u.id].assetSizes)} /{" "}
+                    {u.storageQuota
+                      ? toHumanReadableSize(u.storageQuota)
+                      : t("admin.users_list.unlimited")}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className="bg-muted/60 text-muted-foreground"
+                    >
+                      {u.role && t(`common.roles.${u.role}`)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {u.localUser ? (
+                      <Badge
+                        variant="secondary"
+                        className="border-success/20 bg-success/10 text-success gap-1 border"
+                      >
+                        <Check className="size-3.5" />
+                        Yes
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 border border-border/70 bg-muted/70 text-muted-foreground"
+                      >
+                        <X className="size-3.5" />
+                        No
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <ActionConfirmingDialog
+                        title={t("admin.users_list.delete_user")}
+                        description={t(
+                          "admin.users_list.delete_user_confirm_description",
+                          {
+                            name: u.name ?? "this user",
+                          },
+                        )}
+                        actionButton={(setDialogOpen) => (
+                          <ActionButton
+                            variant="destructive"
+                            loading={isDeletionPending}
+                            onClick={async () => {
+                              await deleteUser({ userId: u.id });
+                              setDialogOpen(false);
+                            }}
+                          >
+                            Delete
+                          </ActionButton>
+                        )}
+                      >
+                        <ButtonWithTooltip
+                          tooltip={t("admin.users_list.delete_user")}
+                          variant="outline"
+                          disabled={session!.user.id === u.id}
+                        >
+                          <Trash size={16} />
+                        </ButtonWithTooltip>
+                      </ActionConfirmingDialog>
+                      <ResetPasswordDialog userId={u.id}>
+                        <ButtonWithTooltip
+                          tooltip={t("admin.users_list.reset_password")}
+                          variant="outline"
+                          disabled={session!.user.id === u.id || !u.localUser}
+                        >
+                          <KeyRound size={16} />
+                        </ButtonWithTooltip>
+                      </ResetPasswordDialog>
+                      <UpdateUserDialog
+                        userId={u.id}
+                        currentRole={u.role!}
+                        currentQuota={u.bookmarkQuota}
+                        currentStorageQuota={u.storageQuota}
+                      >
+                        <ButtonWithTooltip
+                          tooltip="Edit User"
+                          variant="outline"
+                          disabled={session!.user.id === u.id}
+                        >
+                          <Pencil size={16} />
+                        </ButtonWithTooltip>
+                      </UpdateUserDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </AdminCard>
   );
