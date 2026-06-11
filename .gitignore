@@ -83,3 +83,6 @@ jean.json
 
 # superpowers brainstorm artifacts
 .superpowers/
+
+# local browser automation artifacts
+.playwright-mcp/
