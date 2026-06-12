@@ -1,92 +1,149 @@
-# Abhip fork setup
+# Fork setup and deploy notes
 
-Personal Karakeep fork for UI/QoL work. Public repo. Deploys are **pull-based**
-(GitHub Actions builds the image; the VPS pulls it) because the VPS firewalls SSH
-to Tailscale only, so CI can't push-deploy over SSH.
+This is the canonical operator/developer guide for **this fork** of Karakeep.
 
-## Repo layout
+Use it for:
+- local development in this repository
+- CI and image-build behavior
+- production deployment notes specific to this fork
 
-- `origin`: `git@github.com:absolutepraya/karakeep.git`
-- `upstream`: `git@github.com:karakeep-app/karakeep.git`
+## Repo identity
+
+- **Origin:** `git@github.com:absolutepraya/karakeep.git`
+- **Upstream:** `git@github.com:karakeep-app/karakeep.git`
+- **Branch model:** `main` is the active integration/deploy branch for this fork
 
 ## Local development
 
-Runtime: Node 24 (`.nvmrc`), `pnpm@11.2.1` (via corepack; matches `packageManager`).
+### Runtime
+- Node 24 (`.nvmrc`)
+- `pnpm@11.2.1` via corepack
+
+### First-time setup
 
 ```bash
-# node 24 via mise (this machine's mise + gpg/keyboxd needs the verify bypass once):
-MISE_NODE_GPG_VERIFY=false mise install node@24.16.0
-corepack enable                 # provisions pnpm 11.2.1
+corepack enable
 pnpm install
 
-# each process loads .env from its own CWD — symlink the root .env into each:
+cp .env.sample .env
+
 ln -sf ../../.env apps/web/.env
 ln -sf ../../.env apps/workers/.env
 ln -sf ../../.env packages/db/.env
 
 mkdir -p "$(grep '^DATA_DIR=' .env | cut -d= -f2)"
-pnpm db:migrate                 # init the sqlite DB (not auto-run on boot)
-
-pnpm web        # http://localhost:3000
-pnpm workers    # separate terminal
+pnpm db:migrate
 ```
 
-Meilisearch (search) and headless Chrome (crawling) are optional — the web app
-boots without them. `./start-dev.sh` brings both up in Docker; or use the full
-Docker dev stack: `docker compose -f docker/docker-compose.dev.yml up`.
+### Preferred start flow
 
-## CI (`.github/workflows/ci.yml`)
+```bash
+./start-dev.sh
+```
 
-`lint`, `format`, `typecheck`, `tests`, `open-api-spec`. The fork has **no Turbo
-remote cache**, so `typecheck` and `tests` rebuild everything from scratch and
-exhaust the hosted runner's disk — both jobs include a "Free up disk space" step
-that reclaims ~20GB of unused preinstalled toolchains. (Divergence from upstream.)
+Variants:
+- `./start-dev.sh` — foreground
+- `./start-dev.sh -d` — detached (`.dev/` logs, shell returns immediately)
+- `./stop-dev.sh` — stop detached services
 
-Two extra **non-blocking** report jobs (`continue-on-error`): `knip` (`pnpm knip`)
-and `react-doctor` (`pnpm doctor --annotations`, React packages only).
+What this starts:
+- `web`
+- `workers`
+- Meilisearch in Docker
+- headless Chrome in Docker
+
+### Direct/manual start
+
+```bash
+pnpm web
+pnpm workers
+```
+
+Notes:
+- Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
+- If `next dev` crashes with a stale Turbopack / `instrumentation.ts` parse issue, clear `apps/web/.next` and restart.
+
+## Environment notes
+
+The root `.env` is the source of truth, but several processes load `.env` from their own working directory. That is why the symlinks above are required.
+
+The most important variables for local development are:
+- `DATA_DIR`
+- `NEXTAUTH_SECRET`
+- `MEILI_ADDR` (if search should work)
+- `OPENAI_API_KEY` (if AI tagging/summarization should work)
+
+## CI
+
+Primary workflow:
+- `.github/workflows/ci.yml`
+
+It runs:
+- lint
+- format
+- typecheck
+- tests
+- open-api-spec
+
+Fork-specific notes:
+- this fork does **not** use Turbo remote cache
+- some CI jobs reclaim disk space before heavy steps because typecheck/tests can otherwise exhaust hosted-runner storage
+- `knip` and `react-doctor` run as **non-blocking** report jobs
 
 ## Extra quality tooling
 
-- **knip** (`pnpm knip`, config `knip.json`) — unused files/deps/exports.
-- **react.doctor** (`pnpm doctor` / `pnpm doctor:staged`) — React health score, scoped
-  via `--project` to the React packages only. Wired into pre-commit **advisory-only**
-  (`|| true`, never blocks). Local + free; `--no-score` keeps it fully offline.
-- **react-grab** — dev-only AI helper in `apps/web/app/layout.tsx`.
-- **Biome** is intentionally skipped (oxlint + oxfmt already cover lint+format).
+- `pnpm knip` — unused files / deps / exports (`knip.json`)
+- `pnpm doctor` / `pnpm doctor:staged` — React health scan via react.doctor
+- `react-grab` — dev-only component/source capture helper in the web app
+- **Biome is intentionally not used** in this repo
 
-## Build + deploy (pull-based)
+## Build and deploy model
 
-- **`.github/workflows/docker.yml`** ("Build and Push image"): on CI success on
-  `main` (or manual `workflow_dispatch`), builds the `linux/amd64` `aio` image and
-  pushes `ghcr.io/<owner>/karakeep:main` (+ a `:sha-<sha>` tag). No SSH/deploy step.
-- The **GHCR package is public**, so the VPS pulls anonymously (no token).
-- On the VPS, a **watchtower** container (`ghcr.io/nicholas-fedor/watchtower` — the
-  maintained fork; the original `containrrr/watchtower` is abandoned and too old for
-  modern Docker engines) polls GHCR every 60s and recreates `web` when `:main`
-  changes. Only the labeled `web` service is auto-updated (`WATCHTOWER_LABEL_ENABLE`).
+This fork deploys with a **pull-based Docker flow**.
 
-Flow: merge to `main` → CI → "Build and Push image" → new `:main` → watchtower
-redeploys `web` within ~1 min. (The image build is the slow part, ~12–20 min.)
+### Build path
+- `.github/workflows/docker.yml` builds the `aio` image on CI success on `main`
+- the workflow pushes `ghcr.io/<owner>/karakeep:main`
+- it also pushes a `:sha-<sha>` image tag
 
-## Deploy compose (`deploy/docker-compose.prod.yml`)
+### Deploy path
+- the VPS runs a Watchtower container
+- Watchtower polls GHCR
+- when `:main` changes, Watchtower recreates the `web` service
 
-Canonical compose for any instance: `web` + `chrome` + `meilisearch` + `watchtower`,
-parametrized by `KARAKEEP_PORT` (host port nginx proxies to) and `KARAKEEP_IMAGE`.
-`web` binds `127.0.0.1:${KARAKEEP_PORT}:3000` (localhost only; nginx fronts it).
+Important characteristics:
+- no SSH deploy from CI
+- GHCR package is public, so the VPS pulls anonymously
+- the canonical production compose is `deploy/docker-compose.prod.yml`
 
-## Provisioning a VPS instance (staging is live; prod later)
+## Production compose
 
-The VPS already runs a staging instance at `keep-dev.<your-domain>` (compose project
-`karakeep-dev` under `~/karakeep-dev`, host port 3100, isolated volumes — separate
-from the live `~/karakeep` instance). To stand up another:
+Canonical compose file:
+- `deploy/docker-compose.prod.yml`
+
+Expected service shape:
+- `web`
+- `chrome`
+- `meilisearch`
+- `watchtower`
+
+Key parameters:
+- `KARAKEEP_PORT`
+- `KARAKEEP_IMAGE`
+
+The web container binds to localhost and is expected to sit behind nginx.
+
+## VPS provisioning notes
+
+Typical high-level flow:
 
 ```bash
-~/setup-subdomain.sh <sub> <port>          # nginx vhost + Let's Encrypt cert
+~/setup-subdomain.sh <sub> <port>
 mkdir ~/<dir> && cd ~/<dir>
-# copy deploy/docker-compose.prod.yml here as docker-compose.yml, then:
+# copy deploy/docker-compose.prod.yml here as docker-compose.yml
 cat > .env <<'ENV'
-NEXTAUTH_SECRET=...        # openssl rand -base64 36
-MEILI_MASTER_KEY=...       # openssl rand -base64 36
+NEXTAUTH_SECRET=...
+MEILI_MASTER_KEY=...
 NEXTAUTH_URL=https://<sub>.<your-domain>
 KARAKEEP_PORT=<port>
 DISABLE_SIGNUPS=false
@@ -94,6 +151,14 @@ ENV
 docker compose up -d
 ```
 
-Add a Cloudflare A record for `<sub>` → server IP, **DNS-only (grey)** — matching
-the other service subdomains. (The orange proxy currently causes a redirect loop
-given the zone SSL mode + nginx's HTTPS redirect; keep services grey.)
+Notes:
+- create the relevant DNS record before expecting nginx/HTTPS to work
+- this fork’s current operator notes assume the service is fronted by nginx
+- depending on SSL/proxy mode, a Cloudflare orange-cloud proxy can cause redirect loops; DNS-only/grey-cloud has been the safer path for this setup
+
+## Related docs
+
+- Public repo overview: `README.md`
+- Contribution rules: `CONTRIBUTING.md`
+- Assistant-facing summaries: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`
+- Docs-site workflow: `docs/README.md`

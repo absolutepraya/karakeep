@@ -4,52 +4,47 @@ slug: /
 
 # Introduction
 
-Karakeep (previously Hoarder) is an open source "Bookmark Everything" app that uses AI for automatically tagging the content you throw at it. The app is built with self-hosting as a first class citizen.
+Karakeep is a self-hostable bookmark-everything app for saving links, notes, images, PDFs, highlights, and archived pages, then finding them again quickly with search, lists, and optional AI assistance.
 
-![Screenshot](https://raw.githubusercontent.com/karakeep-app/karakeep/main/screenshots/homepage.png)
+> These docs primarily describe **Karakeep itself**. This repository is a personal fork of upstream Karakeep, so fork-specific development and deployment notes also live in the repo docs: `README.md`, `CONTRIBUTING.md`, and `docs/fork-setup.md`.
 
+![Screenshot](https://raw.githubusercontent.com/absolutepraya/karakeep/main/screenshots/homepage.png)
 
-## Features
+## What Karakeep can do
 
-- 🔗 Bookmark links, take simple notes and store images and pdfs.
-- ⬇️ Automatic fetching for link titles, descriptions and images.
-- 📋 Sort your bookmarks into lists.
-- 👥 Collaborate with others on the same list.
-- 🔎 Full text search of all the content stored.
-- ✨ LLM-based automatic tagging and summarization. With supports for local models using ollama!
-- 🤖 LLM Agents (e.g. OpenClaw, Hermes) friendly with powerful [CLI](https://docs.karakeep.app/integrations/command-line), and [official skills](https://docs.karakeep.app/integrations/agentic-skills).
-- ⚙️ Rule-based engine for customized management.
-- 🎆 OCR for extracting text from images.
-- 🔖 [Chrome plugin](https://chromewebstore.google.com/detail/karakeep/kgcjekpmcjjogibpjebkhaanilehneje), [Firefox addon](https://addons.mozilla.org/en-US/firefox/addon/karakeep/), and [Safari extension](https://apps.apple.com/gb/app/karakeep-app/id6479258022?platform=mac) for quick bookmarking.
-- 📱 An [iOS app](https://apps.apple.com/us/app/karakeep-app/id6479258022), and an [Android app](https://play.google.com/store/apps/details?id=app.hoarder.hoardermobile&pcampaignid=web_share).
-- 📰 Auto hoarding from RSS feeds.
-- 🔌 REST API and multiple clients.
-- 🌐 Multi-language support.
-- 🖍️ Mark and store highlights from your hoarded content.
-- 🗄️ Full page archival (using [monolith](https://github.com/Y2Z/monolith)) to protect against link rot.
-- ▶️ Auto video archiving using [yt-dlp](https://github.com/yt-dlp/yt-dlp).
-- ☑️ Bulk actions support.
-- 🔐 SSO support.
-- 🌙 Dark mode support.
-- 💾 Self-hosting first.
-- ⬇️ Bookmark importers from Chrome, Pocket, Linkwarden, Omnivore, Tab Session Manager.
-- 🔄 Automatic sync with browser bookmarks via [floccus](https://floccus.org/).
-- [Planned] Offline reading on mobile, semantic search across bookmarks, ...
+- 🔗 Save links, notes, images, and PDFs
+- ⬇️ Fetch titles, descriptions, and preview images automatically
+- 📋 Organize bookmarks into lists
+- 👥 Collaborate on shared lists
+- 🔎 Search across saved content
+- ✨ Automatically tag and summarize bookmarks with AI
+- ⚙️ Apply rule-based automation
+- 🎆 Extract text from images with OCR
+- 🖍️ Save and revisit highlights
+- 🗄️ Archive full pages to reduce link rot
+- ▶️ Archive video content with `yt-dlp`
+- 📰 Pull content from RSS feeds automatically
+- 🔌 Use the REST API, SDK, CLI, browser extensions, mobile apps, and MCP server
+- 💾 Self-host on your own infrastructure
 
-**⚠️ This app is under heavy development.**
+## Where to go next
 
+- **Install Karakeep:** browse the installation guides in this docs site
+- **Configure your instance:** see the configuration section
+- **Use the API:** visit the API reference
+- **Develop locally:** start with the development setup guide
 
 ## Demo
 
-You can access the demo at [https://try.karakeep.app](https://try.karakeep.app). Login with the following creds:
+You can try the upstream demo at [try.karakeep.app](https://try.karakeep.app) using:
 
-```
+```text
 email: demo@karakeep.app
 password: demodemo
 ```
 
-The demo is seeded with some content, but it's in read-only mode to prevent abuse.
+The demo is read-only.
 
 ## About the name
 
-The name Karakeep is inspired by the Arabic word "كراكيب" (karakeeb), a colloquial term commonly used to refer to miscellaneous clutter, odds and ends, or items that may seem disorganized but often hold personal value or hidden usefulness. It evokes the image of a messy drawer or forgotten box, full of stuff you can't quite throw away—because somehow, it matters (or more likely, because you're a hoarder!).
+Karakeep is inspired by the Arabic word **كراكيب** (*karakeeb*), a colloquial term for miscellaneous clutter, odds and ends, or things that look messy but still feel worth keeping. That makes it a fitting name for a personal library of saved links, notes, screenshots, and everything else you are not ready to lose.

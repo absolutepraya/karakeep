@@ -1,41 +1,100 @@
-# Website
+# Docs site
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+This directory contains the Docusaurus docs site for Karakeep as maintained in this fork.
 
-### Installation
+## What lives here
 
-```
-$ yarn
-```
+- `docs/docs/**` — docs content pages
+- `docs/api/**` — generated API docs
+- `docusaurus.config.ts` — site configuration
+- `sidebars.ts` — sidebar configuration
+- `src/**` — theme/custom UI for the docs site
+- `static/**` — static assets
 
-### Local Development
+## Documentation model used in this repo
 
-```
-$ yarn start
-```
+This repository keeps two related but distinct documentation layers:
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+1. **Repo / fork docs**
+   - `README.md`
+   - `CONTRIBUTING.md`
+   - `docs/fork-setup.md`
+   - `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`
 
-### Build
+2. **Docs site content**
+   - end-user and developer docs under `docs/docs/**`
+   - generated API docs under `docs/api/**`
 
-```
-$ yarn build
-```
+The docs site should stay broadly **upstream-first in product framing**, while still reflecting this fork’s real development and operator workflow where relevant.
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+## Install
 
-### Deployment
+From the repository root:
 
-Using SSH:
-
-```
-$ USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```
-$ GIT_USER=<Your GitHub username> yarn deploy
+```bash
+pnpm install
 ```
 
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+You usually do **not** need a separate install inside `docs/`.
+
+## Local development
+
+Run the docs site from the repository root:
+
+```bash
+pnpm --filter @karakeep/docs start
+```
+
+Useful related commands:
+
+```bash
+pnpm --filter @karakeep/docs build
+pnpm --filter @karakeep/docs serve
+pnpm --filter @karakeep/docs clear
+pnpm --filter @karakeep/docs typecheck
+```
+
+## API docs generation
+
+The docs site includes generated API reference material.
+
+Regenerate it with:
+
+```bash
+pnpm --filter @karakeep/docs gen-api
+```
+
+This reads from:
+- `packages/open-api/karakeep-openapi-spec.json`
+
+and writes to:
+- `docs/docs/api/**`
+
+## When editing docs
+
+If you change fork/dev/deploy facts, keep the repo docs and docs-site pages aligned.
+
+At minimum, check:
+- `README.md`
+- `CONTRIBUTING.md`
+- `docs/fork-setup.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `GEMINI.md`
+- relevant pages under `docs/docs/**`
+
+## Validation
+
+For documentation-only changes, the most useful checks are:
+
+```bash
+pnpm --filter @karakeep/docs typecheck
+pnpm --filter @karakeep/docs build
+```
+
+For repo-wide consistency after larger docs rewrites, also run:
+
+```bash
+pnpm lint
+pnpm typecheck
+```

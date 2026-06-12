@@ -64,9 +64,16 @@ OPENAI_API_KEY=your_openai_key
 
 ### Run with pnpm (Recommended)
 
+From the repository root:
+
+```bash
+pnpm --filter @karakeep/compare-models run
+```
+
+Or from the package directory:
+
 ```bash
 cd tools/compare-models
-pnpm install
 pnpm run
 ```
 

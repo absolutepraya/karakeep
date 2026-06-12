@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# `@karakeep/web`
 
-## Getting Started
+This is the main Next.js web application for Karakeep.
 
-First, run the development server:
+## What lives here
+
+- authenticated dashboard UI
+- public list pages
+- settings and admin surfaces
+- server-rendered web routes
+- most user-facing interactions for saving, browsing, and retrieving bookmarks
+
+## Local development
+
+From the repository root, the usual entrypoint is:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+In this fork, the preferred full-stack workflow is still:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+./start-dev.sh
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+That brings up:
+- the web app
+- workers
+- Meilisearch
+- headless Chrome
 
-## Learn More
+## Useful commands
 
-To learn more about Next.js, take a look at the following resources:
+From the repository root:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm --filter @karakeep/web dev
+pnpm --filter @karakeep/web build
+pnpm --filter @karakeep/web start
+pnpm --filter @karakeep/web lint
+pnpm --filter @karakeep/web format:fix
+pnpm --filter @karakeep/web typecheck
+pnpm --filter @karakeep/web test
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- The app reads `.env` from its own working directory, so this repo symlinks the root `.env` into `apps/web/.env`.
+- Search requires Meilisearch.
+- Crawling and several background-driven features require the workers.
+- If local dev crashes with a stale Turbopack/instrumentation issue, clearing `apps/web/.next` is often enough.

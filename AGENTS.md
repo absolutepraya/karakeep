@@ -1,94 +1,162 @@
-# Karakeep Project Overview
+# Karakeep fork overview
 
-This document provides context about the Karakeep project for the different agents.
+This repository is an **opinionated personal fork** of upstream Karakeep.
 
-## Project Overview
+- **Origin:** `absolutepraya/karakeep`
+- **Upstream:** `karakeep-app/karakeep`
+- **Focus:** UX/QoL improvements, tighter local-dev ergonomics, and a personal operator workflow while staying reasonably close to upstream
 
-Karakeep is a monorepo project managed with Turborepo. It is a "read-it-later" bookmarking application with a focus on collecting and organizing information. The project is built with a modern tech stack, including:
+## Canonical sources
 
+When facts conflict, use these as the source of truth:
+
+- **Public repo framing:** `README.md`
+- **Contribution expectations:** `CONTRIBUTING.md`
+- **Fork-specific local dev / deploy / operator workflow:** `docs/fork-setup.md`
+- **Docs-site workflow:** `docs/README.md`
+
+Keep this file aligned with `AGENTS.md` and `CLAUDE.md`.
+
+## Project overview
+
+Karakeep is a monorepo bookmark-everything app for saving and retrieving links, notes, images, PDFs, highlights, and archived pages.
+
+Main stack:
 - **Frontend:** Next.js, React, TypeScript, Tailwind CSS
-- **Backend:** Hono (a lightweight web framework), tRPC
-- **Database:** Drizzle ORM over SQLite (`better-sqlite3`); the DB file and assets live under `DATA_DIR`
-- **Tooling:** Oxfmt, oxlint, Vitest, pnpm
+- **API:** Hono + tRPC
+- **Database:** Drizzle ORM over SQLite (`better-sqlite3`)
+- **Search:** Meilisearch
+- **Tooling:** pnpm, Turborepo, oxfmt, oxlint, Vitest
 
-## Fork notes
+## Repo structure
 
-This repo is an **opinionated personal fork** of Karakeep (`origin`: `absolutepraya/karakeep`, `upstream`: `karakeep-app/karakeep`) focused on UX/QoL changes while staying close to upstream. Full setup details live in [`docs/fork-setup.md`](docs/fork-setup.md).
+### Apps
+- `apps/web` — main web application
+- `apps/workers` — background workers
+- `apps/browser-extension` — browser extension
+- `apps/mobile` — Expo mobile app
+- `apps/landing` — marketing / landing site
+- `apps/mcp` — MCP server
 
-### Local dev (one command)
+### Packages
+- `packages/trpc` — core business logic and routers
+- `packages/db` — schema and migrations
+- `packages/shared` — shared code and types
+- `packages/shared-react` — shared React helpers/components
+- `packages/shared-server` — shared server-only logic
+- `packages/open-api` — OpenAPI artifacts
+- `packages/sdk` — TypeScript SDK
 
-Node 24 (`.nvmrc`) + `pnpm@11.2.1` via corepack. First-time setup: `pnpm install`, then symlink the root `.env` into `apps/web`, `apps/workers`, and `packages/db` (each process loads `.env` from its own CWD), then `pnpm db:migrate`.
+## Local development for this fork
 
-- `./start-dev.sh` — foreground (Ctrl+C stops everything); `./start-dev.sh -d` — detached (logs in `.dev/`, frees the shell), stop with `./stop-dev.sh`. Runs `web`+`workers` natively and Meilisearch+Chrome in Docker.
-- Or run pieces directly: `pnpm web` (:3000) + `pnpm workers`. Meilisearch (search) and headless Chrome (crawling) are optional — the web app boots and degrades gracefully without them.
-- Gotcha: if `next dev` crashes at boot with `instrumentation.ts ... MODULE_UNPARSABLE`, clear the stale Turbopack cache with `rm -rf apps/web/.next` (it gets seeded by `next typegen`, which `pnpm typecheck` runs).
+### Runtime
+- Node 24 (`.nvmrc`)
+- `pnpm@11.2.1` via corepack
 
-### Deploy (pull-based)
+### First-time setup
 
-CI green on `main` → `.github/workflows/docker.yml` builds + pushes the public image `ghcr.io/<owner>/karakeep:main` → a Watchtower container on the VPS polls GHCR and redeploys. No inbound SSH (the VPS firewalls SSH to Tailscale). The canonical compose is `deploy/docker-compose.prod.yml`.
+```bash
+pnpm install
 
-### Code quality
+ln -sf ../../.env apps/web/.env
+ln -sf ../../.env apps/workers/.env
+ln -sf ../../.env packages/db/.env
 
-Beyond oxlint / oxfmt / sherif / tsc / vitest:
-- `pnpm knip` — unused files / deps / exports (config: `knip.json`). Runs as a **non-blocking** CI job; not in pre-commit.
-- `pnpm doctor` — [react.doctor](https://react.doctor) React health scan (0–100), scoped via `--project` to **React packages only** (`web`, `browser-extension`, `mobile`, `landing`, `shared-react`). `pnpm doctor:staged` runs it on staged files without the remote score. The pre-commit hook runs it **advisory-only** (`|| true`) — it prints findings but never blocks a commit.
-- **react-grab** loads dev-only in `apps/web/app/layout.tsx` (hover a component + ⌘C copies its source/stack for an AI); absent from prod builds.
-- **Biome is intentionally not used** — oxlint + oxfmt (oxc) already cover lint + format.
+pnpm db:migrate
+```
 
-## Project Structure
+### Preferred start command
 
-The project is organized into `apps` and `packages`:
+```bash
+./start-dev.sh
+```
 
-### Applications (`apps/`)
+Useful variants:
+- `./start-dev.sh` — foreground
+- `./start-dev.sh -d` — detached
+- `./stop-dev.sh` — stop detached services
 
-- **`web`:** The main web application, built with Next.js.
-- **`browser-extension`:** A browser extension, likely for saving content to karakeep.
-- **`cli`:** A command-line interface for interacting with the service.
-- **`landing`:** A landing page for the project.
-- **`mobile`:** A mobile application (details unknown).
-- **`mcp`:** The Model Context Protocol (MCP) server to communicate with Karakeep.
-- **`workers`:** Background workers for processing tasks.
+What it does:
+- runs `web` + `workers` natively
+- runs Meilisearch + headless Chrome in Docker
 
-### Packages (`packages/`)
+### Direct commands
 
-- **`api`:** The main API, built with Hono and tRPC.
-- **`db`:** Database schema and migrations, using Drizzle ORM.
-- **`e2e_tests`:** End-to-end tests for the project.
-- **`open-api`:** OpenAPI specifications for the API.
-- **`sdk`:** A software development kit for interacting with the API.
-- **`shared`:** Shared code and types between packages.
-- **`shared-react`:** Shared React components and hooks.
-- **`shared-server`:** Shared logic that's meant to be used on the server-side.
-- **`trpc`:** tRPC router and procedures. Most of the business logic is here.
+```bash
+pnpm web
+pnpm workers
+```
 
-### Docs
+Notes:
+- Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
+- If `next dev` crashes with a stale Turbopack/instrumentation issue, clear `apps/web/.next`.
 
-- **docs/docs/03-configuration.md**: Explains configuration options for the project.
+## Deploy model for this fork
 
-## Development Workflow
+This fork uses a **pull-based** deploy flow.
 
-- **Package Manager:** pnpm
-- **Build System:** Turborepo
-- **Code Formatting:** Oxfmt
-- **Linting:** oxlint
-- **Testing:** Vitest
+High-level flow:
+- CI passes on `main`
+- `.github/workflows/docker.yml` builds and pushes `ghcr.io/<owner>/karakeep:main`
+- a Watchtower container on the VPS polls GHCR and redeploys automatically
 
-## Other info
+Important notes:
+- no inbound SSH push-deploy from CI
+- canonical production compose: `deploy/docker-compose.prod.yml`
+- details live in `docs/fork-setup.md`
 
-- This project uses shadcn/ui. The shadcn components in the web app are in `apps/web/components/ui`.
-- This project uses Tailwind CSS.
-- For the mobile app, we use [expo](https://expo.dev/).
+## Quality / maintenance tooling
 
-### Common Commands
+Standard commands:
+- `pnpm format:fix`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm test`
 
-- `pnpm typecheck`: Typecheck the codebase.
-- `pnpm lint`: Lint the codebase.
-- `pnpm lint:fix`: Fix linting issues.
-- `pnpm format`: Format the codebase.
-- `pnpm format:fix`: Fix formatting issues.
-- `pnpm test`: Run tests.
-- `pnpm db:generate --name description_of_schema_change`: db migration after making schema changes
+Additional tooling used in this fork:
+- `pnpm knip` — unused files / deps / exports
+- `pnpm doctor` — React health scan via react.doctor
+- `pnpm doctor:staged` — staged-file React scan
 
-Starting services:
-- `pnpm web`: Start the web application (this doesn't return, unless you kill it).
-- `pnpm workers`: Starts the background workers (this doesn't return, unless you kill it).
+Notes:
+- `react.doctor` is advisory in pre-commit and can emit noisy temp-package errors.
+- **Biome is intentionally not used** in this repo.
+- `react-grab` is loaded in dev-only mode in the web app.
+
+## Documentation guidance
+
+This repo’s docs are intentionally split into audiences:
+- **public/repo-facing** docs explain Karakeep plus this fork’s repo identity
+- **assistant docs** summarize the same fork facts for tooling
+- **operator docs** capture the real deploy/dev workflow of this fork
+
+If you edit fork/dev/deploy facts, keep these aligned:
+- `README.md`
+- `CONTRIBUTING.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `GEMINI.md`
+- `docs/fork-setup.md`
+- relevant pages under `docs/docs/**`
+
+## Common commands
+
+```bash
+pnpm format:fix
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm knip
+pnpm doctor
+pnpm db:generate --name <description>
+pnpm db:migrate
+pnpm web
+pnpm workers
+```
+
+## Working style for assistants
+
+- Prefer repo-specific facts over generic upstream assumptions.
+- Use `docs/fork-setup.md` for local-dev/deploy/operator answers.
+- Treat upstream docs as product context, not as authoritative for this fork’s operational workflow.
+- When changing documentation, avoid leaving “see upstream below” splits; rewrite for coherence.

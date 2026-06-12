@@ -1,46 +1,109 @@
-# Contributing to Karakeep
+# Contributing
 
-First off, thank you for considering contributing to our project! This document outlines our contribution process and guidelines to make it easy for you to help improve this project.
+Thanks for taking the time to improve Karakeep.
 
-## How Can I Contribute?
+This repository is an **opinionated personal fork** of upstream Karakeep, so contribution flow here is a little different from the main project.
 
+## Which repo should you contribute to?
 
-### Asking Questions
+### Contribute to upstream Karakeep if...
+- your change is generally useful to the main project
+- it is not specific to this fork’s UX/QoL direction
+- it affects the broader community-facing product, install flow, or platform support
 
-If you have questions:
+Start here:
+- Upstream repo: <https://github.com/karakeep-app/karakeep>
+- Upstream docs: <https://docs.karakeep.app>
 
-* Use the GitHub Discussions Q&A section
-* Search existing discussions to see if your question has been answered
-* If not found, create a new discussion with a clear, descriptive title
+### Contribute to this fork if...
+- the change is specific to this fork’s UX, operator workflow, or repo-specific maintenance model
+- it depends on this fork’s pull-based deploy flow or local-dev scripts
+- it intentionally diverges from upstream behavior or presentation
 
+## Before you start
 
-### Reporting Bugs
+- Open an issue or discussion first if the change is large, behavioral, or opinionated.
+- If the change probably belongs upstream, prefer proposing it there instead of here.
+- Read the fork-specific setup guide: [`docs/fork-setup.md`](docs/fork-setup.md)
 
-If in doubt, about whether a problem you're seeing is a bug or not, use the discussions Q&A section instead. If it turns out to be a bug, we'll promote it into an issue. If you're sure it's a bug:
-* Create a new issue using the bug report template
-* Include a clear description and steps to reproduce
-* Wait for triage and labeling by maintainers
+## Local setup
 
+This fork uses:
+- Node 24 (`.nvmrc`)
+- `pnpm@11.2.1` via corepack
+- root `.env` symlinked into `apps/web`, `apps/workers`, and `packages/db`
 
-### Suggesting Features
+Quick start:
 
-For feature requests:
+```bash
+pnpm install
 
-* If you find a similar feature request, upvote it instead of creating a new one to help us prioritize it
-* Create a new issue using the feature request template
-* New features start with the `status/untriaged` label
-  * If the feature request is approved, the maintainers will add the `status/approved` label and assign a priority to the issue
-  * Other issues will get labeled with `status/icebox`. Issues in the icebox are not prioritized, until there's enough interest from the community
+ln -sf ../../.env apps/web/.env
+ln -sf ../../.env apps/workers/.env
+ln -sf ../../.env packages/db/.env
 
+pnpm db:migrate
+./start-dev.sh
+```
 
-### Working on Issues
+For the full workflow, detached mode, and production deploy notes, use:
+- [`docs/fork-setup.md`](docs/fork-setup.md)
 
-Before starting to work on an issue:
+## What to run before opening a PR
 
-* Prefer working on `status/approved` issues to make sure they get prioritized for the review
-* Comment on the issue to let others know you're working on it
-* Read the [development documentation](https://docs.karakeep.app/Development/setup) to get started
-* If you need help, you can find us in the #development channel in the [Karakeep Discord](https://discord.com/invite/NrgeYywsFh).
-* Once you're done, open a PR and wait for review. Try to include a screenshot of the change in the PR description.
+At minimum:
 
-Please note that we're all volunteers. We'll aim to review your PR within a week from when they are opened.
+```bash
+pnpm format:fix
+pnpm lint
+pnpm typecheck
+```
+
+Depending on the change, also run:
+
+```bash
+pnpm test
+pnpm knip
+pnpm doctor
+```
+
+Notes:
+- `react.doctor` is advisory in pre-commit and may print noisy temp-package errors locally.
+- `knip` is useful for repository cleanup, but is non-blocking in CI.
+
+## Change expectations
+
+### UI / UX changes
+- Include screenshots or a short screen recording.
+- Explain why the change fits this fork specifically.
+- Keep the design language consistent with the current app rather than introducing a second style system.
+
+### Schema / backend changes
+- Add migrations when needed.
+- Call out any deploy or operator impact clearly.
+- Mention if a change would make upstream sync harder.
+
+### Documentation changes
+If you touch fork/dev/deploy facts, keep the relevant docs aligned:
+- `README.md`
+- `CONTRIBUTING.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `GEMINI.md`
+- `docs/fork-setup.md`
+- relevant docs-site pages under `docs/docs/**`
+
+## PR guidance
+
+A good PR for this repo should include:
+- a clear summary of the change
+- why it belongs in this fork
+- screenshots for UI changes
+- commands run for validation
+- any deploy, migration, or sync-with-upstream implications
+
+## Review expectations
+
+This is a personal fork, so review cadence is best-effort rather than community-SLA driven.
+
+If you need a guaranteed path to merge for a generally useful change, upstream Karakeep is usually the better place to propose it.

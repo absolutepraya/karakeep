@@ -1,30 +1,29 @@
-# Karakeep MCP Server
+# Karakeep MCP server
 
-This is the Karakeep MCP server, which is a server that can be used to interact
-with Karakeep from other tools.
+This package contains the MCP server for Karakeep.
 
-## Supported Tools
+It exposes bookmark/list/tag operations for external MCP-compatible tools and agents.
 
-- Searching bookmarks
-- Adding and removing bookmarks from lists
-- Attaching and detaching tags to bookmarks
-- Creating new lists
-- Creating text and URL bookmarks
+## Supported tools
 
-Currently, the MCP server only exposes tools (no resources).
+- search bookmarks
+- create bookmarks
+- create lists
+- attach and detach tags
+- add and remove bookmarks from lists
 
-## Usage with Claude Desktop
+At the moment, this package exposes **tools only** (no MCP resources).
 
-From NPM:
+## Use with Claude Desktop
+
+### From npm
 
 ```json
 {
   "mcpServers": {
     "karakeep": {
       "command": "npx",
-      "args": [
-        "@karakeep/mcp"
-      ],
+      "args": ["@karakeep/mcp"],
       "env": {
         "KARAKEEP_API_ADDR": "https://<YOUR_SERVER_ADDR>",
         "KARAKEEP_API_KEY": "<YOUR_TOKEN>",
@@ -35,7 +34,7 @@ From NPM:
 }
 ```
 
-From Docker:
+### From Docker
 
 ```json
 {
@@ -55,4 +54,23 @@ From Docker:
     }
   }
 }
+```
+
+The Docker example above uses the upstream published image. If you want a fork-specific image, build and publish one yourself.
+
+## Local development
+
+From the repository root:
+
+```bash
+pnpm --filter @karakeep/mcp run
+```
+
+Other useful commands:
+
+```bash
+pnpm --filter @karakeep/mcp build
+pnpm --filter @karakeep/mcp lint
+pnpm --filter @karakeep/mcp format:fix
+pnpm --filter @karakeep/mcp typecheck
 ```

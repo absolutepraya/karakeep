@@ -1,46 +1,129 @@
 # Troubleshooting
 
-## SqliteError: no such table: user
+This page covers the problems that come up most often when self-hosting or developing Karakeep from this repository.
 
-This usually means that there's something wrong with the database setup (more concretely, it means that the database is not initialized). This can be caused by multiple problems:
-1. **Wiped DATA_DIR:** Your `DATA_DIR` got wiped (or the backing storage dir changed). If you did this intentionally, restart the container so that it can re-initalize the database.
-2. **Missing DATA_DIR**: You're not using the default docker compose file, and you forgot to configure the `DATA_DIR` env var. This will result into the database getting set up in a different directory than the one used by the service.
+## `SqliteError: no such table: user`
 
-## Chrome Failed to Read DnsConfig
+This almost always means the database was not initialized where the app expects it to be.
 
-If you see this error in the logs of the chrome container, it's a benign error and you can safely ignore it. Whatever problems you're having, is unrelated to this error.
+Common causes:
+1. `DATA_DIR` points at the wrong place.
+2. The backing directory was wiped or changed.
+3. Migrations were never run.
 
-## AI Tagging not working (when using OpenAI)
+Checks:
+- confirm `DATA_DIR` in your environment
+- confirm the app and workers are reading the same `.env`
+- run:
 
-Check the logs of the container and this will usually tell you what's wrong. Common problems are:
-1. Typo in the env variable `OPENAI_API_KEY` name resulting into logs saying something like "skipping inference as it's not configured".
-2. You forgot to call `docker compose up` after configuring open ai.
-3. OpenAI requires pre-charging the account with credits before using it, otherwise you'll get an error like "insufficient funds".
+```bash
+pnpm db:migrate
+```
 
-## AI Tagging not working (when using Ollama)
+## The app boots, but auth/search/workers act like env vars are missing
 
-Check the logs of the container and this will usually tell you what's wrong. Common problems are:
-1. Typo in the env variable `OLLAMA_BASE_URL` name resulting into logs saying something like "skipping inference as it's not configured".
-2. You forgot to call `docker compose up` after configuring ollama.
-3. You didn't change the `INFERENCE_TEXT_MODEL` env variable, resulting into karakeep attempting to use gpt models with ollama which won't work.
-4. Ollama server is not reachable by the karakeep container. This can be caused by:
-    1. Ollama server being in a different docker network than the karakeep container.
-    2. You're using `localhost` as the `OLLAMA_BASE_URL` instead of the actual address of the ollama server. `localhost` points to the container itself, not the docker host. Check this [stackoverflow answer](https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach) to find how to correctly point to the docker host address instead.
+In this repo, multiple processes load `.env` from their own working directory.
+
+If you created only the root `.env` file and did not symlink it into the app/package directories, behavior can look partially broken.
+
+Expected symlinks:
+
+```bash
+ln -sf ../../.env apps/web/.env
+ln -sf ../../.env apps/workers/.env
+ln -sf ../../.env packages/db/.env
+```
+
+## `next dev` crashes with a stale Turbopack / `instrumentation.ts` parse error
+
+This fork occasionally hits a stale `.next` cache issue after type generation or interrupted dev runs.
+
+Clear the web app cache and restart:
+
+```bash
+rm -rf apps/web/.next
+pnpm web
+```
+
+## `Chrome Failed to Read DnsConfig`
+
+If you see this in the Chrome container logs, it is usually benign and unrelated to the actual issue you are debugging.
+
+## AI tagging not working with OpenAI
+
+Common causes:
+1. `OPENAI_API_KEY` is missing or misspelled.
+2. You changed the env file but did not restart the relevant services.
+3. The OpenAI account does not have usable credits.
+
+Checks:
+- inspect the workers logs
+- verify the env var name exactly
+- restart the app/workers after updating the env file
+
+## AI tagging not working with Ollama
+
+Common causes:
+1. `OLLAMA_BASE_URL` is missing or misspelled.
+2. Services were not restarted after updating the env file.
+3. `INFERENCE_TEXT_MODEL` still points at a model name that only makes sense for OpenAI.
+4. The Karakeep containers cannot actually reach Ollama.
+
+If Ollama is unreachable, typical reasons are:
+- wrong Docker network
+- using `localhost` instead of the correct host/container address
+
+Remember: inside a container, `localhost` points to the container itself, not your host machine.
 
 ## Crawling not working
 
-Check the logs of the container and this will usually tell you what's wrong. Common problems are:
-1. You changed the name of the chrome container but didn't change the `BROWSER_WEB_URL` env variable.
+Common causes:
+1. Workers are not running.
+2. The configured Chrome service is unreachable.
+3. `BROWSER_WEB_URL` no longer matches the actual Chrome container/service name.
 
-## Upgrading Meilisearch - Migrating the Meilisearch db version
+Checks:
+- confirm `pnpm workers` is running, or use `./start-dev.sh`
+- confirm the Chrome service is up
+- inspect workers logs for crawl failures
 
-[Meilisearch](https://www.meilisearch.com/) is the database used by karakeep for searching in your bookmarks. The version used by karakeep is `1.41.0` and it is advised not to upgrade it without good reasons. If you do, you might see errors like `Your database version (x.x.x) is incompatible with your current engine version (x.x.x). To migrate data between Meilisearch versions, please follow our guide on https://www.meilisearch.com/docs/learn/update_and_migration/updating.`.
+## Search not working
 
-Luckily we can easily workaround this:
-1. Stop the Meilisearch container.
-2. Inside the Meilisearch volume bound to `/meili_data`, erase/rename the folder called `data.ms`.
-3. Launch Meilisearch again.
-4. Login to karakeep as administrator and go to (as of v0.24.1) `Admin Settings > Background Jobs` then click on `Reindex All Bookmarks`.
-5. When the reindexing has finished, Meilisearch should be working as usual.
+Common causes:
+1. Meilisearch is not running.
+2. `MEILI_ADDR` is missing or incorrect.
+3. The app was started before the search service was reachable.
 
-If you run into issues, the official documentation can be found [there](https://www.meilisearch.com/docs/learn/update_and_migration/updating).
+Checks:
+- confirm Meilisearch is reachable
+- verify `MEILI_ADDR`
+- reindex if needed from the admin panel after the service is healthy
+
+## Meilisearch version / index migration problems
+
+If you upgrade Meilisearch and see an incompatible database version error, the cleanest fix is usually to rebuild the Meilisearch data and reindex.
+
+Typical recovery flow:
+1. Stop Meilisearch.
+2. Inside the mounted Meilisearch volume, remove or rename `data.ms`.
+3. Start Meilisearch again.
+4. Reindex bookmarks from the admin panel.
+
+Use this carefully: deleting `data.ms` wipes the search index, so only do it if you are prepared to reindex.
+
+## Cloudflare / reverse-proxy redirect loops on personal deployments
+
+For this fork’s current VPS workflow, a Cloudflare orange-cloud proxy can cause redirect-loop behavior depending on SSL mode and nginx redirects.
+
+If you hit that while following this repo’s operator workflow, check the notes in:
+- `docs/fork-setup.md`
+
+## Still stuck?
+
+If you are debugging the product generically, upstream docs and community channels are still useful:
+- [docs.karakeep.app](https://docs.karakeep.app)
+- [Discord](https://discord.gg/NrgeYywsFh)
+
+If you are debugging this fork’s local/dev/deploy workflow specifically, prefer the repo docs first:
+- `README.md`
+- `docs/fork-setup.md`

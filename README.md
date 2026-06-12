@@ -1,128 +1,182 @@
 <div align="center">
-    <a href="https://github.com/karakeep-app/karakeep/actions/workflows/ci.yml">
-        <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/karakeep-app/karakeep/ci.yml" />
-    </a>
-    <a href="https://github.com/karakeep-app/karakeep/releases">
-        <img alt="GitHub Release" src="https://img.shields.io/github/v/release/karakeep-app/karakeep" />
-    </a>
-    <a href="https://discord.gg/NrgeYywsFh">
-        <img alt="Discord" src="https://img.shields.io/discord/1223681308962721802?label=chat%20on%20discord" />
-    </a>
-    <a href="https://hosted.weblate.org/engage/hoarder/">
-        <img src="https://hosted.weblate.org/widget/hoarder/hoarder/svg-badge.svg" alt="Translation status" />
-    </a>
+  <a href="https://github.com/absolutepraya/karakeep/actions/workflows/ci.yml">
+    <img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/absolutepraya/karakeep/ci.yml?branch=main&label=ci" />
+  </a>
+  <a href="https://github.com/karakeep-app/karakeep/releases">
+    <img alt="Upstream release" src="https://img.shields.io/github/v/release/karakeep-app/karakeep?label=upstream%20release" />
+  </a>
+  <a href="https://discord.gg/NrgeYywsFh">
+    <img alt="Discord" src="https://img.shields.io/discord/1223681308962721802?label=upstream%20discord" />
+  </a>
+  <a href="https://hosted.weblate.org/engage/hoarder/">
+    <img src="https://hosted.weblate.org/widget/hoarder/hoarder/svg-badge.svg" alt="Translation status" />
+  </a>
 </div>
 
-# <img height="50px" src="./screenshots/logo.png" />
+# <img height="50" src="./screenshots/logo.png" alt="Karakeep logo" />
 
-Karakeep (previously Hoarder) is a self-hostable bookmark-everything app with a touch of AI for the data hoarders out there.
+Karakeep is a self-hostable bookmark-everything app for saving links, notes, images, PDFs, and web pages, then finding them again with fast search, lists, highlights, and optional AI tagging/summarization.
 
-> **Personal fork.** This is an opinionated personal fork of Karakeep focused on UX/QoL changes, kept in sync with upstream. For this fork's one-command local dev and pull-based deploy setup, see [`docs/fork-setup.md`](docs/fork-setup.md). Everything below is upstream Karakeep's README.
+> This repository is **not the upstream Karakeep repo**. It is an opinionated personal fork of [karakeep-app/karakeep](https://github.com/karakeep-app/karakeep) focused on UX, QoL, and personal operator workflow changes while staying close to upstream.
 
-![homepage screenshot](https://github.com/karakeep-app/karakeep/blob/main/screenshots/homepage.png?raw=true)
+![Homepage screenshot](./screenshots/homepage.png)
 
-## Features
+## What this repository is
 
-- 🔗 Bookmark links, take simple notes and store images and pdfs.
-- ⬇️ Automatic fetching for link titles, descriptions and images.
-- 📋 Sort your bookmarks into lists.
-- 👥 Collaborate with others on the same list.
-- 🔎 Full text search of all the content stored.
-- ✨ LLM-based automatic tagging and summarization. With supports for local models using ollama!
-- 🤖 LLM Agents (e.g. OpenClaw, Hermes) friendly with powerful [CLI](https://docs.karakeep.app/integrations/command-line), and [official skills](https://docs.karakeep.app/integrations/agentic-skills).
-- ⚙️ Rule-based engine for customized management.
-- 🎆 OCR for extracting text from images.
-- 🔖 [Chrome plugin](https://chromewebstore.google.com/detail/karakeep/kgcjekpmcjjogibpjebkhaanilehneje), [Firefox addon](https://addons.mozilla.org/en-US/firefox/addon/karakeep/), and [Safari extension](https://apps.apple.com/gb/app/karakeep-app/id6479258022?platform=mac) for quick bookmarking.
-- 📱 An [iOS app](https://apps.apple.com/us/app/karakeep-app/id6479258022), and an [Android app](https://play.google.com/store/apps/details?id=app.hoarder.hoardermobile&pcampaignid=web_share).
-- 📰 Auto hoarding from RSS feeds.
-- 🔌 REST API and multiple clients.
-- 🌐 Multi-language support.
-- 🖍️ Mark and store highlights from your hoarded content.
-- 🗄️ Full page archival (using [monolith](https://github.com/Y2Z/monolith)) to protect against link rot.
-- ▶️ Auto video archiving using [yt-dlp](https://github.com/yt-dlp/yt-dlp).
-- ☑️ Bulk actions support.
-- 🔐 SSO support.
-- 🌙 Dark mode support.
-- 💾 Self-hosting first.
-- ⬇️ Bookmark importers from Chrome, Pocket, Linkwarden, Omnivore, Tab Session Manager.
-- 🔄 Automatic sync with browser bookmarks via [floccus](https://floccus.org/).
-- [Planned] Offline reading on mobile, semantic search across bookmarks, ...
+This fork keeps the upstream Karakeep product intact in spirit, but documents and operates it as a real personal deployment:
 
-**⚠️ This app is under heavy development.**
+- **Origin:** `absolutepraya/karakeep`
+- **Upstream:** `karakeep-app/karakeep`
+- **Focus:** UX polish, quality-of-life improvements, and personal deployment ergonomics
+- **Local dev:** one-command workflow via `./start-dev.sh`
+- **Deploy model:** pull-based Docker image delivery via GHCR + Watchtower
 
-## Documentation
+If you want the main project, releases, or community-first contribution flow, start with the upstream repo:
+- Upstream repo: <https://github.com/karakeep-app/karakeep>
+- Upstream docs: <https://docs.karakeep.app>
 
-- [Installation](https://docs.karakeep.app/Installation/docker)
-- [Configuration](https://docs.karakeep.app/configuration)
-- [Screenshots](https://docs.karakeep.app/screenshots)
-- [Security Considerations](https://docs.karakeep.app/security-considerations)
-- [Development](https://docs.karakeep.app/Development/setup)
+If you are here to work on **this fork**, the most important repo-specific guide is:
+- [`docs/fork-setup.md`](docs/fork-setup.md)
+
+## What Karakeep does
+
+Karakeep can:
+
+- save **links, notes, images, and PDFs**
+- fetch link titles, descriptions, and preview images automatically
+- organize bookmarks into **lists** and **tags**
+- support **collaborative lists**
+- provide **full-text search** across saved content
+- run **AI tagging and summarization** (including local-model setups)
+- archive pages to reduce link rot
+- save and revisit **highlights**
+- sync with browser workflows through extensions, RSS, CLI, API, and MCP tooling
+
+### Key features
+
+- 🔗 Bookmark links, store notes, images, and PDFs
+- 📋 Organize bookmarks into lists
+- 👥 Collaborate with others on shared lists
+- 🔎 Search across saved content
+- ✨ Automatic AI tagging and summarization
+- 🖍️ Save highlights from your reading
+- 🗄️ Archive full pages to protect against link rot
+- 📰 Auto-hoard from RSS feeds
+- 🔌 REST API, SDKs, CLI, and MCP server
+- 📱 Browser extension + mobile apps
+- 💾 Self-hosting first
+
+## Quick start for this fork
+
+### Preferred local development
+
+From the repository root:
+
+```bash
+pnpm install
+
+ln -sf ../../.env apps/web/.env
+ln -sf ../../.env apps/workers/.env
+ln -sf ../../.env packages/db/.env
+
+pnpm db:migrate
+./start-dev.sh
+```
+
+That starts:
+- the web app
+- background workers
+- Meilisearch in Docker
+- headless Chrome in Docker
+
+Then open:
+- <http://localhost:3000>
+
+### Manual split-terminal development
+
+```bash
+pnpm web
+pnpm workers
+```
+
+Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
+
+### Full fork/operator setup
+
+For the complete local-dev and deploy workflow, read:
+- [`docs/fork-setup.md`](docs/fork-setup.md)
+
+## Documentation map
+
+### For this fork
+- Fork/local dev/deploy guide: [`docs/fork-setup.md`](docs/fork-setup.md)
+- Docs-site development guide: [`docs/README.md`](docs/README.md)
+- Contribution guidance for this repo: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+
+### For upstream Karakeep product usage
+- Main docs: <https://docs.karakeep.app>
+- Installation: <https://docs.karakeep.app>
+- Configuration: <https://docs.karakeep.app>
+- Development docs: <https://docs.karakeep.app>
+- API docs: <https://docs.karakeep.app/api>
 
 ## Demo
 
-You can access the demo at [https://try.karakeep.app](https://try.karakeep.app). Login with the following creds:
+Upstream maintains the public demo at:
+- <https://try.karakeep.app>
 
-```
+Demo credentials:
+
+```text
 email: demo@karakeep.app
 password: demodemo
 ```
 
-The demo is seeded with some content, but it's in read-only mode to prevent abuse.
+The demo is read-only.
 
 ## About the name
 
-The name Karakeep is inspired by the Arabic word "كراكيب" (karakeeb), a colloquial term commonly used to refer to miscellaneous clutter, odds and ends, or items that may seem disorganized but often hold personal value or hidden usefulness. It evokes the image of a messy drawer or forgotten box, full of stuff you can't quite throw away—because somehow, it matters (or more likely, because you're a hoarder!).
+Karakeep is inspired by the Arabic word **كراكيب** (*karakeeb*), a colloquial term for miscellaneous clutter, odds and ends, or things that look messy but still feel worth keeping. It fits a personal library for links, notes, screenshots, and all the other things you are not ready to lose.
 
-## Stack
+## Tech stack
 
-- [NextJS](https://nextjs.org/) for the web app. Using app router.
-- [Drizzle](https://orm.drizzle.team/) for the database and its migrations.
-- [NextAuth](https://next-auth.js.org) for authentication.
-- [tRPC](https://trpc.io) for client->server communication.
-- [Puppeteer](https://pptr.dev/) for crawling the bookmarks.
-- [OpenAI](https://openai.com/) because AI is so hot right now.
-- [Meilisearch](https://meilisearch.com) for the full content search.
+- **Web:** Next.js, React, TypeScript, Tailwind CSS
+- **API:** Hono + tRPC
+- **Database:** Drizzle ORM over SQLite (`better-sqlite3`)
+- **Search:** Meilisearch
+- **Crawling:** headless Chrome / browser worker flow
+- **Tooling:** pnpm, Turborepo, oxfmt, oxlint, Vitest
 
-## Why did I build it?
+## Repo-specific development notes
 
-I browse reddit, twitter and hackernews a lot from my phone. I frequently find interesting stuff (articles, tools, etc) that I'd like to bookmark and read later when I'm in front of a laptop. Typical read-it-later apps usecase. Initially, I was using [Pocket](https://getpocket.com) for that. Then I got into self-hosting and I wanted to self-host this usecase. I used [memos](https://github.com/usememos/memos) for those quick notes and I loved it but it was lacking some features that I found important for that usecase such as link previews and automatic tagging (more on that in the next section).
+This fork intentionally differs from upstream in a few practical ways:
 
-I'm a systems engineer in my day job (and have been for the past 7 years). I didn't want to get too detached from the web development world. I decided to build this app as a way to keep my hand dirty with web development, and at the same time, build something that I care about and use every day.
+- deploys are **pull-based** rather than SSH push-based
+- the canonical production compose lives at `deploy/docker-compose.prod.yml`
+- `knip` and `react.doctor` are present as additional quality tooling
+- `react-grab` is loaded only in local development for component/source capture
 
-## Alternatives
+## Contributing
 
-- [memos](https://github.com/usememos/memos): I love memos. I have it running on my home server and it's one of my most used self-hosted apps. It doesn't, however, archive or preview the links shared in it. It's just that I dump a lot of links there and I'd have loved if I'd be able to figure which link is that by just looking at my timeline. Also, given the variety of things I dump there, I'd have loved if it does some sort of automatic tagging for what I save there. This is exactly the usecase that I'm trying to tackle with Karakeep.
-- [mymind](https://mymind.com/): Mymind is the closest alternative to this project and from where I drew a lot of inspirations. It's a commercial product though.
-- [raindrop](https://raindrop.io): A polished open source bookmark manager that supports links, images and files. It's not self-hostable though.
-- Bookmark managers (mostly focused on bookmarking links):
-    - [Pocket](https://getpocket.com) (Dead): Pocket is what hooked me into the whole idea of read-it-later apps. I used it [a lot](https://blog.mbassem.com/2019/01/27/favorite-articles-2018/). However, I recently got into home-labbing and became obsessed with the idea of running my services in my home server. Karakeep is meant to be a self-hosting first app. Mozilla recently announced that it's shutting down pocket.
-    - [Linkwarden](https://linkwarden.app/): An open-source self-hostable bookmark manager that I ran for a bit in my homelab. It's focused mostly on links and supports collaborative collections.
-    - [Wallabag](https://wallabag.it): Wallabag is a well-established open source read-it-later app written in php.
-    - [Shiori](https://github.com/go-shiori/shiori): Shiori is meant to be an open source pocket clone written in Go.
+There are two contribution paths:
 
-## Translations
+1. **Upstream Karakeep contributions**
+   - Use <https://github.com/karakeep-app/karakeep>
+   - Follow the upstream community process
 
-Karakeep uses Weblate for managing translations. If you want to help translate Karakeep, you can do so [here](https://hosted.weblate.org/engage/hoarder/).
+2. **Fork-specific contributions for this repo**
+   - Use this repository
+   - Read [`CONTRIBUTING.md`](CONTRIBUTING.md)
+   - Prefer changes that are explicitly valuable for this fork’s UX, operator flow, or maintenance model
 
-## Karakeep Cloud ☁️
+## Community and support
 
-If you're not comfortable with self-hosting, you can use our managed Karakeep cloud at [cloud.karakeep.app](https://cloud.karakeep.app). Cloud subscriptions support the development of Karakeep.
-
-## Support
-
-If you're enjoying using Karakeep, drop a ⭐️ on the repo!
-
-<a href="https://www.buymeacoffee.com/mbassem" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
-
-## Community Channels
-
-- Join us on [Discord](https://discord.gg/NrgeYywsFh).
-- Follow us on Twitter: [@karakeep_app](https://x.com/karakeep_app).
+- Upstream Discord: <https://discord.gg/NrgeYywsFh>
+- Upstream project site: <https://karakeep.app>
+- Upstream cloud: <https://cloud.karakeep.app>
 
 ## License
 
-Karakeep is licensed under [AGPL-3.0](https://github.com/karakeep-app/karakeep/blob/main/LICENSE) and owned by [Localhost Labs Ltd](https://localhostlabs.co.uk).
+This fork remains licensed under [AGPL-3.0](./LICENSE).
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=karakeep-app/karakeep&type=Date)](https://star-history.com/#karakeep-app/karakeep&Date)
+Upstream Karakeep is developed by [Localhost Labs Ltd](https://localhostlabs.co.uk). This repository is a personal fork, not the canonical upstream source.

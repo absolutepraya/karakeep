@@ -5,7 +5,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 
 const config: Config = {
   title: "Karakeep Docs",
-  tagline: "Dinosaurs are cool",
+  tagline: "Self-hostable bookmarking, search, and retrieval docs",
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
@@ -45,7 +45,7 @@ const config: Config = {
               (item) => !(item.type == "category" && item.label === "API"),
             );
           },
-          editUrl: "https://github.com/karakeep-app/karakeep/tree/main/docs/",
+          editUrl: "https://github.com/absolutepraya/karakeep/tree/main/docs/",
           routeBasePath: "/",
           docItemComponent: "@theme/ApiItem",
         },

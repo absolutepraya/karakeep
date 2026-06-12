@@ -1,21 +1,21 @@
 # Karakeep SDK
 
-This package contains the official typescript SDK for the karakeep API.
+This package contains the official TypeScript SDK for the Karakeep API.
 
-## Installation
+## Install
 
-```
+```bash
 npm install @karakeep/sdk
 ```
 
 ## Usage
 
-```typescript
+```ts
 import { createKarakeepClient } from "@karakeep/sdk";
 
-// Create a client
 const apiKey = "my-super-secret-key";
-const addr = `https://karakeep.mydomain.com`;
+const addr = "https://karakeep.mydomain.com";
+
 const client = createKarakeepClient({
   baseUrl: `${addr}/api/v1/`,
   headers: {
@@ -24,41 +24,26 @@ const client = createKarakeepClient({
   },
 });
 
-// Create a bookmark
-const {
-  data: createdBookmark,
-  response: createResponse,
-  error: createError,
-} = await client.POST("/bookmarks", {
-  body: {
-    type: "text",
-    title: "Search Test 1",
-    text: "This is a test bookmark for search",
-  },
-});
-
-console.log(createResponse.status, createdBookmark, createError);
-
-// Search for bookmarks
-const {
-  data: searchResults,
-  response: searchResponse,
-  error: searchError,
-} = await client.GET("/bookmarks/search", {
-  params: {
-    query: {
-      q: "test bookmark",
+const { data: createdBookmark, error: createError } = await client.POST(
+  "/bookmarks",
+  {
+    body: {
+      type: "text",
+      title: "Search Test 1",
+      text: "This is a test bookmark for search",
     },
   },
-});
-console.log(searchResponse.status, searchResults, searchError);
+);
+
+console.log(createdBookmark, createError);
 ```
 
 ## Docs
 
-API docs can be found [here](https://docs.karakeep.app/api).
+- API reference: <https://docs.karakeep.app/api>
 
 ## Versioning
 
-- This package follows the minor version of the karakeep server. So new APIs introduced in Karakeep version `0.21.0` will be available in this package starting from version `0.21.0`.
-- Karakeep strives to maintain backward compatibility in its APIs, so older versions of this package should continue working with newer karakeep server versions.
+- The SDK tracks Karakeep’s minor server version.
+- New API surface from Karakeep `0.x.y` becomes available in the SDK starting from the matching minor line.
+- Karakeep aims to keep older SDK versions broadly usable against newer server versions when compatibility allows.
