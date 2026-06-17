@@ -42,7 +42,7 @@ export default function SidebarItem({
       className={cn(
         "ease-(--ease-out) group relative flex min-w-0 items-center justify-between overflow-hidden rounded-xl text-sm transition-[background-color,color,box-shadow] duration-150",
         isActive
-          ? "shadow-xs bg-background text-foreground ring-1 ring-border/70"
+          ? "shadow-xs bg-background text-foreground"
           : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
         dropHighlight && "bg-accent ring-2 ring-primary",
         className,
