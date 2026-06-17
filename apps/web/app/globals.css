@@ -199,7 +199,7 @@
   /* Fonts - Inter + JetBrains Mono loaded via next/font in layout.tsx; Georgia
      is a system serif. Emoji stays in every chain. */
   --font-emoji:
-    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --font-sans:
     var(--font-inter), var(--font-emoji), ui-sans-serif, system-ui, sans-serif;
   --font-heading:

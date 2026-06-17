@@ -23,13 +23,23 @@ import { clientConfig } from "@karakeep/shared/config";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  fallback: ["Noto Color Emoji", "system-ui", "sans-serif"],
+  fallback: [
+    "Apple Color Emoji",
+    "Noto Color Emoji",
+    "system-ui",
+    "sans-serif",
+  ],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
-  fallback: ["Noto Color Emoji", "ui-monospace", "monospace"],
+  fallback: [
+    "Apple Color Emoji",
+    "Noto Color Emoji",
+    "ui-monospace",
+    "monospace",
+  ],
 });
 
 export const metadata: Metadata = {

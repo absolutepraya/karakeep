@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  emoji-mart@5.6.0: 143c98b792b95fd9aabc50261834f849bf1200b68a4b19c152742ca35f7258e4
+  emoji-mart@5.6.0: cfaa189508957f65554d786632e406cdf321f8c2b7ca0666d6428ff4fd424edc
   playwright-extra@4.3.6: cc2a1c1903e66d7f6cea77c615cb9ae3b36a694502c1c588c3e34d28aa925aac
   react-tweet@3.2.2: d7b79c3ae412d8e700a8c176df42ee89112c9bdc91d2aad0ebb7d5b011b49993
   xcode@3.0.1: 725863c0591d89ca053226c49fe7bc321f320391ec5f78b6c2e8e41ab1868805
@@ -537,7 +537,7 @@ importers:
         version: 1.2.1
       '@emoji-mart/react':
         specifier: ^1.1.1
-        version: 1.1.1(emoji-mart@5.6.0(patch_hash=143c98b792b95fd9aabc50261834f849bf1200b68a4b19c152742ca35f7258e4))(react@19.2.6)
+        version: 1.1.1(emoji-mart@5.6.0(patch_hash=cfaa189508957f65554d786632e406cdf321f8c2b7ca0666d6428ff4fd424edc))(react@19.2.6)
       '@fontsource/noto-color-emoji':
         specifier: 5.2.12
         version: 5.2.12
@@ -22253,9 +22253,9 @@ snapshots:
 
   '@emoji-mart/data@1.2.1': {}
 
-  '@emoji-mart/react@1.1.1(emoji-mart@5.6.0(patch_hash=143c98b792b95fd9aabc50261834f849bf1200b68a4b19c152742ca35f7258e4))(react@19.2.6)':
+  '@emoji-mart/react@1.1.1(emoji-mart@5.6.0(patch_hash=cfaa189508957f65554d786632e406cdf321f8c2b7ca0666d6428ff4fd424edc))(react@19.2.6)':
     dependencies:
-      emoji-mart: 5.6.0(patch_hash=143c98b792b95fd9aabc50261834f849bf1200b68a4b19c152742ca35f7258e4)
+      emoji-mart: 5.6.0(patch_hash=cfaa189508957f65554d786632e406cdf321f8c2b7ca0666d6428ff4fd424edc)
       react: 19.2.6
 
   '@emotion/babel-plugin@11.13.5':
@@ -30132,7 +30132,7 @@ snapshots:
       '@emmetio/abbreviation': 2.3.3
       '@emmetio/css-abbreviation': 2.1.8
 
-  emoji-mart@5.6.0(patch_hash=143c98b792b95fd9aabc50261834f849bf1200b68a4b19c152742ca35f7258e4): {}
+  emoji-mart@5.6.0(patch_hash=cfaa189508957f65554d786632e406cdf321f8c2b7ca0666d6428ff4fd424edc): {}
 
   emoji-regex@8.0.0: {}
 
