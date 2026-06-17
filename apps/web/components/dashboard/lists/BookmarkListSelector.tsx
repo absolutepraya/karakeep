@@ -1,4 +1,4 @@
-import { ReactNode, useId, useState } from "react";
+import { ReactNode, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import LoadingSpinner from "@/components/ui/spinner";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 
@@ -74,6 +75,22 @@ function ListSelectorComponent({
   disabled,
   listboxId,
 }: ListSelectorComponentProps) {
+  const [searchValue, setSearchValue] = useState("");
+  const isMobile = useIsMobile();
+  const filteredPaths = useMemo(() => {
+    const query = searchValue.trim().toLowerCase();
+    if (!allPaths || !query) {
+      return allPaths;
+    }
+    return allPaths.filter((path) => {
+      const list = path[path.length - 1];
+      return [listNameFromPath(path), list.name, list.icon].some((value) =>
+        value.toLowerCase().includes(query),
+      );
+    });
+  }, [allPaths, searchValue]);
+  const visiblePaths = isMobile ? filteredPaths?.slice(0, 3) : filteredPaths;
+
   if (isPending) {
     return <LoadingSpinner />;
   }
@@ -84,6 +101,9 @@ function ListSelectorComponent({
       onOpenChange={(nextOpen) => {
         if (!disabled) {
           setOpen(nextOpen);
+          if (!nextOpen) {
+            setSearchValue("");
+          }
         }
       }}
     >
@@ -93,16 +113,20 @@ function ListSelectorComponent({
         style={{ width: "var(--radix-popover-trigger-width)" }}
         onWheel={(e) => e.stopPropagation()}
       >
-        <Command>
-          <CommandInput placeholder="Search lists..." />
+        <Command shouldFilter={false}>
+          <CommandInput
+            value={searchValue}
+            onValueChange={setSearchValue}
+            placeholder="Search lists..."
+          />
           <CommandList id={listboxId}>
             <CommandEmpty>
-              {allPaths && allPaths.length === 0
+              {allPaths?.length === 0
                 ? "You don't currently have any lists."
                 : "No lists found."}
             </CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
-              {allPaths?.map((path) => {
+              {visiblePaths?.map((path) => {
                 const l = path[path.length - 1];
                 const name = listNameFromPath(path);
                 return (
