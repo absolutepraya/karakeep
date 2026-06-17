@@ -212,7 +212,7 @@ export function EditListModal({
       }}
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent>
+      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] rounded-2xl px-3 py-5 sm:max-w-md sm:p-5">
         <Form {...form}>
           <form onSubmit={onSubmit}>
             <DialogHeader>
@@ -391,7 +391,7 @@ export function EditListModal({
                 }}
               />
             )}
-            <DialogFooter className="sm:justify-end">
+            <DialogFooter className="gap-2 sm:justify-end sm:gap-0">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">
                   {t("actions.close")}
