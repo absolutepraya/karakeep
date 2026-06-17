@@ -186,7 +186,15 @@ const SearchInput = React.forwardRef<
           className="shadow-xs ease-(--ease-out) relative rounded-xl border border-input/80 bg-background/90 transition-[border-color,box-shadow,background-color] duration-150 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/25 [&_[cmdk-input-wrapper]]:border-0"
           onKeyDown={handleCommandKeyDown}
         >
-          <Popover open={isPopoverVisible}>
+          <Popover
+            open={isPopoverVisible}
+            onOpenChange={(nextOpen) => {
+              setIsPopoverOpen(nextOpen);
+              if (!nextOpen) {
+                inputRef.current?.blur();
+              }
+            }}
+          >
             <PopoverTrigger asChild>
               <div className="relative">
                 <CommandInput
