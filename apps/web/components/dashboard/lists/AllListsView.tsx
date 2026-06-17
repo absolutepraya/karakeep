@@ -91,7 +91,7 @@ function ListRow({
             <Button
               size="none"
               variant="ghost"
-              className="pointer-coarse:static pointer-coarse:opacity-100 absolute inset-y-0 right-0 my-auto flex size-7 items-center justify-center rounded-md opacity-0 focus-visible:opacity-100 group-hover/list-row:opacity-100"
+              className="pointer-coarse:static pointer-coarse:opacity-100 absolute inset-y-0 right-0 my-auto flex size-7 items-center justify-center rounded-lg opacity-0 focus-visible:opacity-100 group-hover/list-row:opacity-100"
             >
               <MoreHorizontal className="size-4" />
             </Button>
@@ -193,9 +193,8 @@ export default function AllListsView({
       {/* Sticky toolbar: a list search above a New List button, both the same
           height, pinned so they stay reachable while the tree scrolls. On
           mobile the page header is sticky (h-16) so we offset below it; on
-          desktop the header sits outside the scroll area, so top-0. The
-          ::after gradient softens the edge rows scroll under. */}
-      <div className="sticky top-16 z-20 flex flex-col gap-2 bg-background pb-2 pt-2 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-3 after:bg-gradient-to-b after:from-background after:to-transparent sm:top-0 sm:flex-row sm:items-center">
+          desktop the header sits outside the scroll area, so top-0. */}
+      <div className="sticky top-16 z-20 flex flex-col gap-2 bg-background pb-2 pt-2 sm:top-0 sm:flex-row sm:items-center">
         <Input
           type="search"
           value={query}

@@ -40,7 +40,7 @@ export default function SidebarItem({
   return (
     <li
       className={cn(
-        "ease-(--ease-out) group relative flex min-w-0 items-center justify-between rounded-xl text-sm transition-[background-color,color,box-shadow] duration-150",
+        "ease-(--ease-out) group relative flex min-w-0 items-center justify-between overflow-hidden rounded-xl text-sm transition-[background-color,color,box-shadow] duration-150",
         isActive
           ? "shadow-xs bg-background text-foreground ring-1 ring-border/70"
           : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
@@ -53,7 +53,7 @@ export default function SidebarItem({
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
     >
-      <div className="flex min-w-0 flex-1 items-center">
+      <div className="flex min-w-0 flex-1 items-center rounded-l-[inherit]">
         {collapseButton}
         <Link
           href={path}
