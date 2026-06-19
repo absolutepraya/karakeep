@@ -13,6 +13,7 @@
     "db:studio": "pnpm --filter @karakeep/db studio",
     "seed:apply": "pnpm --filter @karakeep/seed-snapshot run apply",
     "seed:snapshot": "pnpm --filter @karakeep/seed-snapshot run snapshot",
+    "prod:pull-state": "bash scripts/pull-prod-state.sh",
     "workers": "pnpm --filter @karakeep/workers run start",
     "web": "pnpm --filter @karakeep/web run dev",
     "web:portless": "pnpm --filter @karakeep/web run dev:portless",

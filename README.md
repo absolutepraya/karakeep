@@ -101,6 +101,28 @@ pnpm workers
 
 Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
 
+### Pull production state into local dev
+
+The helper below pulls the production `/data` state from the VPS into your local `DATA_DIR`.
+
+```bash
+pnpm prod:pull-state
+pnpm prod:pull-state -- --yes
+pnpm prod:pull-state -- --yes --db-only
+```
+
+The command is a dry run unless `--yes` is passed. With `--yes`, it backs up the current local `DATA_DIR` before replacing local development state. Full `/data` sync is the default because the SQLite database can reference stored assets; use `--db-only` only when you explicitly want just `db.db`, `db.db-wal`, and `db.db-shm`.
+
+Required root `.env` keys:
+- `DATA_DIR`
+- `KARAKEEP_PROD_SSH_HOST`
+- `KARAKEEP_PROD_COMPOSE_DIR`
+
+Optional root `.env` keys:
+- `KARAKEEP_PROD_SSH_USER`
+- `KARAKEEP_PROD_COMPOSE_SERVICE`
+- `KARAKEEP_PROD_EXPORT_IMAGE`
+
 ### Full fork/operator setup
 
 For the complete local-dev and deploy workflow, read:

@@ -73,6 +73,28 @@ The most important variables for local development are:
 - `MEILI_ADDR` (if search should work)
 - `OPENAI_API_KEY` (if AI tagging/summarization should work)
 
+### Pull production state into local development
+
+Use this helper when local development should mirror the persisted production state from the VPS:
+
+```bash
+pnpm prod:pull-state
+pnpm prod:pull-state -- --yes
+pnpm prod:pull-state -- --yes --db-only
+```
+
+The command is a dry run by default. Passing `--yes` backs up the current local `DATA_DIR` and then replaces local development state. Full `/data` sync is the default because the SQLite database can reference stored assets. Use `--db-only` only when you explicitly want to pull just `db.db`, `db.db-wal`, and `db.db-shm`.
+
+Required root `.env` keys:
+- `DATA_DIR`
+- `KARAKEEP_PROD_SSH_HOST`
+- `KARAKEEP_PROD_COMPOSE_DIR`
+
+Optional root `.env` keys:
+- `KARAKEEP_PROD_SSH_USER`
+- `KARAKEEP_PROD_COMPOSE_SERVICE`
+- `KARAKEEP_PROD_EXPORT_IMAGE`
+
 ## CI
 
 Primary workflow:

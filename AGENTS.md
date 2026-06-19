@@ -91,6 +91,22 @@ Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
 - If `next dev` crashes with a stale Turbopack/instrumentation issue, clear `apps/web/.next`.
 
+### Pull prod state to local dev
+
+Use `pnpm prod:pull-state` for production-to-local state pulls from the VPS. It reads root `.env`, defaults to a dry run, and requires `--yes` before replacing local development state.
+
+Required root `.env` keys:
+- `DATA_DIR`
+- `KARAKEEP_PROD_SSH_HOST`
+- `KARAKEEP_PROD_COMPOSE_DIR`
+
+Optional root `.env` keys:
+- `KARAKEEP_PROD_SSH_USER`
+- `KARAKEEP_PROD_COMPOSE_SERVICE`
+- `KARAKEEP_PROD_EXPORT_IMAGE`
+
+Default to full `/data` pulls because SQLite rows can reference stored assets. Use `pnpm prod:pull-state -- --yes --db-only` only when explicitly asked for a DB-only pull. Do not print `.env` secrets or overwrite local state without `--yes`.
+
 ## Deploy model for this fork
 
 This fork uses a **pull-based** deploy flow.
