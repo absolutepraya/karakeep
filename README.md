@@ -28,7 +28,7 @@ This fork keeps the upstream Karakeep product intact in spirit, but documents an
 - **Origin:** `absolutepraya/karakeep`
 - **Upstream:** `karakeep-app/karakeep`
 - **Focus:** UX polish, quality-of-life improvements, and personal deployment ergonomics
-- **Local dev:** one-command workflow via `./start-dev.sh`
+- **Local dev:** one-command workflow via `pnpm dev:start`
 - **Deploy model:** pull-based Docker image delivery via GHCR + Watchtower
 
 If you want the main project, releases, or community-first contribution flow, start with the upstream repo:
@@ -80,7 +80,7 @@ ln -sf ../../.env apps/workers/.env
 ln -sf ../../.env packages/db/.env
 
 pnpm db:migrate
-./start-dev.sh
+pnpm dev:start
 ```
 
 That starts:
@@ -91,6 +91,13 @@ That starts:
 
 Then open:
 - <http://localhost:3000>
+
+Useful variants:
+
+```bash
+pnpm dev:start -d
+pnpm dev:stop
+```
 
 ### Manual split-terminal development
 
@@ -107,8 +114,8 @@ The helper below pulls the production `/data` state from the VPS into your local
 
 ```bash
 pnpm prod:pull-state
-pnpm prod:pull-state -- --yes
-pnpm prod:pull-state -- --yes --db-only
+pnpm prod:pull-state --yes
+pnpm prod:pull-state --yes --db-only
 ```
 
 The command is a dry run unless `--yes` is passed. With `--yes`, it backs up the current local `DATA_DIR` before replacing local development state. Full `/data` sync is the default because the SQLite database can reference stored assets; use `--db-only` only when you explicitly want just `db.db`, `db.db-wal`, and `db.db-shm`.

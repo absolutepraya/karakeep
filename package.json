@@ -6,6 +6,8 @@
   "scripts": {
     "build": "turbo --no-daemon build",
     "dev": "turbo --no-daemon dev --parallel",
+    "dev:start": "bash start-dev.sh",
+    "dev:stop": "bash stop-dev.sh",
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo --no-daemon clean",
     "db:generate": "pnpm --filter @karakeep/db run generate",

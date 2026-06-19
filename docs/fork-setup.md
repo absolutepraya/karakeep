@@ -38,13 +38,13 @@ pnpm db:migrate
 ### Preferred start flow
 
 ```bash
-./start-dev.sh
+pnpm dev:start
 ```
 
 Variants:
-- `./start-dev.sh` — foreground
-- `./start-dev.sh -d` — detached (`.dev/` logs, shell returns immediately)
-- `./stop-dev.sh` — stop detached services
+- `pnpm dev:start` — foreground
+- `pnpm dev:start -d` — detached (`.dev/` logs, shell returns immediately)
+- `pnpm dev:stop` — stop detached services
 
 What this starts:
 - `web`
@@ -79,8 +79,8 @@ Use this helper when local development should mirror the persisted production st
 
 ```bash
 pnpm prod:pull-state
-pnpm prod:pull-state -- --yes
-pnpm prod:pull-state -- --yes --db-only
+pnpm prod:pull-state --yes
+pnpm prod:pull-state --yes --db-only
 ```
 
 The command is a dry run by default. Passing `--yes` backs up the current local `DATA_DIR` and then replaces local development state. Full `/data` sync is the default because the SQLite database can reference stored assets. Use `--db-only` only when you explicitly want to pull just `db.db`, `db.db-wal`, and `db.db-shm`.

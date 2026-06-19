@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: pnpm prod:pull-state [-- --yes] [-- --db-only] [-- --skip-migrate]
+Usage: pnpm prod:pull-state [--yes] [--db-only] [--skip-migrate]
 
 Pull production Karakeep persisted state from the VPS into local development.
 

@@ -41,7 +41,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: pnpm prod:pull-state [-- --yes] [-- --db-only] [-- --skip-migrate]
+Usage: pnpm prod:pull-state [--yes] [--db-only] [--skip-migrate]
 
 Pull production Karakeep persisted state from the VPS into local development.
 
@@ -133,8 +133,8 @@ Add an operator section showing:
 
 ```bash
 pnpm prod:pull-state
-pnpm prod:pull-state -- --yes
-pnpm prod:pull-state -- --yes --db-only
+pnpm prod:pull-state --yes
+pnpm prod:pull-state --yes --db-only
 ```
 
 Include the warning that `--yes` replaces local development state and creates a backup.

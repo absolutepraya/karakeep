@@ -68,13 +68,13 @@ pnpm db:migrate
 ### Preferred start command
 
 ```bash
-./start-dev.sh
+pnpm dev:start
 ```
 
 Useful variants:
-- `./start-dev.sh` — foreground
-- `./start-dev.sh -d` — detached
-- `./stop-dev.sh` — stop detached services
+- `pnpm dev:start` — foreground
+- `pnpm dev:start -d` — detached
+- `pnpm dev:stop` — stop detached services
 
 What it does:
 - runs `web` + `workers` natively
@@ -105,7 +105,7 @@ Optional root `.env` keys:
 - `KARAKEEP_PROD_COMPOSE_SERVICE`
 - `KARAKEEP_PROD_EXPORT_IMAGE`
 
-Default to full `/data` pulls because SQLite rows can reference stored assets. Use `pnpm prod:pull-state -- --yes --db-only` only when explicitly asked for a DB-only pull. Do not print `.env` secrets or overwrite local state without `--yes`.
+Default to full `/data` pulls because SQLite rows can reference stored assets. Use `pnpm prod:pull-state --yes --db-only` only when explicitly asked for a DB-only pull. Do not print `.env` secrets or overwrite local state without `--yes`.
 
 ## Deploy model for this fork
 
