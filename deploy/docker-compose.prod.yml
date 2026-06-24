@@ -11,7 +11,9 @@ services:
     image: ${KARAKEEP_IMAGE:-ghcr.io/absolutepraya/karakeep:main}
     restart: unless-stopped
     # Ceiling to stop runaway on the shared 8GB VPS (not a reservation).
-    mem_limit: 1024m
+    # web runs the all-in-one app + workers (crawl/AI/OCR), so it gets the
+    # most headroom for bulk operations.
+    mem_limit: 2g
     depends_on:
       - chrome
       - meilisearch
@@ -33,7 +35,7 @@ services:
   chrome:
     image: gcr.io/zenika-hub/alpine-chrome:124
     restart: unless-stopped
-    mem_limit: 768m
+    mem_limit: 1g
     command:
       - --no-sandbox
       - --disable-gpu
