@@ -153,6 +153,8 @@ Key parameters:
 - `KARAKEEP_PORT`
 - `KARAKEEP_IMAGE`
 
+Each service sets a `mem_limit` (web `1024m`, chrome `768m`, meilisearch `512m`, watchtower `128m`) as a ceiling to keep the stack from ballooning and thrashing swap on the shared 8GB VPS. These are caps, not reservations; raise a value if a service is legitimately OOM-killed.
+
 The web container binds to localhost and is expected to sit behind nginx.
 
 ## VPS provisioning notes

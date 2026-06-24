@@ -10,6 +10,8 @@ services:
   web:
     image: ${KARAKEEP_IMAGE:-ghcr.io/absolutepraya/karakeep:main}
     restart: unless-stopped
+    # Ceiling to stop runaway on the shared 8GB VPS (not a reservation).
+    mem_limit: 1024m
     depends_on:
       - chrome
       - meilisearch
@@ -31,6 +33,7 @@ services:
   chrome:
     image: gcr.io/zenika-hub/alpine-chrome:124
     restart: unless-stopped
+    mem_limit: 768m
     command:
       - --no-sandbox
       - --disable-gpu
@@ -42,6 +45,7 @@ services:
   meilisearch:
     image: getmeili/meilisearch:v1.41.0
     restart: unless-stopped
+    mem_limit: 512m
     env_file:
       - .env
     environment:
@@ -54,6 +58,7 @@ services:
     # Docker client (API 1.25) is too old for modern engines (min API 1.44).
     image: ghcr.io/nicholas-fedor/watchtower:latest
     restart: unless-stopped
+    mem_limit: 128m
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
