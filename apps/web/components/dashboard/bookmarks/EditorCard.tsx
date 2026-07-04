@@ -294,22 +294,37 @@ export default function EditorCard({
         )}
         onSubmit={form.handleSubmit(onSubmit, onError)}
       >
-        <div className="flex justify-between">
+        <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {t("editor.new_item")}
           </p>
-          <Kbd>⌘ + E</Kbd>
+          <div className="flex items-center gap-2">
+            <Kbd>⌘ + E</Kbd>
+            {isMobile && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-7 gap-1 px-2 text-xs shadow-sm"
+                aria-label="Paste from clipboard"
+                disabled={isPending || demoMode}
+                onClick={handlePasteButtonClick}
+              >
+                <ClipboardPaste className="size-3.5" />
+                Paste
+              </Button>
+            )}
+          </div>
         </div>
         <Separator />
         <FormItem className="min-h-0 flex-1">
           <FormControl>
-            <div className="relative h-full w-full">
+            <div className="h-full w-full">
               <Textarea
                 ref={inputRef}
                 disabled={isPending}
                 className={cn(
                   "h-full w-full border-none bg-transparent p-0 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0",
-                  isMobile && "pb-10",
                   { "resize-none": bookmarkLayout !== "list" },
                 )}
                 placeholder={t("editor.placeholder_v2")}
@@ -336,20 +351,6 @@ export default function EditorCard({
                 onInput={onInput}
                 {...textFieldProps}
               />
-              {isMobile && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="absolute bottom-1 right-1 h-8 gap-1 px-2 text-xs shadow-sm"
-                  aria-label="Paste from clipboard"
-                  disabled={isPending || demoMode}
-                  onClick={handlePasteButtonClick}
-                >
-                  <ClipboardPaste className="size-3.5" />
-                  Paste
-                </Button>
-              )}
             </div>
           </FormControl>
         </FormItem>
