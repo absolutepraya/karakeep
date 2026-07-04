@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/action-button";
@@ -38,10 +38,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { useTranslation } from "@/lib/i18n/client";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X } from "lucide-react";
+import { ClipboardPaste, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -80,6 +81,8 @@ export function EditListModal({
     throw new Error("You must provide both open and setOpen or neither");
   }
   const [customOpen, customSetOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm({
     resolver: zodResolver(zNewBookmarkListSchema),
@@ -191,6 +194,39 @@ export function EditListModal({
   const isEdit = !!list;
   const isPending = isCreating || isEditing;
 
+  const handlePasteListName = async () => {
+    if (!navigator.clipboard?.readText) {
+      toast({
+        variant: "destructive",
+        description: "Clipboard is not available.",
+      });
+      return;
+    }
+
+    try {
+      const clipboardText = (await navigator.clipboard.readText()).trim();
+
+      if (!clipboardText) {
+        toast({
+          description: "Clipboard is empty.",
+        });
+        return;
+      }
+
+      form.setValue("name", clipboardText, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      nameInputRef.current?.focus();
+    } catch {
+      toast({
+        variant: "destructive",
+        description: "Unable to read clipboard.",
+      });
+    }
+  };
+
   const onSubmit = form.handleSubmit(
     (value: z.infer<typeof zNewBookmarkListSchema>) => {
       value.parentId = value.parentId === "" ? null : value.parentId;
@@ -257,9 +293,28 @@ export function EditListModal({
                       <FormControl>
                         <Input
                           type="text"
-                          className="w-full"
+                          className={isMobile ? "w-full pr-24" : "w-full"}
                           placeholder="List Name"
+                          endIcon={
+                            isMobile ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1 px-2 text-xs"
+                                aria-label="Paste list name from clipboard"
+                                onClick={handlePasteListName}
+                              >
+                                <ClipboardPaste className="size-3.5" />
+                                Paste
+                              </Button>
+                            ) : undefined
+                          }
                           {...field}
+                          ref={(node) => {
+                            field.ref(node);
+                            nameInputRef.current = node;
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

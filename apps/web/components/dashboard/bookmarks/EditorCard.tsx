@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import BookmarkAlreadyExistsToast from "@/components/utils/BookmarkAlreadyExistsToast";
 import { useClientConfig } from "@/lib/clientConfig";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useTranslation } from "@/lib/i18n/client";
 import {
   useBookmarkLayout,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/userLocalSettings/bookmarksLayout";
 import { cn, getOS } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X } from "lucide-react";
+import { ClipboardPaste, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useHotkeys } from "react-hotkeys-hook";
 import { z } from "zod";
@@ -66,6 +67,7 @@ export default function EditorCard({
 }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
 
   const demoMode = !!useClientConfig().demoMode;
   const bookmarkLayout = useBookmarkLayout();
@@ -194,6 +196,54 @@ export default function EditorCard({
     }
   };
 
+  const handlePasteButtonClick = async () => {
+    if (!navigator.clipboard?.readText) {
+      toast({
+        variant: "destructive",
+        description: "Clipboard is not available.",
+      });
+      return;
+    }
+
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (!clipboardText.trim()) {
+        toast({
+          description: "Clipboard is empty.",
+        });
+        return;
+      }
+
+      const textarea = inputRef.current;
+      const currentText = form.getValues("text") ?? "";
+      const selectionStart = textarea?.selectionStart ?? currentText.length;
+      const selectionEnd = textarea?.selectionEnd ?? currentText.length;
+      const nextText =
+        currentText.slice(0, selectionStart) +
+        clipboardText +
+        currentText.slice(selectionEnd);
+      const nextCursor = selectionStart + clipboardText.length;
+
+      form.setValue("text", nextText, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+
+      if (textarea) {
+        textarea.value = nextText;
+        textarea.focus();
+        textarea.setSelectionRange(nextCursor, nextCursor);
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    } catch {
+      toast({
+        variant: "destructive",
+        description: "Unable to read clipboard.",
+      });
+    }
+  };
+
   /**
    * Methods that triggers when "enter" is pressed (without ctrl)
    * It checks if the current line is a todo
@@ -253,37 +303,54 @@ export default function EditorCard({
         <Separator />
         <FormItem className="min-h-0 flex-1">
           <FormControl>
-            <Textarea
-              ref={inputRef}
-              disabled={isPending}
-              className={cn(
-                "h-full w-full border-none bg-transparent p-0 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0",
-                { "resize-none": bookmarkLayout !== "list" },
+            <div className="relative h-full w-full">
+              <Textarea
+                ref={inputRef}
+                disabled={isPending}
+                className={cn(
+                  "h-full w-full border-none bg-transparent p-0 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0",
+                  isMobile && "pb-10",
+                  { "resize-none": bookmarkLayout !== "list" },
+                )}
+                placeholder={t("editor.placeholder_v2")}
+                onKeyDown={(e) => {
+                  if (demoMode) {
+                    return;
+                  }
+                  if (
+                    e.key === "Enter" &&
+                    !(e.metaKey || e.ctrlKey || e.shiftKey)
+                  ) {
+                    handleNewTodo(e);
+                  }
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    form.handleSubmit(onSubmit, onError)();
+                  }
+                }}
+                onPaste={(e) => {
+                  if (demoMode) {
+                    return;
+                  }
+                  handlePaste(e);
+                }}
+                onInput={onInput}
+                {...textFieldProps}
+              />
+              {isMobile && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="absolute bottom-1 right-1 h-8 gap-1 px-2 text-xs shadow-sm"
+                  aria-label="Paste from clipboard"
+                  disabled={isPending || demoMode}
+                  onClick={handlePasteButtonClick}
+                >
+                  <ClipboardPaste className="size-3.5" />
+                  Paste
+                </Button>
               )}
-              placeholder={t("editor.placeholder_v2")}
-              onKeyDown={(e) => {
-                if (demoMode) {
-                  return;
-                }
-                if (
-                  e.key === "Enter" &&
-                  !(e.metaKey || e.ctrlKey || e.shiftKey)
-                ) {
-                  handleNewTodo(e);
-                }
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                  form.handleSubmit(onSubmit, onError)();
-                }
-              }}
-              onPaste={(e) => {
-                if (demoMode) {
-                  return;
-                }
-                handlePaste(e);
-              }}
-              onInput={onInput}
-              {...textFieldProps}
-            />
+            </div>
           </FormControl>
         </FormItem>
         {/* Optional destination folder, sitting right above Save. Empty by
