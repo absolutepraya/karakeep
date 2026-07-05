@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { FullPageSpinner } from "@/components/ui/full-page-spinner";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -49,6 +49,20 @@ function ListItem({
   useEffect(() => {
     setOpen((curr) => curr || isAnyChildOpen(node, isOpenFunc));
   }, [node, isOpenFunc]);
+
+  if (node.children.length === 0) {
+    return (
+      <>
+        {render({
+          node,
+          level: level + indentOffset,
+          open: false,
+          onOpenChange: setOpen,
+          numBookmarks: listStats?.get(node.item.id),
+        })}
+      </>
+    );
+  }
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={className}>
