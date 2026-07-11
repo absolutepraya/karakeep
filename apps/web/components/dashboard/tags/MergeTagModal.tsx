@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -93,7 +93,7 @@ export function MergeTagModal({
       }}
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent>
+      <ResponsiveDialogContent>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((value) => {
@@ -142,7 +142,7 @@ export function MergeTagModal({
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

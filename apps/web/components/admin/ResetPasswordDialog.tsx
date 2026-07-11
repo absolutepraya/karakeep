@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -84,7 +84,7 @@ export default function ResetPasswordDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <ResponsiveDialogContent>
         <DialogHeader>
           <DialogTitle>Reset Password</DialogTitle>
         </DialogHeader>
@@ -144,7 +144,7 @@ export default function ResetPasswordDialog({
             </div>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

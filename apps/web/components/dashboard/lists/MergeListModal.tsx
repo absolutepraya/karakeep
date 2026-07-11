@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -119,7 +119,7 @@ export function MergeListModal({
       }}
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent>
+      <ResponsiveDialogContent>
         <Form {...form}>
           <form onSubmit={onSubmit}>
             <DialogHeader>
@@ -204,7 +204,7 @@ export function MergeListModal({
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

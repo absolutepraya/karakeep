@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { useTranslation } from "@/lib/i18n/client";
@@ -70,7 +70,7 @@ export default function RegenerateApiKey({
           <RefreshCcw className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <ResponsiveDialogContent>
         <DialogHeader>
           <DialogTitle>
             {key
@@ -117,7 +117,7 @@ export default function RegenerateApiKey({
             </DialogClose>
           )}
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

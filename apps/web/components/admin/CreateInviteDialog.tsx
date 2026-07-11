@@ -4,11 +4,11 @@ import { useState } from "react";
 import { ActionButton } from "@/components/ui/action-button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -75,7 +75,7 @@ export default function CreateInviteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <ResponsiveDialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Send User Invitation</DialogTitle>
           <DialogDescription>
@@ -133,7 +133,7 @@ export default function CreateInviteDialog({
             </div>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

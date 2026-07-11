@@ -2,9 +2,9 @@
 
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { useTranslation } from "@/lib/i18n/client";
@@ -157,7 +157,7 @@ export default function KeyboardShortcutsDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-md">
+      <ResponsiveDialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("keyboard_shortcuts.title")}</DialogTitle>
         </DialogHeader>
@@ -170,7 +170,7 @@ export default function KeyboardShortcutsDialog({
             />
           ))}
         </div>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

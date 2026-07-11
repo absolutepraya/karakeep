@@ -54,6 +54,23 @@ const DialogContent = React.forwardRef<
     </DialogPrimitive.Content>
   </DialogPortal>
 ));
+
+const ResponsiveDialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    hideCloseBtn?: boolean;
+  }
+>(({ className, ...props }, ref) => (
+  <DialogContent
+    ref={ref}
+    className={cn(
+      "bottom-0 left-0 top-auto max-h-[calc(var(--vvh)_*_0.75)] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-5 shadow-2xl sm:bottom-auto sm:left-[50%] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:p-6",
+      className,
+    )}
+    {...props}
+  />
+));
+ResponsiveDialogContent.displayName = "ResponsiveDialogContent";
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({
@@ -118,6 +135,7 @@ export {
   DialogClose,
   DialogTrigger,
   DialogContent,
+  ResponsiveDialogContent,
   DialogHeader,
   DialogFooter,
   DialogTitle,

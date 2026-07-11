@@ -42,11 +42,11 @@ import { Button } from "../ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "../ui/dialog";
 import {
   Table,
@@ -100,7 +100,7 @@ export function WebhooksEditorDialog() {
           {t("settings.webhooks.create_webhook")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <ResponsiveDialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("settings.webhooks.create_webhook")}</DialogTitle>
         </DialogHeader>
@@ -177,7 +177,7 @@ export function WebhooksEditorDialog() {
             Add
           </ActionButton>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }
@@ -230,7 +230,7 @@ export function EditWebhookDialog({ webhook }: { webhook: ZWebhook }) {
           {t("actions.edit")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <ResponsiveDialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("settings.webhooks.edit_webhook")}</DialogTitle>
         </DialogHeader>
@@ -301,7 +301,7 @@ export function EditWebhookDialog({ webhook }: { webhook: ZWebhook }) {
             {t("actions.save")}
           </ActionButton>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }
@@ -360,7 +360,7 @@ export function EditTokenDialog({ webhook }: { webhook: ZWebhook }) {
             : t("settings.webhooks.add_auth_token")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <ResponsiveDialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("settings.webhooks.edit_auth_token")}</DialogTitle>
         </DialogHeader>
@@ -434,7 +434,7 @@ export function EditTokenDialog({ webhook }: { webhook: ZWebhook }) {
             {t("actions.save")}
           </ActionButton>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

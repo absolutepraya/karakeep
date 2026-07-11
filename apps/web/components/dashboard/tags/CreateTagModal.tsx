@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -95,7 +95,7 @@ export function CreateTagModal() {
           <span className="hidden sm:inline">{t("tags.create_tag")}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <ResponsiveDialogContent>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((values) => {
@@ -139,7 +139,7 @@ export function CreateTagModal() {
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

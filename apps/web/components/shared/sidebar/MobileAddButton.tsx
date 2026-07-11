@@ -4,10 +4,10 @@ import { useState } from "react";
 import EditorCard from "@/components/dashboard/bookmarks/EditorCard";
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import { haptic } from "@/lib/haptic";
 import { useTranslation } from "@/lib/i18n/client";
@@ -36,15 +36,15 @@ export default function MobileAddButton() {
             {t("actions.new", { defaultValue: "Add" })}
           </span>
         </DialogTrigger>
-        <DialogContent
+        <ResponsiveDialogContent
           hideCloseBtn
-          className="max-w-[calc(100vw-2rem)] rounded-2xl p-3 sm:max-w-md"
+          className="gap-0 p-3 sm:max-w-md sm:p-4"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{label}</DialogTitle>
           </DialogHeader>
           <EditorCard onCreated={() => setOpen(false)} />
-        </DialogContent>
+        </ResponsiveDialogContent>
       </Dialog>
     </li>
   );

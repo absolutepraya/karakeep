@@ -2,8 +2,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
-  DialogFooter,
+  ResponsiveDialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -36,20 +35,26 @@ export default function ActionConfirmingDialog({
   return (
     <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+      <ResponsiveDialogContent className="gap-0 p-0">
+        <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-6 text-left sm:px-6">
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            {title}
+          </DialogTitle>
         </DialogHeader>
-        {description}
-        <DialogFooter className="sm:justify-end">
+        <div className="px-5 py-4 text-sm text-muted-foreground sm:px-6 sm:py-5">
+          {description}
+        </div>
+        <div className="sticky bottom-0 flex gap-2 border-t border-border/70 bg-card px-5 py-4 sm:px-6">
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
+            <Button type="button" variant="secondary" className="h-11 flex-1">
               {t("actions.close")}
             </Button>
           </DialogClose>
-          {actionButton(setDialogOpen)}
-        </DialogFooter>
-      </DialogContent>
+          <div className="flex-1 [&>button]:h-11 [&>button]:w-full">
+            {actionButton(setDialogOpen)}
+          </div>
+        </div>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

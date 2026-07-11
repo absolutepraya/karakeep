@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -389,7 +389,7 @@ export default function AddApiKey({ isAdmin }: { isAdmin: boolean }) {
           {t("settings.api_keys.new_api_key")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-3xl">
+      <ResponsiveDialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             {key
@@ -414,7 +414,7 @@ export default function AddApiKey({ isAdmin }: { isAdmin: boolean }) {
             </DialogClose>
           </DialogFooter>
         )}
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

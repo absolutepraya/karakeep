@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import { useTranslation } from "@/lib/i18n/client";
 
@@ -49,7 +49,7 @@ export function ShareListModal({
       }}
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="max-w-xl">
+      <ResponsiveDialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("lists.share_list")}</DialogTitle>
         </DialogHeader>
@@ -64,7 +64,7 @@ export function ShareListModal({
             </Button>
           </DialogClose>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

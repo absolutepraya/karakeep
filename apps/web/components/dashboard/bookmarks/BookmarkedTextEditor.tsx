@@ -1,9 +1,9 @@
 import { BookmarkMarkdownComponent } from "@/components/dashboard/bookmarks/BookmarkMarkdownComponent";
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 
 import { ZBookmark, ZBookmarkTypeText } from "@karakeep/shared/types/bookmarks";
@@ -21,7 +21,7 @@ export function BookmarkedTextEditor({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-[80%]">
+      <ResponsiveDialogContent className="sm:max-w-[80%]">
         <DialogHeader className="flex">
           <DialogTitle className="w-fit">
             {isNewBookmark ? "New Note" : "Edit Note"}
@@ -32,7 +32,7 @@ export function BookmarkedTextEditor({
             {bookmark as ZBookmarkTypeText}
           </BookmarkMarkdownComponent>
         </div>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

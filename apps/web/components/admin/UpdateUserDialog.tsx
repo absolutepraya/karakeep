@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -99,7 +99,7 @@ export default function UpdateUserDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <ResponsiveDialogContent>
         <DialogTrigger asChild></DialogTrigger>
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>
@@ -205,7 +205,7 @@ export default function UpdateUserDialog({
             </div>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

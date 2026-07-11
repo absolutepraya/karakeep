@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  ResponsiveDialogContent,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -74,7 +74,7 @@ export function RenameTagModal({
         }
       }}
     >
-      <DialogContent>
+      <ResponsiveDialogContent>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((values) => {
@@ -115,7 +115,7 @@ export function RenameTagModal({
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

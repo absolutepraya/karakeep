@@ -47,11 +47,11 @@ import { Button, buttonVariants } from "../ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ResponsiveDialogContent,
 } from "../ui/dialog";
 import {
   Table,
@@ -106,7 +106,7 @@ export function FeedsEditorDialog() {
           {t("settings.feeds.add_a_subscription")}
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <ResponsiveDialogContent>
         <DialogHeader>
           <DialogTitle>Subscribe to a new Feed</DialogTitle>
         </DialogHeader>
@@ -191,7 +191,7 @@ export function FeedsEditorDialog() {
             Add
           </ActionButton>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }
@@ -243,7 +243,7 @@ export function EditFeedDialog({ feed }: { feed: ZFeed }) {
         </TooltipTrigger>
         <TooltipContent>{t("actions.edit")}</TooltipContent>
       </Tooltip>
-      <DialogContent>
+      <ResponsiveDialogContent>
         <DialogHeader>
           <DialogTitle>Edit Feed</DialogTitle>
         </DialogHeader>
@@ -341,7 +341,7 @@ export function EditFeedDialog({ feed }: { feed: ZFeed }) {
             {t("actions.save")}
           </ActionButton>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }
