@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/action-button";
@@ -9,7 +9,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -42,7 +42,7 @@ import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ClipboardPaste, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -97,7 +97,6 @@ export function EditListModal({
   }
   const [customOpen, customSetOpen] = useState(false);
   const isMobile = useIsMobile();
-  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm({
     resolver: zodResolver(zNewBookmarkListSchema),
@@ -209,39 +208,6 @@ export function EditListModal({
   const isEdit = !!list;
   const isPending = isCreating || isEditing;
 
-  const handlePasteListName = async () => {
-    if (!navigator.clipboard?.readText) {
-      toast({
-        variant: "destructive",
-        description: "Clipboard is not available.",
-      });
-      return;
-    }
-
-    try {
-      const clipboardText = (await navigator.clipboard.readText()).trim();
-
-      if (!clipboardText) {
-        toast({
-          description: "Clipboard is empty.",
-        });
-        return;
-      }
-
-      form.setValue("name", clipboardText, {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      nameInputRef.current?.focus();
-    } catch {
-      toast({
-        variant: "destructive",
-        description: "Unable to read clipboard.",
-      });
-    }
-  };
-
   const onSubmit = form.handleSubmit(
     (value: z.infer<typeof zNewBookmarkListSchema>) => {
       value.parentId = value.parentId === "" ? null : value.parentId;
@@ -263,73 +229,90 @@ export function EditListModal({
       }}
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] rounded-2xl px-3 py-5 sm:max-w-md sm:p-5">
+      <DialogContent className="bottom-0 left-0 top-auto max-h-[calc(var(--vvh)-0.75rem)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-0 shadow-2xl sm:bottom-auto sm:left-[50%] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border">
         <Form {...form}>
           <form onSubmit={onSubmit}>
-            <DialogHeader>
-              <DialogTitle>
+            <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-6 text-left sm:px-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
                 {isEdit ? t("lists.edit_list") : t("lists.new_list")}
               </DialogTitle>
+              <DialogDescription>
+                {isEdit
+                  ? "Update this list's details and organization."
+                  : "Set its name, location, and type."}
+              </DialogDescription>
             </DialogHeader>
-            <div className="flex w-full gap-2 py-4">
-              <FormField
-                control={form.control}
-                name="icon"
-                render={({ field }) => {
-                  return (
-                    <FormItem>
-                      <FormControl>
-                        <Popover>
-                          <PopoverTrigger className="h-full rounded border border-input px-2 text-2xl">
-                            {field.value}
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto border-0 bg-transparent p-0 shadow-none">
-                            <Picker
-                              data={data}
-                              onEmojiSelect={(e: { native: string }) =>
-                                field.onChange(e.native)
-                              }
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
+            <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5">
+              <div className="flex w-full items-end gap-2">
+                <FormField
+                  control={form.control}
+                  name="icon"
+                  render={({ field }) => {
+                    return (
+                      <FormItem className="shrink-0">
+                        <FormControl>
+                          <Popover>
+                            <PopoverTrigger className="shadow-xs flex size-10 items-center justify-center rounded-xl border border-input bg-muted/40 text-xl transition-[border-color,background-color,box-shadow] duration-150 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:size-11 sm:text-2xl">
+                              {field.value}
+                            </PopoverTrigger>
+                            <PopoverContent className="max-h-[calc(var(--vvh)-1rem)] max-w-[calc(100vw-1rem)] overflow-auto border-0 bg-transparent p-0 shadow-none sm:max-h-none sm:max-w-none">
+                              <Picker
+                                data={data}
+                                height={isMobile ? 290 : undefined}
+                                emojiSize={isMobile ? 18 : 24}
+                                emojiButtonSize={isMobile ? 30 : 36}
+                                perLine={isMobile ? 8 : 9}
+                                previewPosition={isMobile ? "none" : undefined}
+                                skinTonePosition={isMobile ? "none" : undefined}
+                                onEmojiSelect={(e: { native: string }) =>
+                                  field.onChange(e.native)
+                                }
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
 
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => {
+                    return (
+                      <FormItem className="min-w-0 flex-1">
+                        <FormLabel>
+                          {t("lists.name", { defaultValue: "Name" })}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            className="h-10 w-full sm:h-11"
+                            placeholder="e.g. Design inspiration"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
               <FormField
                 control={form.control}
-                name="name"
+                name="description"
                 render={({ field }) => {
                   return (
-                    <FormItem className="grow">
+                    <FormItem className="space-y-2">
+                      <FormLabel>{t("lists.description")}</FormLabel>
                       <FormControl>
                         <Input
                           type="text"
-                          className={isMobile ? "w-full pr-24" : "w-full"}
-                          placeholder="List Name"
-                          endIcon={
-                            isMobile ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 gap-1 px-2 text-xs"
-                                aria-label="Paste list name from clipboard"
-                                onClick={handlePasteListName}
-                              >
-                                <ClipboardPaste className="size-3.5" />
-                                Paste
-                              </Button>
-                            ) : undefined
-                          }
+                          className="h-10 w-full sm:h-11"
+                          placeholder="Optional context for this list"
                           {...field}
-                          ref={(node) => {
-                            field.ref(node);
-                            nameInputRef.current = node;
-                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -337,144 +320,135 @@ export function EditListModal({
                   );
                 }}
               />
-            </div>
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => {
-                return (
-                  <FormItem className="grow pb-4">
-                    <FormLabel>{t("lists.description")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        className="w-full"
-                        placeholder="Description"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
-            <FormField
-              control={form.control}
-              name="parentId"
-              render={({ field }) => {
-                return (
-                  <FormItem className="grow pb-4">
-                    <FormLabel>{t("lists.parent_list")}</FormLabel>
-                    <div className="flex items-center gap-1">
-                      <FormControl>
-                        <BookmarkListSelector
-                          // Hide the current list from the list of parents
-                          hideSubtreeOf={list ? list.id : undefined}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder={t("lists.no_parent")}
-                        />
-                      </FormControl>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          form.setValue("parentId", "");
-                        }}
-                      >
-                        <X />
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => {
-                return (
-                  <FormItem className="grow pb-4">
-                    <FormLabel>{t("lists.list_type")}</FormLabel>
-                    <FormControl>
-                      <Select
-                        disabled={isEdit}
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="manual">
-                            {t("lists.manual_list")}
-                          </SelectItem>
-                          <SelectItem value="smart">
-                            {t("lists.smart_list")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
-            {listType === "smart" && (
               <FormField
                 control={form.control}
-                name="query"
+                name="parentId"
                 render={({ field }) => {
                   return (
-                    <FormItem className="grow pb-4">
-                      <FormLabel>{t("lists.search_query")}</FormLabel>
-                      <div className="relative">
+                    <FormItem className="space-y-2">
+                      <FormLabel>{t("lists.parent_list")}</FormLabel>
+                      <div className="flex items-center gap-1">
                         <FormControl>
-                          <Input
+                          <BookmarkListSelector
+                            // Hide the current list from the list of parents
+                            hideSubtreeOf={list ? list.id : undefined}
                             value={field.value}
                             onChange={field.onChange}
-                            placeholder={t("lists.search_query")}
-                            endIcon={
-                              parsedSearchQuery ? (
-                                <QueryExplainerTooltip
-                                  className="stroke-foreground p-1"
-                                  parsedSearchQuery={parsedSearchQuery}
-                                />
-                              ) : undefined
-                            }
+                            placeholder={t("lists.no_parent")}
+                            className="h-10 sm:h-11"
                           />
                         </FormControl>
-                      </div>
-                      <FormDescription>
-                        <Link
-                          href="https://docs.karakeep.app/Guides/search-query-language"
-                          className="italic"
-                          target="_blank"
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-10 shrink-0 rounded-xl sm:size-11"
+                          aria-label={t("lists.no_parent", {
+                            defaultValue: "Remove parent list",
+                          })}
+                          onClick={() => {
+                            form.setValue("parentId", "");
+                          }}
                         >
-                          {t("lists.search_query_help")}
-                        </Link>
-                      </FormDescription>
+                          <X className="size-4" />
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   );
                 }}
               />
-            )}
-            <DialogFooter className="gap-2 sm:justify-end sm:gap-0">
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => {
+                  return (
+                    <FormItem className="space-y-2">
+                      <FormLabel>{t("lists.list_type")}</FormLabel>
+                      <FormControl>
+                        <Select
+                          disabled={isEdit}
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <SelectTrigger className="h-10 w-full sm:h-11">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="manual">
+                              {t("lists.manual_list")}
+                            </SelectItem>
+                            <SelectItem value="smart">
+                              {t("lists.smart_list")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+              {listType === "smart" && (
+                <FormField
+                  control={form.control}
+                  name="query"
+                  render={({ field }) => {
+                    return (
+                      <FormItem className="rounded-xl border border-border/70 bg-muted/30 p-3">
+                        <FormLabel>{t("lists.search_query")}</FormLabel>
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder={t("lists.search_query")}
+                              className="h-10 sm:h-11"
+                              endIcon={
+                                parsedSearchQuery ? (
+                                  <QueryExplainerTooltip
+                                    className="stroke-foreground p-1"
+                                    parsedSearchQuery={parsedSearchQuery}
+                                  />
+                                ) : undefined
+                              }
+                            />
+                          </FormControl>
+                        </div>
+                        <FormDescription>
+                          <Link
+                            href="https://docs.karakeep.app/Guides/search-query-language"
+                            className="italic"
+                            target="_blank"
+                          >
+                            {t("lists.search_query_help")}
+                          </Link>
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              )}
+            </div>
+            <div className="sticky bottom-0 flex gap-2 border-t border-border/70 bg-card px-5 py-4 sm:px-6">
               <DialogClose asChild>
-                <Button type="button" variant="secondary">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11 flex-1"
+                >
                   {t("actions.close")}
                 </Button>
               </DialogClose>
               <ActionButton
                 type="submit"
-                onClick={onSubmit}
                 loading={isPending}
+                className="h-11 flex-1"
               >
                 {list ? t("actions.save") : t("actions.create")}
               </ActionButton>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>
