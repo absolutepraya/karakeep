@@ -4,7 +4,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "@/components/ui/sonner";
@@ -93,39 +94,48 @@ export default function BulkManageListsModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent className="bottom-0 left-0 top-auto max-h-[calc(var(--vvh)-0.75rem)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-0 shadow-2xl sm:bottom-auto sm:left-[50%] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border">
         <Form {...form}>
-          <form
-            className="flex w-full flex-col gap-4"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
-            <DialogHeader>
-              <DialogTitle>
-                Add {bookmarkIds.length} bookmarks to List
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-6 text-left sm:px-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                Add to a list
               </DialogTitle>
+              <DialogDescription>
+                Add {bookmarkIds.length} selected bookmarks to one manual list.
+              </DialogDescription>
             </DialogHeader>
 
-            <FormField
-              control={form.control}
-              name="listId"
-              render={({ field }) => {
-                return (
-                  <FormItem>
-                    <FormControl>
-                      <BookmarkListSelector
-                        value={field.value}
-                        onChange={field.onChange}
-                        listTypes={["manual"]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
-            <DialogFooter className="sm:justify-end">
+            <div className="space-y-3 px-4 py-4 sm:px-6 sm:py-5">
+              <FormField
+                control={form.control}
+                name="listId"
+                render={({ field }) => {
+                  return (
+                    <FormItem className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3">
+                      <FormLabel>Destination list</FormLabel>
+                      <FormControl>
+                        <BookmarkListSelector
+                          value={field.value}
+                          onChange={field.onChange}
+                          listTypes={["manual"]}
+                          className="h-10 sm:h-11"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            </div>
+
+            <div className="sticky bottom-0 flex gap-2 border-t border-border/70 bg-card px-5 py-4 sm:px-6">
               <DialogClose asChild>
-                <Button type="button" variant="secondary">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11 flex-1"
+                >
                   Close
                 </Button>
               </DialogClose>
@@ -133,10 +143,11 @@ export default function BulkManageListsModal({
                 type="submit"
                 loading={isAddingToListPending}
                 disabled={isAddingToListPending}
+                className="h-11 flex-1"
               >
                 Add
               </ActionButton>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>

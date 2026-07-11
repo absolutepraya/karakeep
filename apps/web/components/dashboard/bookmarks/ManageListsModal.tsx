@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -99,62 +99,93 @@ export default function ManageListsModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("actions.manage_lists")}</DialogTitle>
+      <DialogContent className="bottom-0 left-0 top-auto max-h-[calc(var(--vvh)-0.75rem)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-0 shadow-2xl sm:bottom-auto sm:left-[50%] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border">
+        <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-6 text-left sm:px-6">
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            {t("actions.manage_lists")}
+          </DialogTitle>
+          <DialogDescription>
+            Add this bookmark to lists or remove existing memberships.
+          </DialogDescription>
         </DialogHeader>
+
         {isLoading ? (
-          <LoadingSpinner className="my-4" />
+          <LoadingSpinner className="my-12" />
         ) : (
-          <ul className="flex flex-col gap-2 pb-2 pt-4">
-            {alreadyInList?.lists.map((list) => {
-              const path = allLists?.getPathById(list.id);
-              return (
-                <li
-                  key={list.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-background px-2 py-1 text-foreground"
-                >
-                  <p>
-                    {path
-                      ? path.map((l) => `${l.icon} ${l.name}`).join(" / ")
-                      : list.name}
-                  </p>
-                  <ActionButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    loading={isDeleteFromListPending}
-                    onClick={() =>
-                      deleteFromList({ bookmarkId, listId: list.id })
-                    }
-                    aria-label={t("actions.remove_from_list")}
-                  >
-                    <X className="size-4" />
-                  </ActionButton>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
+            <section className="space-y-2">
+              <div className="flex items-baseline justify-between px-1">
+                <h3 className="text-sm font-medium">Current lists</h3>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {alreadyInList?.lists.length ?? 0}
+                </span>
+              </div>
+              {alreadyInList?.lists.length ? (
+                <ul className="space-y-1.5">
+                  {alreadyInList.lists.map((list) => {
+                    const path = allLists?.getPathById(list.id);
+                    return (
+                      <li
+                        key={list.id}
+                        className="flex min-w-0 items-center gap-2 rounded-xl border border-border/70 bg-muted/25 px-3 py-2"
+                      >
+                        <p className="min-w-0 flex-1 truncate text-sm text-foreground">
+                          {path
+                            ? path.map((l) => `${l.icon} ${l.name}`).join(" / ")
+                            : list.name}
+                        </p>
+                        <ActionButton
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-9 shrink-0 rounded-lg"
+                          loading={isDeleteFromListPending}
+                          onClick={() =>
+                            deleteFromList({ bookmarkId, listId: list.id })
+                          }
+                          aria-label={t("actions.remove_from_list")}
+                        >
+                          <X className="size-4" />
+                        </ActionButton>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="rounded-xl border border-dashed border-border/80 px-3 py-4 text-sm text-muted-foreground">
+                  This bookmark is not in a list yet.
+                </p>
+              )}
+            </section>
+
+            <section className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3">
+              <div>
+                <h3 className="text-sm font-medium">Add to a list</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Choose a destination to add this bookmark immediately.
+                </p>
+              </div>
+              <BookmarkListSelector
+                hideBookmarkIds={alreadyInList?.lists.map((l) => l.id)}
+                onChange={(listId) => {
+                  if (!isAddingToListPending) {
+                    addToList({
+                      bookmarkId,
+                      listId,
+                    });
+                  }
+                }}
+                listTypes={["manual"]}
+                disabled={isAddingToListPending}
+                className="h-10 sm:h-11"
+              />
+            </section>
+          </div>
         )}
 
-        <div className="pb-4">
-          <BookmarkListSelector
-            hideBookmarkIds={alreadyInList?.lists.map((l) => l.id)}
-            onChange={(listId) => {
-              if (!isLoading && !isAddingToListPending) {
-                addToList({
-                  bookmarkId: bookmarkId,
-                  listId: listId,
-                });
-              }
-            }}
-            listTypes={["manual"]}
-            disabled={isLoading || isAddingToListPending}
-          />
-        </div>
-        <DialogFooter className="sm:justify-end">
+        <div className="sticky bottom-0 flex gap-2 border-t border-border/70 bg-card px-5 py-4 sm:px-6">
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
+            <Button type="button" variant="secondary" className="h-11 flex-1">
               {t("actions.close")}
             </Button>
           </DialogClose>
@@ -163,10 +194,11 @@ export default function ManageListsModal({
             bookmarkId={bookmarkId}
             onDone={() => setOpen(false)}
             variant="secondary"
+            className="h-11 flex-1"
           >
             <Archive className="mr-2 size-4" /> {t("actions.archive")}
           </ArchiveBookmarkButton>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
