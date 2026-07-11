@@ -7,6 +7,7 @@ import useBulkActionsStore from "@/lib/bulkActions";
 import { useBookmarkKeyboardNavigation } from "@/lib/hooks/useBookmarkKeyboardNavigation";
 import { useTranslation } from "@/lib/i18n/client";
 import { useInBookmarkGridStore } from "@/lib/store/useInBookmarkGridStore";
+import usePendingBookmarkDeletionStore from "@/lib/store/usePendingBookmarkDeletionStore";
 import { useKeyboardNavigationStore } from "@/lib/store/useKeyboardNavigationStore";
 import {
   bookmarkLayoutSwitch,
@@ -169,6 +170,19 @@ export default function BookmarksGrid({
     (state) => state.setInBookmarkGrid,
   );
   const withinListContext = useBookmarkListContext();
+  const pendingBookmarkIds = usePendingBookmarkDeletionStore(
+    (state) => state.pendingBookmarkIds,
+  );
+  const visibleBookmarks = useMemo(() => {
+    if (pendingBookmarkIds.length === 0) {
+      return bookmarks;
+    }
+
+    const pendingBookmarkIdSet = new Set(pendingBookmarkIds);
+    return bookmarks.filter(
+      (bookmark) => !pendingBookmarkIdSet.has(bookmark.id),
+    );
+  }, [bookmarks, pendingBookmarkIds]);
   const breakpointConfig = useMemo(
     () => getBreakpointConfig(gridColumns, serverIsMobile),
     [gridColumns, serverIsMobile],
@@ -189,7 +203,7 @@ export default function BookmarksGrid({
     confirmDelete,
     isDeletePending,
   } = useBookmarkKeyboardNavigation({
-    bookmarks,
+    bookmarks: visibleBookmarks,
     columns: navColumns,
     hasNextPage,
     isFetchingNextPage,
@@ -197,14 +211,19 @@ export default function BookmarksGrid({
   });
 
   useEffect(() => {
-    setVisibleBookmarks(bookmarks);
+    setVisibleBookmarks(visibleBookmarks);
     setListContext(withinListContext);
 
     return () => {
       setVisibleBookmarks([]);
       setListContext(undefined);
     };
-  }, [bookmarks, setListContext, setVisibleBookmarks, withinListContext]);
+  }, [
+    setListContext,
+    setVisibleBookmarks,
+    visibleBookmarks,
+    withinListContext,
+  ]);
 
   useEffect(() => {
     setInBookmarkGrid(true);
@@ -219,7 +238,7 @@ export default function BookmarksGrid({
     }
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, loadMoreButtonInView]);
 
-  if (bookmarks.length == 0 && !showEditorCard) {
+  if (visibleBookmarks.length == 0 && !showEditorCard) {
     return (
       <>
         <NoBookmarksBanner />
@@ -241,13 +260,13 @@ export default function BookmarksGrid({
         </StyledBookmarkCard>
       </div>
     ),
-    ...bookmarks.map((bookmark, index) => (
+    ...visibleBookmarks.map((bookmark, index) => (
       <BookmarkGridItem key={bookmark.id} bookmark={bookmark} index={index} />
     )),
   ];
   return (
     <>
-      {bookmarks.length === 0 && showEditorCard && (
+      {visibleBookmarks.length === 0 && showEditorCard && (
         <NoBookmarksBanner className="mb-4" />
       )}
       {bookmarkLayoutSwitch(layout, {

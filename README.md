@@ -114,11 +114,10 @@ The helper below pulls the production `/data` state from the VPS into your local
 
 ```bash
 pnpm prod:pull-state
-pnpm prod:pull-state --yes
-pnpm prod:pull-state --yes --db-only
+pnpm prod:pull-state --dry-run
 ```
 
-The command is a dry run unless `--yes` is passed. With `--yes`, it backs up the current local `DATA_DIR` before replacing local development state. Full `/data` sync is the default because the SQLite database can reference stored assets; use `--db-only` only when you explicitly want just `db.db`, `db.db-wal`, and `db.db-shm`.
+The command replaces local development state by default, first backing up the current `DATA_DIR`. It always pulls the full `/data` volume, including SQLite files and stored assets. Use `--dry-run` to inspect the plan without replacing local state.
 
 Required root `.env` keys:
 - `DATA_DIR`

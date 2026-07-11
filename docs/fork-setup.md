@@ -79,11 +79,10 @@ Use this helper when local development should mirror the persisted production st
 
 ```bash
 pnpm prod:pull-state
-pnpm prod:pull-state --yes
-pnpm prod:pull-state --yes --db-only
+pnpm prod:pull-state --dry-run
 ```
 
-The command is a dry run by default. Passing `--yes` backs up the current local `DATA_DIR` and then replaces local development state. Full `/data` sync is the default because the SQLite database can reference stored assets. Use `--db-only` only when you explicitly want to pull just `db.db`, `db.db-wal`, and `db.db-shm`.
+The command replaces local development state by default, first backing up the current `DATA_DIR`. It always pulls the full `/data` volume, including SQLite files and stored assets. Use `--dry-run` to inspect the plan without replacing local state.
 
 Required root `.env` keys:
 - `DATA_DIR`

@@ -93,7 +93,7 @@ Notes:
 
 ### Pull prod state to local dev
 
-Use `pnpm prod:pull-state` for production-to-local state pulls from the VPS. It reads root `.env`, defaults to a dry run, and requires `--yes` before replacing local development state.
+Use `pnpm prod:pull-state` for production-to-local state pulls from the VPS. It reads root `.env` and replaces local development state by default. Use `pnpm prod:pull-state --dry-run` to inspect the plan without changing local state.
 
 Required root `.env` keys:
 - `DATA_DIR`
@@ -105,7 +105,7 @@ Optional root `.env` keys:
 - `KARAKEEP_PROD_COMPOSE_SERVICE`
 - `KARAKEEP_PROD_EXPORT_IMAGE`
 
-Default to full `/data` pulls because SQLite rows can reference stored assets. Use `pnpm prod:pull-state --yes --db-only` only when explicitly asked for a DB-only pull. Do not print `.env` secrets or overwrite local state without `--yes`.
+Every pull restores the full `/data` volume because SQLite rows can reference stored assets. Do not use DB-only pulls or print `.env` secrets.
 
 ## Deploy model for this fork
 

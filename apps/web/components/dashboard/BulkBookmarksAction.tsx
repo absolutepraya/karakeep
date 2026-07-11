@@ -10,6 +10,7 @@ import ActionConfirmingDialog from "@/components/ui/action-confirming-dialog";
 import { toast } from "@/components/ui/sonner";
 import useBulkActionsStore from "@/lib/bulkActions";
 import { useBookmarkBulkMutations } from "@/lib/hooks/useBookmarkBulkActions";
+import { useUndoableBookmarkDeletion } from "@/lib/hooks/useUndoableBookmarkDeletion";
 import type { UpdateBookmarkProps } from "@/lib/hooks/useBookmarkBulkActions";
 import { useTranslation } from "@/lib/i18n/client";
 import {
@@ -47,6 +48,7 @@ export default function BulkBookmarksAction() {
     });
   };
   const bulkActionsStore = useBulkActionsStore();
+  const { scheduleDeletes, pendingBookmarkIds } = useUndoableBookmarkDeletion();
   const selectedBookmarks = bulkActionsStore.getSelectedBookmarks();
   const {
     isBulkEditEnabled,
@@ -58,13 +60,11 @@ export default function BulkBookmarksAction() {
   } = bulkActionsStore;
   const {
     updateBookmarkMutator,
-    deleteBookmarkMutator,
-    recrawlBookmarkMutator,
-    removeBookmarkFromListMutator,
     updateSelectedBookmarks,
-    deleteSelectedBookmarks,
-    recrawlSelectedLinkBookmarks,
+    recrawlBookmarkMutator,
     removeSelectedBookmarksFromList,
+    recrawlSelectedLinkBookmarks,
+    removeBookmarkFromListMutator,
     selectedBookmarkLinksText,
   } = useBookmarkBulkMutations({
     selectedBookmarks,
@@ -122,11 +122,9 @@ export default function BulkBookmarksAction() {
     });
   };
 
-  const deleteBookmarks = async () => {
-    await deleteSelectedBookmarks();
-    toast({
-      description: `${selectedBookmarks.length} bookmarks have been deleted!`,
-    });
+  const deleteBookmarks = () => {
+    scheduleDeletes(selectedBookmarks.map((bookmark) => bookmark.id));
+    setIsBulkEditEnabled(false);
     setIsDeleteDialogOpen(false);
   };
 
@@ -263,7 +261,9 @@ export default function BulkBookmarksAction() {
           <ActionButton
             type="button"
             variant="destructive"
-            loading={deleteBookmarkMutator.isPending}
+            loading={selectedBookmarks.some((bookmark) =>
+              pendingBookmarkIds.includes(bookmark.id),
+            )}
             onClick={() => deleteBookmarks()}
           >
             {t("actions.delete")}

@@ -31,12 +31,14 @@ export default async function SignInForm() {
       {providerValues && providerValues.length > 0 && (
         <OAuthAutoRedirect oauthProviderId={providerValues[0].id} />
       )}
-      <Card className="w-full">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your Karakeep account</CardDescription>
+      <Card className="w-full rounded-2xl border-border/70 bg-card/95 shadow-xl backdrop-blur">
+        <CardHeader className="space-y-2 px-5 pb-3 pt-6 text-center sm:px-7 sm:pt-7">
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            Welcome back
+          </CardTitle>
+          <CardDescription>Sign in to continue to Karakeep.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5 px-5 pb-6 sm:px-7 sm:pb-7">
           {serverConfig.demoMode && (
             <Alert>
               <Info className="h-4 w-4" />
@@ -54,10 +56,12 @@ export default async function SignInForm() {
 
           {providerValues && providerValues.length > 0 && (
             <>
-              <div className="flex w-full items-center">
-                <div className="flex-1 grow border-t border-gray-200"></div>
-                <span className="bg-white px-3 text-sm text-gray-500">Or</span>
-                <div className="flex-1 grow border-t border-gray-200"></div>
+              <div className="flex w-full items-center gap-3">
+                <div className="flex-1 border-t border-border" />
+                <span className="bg-card px-1 text-xs font-medium text-muted-foreground">
+                  Or continue with
+                </span>
+                <div className="flex-1 border-t border-border" />
               </div>
               <div className="space-y-2">
                 {providerValues.map((provider) => (

@@ -7,7 +7,6 @@ import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import {
-  useDeleteBookmark,
   useRecrawlBookmark,
   useUpdateBookmark,
 } from "@karakeep/shared-react/hooks/bookmarks";
@@ -34,10 +33,6 @@ export function useBookmarkBulkMutations({
   onBulkEditDone?: () => void;
 }) {
   const updateBookmarkMutator = useUpdateBookmark({
-    onSuccess: onBulkEditDone,
-    onError,
-  });
-  const deleteBookmarkMutator = useDeleteBookmark({
     onSuccess: onBulkEditDone,
     onError,
   });
@@ -97,33 +92,6 @@ export function useBookmarkBulkMutations({
     [selectedActionableBookmarks, updateSelectedBookmarks],
   );
 
-  const deleteSelectedBookmarks = useCallback(async () => {
-    const selected = selectedActionableBookmarks();
-    await Promise.all(
-      limitConcurrency(
-        selected.map(
-          (bookmark) => () =>
-            deleteBookmarkMutator.mutateAsync({ bookmarkId: bookmark.id }),
-        ),
-        MAX_CONCURRENT_BULK_ACTIONS,
-      ),
-    );
-    return selected;
-  }, [deleteBookmarkMutator, selectedActionableBookmarks]);
-
-  const deleteSelectedBookmarksSettled = useCallback(async () => {
-    const selected = selectedActionableBookmarks();
-    return Promise.allSettled(
-      limitConcurrency(
-        selected.map(
-          (bookmark) => () =>
-            deleteBookmarkMutator.mutateAsync({ bookmarkId: bookmark.id }),
-        ),
-        MAX_CONCURRENT_BULK_ACTIONS,
-      ),
-    );
-  }, [deleteBookmarkMutator, selectedActionableBookmarks]);
-
   const recrawlSelectedLinkBookmarks = useCallback(
     async (archiveFullPage: boolean) => {
       const links = selectedLinkBookmarks();
@@ -176,13 +144,10 @@ export function useBookmarkBulkMutations({
 
   return {
     updateBookmarkMutator,
-    deleteBookmarkMutator,
     recrawlBookmarkMutator,
     removeBookmarkFromListMutator,
     updateSelectedBookmarks,
     setSelectedBookmarksToNextState,
-    deleteSelectedBookmarks,
-    deleteSelectedBookmarksSettled,
     recrawlSelectedLinkBookmarks,
     removeSelectedBookmarksFromList,
     selectedBookmarkLinksText,

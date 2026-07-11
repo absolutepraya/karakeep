@@ -1,5 +1,5 @@
 import { experimental_trpcMiddleware, TRPCError } from "@trpc/server";
-import { and, eq, gt, inArray, like, lt, or } from "drizzle-orm";
+import { and, count, eq, gt, inArray, like, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -10,6 +10,7 @@ import {
   bookmarks,
   bookmarkTags,
   bookmarkTexts,
+  importSessions,
   customPrompts,
   tagsOnBookmarks,
   userReadingProgress,
@@ -969,6 +970,89 @@ export const bookmarksAppRouter = router({
       return {
         bookmarks: res.bookmarks.map((b) => b.asZBookmark()),
         nextCursor: res.nextCursor,
+      };
+    }),
+
+  getProcessingStatus: bookmarksProcedure
+    .output(
+      z.object({
+        total: z.number(),
+        tasks: z.array(
+          z.object({
+            kind: z.enum([
+              "crawling",
+              "tagging",
+              "summarizing",
+              "embedding",
+              "importing",
+            ]),
+            count: z.number(),
+          }),
+        ),
+      }),
+    )
+    .query(async ({ ctx }) => {
+      const [crawling, tagging, summarizing, embedding, importing] =
+        await Promise.all([
+          ctx.db
+            .select({ count: count() })
+            .from(bookmarkLinks)
+            .innerJoin(bookmarks, eq(bookmarks.id, bookmarkLinks.id))
+            .where(
+              and(
+                eq(bookmarks.userId, ctx.user.id),
+                eq(bookmarkLinks.crawlStatus, "pending"),
+              ),
+            ),
+          ctx.db
+            .select({ count: count() })
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, ctx.user.id),
+                eq(bookmarks.taggingStatus, "pending"),
+              ),
+            ),
+          ctx.db
+            .select({ count: count() })
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, ctx.user.id),
+                eq(bookmarks.summarizationStatus, "pending"),
+              ),
+            ),
+          ctx.db
+            .select({ count: count() })
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, ctx.user.id),
+                eq(bookmarks.embeddingStatus, "pending"),
+              ),
+            ),
+          ctx.db
+            .select({ count: count() })
+            .from(importSessions)
+            .where(
+              and(
+                eq(importSessions.userId, ctx.user.id),
+                inArray(importSessions.status, ["pending", "running"]),
+              ),
+            ),
+        ]);
+
+      const tasks = [
+        { kind: "crawling" as const, count: crawling[0]?.count ?? 0 },
+        { kind: "tagging" as const, count: tagging[0]?.count ?? 0 },
+        { kind: "summarizing" as const, count: summarizing[0]?.count ?? 0 },
+        { kind: "embedding" as const, count: embedding[0]?.count ?? 0 },
+        { kind: "importing" as const, count: importing[0]?.count ?? 0 },
+      ].filter((task) => task.count > 0);
+
+      return {
+        total: tasks.reduce((total, task) => total + task.count, 0),
+        tasks,
       };
     }),
 

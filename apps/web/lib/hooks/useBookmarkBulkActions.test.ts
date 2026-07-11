@@ -7,7 +7,6 @@ import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 
 const mutators = vi.hoisted(() => ({
   updateMutateAsync: vi.fn(),
-  deleteMutateAsync: vi.fn(),
   recrawlMutateAsync: vi.fn(),
   removeFromListMutateAsync: vi.fn(),
 }));
@@ -15,10 +14,6 @@ const mutators = vi.hoisted(() => ({
 vi.mock("@karakeep/shared-react/hooks/bookmarks", () => ({
   useUpdateBookmark: () => ({
     mutateAsync: mutators.updateMutateAsync,
-    isPending: false,
-  }),
-  useDeleteBookmark: () => ({
-    mutateAsync: mutators.deleteMutateAsync,
     isPending: false,
   }),
   useRecrawlBookmark: () => ({
@@ -55,7 +50,6 @@ describe("useBookmarkBulkMutations", () => {
     mutators.updateMutateAsync.mockImplementation((input) =>
       Promise.resolve({ id: input.bookmarkId }),
     );
-    mutators.deleteMutateAsync.mockResolvedValue({});
     mutators.recrawlMutateAsync.mockResolvedValue({});
     mutators.removeFromListMutateAsync.mockResolvedValue({});
   });
@@ -125,27 +119,6 @@ describe("useBookmarkBulkMutations", () => {
       bookmarkId: "b",
       archived: false,
     });
-  });
-
-  it("deletes selected actionable bookmarks with settled results", async () => {
-    const selected = [bookmark("a"), bookmark("b")];
-    mutators.deleteMutateAsync
-      .mockResolvedValueOnce({})
-      .mockRejectedValueOnce(new Error("failed"));
-    const { result } = renderHook(() =>
-      useBookmarkBulkMutations({ selectedBookmarks: selected }),
-    );
-
-    let settled: PromiseSettledResult<unknown>[] = [];
-    await act(async () => {
-      settled = await result.current.deleteSelectedBookmarksSettled();
-    });
-
-    expect(mutators.deleteMutateAsync).toHaveBeenCalledTimes(2);
-    expect(settled.map((item) => item.status)).toEqual([
-      "fulfilled",
-      "rejected",
-    ]);
   });
 
   it("recrawls only selected link bookmarks", async () => {

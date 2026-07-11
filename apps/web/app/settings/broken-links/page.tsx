@@ -8,6 +8,7 @@ import { ActionButton } from "@/components/ui/action-button";
 import FormattedDate from "@/components/ui/formatted-date";
 import { FullPageSpinner } from "@/components/ui/full-page-spinner";
 import { toast } from "@/components/ui/sonner";
+import { useUndoableBookmarkDeletion } from "@/lib/hooks/useUndoableBookmarkDeletion";
 import {
   Table,
   TableBody,
@@ -20,10 +21,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link as LinkIcon, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import {
-  useDeleteBookmark,
-  useRecrawlBookmark,
-} from "@karakeep/shared-react/hooks/bookmarks";
+import { useRecrawlBookmark } from "@karakeep/shared-react/hooks/bookmarks";
 import { useTRPC } from "@karakeep/shared-react/trpc";
 
 export default function BrokenLinksPage() {
@@ -35,20 +33,11 @@ export default function BrokenLinksPage() {
     api.bookmarks.getBrokenLinks.queryOptions(),
   );
 
-  const { mutate: deleteBookmark, isPending: isDeleting } = useDeleteBookmark({
-    onSuccess: () => {
-      toast({
-        description: t("toasts.bookmarks.deleted"),
-      });
-      queryClient.invalidateQueries(api.bookmarks.getBrokenLinks.pathFilter());
-    },
-    onError: () => {
-      toast({
-        description: t("common.something_went_wrong"),
-        variant: "destructive",
-      });
-    },
-  });
+  const { scheduleDelete, pendingBookmarkIds } = useUndoableBookmarkDeletion();
+  const visibleBookmarks =
+    data?.bookmarks.filter(
+      (bookmark) => !pendingBookmarkIds.includes(bookmark.id),
+    ) ?? [];
 
   const { mutate: recrawlBookmark, isPending: isRecrawling } =
     useRecrawlBookmark({
@@ -75,12 +64,12 @@ export default function BrokenLinksPage() {
     >
       <SettingsSection>
         {isPending && <FullPageSpinner />}
-        {!isPending && data && data.bookmarks.length == 0 && (
+        {!isPending && data && visibleBookmarks.length == 0 && (
           <p className="rounded-md bg-muted p-3 text-center text-sm text-muted-foreground">
             No broken links found
           </p>
         )}
-        {!isPending && data && data.bookmarks.length > 0 && (
+        {!isPending && data && visibleBookmarks.length > 0 && (
           <Table className="whitespace-nowrap">
             <TableHeader>
               <TableRow>
@@ -96,7 +85,7 @@ export default function BrokenLinksPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.bookmarks.map((b) => (
+              {visibleBookmarks.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell>{b.url}</TableCell>
                   <TableCell>
@@ -124,8 +113,8 @@ export default function BrokenLinksPage() {
                     </ActionButton>
                     <ActionButton
                       variant="ghostDestructive"
-                      onClick={() => deleteBookmark({ bookmarkId: b.id })}
-                      loading={isDeleting}
+                      onClick={() => scheduleDelete(b.id)}
+                      loading={pendingBookmarkIds.includes(b.id)}
                       className="flex items-center gap-2"
                     >
                       <Trash2 className="size-4" />

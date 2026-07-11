@@ -68,16 +68,16 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
     clientConfig.auth.disablePasswordAuth
   ) {
     return (
-      <Card className="w-full">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
-            Sign Up Unavailable
+      <Card className="w-full rounded-2xl border-border/70 bg-card/95 shadow-xl backdrop-blur">
+        <CardHeader className="space-y-2 px-5 pb-3 pt-6 text-center sm:px-7 sm:pt-7">
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            Sign up unavailable
           </CardTitle>
           <CardDescription>
-            Account registration is currently disabled
+            Account registration is currently disabled.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5 px-5 pb-6 sm:px-7 sm:pb-7">
           <div className="space-y-4">
             <Alert>
               <UserX className="h-4 w-4" />
@@ -96,16 +96,16 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">
-          Create Your Account
+    <Card className="w-full rounded-2xl border-border/70 bg-card/95 shadow-xl backdrop-blur">
+      <CardHeader className="space-y-2 px-5 pb-3 pt-6 text-center sm:px-7 sm:pt-7">
+        <CardTitle className="text-2xl font-semibold tracking-tight">
+          Create your account
         </CardTitle>
         <CardDescription>
-          Join Karakeep to start organizing your bookmarks
+          Save and organize what matters to you.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-5 px-5 pb-6 sm:px-7 sm:pb-7">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(async (value) => {
@@ -161,7 +161,7 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
                 router.replace(redirectUrl);
               }
             })}
-            className="space-y-4"
+            className="space-y-5"
           >
             {errorMessage && (
               <Alert variant="destructive">
@@ -179,6 +179,7 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
                   <FormControl>
                     <Input
                       type="text"
+                      autoComplete="name"
                       placeholder="Enter your full name"
                       {...field}
                     />
@@ -197,6 +198,7 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
                   <FormControl>
                     <Input
                       type="email"
+                      autoComplete="email"
                       placeholder="Enter your email"
                       {...field}
                     />
@@ -215,6 +217,7 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
                   <FormControl>
                     <Input
                       type="password"
+                      autoComplete="new-password"
                       placeholder="Create a password"
                       {...field}
                     />
@@ -233,6 +236,7 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
                   <FormControl>
                     <Input
                       type="password"
+                      autoComplete="new-password"
                       placeholder="Confirm your password"
                       {...field}
                     />
@@ -279,7 +283,7 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
               loading={
                 form.formState.isSubmitting || createUserMutation.isPending
               }
-              className="w-full"
+              className="h-11 w-full"
             >
               Sign up
             </ActionButton>
@@ -319,11 +323,11 @@ export default function SignUpForm({ redirectUrl }: SignUpFormProps) {
         </Form>
 
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
               href="/signin"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="rounded-sm font-medium text-primary underline-offset-4 transition-colors hover:text-primary/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Sign in
             </Link>

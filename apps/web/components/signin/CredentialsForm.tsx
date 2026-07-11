@@ -22,8 +22,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const signInSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Enter your email address")
+    .email("Enter a valid email address"),
+  password: z.string().min(1, "Enter your password"),
 });
 
 const SIGNIN_FAILED = "Incorrect email or password";
@@ -70,7 +74,7 @@ export default function CredentialsForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(async (value) => {
@@ -93,7 +97,7 @@ export default function CredentialsForm() {
             }
             router.replace("/");
           })}
-          className="space-y-4"
+          className="space-y-5"
         >
           {signinError && (
             <Alert variant="destructive">
@@ -111,7 +115,9 @@ export default function CredentialsForm() {
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="Enter your email"
+                    autoComplete="email"
+                    autoFocus
+                    placeholder="you@example.com"
                     {...field}
                   />
                 </FormControl>
@@ -129,6 +135,7 @@ export default function CredentialsForm() {
                 <FormControl>
                   <Input
                     type="password"
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     {...field}
                   />
@@ -142,7 +149,7 @@ export default function CredentialsForm() {
             ignoreDemoMode
             type="submit"
             loading={form.formState.isSubmitting}
-            className="w-full"
+            className="h-11 w-full"
           >
             Sign In
           </ActionButton>
@@ -150,7 +157,7 @@ export default function CredentialsForm() {
           <div className="text-center">
             <Link
               href="/forgot-password"
-              className="text-sm text-muted-foreground underline hover:text-primary"
+              className="rounded-sm text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Forgot your password?
             </Link>
@@ -159,11 +166,11 @@ export default function CredentialsForm() {
       </Form>
 
       <div className="text-center">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="rounded-sm font-medium text-primary underline-offset-4 transition-colors hover:text-primary/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Sign up
           </Link>

@@ -5,11 +5,8 @@ import { formatLocalDate } from "@/lib/date-format";
 import { useTranslation } from "@/lib/i18n/client";
 
 /**
- * Renders a date formatted on the client side to ensure the user's local
- * timezone is used.  Returns an empty string during SSR so that we never
- * render a server-timezone date and avoids hydration mismatches.
- *
- * The default `formatStr` produces output like "Jan 5, 2025, 3:42 PM".
+ * Renders a date formatted in Asia/Jakarta on the client to avoid
+ * server-rendered timezone differences and hydration mismatches.
  */
 export default function FormattedDate({
   date,

@@ -20,8 +20,8 @@ import {
 import { CircleHelp } from "lucide-react";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import { useDoBookmarkSearch } from "@/lib/hooks/bookmark-search";
 import { useTranslation } from "@/lib/i18n/client";
@@ -195,7 +195,7 @@ const SearchInput = React.forwardRef<
               }
             }}
           >
-            <PopoverTrigger asChild>
+            <PopoverAnchor asChild>
               <div className="relative">
                 <CommandInput
                   ref={inputRef}
@@ -210,7 +210,7 @@ const SearchInput = React.forwardRef<
                   {...props}
                 />
               </div>
-            </PopoverTrigger>
+            </PopoverAnchor>
             <PopoverContent
               className="p-0"
               style={{ width: "var(--radix-popover-trigger-width)" }}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import GlobalActions from "@/components/dashboard/GlobalActions";
 import ProfileOptions from "@/components/dashboard/header/ProfileOptions";
+import ProcessingStatusIndicator from "@/components/dashboard/header/ProcessingStatusIndicator";
 import { SearchInput } from "@/components/dashboard/search/SearchInput";
 import KarakeepLogo from "@/components/KarakeepIcon";
 import { getServerAuthSession } from "@/server/auth";
@@ -30,6 +31,7 @@ export default async function Header() {
           <GlobalActions />
         </div>
         <div className="ml-1 flex shrink-0 items-center sm:ml-2">
+          <ProcessingStatusIndicator />
           <ProfileOptions />
         </div>
       </div>

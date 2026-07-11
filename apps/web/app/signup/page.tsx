@@ -25,10 +25,14 @@ export default async function SignUpPage({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
+    <div className="bg-linear-to-b from-sidebar/70 relative flex min-h-svh items-center justify-center overflow-hidden via-background to-background px-4 py-10 sm:px-6">
+      <div
+        aria-hidden
+        className="bg-radial from-primary/12 pointer-events-none absolute inset-x-0 top-0 h-80 to-transparent blur-3xl"
+      />
+      <div className="relative w-full max-w-md space-y-6">
         <div className="flex items-center justify-center">
-          <KarakeepLogo height={80} />
+          <KarakeepLogo height={72} />
         </div>
         <SignUpForm redirectUrl={redirectUrl} />
       </div>

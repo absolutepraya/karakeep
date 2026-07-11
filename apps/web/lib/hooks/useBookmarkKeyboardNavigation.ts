@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth/client";
 import useBulkActionsStore from "@/lib/bulkActions";
 import { useBookmarkBulkMutations } from "@/lib/hooks/useBookmarkBulkActions";
+import { useUndoableBookmarkDeletion } from "@/lib/hooks/useUndoableBookmarkDeletion";
 import { useKeyboardNavigationStore } from "@/lib/store/useKeyboardNavigationStore";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
@@ -460,8 +461,6 @@ function useBookmarkDeleteHotkeys({
   deleteDialogOpen,
   hasBulkSelection,
   isNavigating,
-  deleteBookmarkMutator,
-  deleteSelectedBookmarksSettled,
   selectedOwnedBookmarks,
   setDeleteDialogOpen,
   withOwnedFocusedBookmark,
@@ -470,19 +469,12 @@ function useBookmarkDeleteHotkeys({
   deleteDialogOpen: boolean;
   hasBulkSelection: boolean;
   isNavigating: boolean;
-  deleteBookmarkMutator: ReturnType<
-    typeof useBookmarkBulkMutations
-  >["deleteBookmarkMutator"];
-  deleteSelectedBookmarksSettled: ReturnType<
-    typeof useBookmarkBulkMutations
-  >["deleteSelectedBookmarksSettled"];
   selectedOwnedBookmarks: () => ZBookmark[];
   setDeleteDialogOpen: (open: boolean) => void;
   withOwnedFocusedBookmark: (action: (bookmark: ZBookmark) => void) => void;
 }) {
-  const { t } = useTranslation();
+  const { scheduleDelete, scheduleDeletes } = useUndoableBookmarkDeletion();
   const bulkActionsStore = useBulkActionsStore();
-  const [isBulkDeletePending, setIsBulkDeletePending] = useState(false);
   const modalBookmarkIdRef = useRef<string | null>(null);
 
   const openDeleteDialog = useCallback(() => {
@@ -515,53 +507,30 @@ function useBookmarkDeleteHotkeys({
   const isBulkDelete = deleteDialogOpen && modalBookmarkIdRef.current === null;
   const deleteCount = isBulkDelete ? selectedOwnedBookmarks().length : 1;
 
-  const confirmDelete = useCallback(async () => {
+  const confirmDelete = useCallback(() => {
     if (isBulkDelete) {
-      setIsBulkDeletePending(true);
-      const results = await deleteSelectedBookmarksSettled();
-      const deletedCount = results.filter(
-        (result) => result.status === "fulfilled",
-      ).length;
-      const failedCount = results.length - deletedCount;
-      if (deletedCount > 0) {
-        toast.success(t("toasts.bookmarks.deleted"));
-      }
-      if (failedCount > 0) {
-        toast.error(t("common.something_went_wrong"));
-      }
-      setIsBulkDeletePending(false);
-      if (failedCount === 0) {
-        setDeleteDialogOpen(false);
-        bulkActionsStore.setIsBulkEditEnabled(false);
-      }
+      scheduleDeletes(selectedOwnedBookmarks().map((bookmark) => bookmark.id));
+      setDeleteDialogOpen(false);
+      bulkActionsStore.setIsBulkEditEnabled(false);
     } else if (modalBookmarkIdRef.current) {
-      deleteBookmarkMutator.mutate(
-        {
-          bookmarkId: modalBookmarkIdRef.current,
-        },
-        {
-          onSuccess: () => {
-            toast.success(t("toasts.bookmarks.deleted"));
-            setDeleteDialogOpen(false);
-          },
-        },
-      );
+      scheduleDelete(modalBookmarkIdRef.current);
+      setDeleteDialogOpen(false);
     }
   }, [
     bulkActionsStore,
-    deleteBookmarkMutator,
-    deleteSelectedBookmarksSettled,
     isBulkDelete,
-    t,
+    scheduleDelete,
+    scheduleDeletes,
+    selectedOwnedBookmarks,
+    setDeleteDialogOpen,
   ]);
-
   return {
     deleteDialogOpen,
     setDeleteDialogOpen,
     isBulkDelete,
     deleteCount,
     confirmDelete,
-    isDeletePending: deleteBookmarkMutator.isPending || isBulkDeletePending,
+    isDeletePending: false,
   };
 }
 
@@ -640,18 +609,14 @@ export function useBookmarkKeyboardNavigation({
     },
     [bulkActionsStore, enableBulkEdit],
   );
-  const {
-    updateBookmarkMutator,
-    deleteBookmarkMutator,
-    setSelectedBookmarksToNextState,
-    deleteSelectedBookmarksSettled,
-  } = useBookmarkBulkMutations({
-    selectedBookmarks,
-    selectedActionableBookmarks,
-    onError: () => {
-      toast.error(t("common.something_went_wrong"));
-    },
-  });
+  const { updateBookmarkMutator, setSelectedBookmarksToNextState } =
+    useBookmarkBulkMutations({
+      selectedBookmarks,
+      selectedActionableBookmarks,
+      onError: () => {
+        toast.error(t("common.something_went_wrong"));
+      },
+    });
 
   const focusNavigation = useBookmarkFocusNavigation({
     bookmarks,
@@ -705,8 +670,6 @@ export function useBookmarkKeyboardNavigation({
     deleteDialogOpen,
     hasBulkSelection,
     isNavigating: focusNavigation.isNavigating,
-    deleteBookmarkMutator,
-    deleteSelectedBookmarksSettled,
     selectedOwnedBookmarks: selectedActionableBookmarks,
     setDeleteDialogOpen,
     withOwnedFocusedBookmark,

@@ -3,22 +3,20 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: pnpm prod:pull-state [--yes] [--db-only] [--skip-migrate]
+Usage: pnpm prod:pull-state [--dry-run] [--skip-migrate]
 
-Pull production Karakeep persisted state from the VPS into local development.
+Pull production Karakeep persisted state, including all assets, into local development.
 
 Options:
-  --yes           Replace local state. Without this, only print the plan.
-  --db-only       Pull only db.db, db.db-wal, and db.db-shm.
+  --dry-run       Print the replacement plan without changing local state.
   --skip-migrate  Do not run pnpm db:migrate after restore.
-  -h, --help      Show this help.
 USAGE
 }
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="$repo_root/.env"
 mode="full"
-confirm="false"
+dry_run="false"
 skip_migrate="false"
 
 die() {
@@ -32,11 +30,8 @@ quote_remote() {
 
 while (($# > 0)); do
   case "$1" in
-    --yes)
-      confirm="true"
-      ;;
-    --db-only)
-      mode="db-only"
+    --dry-run)
+      dry_run="true"
       ;;
     --skip-migrate)
       skip_migrate="true"
@@ -100,10 +95,10 @@ Prod state pull plan
   run migrations: $([[ "$skip_migrate" == "true" ]] && printf 'no' || printf 'yes')
 PLAN
 
-if [[ "$confirm" != "true" ]]; then
+if [[ "$dry_run" == "true" ]]; then
   cat <<'DRYRUN'
 
-Dry run only. Re-run with --yes to replace local development state.
+Dry run only. Re-run without --dry-run to replace local development state.
 DRYRUN
   exit 0
 fi
@@ -146,32 +141,11 @@ trap cleanup_remote EXIT
 docker compose pause "$service" >/dev/null
 paused="true"
 
-if [ "$mode" = "db-only" ]; then
-  docker run --rm --volumes-from "$container_id":ro "$export_image" sh -c '"'"'
-    set -eu
-    cd /data
-    found="false"
-    files=""
-    for file in db.db db.db-wal db.db-shm; do
-      if [ -e "$file" ]; then
-        found="true"
-        files="$files $file"
-      fi
-    done
-    if [ "$found" != "true" ]; then
-      echo "error: no sqlite database files found in /data" >&2
-      exit 1
-    fi
-    # shellcheck disable=SC2086
-    tar -cf - $files
-  '"'"'
-else
-  docker run --rm --volumes-from "$container_id":ro "$export_image" sh -c '"'"'
-    set -eu
-    cd /data
-    tar -cf - .
-  '"'"'
-fi
+docker run --rm --volumes-from "$container_id":ro "$export_image" sh -c '"'"'
+  set -eu
+  cd /data
+  tar -cf - .
+'"'"'
 '
 
 printf 'Downloading prod %s state...\n' "$mode"
@@ -192,18 +166,7 @@ if [[ -e "$data_dir" ]]; then
   mv "$data_dir" "$backup_dir"
 fi
 
-if [[ "$mode" == "db-only" ]]; then
-  mkdir -p "$data_dir"
-  if [[ -d "$backup_dir" ]]; then
-    rsync -a "$backup_dir"/ "$data_dir"/
-  fi
-  rm -f "$data_dir"/db.db "$data_dir"/db.db-wal "$data_dir"/db.db-shm
-  for file in db.db db.db-wal db.db-shm; do
-    [[ -e "$restore_dir/$file" ]] && mv "$restore_dir/$file" "$data_dir/$file"
-  done
-else
-  mv "$restore_dir" "$data_dir"
-fi
+mv "$restore_dir" "$data_dir"
 
 printf 'Restored prod %s state to %s\n' "$mode" "$data_dir"
 if [[ -d "$backup_dir" ]]; then

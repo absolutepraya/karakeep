@@ -1,5 +1,35 @@
 import { format } from "date-fns";
 
+const JAKARTA_TIME_ZONE = "Asia/Jakarta";
+const jakartaDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: JAKARTA_TIME_ZONE,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+  hourCycle: "h23",
+});
+
+function toJakartaWallTime(date: Date) {
+  const parts = new Map(
+    jakartaDateTimeFormatter
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+
+  return new Date(
+    Number(parts.get("year")),
+    Number(parts.get("month")) - 1,
+    Number(parts.get("day")),
+    Number(parts.get("hour")),
+    Number(parts.get("minute")),
+    Number(parts.get("second")),
+    date.getMilliseconds(),
+  );
+}
+
 export function normalizeI18nLanguage(language: string | undefined) {
   if (!language) {
     return undefined;
@@ -21,10 +51,16 @@ export function formatLocalDate(
 
   const formatWithIntl = (options: Intl.DateTimeFormatOptions) => {
     try {
-      return new Intl.DateTimeFormat(locale, options).format(date);
+      return new Intl.DateTimeFormat(locale, {
+        ...options,
+        timeZone: JAKARTA_TIME_ZONE,
+      }).format(date);
     } catch (error) {
       if (error instanceof RangeError) {
-        return new Intl.DateTimeFormat(undefined, options).format(date);
+        return new Intl.DateTimeFormat(undefined, {
+          ...options,
+          timeZone: JAKARTA_TIME_ZONE,
+        }).format(date);
       }
 
       throw error;
@@ -44,5 +80,5 @@ export function formatLocalDate(
     });
   }
 
-  return format(date, formatStr);
+  return format(toJakartaWallTime(date), formatStr);
 }

@@ -6,6 +6,7 @@ import {
   bookmarks,
   rssFeedImportsTable,
   tagsOnBookmarks,
+  importSessions,
   users,
 } from "@karakeep/db/schema";
 import * as sharedServer from "@karakeep/shared-server";
@@ -72,6 +73,44 @@ describe("Bookmark Routes", () => {
     expect(res.favourited).toEqual(false);
     expect(res.archived).toEqual(false);
     expect(res.content.type).toEqual(BookmarkTypes.LINK);
+  });
+
+  test<CustomTestContext>("returns only the current account's active processing work", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].bookmarks;
+    const user = await apiCallers[0].users.whoami();
+
+    await api.createBookmark({
+      url: "https://pending.example",
+      type: BookmarkTypes.LINK,
+    });
+    await api.createBookmark({
+      text: "Pending text bookmark",
+      type: BookmarkTypes.TEXT,
+    });
+    await db.insert(importSessions).values({
+      name: "Pending import",
+      userId: user.id,
+      status: "running",
+    });
+
+    await apiCallers[1].bookmarks.createBookmark({
+      url: "https://other-user.example",
+      type: BookmarkTypes.LINK,
+    });
+
+    await expect(api.getProcessingStatus()).resolves.toEqual({
+      total: 7,
+      tasks: [
+        { kind: "crawling", count: 1 },
+        { kind: "tagging", count: 2 },
+        { kind: "summarizing", count: 1 },
+        { kind: "embedding", count: 2 },
+        { kind: "importing", count: 1 },
+      ],
+    });
   });
 
   test<CustomTestContext>("api key with read scope can read bookmarks but not write", async ({
