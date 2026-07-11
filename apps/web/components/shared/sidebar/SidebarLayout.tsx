@@ -28,9 +28,9 @@ export default function SidebarLayout({
         <main className="flex-1 bg-background sm:min-h-0 sm:overflow-y-auto sm:rounded-tl-2xl sm:border-l sm:border-t sm:border-border/70">
           {serverConfig.demoMode && <DemoModeBanner />}
           {modal}
-          {/* Extra bottom padding on mobile so the floating nav never covers
-              the last row of content. */}
-          <div className="min-h-30 container p-4 pb-20 sm:p-5 sm:pb-5">
+          {/* Reserve the floating nav's height, gesture-safe-area inset, and a
+              small visual gap so the last mobile row can scroll clear of it. */}
+          <div className="min-h-30 container p-4 pb-[calc(env(safe-area-inset-bottom)+6.5rem)] sm:p-5 sm:pb-5">
             <ErrorBoundary fallback={<ErrorFallback />}>
               <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
             </ErrorBoundary>

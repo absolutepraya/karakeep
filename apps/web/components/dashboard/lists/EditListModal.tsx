@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,20 @@ import {
 import QueryExplainerTooltip from "../search/QueryExplainerTooltip";
 import { BookmarkListSelector } from "./BookmarkListSelector";
 
+export function resolveListParentId(
+  list: Pick<ZBookmarkList, "parentId"> | undefined,
+  prefill: Partial<Pick<ZBookmarkList, "parentId">> | undefined,
+  pathname: string,
+) {
+  if (list) {
+    return list.parentId;
+  }
+  if (prefill?.parentId !== undefined) {
+    return prefill.parentId;
+  }
+  return pathname.match(/^\/dashboard\/lists\/([^/]+)$/)?.[1];
+}
+
 export function EditListModal({
   open: userOpen,
   setOpen: userSetOpen,
@@ -74,6 +88,7 @@ export function EditListModal({
 }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const parentId = resolveListParentId(list, prefill, usePathname());
   if (
     (userOpen !== undefined && !userSetOpen) ||
     (userOpen === undefined && userSetOpen)
@@ -90,7 +105,7 @@ export function EditListModal({
       name: list?.name ?? prefill?.name ?? "",
       description: list?.description ?? prefill?.description ?? "",
       icon: list?.icon ?? prefill?.icon ?? "📁",
-      parentId: list?.parentId ?? prefill?.parentId,
+      parentId,
       type: list?.type ?? prefill?.type ?? "manual",
       query: list?.query ?? prefill?.query ?? undefined,
     },
@@ -105,7 +120,7 @@ export function EditListModal({
       name: list?.name ?? prefill?.name ?? "",
       description: list?.description ?? prefill?.description ?? "",
       icon: list?.icon ?? prefill?.icon ?? "📁",
-      parentId: list?.parentId ?? prefill?.parentId,
+      parentId,
       type: list?.type ?? prefill?.type ?? "manual",
       query: list?.query ?? prefill?.query ?? undefined,
     });
