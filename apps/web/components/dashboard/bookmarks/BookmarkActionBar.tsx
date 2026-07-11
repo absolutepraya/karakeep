@@ -18,8 +18,10 @@ import { FavouritedActionIcon } from "./icons";
 
 export default function BookmarkActionBar({
   bookmark,
+  alwaysVisibleOnDesktop = false,
 }: {
   bookmark: ZBookmark;
+  alwaysVisibleOnDesktop?: boolean;
 }) {
   const { t } = useTranslation();
   const { data: session } = useSession();
@@ -41,7 +43,12 @@ export default function BookmarkActionBar({
     "flex size-8 items-center justify-center rounded-full text-muted-foreground transition-[transform,background-color,color,opacity] duration-150 ease-(--ease-out) hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]";
 
   return (
-    <div className="pointer-coarse:opacity-100 ease-(--ease-out) pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 flex items-center gap-0.5 text-muted-foreground transition-opacity duration-150">
+    <div
+      className={cn(
+        "pointer-coarse:opacity-100 ease-(--ease-out) pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 flex items-center gap-0.5 text-muted-foreground transition-opacity duration-150",
+        alwaysVisibleOnDesktop && "sm:pointer-fine:opacity-100",
+      )}
+    >
       {canFavourite ? (
         <button
           type="button"

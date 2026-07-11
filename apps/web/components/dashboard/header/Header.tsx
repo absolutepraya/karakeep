@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import GlobalActions from "@/components/dashboard/GlobalActions";
 import ProfileOptions from "@/components/dashboard/header/ProfileOptions";
 import ProcessingStatusIndicator from "@/components/dashboard/header/ProcessingStatusIndicator";
 import { SearchInput } from "@/components/dashboard/search/SearchInput";
@@ -28,9 +27,8 @@ export default async function Header() {
           <div className="min-w-0 flex-1 lg:max-w-4xl">
             <SearchInput />
           </div>
-          <GlobalActions />
         </div>
-        <div className="ml-1 flex shrink-0 items-center sm:ml-2">
+        <div className="ml-3 flex shrink-0 items-center gap-2 sm:ml-4">
           <ProcessingStatusIndicator />
           <ProfileOptions />
         </div>

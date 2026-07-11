@@ -1,4 +1,5 @@
 import React from "react";
+import GlobalActions from "@/components/dashboard/GlobalActions";
 import Bookmarks from "@/components/dashboard/bookmarks/Bookmarks";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { useTranslation } from "@/lib/i18n/server";
@@ -10,7 +11,13 @@ export default async function BookmarksPage() {
 
   return (
     <Bookmarks
-      header={<PageHeader title={t("common.home")} icon={<Home />} />}
+      header={
+        <PageHeader
+          title={t("common.home")}
+          icon={<Home />}
+          titleAction={<GlobalActions />}
+        />
+      }
       query={{ archived: false }}
       showDivider={true}
       showEditorCard={true}

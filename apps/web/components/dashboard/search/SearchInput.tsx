@@ -7,7 +7,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -17,7 +16,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { CircleHelp } from "lucide-react";
 import {
   Popover,
   PopoverAnchor,
@@ -30,7 +28,6 @@ import { cn } from "@/lib/utils";
 import { useSearchHistory } from "@karakeep/shared-react/hooks/search-history";
 
 import { EditListModal } from "../lists/EditListModal";
-import QueryExplainerTooltip from "./QueryExplainerTooltip";
 import { useSearchAutocomplete } from "./useSearchAutocomplete";
 
 function useFocusSearchOnKeyPress(
@@ -267,29 +264,6 @@ const SearchInput = React.forwardRef<
       </div>
 
       <div className="hidden items-center gap-2 sm:flex">
-        {parsedSearchQuery.result === "invalid" ? (
-          <Link
-            href="https://docs.karakeep.app/Guides/search-query-language"
-            target="_blank"
-            className="ease-(--ease-out) shrink-0 rounded-lg border border-border/70 bg-background/80 p-2 text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-150 hover:bg-accent hover:text-foreground"
-          >
-            <CircleHelp className="size-4" />
-          </Link>
-        ) : (
-          <QueryExplainerTooltip
-            parsedSearchQuery={parsedSearchQuery}
-            trigger={
-              <Link
-                href="https://docs.karakeep.app/Guides/search-query-language"
-                target="_blank"
-                className="ease-(--ease-out) shrink-0 rounded-lg border border-border/70 bg-background/80 p-2 text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-150 hover:bg-accent hover:text-foreground"
-              >
-                <CircleHelp className="size-4" />
-              </Link>
-            }
-          />
-        )}
-
         {parsedSearchQuery.result === "full" &&
           parsedSearchQuery.text.length == 0 && (
             <>

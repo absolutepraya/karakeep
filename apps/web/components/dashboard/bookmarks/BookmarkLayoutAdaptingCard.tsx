@@ -411,7 +411,7 @@ function GridView({
               <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
             </Link>
             <div className="shrink-0 [&_a]:size-7 sm:[&_a]:size-8 [&_button]:size-7 sm:[&_button]:size-8 [&_svg]:size-3.5 sm:[&_svg]:size-4">
-              <BookmarkActionBar bookmark={bookmark} />
+              <BookmarkActionBar bookmark={bookmark} alwaysVisibleOnDesktop />
             </div>
           </div>
         </div>
