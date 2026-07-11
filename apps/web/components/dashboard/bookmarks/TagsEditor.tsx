@@ -316,36 +316,29 @@ export function TagsEditor({
                   {optimisticTags.map((tag) => (
                     <div
                       key={tag.id}
-                      className={cn(
-                        "flex min-h-8 space-x-1 rounded px-2",
-                        tag.attachedBy == "ai"
-                          ? "bg-purple-500 text-white"
-                          : "bg-accent",
-                      )}
+                      className="shadow-xs flex min-h-7 items-center gap-1.5 rounded-md border border-border/70 bg-muted px-2 py-1 text-xs font-medium text-foreground"
                     >
-                      <div className="m-auto flex gap-2">
-                        {tag.attachedBy === "ai" && (
-                          <Sparkles className="m-auto size-4" />
-                        )}
-                        {tag.name}
-                        {!isDisabled && (
-                          <button
-                            type="button"
-                            className="rounded-full outline-none ring-offset-background focus:ring-1 focus:ring-ring focus:ring-offset-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onChange({
-                                action: "remove-value",
-                                id: tag.id,
-                                name: tag.name,
-                              });
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                            <span className="sr-only">Remove {tag.name}</span>
-                          </button>
-                        )}
-                      </div>
+                      {tag.attachedBy === "ai" && (
+                        <Sparkles className="size-3 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="truncate">{tag.name}</span>
+                      {!isDisabled && (
+                        <button
+                          type="button"
+                          className="rounded-full text-muted-foreground outline-none ring-offset-background transition-colors hover:text-foreground focus:ring-1 focus:ring-ring focus:ring-offset-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onChange({
+                              action: "remove-value",
+                              id: tag.id,
+                              name: tag.name,
+                            });
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                          <span className="sr-only">Remove {tag.name}</span>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </>
