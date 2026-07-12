@@ -2,7 +2,8 @@ import { useState } from "react";
 import {
   Dialog,
   DialogClose,
-  ResponsiveDialogContent,
+  DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -35,26 +36,28 @@ export default function ActionConfirmingDialog({
   return (
     <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <ResponsiveDialogContent className="gap-0 p-0">
+      <DialogContent className="bottom-0 left-0 top-auto max-h-[calc(var(--vvh)-0.75rem)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-0 shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[calc(var(--vvo)+var(--vvh)/2)] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border">
         <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-6 text-left sm:px-6">
           <DialogTitle className="text-xl font-semibold tracking-tight">
             {title}
           </DialogTitle>
         </DialogHeader>
-        <div className="px-5 py-4 text-sm text-muted-foreground sm:px-6 sm:py-5">
-          {description}
+        <div className="px-5 py-4 sm:px-6 sm:py-5">
+          <DialogDescription className="leading-6">
+            {description}
+          </DialogDescription>
         </div>
         <div className="sticky bottom-0 flex gap-2 border-t border-border/70 bg-card px-5 py-4 sm:px-6">
           <DialogClose asChild>
             <Button type="button" variant="secondary" className="h-11 flex-1">
-              {t("actions.close")}
+              {t("actions.cancel")}
             </Button>
           </DialogClose>
           <div className="flex-1 [&>button]:h-11 [&>button]:w-full">
             {actionButton(setDialogOpen)}
           </div>
         </div>
-      </ResponsiveDialogContent>
+      </DialogContent>
     </Dialog>
   );
 }
