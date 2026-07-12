@@ -56,6 +56,7 @@ data
 **/public/sw.js.map
 **/public/workbox-*.js.map
 **/public/worker-*.js.map
+!apps/web/public/sw.js
 
 # Turbo
 .turbo
@@ -83,6 +84,7 @@ jean.json
 
 # superpowers brainstorm artifacts
 .superpowers/
+.worktrees/
 
 # local browser automation artifacts
 .playwright-mcp/

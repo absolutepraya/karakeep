@@ -43,3 +43,17 @@ _Avoid_: Wi-Fi-only thumbnail sync, manual cellular approval
 **Local-only search**:
 Offline search over fields stored in the offline library: bookmark title, URL, note or text content, tags, summaries, lists, and metadata. It does not claim to search archived pages or PDFs that were not replicated.
 _Avoid_: offline full-text parity, disabled offline search
+
+## Lightweight deployment
+
+**Screenshot-first capture**:
+A bookmark-capture policy that treats a rendered page screenshot as the essential automated artifact. Reader-mode extraction, PDF capture, and full-page archival are optional and may be disabled to reduce deployment cost.
+_Avoid_: full archival, browserless-only capture
+
+**Shared screenshot renderer**:
+A single Browserless Chrome service on the VPS that provides rendered screenshot sessions to Karakeep and RSSHub over an isolated Docker network. It is capacity-governed rather than embedded in either application deployment.
+_Avoid_: application-owned Chrome container, public renderer endpoint
+
+**Capacity-managed capture**:
+Screenshot jobs wait for the shared renderer and retry after a bounded capacity or timeout failure. A bookmark is saved independently of screenshot completion.
+_Avoid_: fail-fast screenshot capture, reserved renderer capacity
