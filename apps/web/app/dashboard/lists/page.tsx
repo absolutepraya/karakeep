@@ -16,16 +16,15 @@ export default async function ListsPage() {
       <PageHeader
         title={t("lists.all_lists")}
         icon={<ClipboardList />}
-        meta={
-          <>
+        titleAction={
+          <div className="flex flex-col items-end text-right text-xs leading-4 text-muted-foreground">
             <span>
               {t("lists.summary_list", { count: lists.lists.length })}
             </span>
-            <span aria-hidden>·</span>
             <span>
               {t("lists.summary_bookmark", { count: stats.numBookmarks })}
             </span>
-          </>
+          </div>
         }
       />
       <PendingInvitationsCard />
