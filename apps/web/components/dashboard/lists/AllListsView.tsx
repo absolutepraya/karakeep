@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { CollapsibleTriggerChevron } from "@/components/ui/collapsible";
@@ -50,9 +51,17 @@ function ListRow({
   collapsible: boolean;
   itemCount?: number;
 }) {
+  const pathname = usePathname();
+  const isActive = path === pathname;
+
   return (
     <div
-      className="group/list-row flex items-center justify-between gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-accent"
+      className={cn(
+        "group/list-row relative flex items-center justify-between gap-2 overflow-hidden rounded-xl px-2 py-1 transition-[background-color,color,box-shadow,ring-color] duration-150",
+        isActive
+          ? "bg-primary/[0.07] text-foreground shadow-inner shadow-primary/10 ring-1 ring-inset ring-primary/30"
+          : "hover:bg-primary/[0.05] hover:shadow-inner hover:shadow-primary/10",
+      )}
       style={{ marginLeft: `${level * 1.25}rem` }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -91,7 +100,7 @@ function ListRow({
             <Button
               size="none"
               variant="ghost"
-              className="pointer-coarse:static pointer-coarse:opacity-100 absolute inset-y-0 right-0 my-auto flex size-7 items-center justify-center rounded-lg opacity-0 focus-visible:opacity-100 group-hover/list-row:opacity-100"
+              className="pointer-coarse:static pointer-coarse:opacity-100 absolute inset-y-0 right-0 my-auto flex size-7 items-center justify-center rounded-none rounded-r-xl bg-transparent opacity-0 hover:bg-transparent focus-visible:opacity-100 focus-visible:ring-inset group-hover/list-row:opacity-100"
             >
               <MoreHorizontal className="size-4" />
             </Button>
