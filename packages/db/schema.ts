@@ -961,6 +961,50 @@ export const importStagingBookmarks = sqliteTable(
   ],
 );
 
+export const offlineSyncEvents = sqliteTable(
+  "offlineSyncEvents",
+  {
+    sequence: integer("sequence").primaryKey({ autoIncrement: true }),
+    userId: text("userId").notNull(),
+    entityType: text("entityType").notNull(),
+    entityId: text("entityId").notNull(),
+    operation: text("operation").notNull(),
+    changedFields: text("changedFields", { mode: "json" })
+      .$type<string[]>()
+      .notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  },
+  (ose) => [
+    index("offlineSyncEvents_userId_sequence_idx").on(
+      ose.userId,
+      ose.sequence,
+    ),
+  ],
+);
+
+export const offlineSyncFieldVersions = sqliteTable(
+  "offlineSyncFieldVersions",
+  {
+    bookmarkId: text("bookmarkId")
+      .notNull()
+      .references(() => bookmarks.id, { onDelete: "cascade" }),
+    field: text("field").notNull(),
+    version: integer("version").notNull(),
+  },
+  (osfv) => [primaryKey({ columns: [osfv.bookmarkId, osfv.field] })],
+);
+
+export const offlineSyncMutationReceipts = sqliteTable(
+  "offlineSyncMutationReceipts",
+  {
+    userId: text("userId").notNull(),
+    idempotencyKey: text("idempotencyKey").notNull(),
+    result: text("result", { mode: "json" }).$type<unknown>().notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  },
+  (osmr) => [primaryKey({ columns: [osmr.userId, osmr.idempotencyKey] })],
+);
+
 // Relations
 
 export const userRelations = relations(users, ({ many, one }) => ({
