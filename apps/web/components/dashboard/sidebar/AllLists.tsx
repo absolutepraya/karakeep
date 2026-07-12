@@ -165,7 +165,7 @@ function DroppableListSidebarItem({
           <Button
             size="none"
             variant="ghost"
-            className="relative h-8 min-w-8 shrink-0 rounded-r-[inherit] px-1.5"
+            className="relative h-8 min-w-8 shrink-0 rounded-none rounded-r-xl bg-transparent px-1.5 hover:bg-transparent focus-visible:ring-inset"
           >
             <MoreHorizontal
               className={cn(

@@ -40,11 +40,12 @@ export default function SidebarItem({
   return (
     <li
       className={cn(
-        "ease-(--ease-out) group relative flex min-w-0 items-center justify-between overflow-hidden rounded-xl text-sm transition-[background-color,color,box-shadow] duration-150",
+        "ease-(--ease-out) group relative flex min-w-0 items-center justify-between overflow-hidden rounded-xl text-sm transition-[background-color,color,box-shadow,ring-color] duration-150",
         isActive
           ? "shadow-xs bg-background text-foreground"
           : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-        dropHighlight && "bg-accent ring-2 ring-primary",
+        dropHighlight &&
+          "bg-primary/10 text-foreground shadow-inner shadow-primary/20 ring-1 ring-inset ring-primary/60",
         className,
       )}
       style={style}
