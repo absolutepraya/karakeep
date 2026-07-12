@@ -214,6 +214,43 @@ test("applies deletion events and advances the replica cursor together", async (
   });
 });
 
+test("does not establish a replica cursor from an empty cold delta", async () => {
+  await applyEvents([], "13");
+
+  await expect(offlineLibraryDb.metadata.toArray()).resolves.toEqual([
+    { key: "replicaState", value: "stale" },
+  ]);
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    cursor: null,
+    bookmarks: [],
+  });
+});
+
+test("does not establish a replica cursor from a deletion-only cold delta", async () => {
+  await applyEvents(
+    [
+      {
+        sequence: 13,
+        userId: "user-1",
+        entityType: "bookmark",
+        entityId: "bookmark-1",
+        operation: "delete",
+        changedFields: [],
+        createdAt: new Date("2026-07-13T00:00:00Z"),
+      },
+    ],
+    "13",
+  );
+
+  await expect(offlineLibraryDb.metadata.toArray()).resolves.toEqual([
+    { key: "replicaState", value: "stale" },
+  ]);
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    cursor: null,
+    bookmarks: [],
+  });
+});
+
 test("preserves stale state across empty delta batches", async () => {
   const updateEvent: ZOfflineSyncEvent = {
     sequence: 13,

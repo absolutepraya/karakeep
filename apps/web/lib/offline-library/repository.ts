@@ -119,16 +119,20 @@ export async function applyEvents(
           ]);
         }),
       );
-      await offlineLibraryDb.metadata.bulkPut([
-        { key: SYNC_CURSOR_KEY, value: cursor },
-        {
-          key: REPLICA_STATE_KEY,
-          value:
-            replicaState?.value === "stale" || hasUnmaterializedEvents
-              ? "stale"
-              : replicaState?.value ?? "ready",
-        },
-      ]);
+      const nextReplicaState =
+        replicaState?.value === "ready" && !hasUnmaterializedEvents
+          ? "ready"
+          : "stale";
+      await offlineLibraryDb.metadata.put({
+        key: REPLICA_STATE_KEY,
+        value: nextReplicaState,
+      });
+      if (replicaState) {
+        await offlineLibraryDb.metadata.put({
+          key: SYNC_CURSOR_KEY,
+          value: cursor,
+        });
+      }
     },
   );
 }
