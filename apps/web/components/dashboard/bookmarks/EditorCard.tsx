@@ -1,5 +1,12 @@
 import type { SubmitErrorHandler, SubmitHandler } from "react-hook-form";
-import React, { useImperativeHandle, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { usePathname } from "next/navigation";
 import { BookmarkListSelector } from "@/components/dashboard/lists/BookmarkListSelector";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
@@ -25,6 +32,7 @@ import { z } from "zod";
 
 import { useCreateBookmarkWithPostHook } from "@karakeep/shared-react/hooks/bookmarks";
 import { useAddBookmarkToList } from "@karakeep/shared-react/hooks/lists";
+import { useBookmarkListContext } from "@karakeep/shared-react/hooks/bookmark-list-context";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
 import { useUploadAsset } from "../UploadDropzone";
@@ -68,6 +76,8 @@ export default function EditorCard({
   const { t } = useTranslation();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const listContext = useBookmarkListContext();
 
   const demoMode = !!useClientConfig().demoMode;
   const bookmarkLayout = useBookmarkLayout();
@@ -96,6 +106,16 @@ export default function EditorCard({
     setSelectedListId(listId);
     selectedListIdRef.current = listId;
   };
+
+  const currentListId =
+    listContext?.type === "manual"
+      ? listContext.id
+      : (pathname?.match(/^\/dashboard\/lists\/([^/]+)$/)?.[1] ?? null);
+
+  useEffect(() => {
+    setSelectedListId(currentListId);
+    selectedListIdRef.current = currentListId;
+  }, [currentListId]);
 
   const { mutateAsync: addToList } = useAddBookmarkToList({
     onError: () => {
