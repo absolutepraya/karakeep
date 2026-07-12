@@ -68,6 +68,7 @@ import { getBookmarkIdsFromMatcher } from "../lib/search";
 import { Asset } from "../models/assets";
 import { BareBookmark, Bookmark } from "../models/bookmarks";
 import { WebhooksService } from "../models/webhooks.service";
+import { recordOfflineSyncEvent } from "../models/offlineSync";
 
 const bookmarksProcedure = createScopedAuthedProcedure("bookmarks");
 
@@ -362,6 +363,23 @@ export const bookmarksAppRouter = router({
             }
           }
 
+          await recordOfflineSyncEvent(
+            tx,
+            ctx.user.id,
+            "bookmark",
+            bookmark.id,
+            "create",
+            [
+              "title",
+              "archived",
+              "favourited",
+              "note",
+              "summary",
+              ...(input.type === BookmarkTypes.LINK ? ["url"] : []),
+              ...(input.type === BookmarkTypes.TEXT ? ["text"] : []),
+            ],
+          );
+
           return {
             alreadyExists: false,
             tags: [] as ZBookmarkTags[],
@@ -470,6 +488,19 @@ export const bookmarksAppRouter = router({
     .use(ensureBookmarkOwnership)
     .mutation(async ({ input, ctx }) => {
       await ctx.db.transaction(async (tx) => {
+      const offlineChangedFields = [
+        ...(input.title !== undefined ? ["title"] : []),
+        ...(input.archived !== undefined ? ["archived"] : []),
+        ...(input.favourited !== undefined ? ["favourited"] : []),
+        ...(input.note !== undefined ? ["note"] : []),
+        ...(input.summary !== undefined ? ["summary"] : []),
+        ...(input.url !== undefined ? ["url"] : []),
+        ...(input.description !== undefined ? ["description"] : []),
+        ...(input.author !== undefined ? ["author"] : []),
+        ...(input.publisher !== undefined ? ["publisher"] : []),
+        ...(input.text !== undefined ? ["text"] : []),
+      ];
+
         let somethingChanged = false;
 
         // Update link-specific fields if any are provided
@@ -593,6 +624,16 @@ export const bookmarksAppRouter = router({
               ),
             );
         }
+        if (offlineChangedFields.length > 0) {
+          await recordOfflineSyncEvent(
+            tx,
+            ctx.user.id,
+            "bookmark",
+            input.bookmarkId,
+            "update",
+            offlineChangedFields,
+          );
+        }
       });
 
       // Refetch the updated bookmark data to return the full object
@@ -685,6 +726,14 @@ export const bookmarksAppRouter = router({
               eq(bookmarks.userId, ctx.user.id),
             ),
           );
+        await recordOfflineSyncEvent(
+          tx,
+          ctx.user.id,
+          "bookmark",
+          input.bookmarkId,
+          "update",
+          ["text"],
+        );
       });
       await Promise.all([
         triggerSearchReindex(input.bookmarkId, {
@@ -709,6 +758,16 @@ export const bookmarksAppRouter = router({
       addLogFields<"bookmark.delete">({ "bookmark.id": input.bookmarkId });
       const bookmark = await Bookmark.fromId(ctx, input.bookmarkId, false);
       await bookmark.delete();
+      await ctx.db.transaction(async (tx) => {
+        await recordOfflineSyncEvent(
+          tx,
+          ctx.user.id,
+          "bookmark",
+          input.bookmarkId,
+          "delete",
+          [],
+        );
+      });
     }),
   recrawlBookmark: bookmarksProcedure
     .use(
@@ -1213,6 +1272,14 @@ export const bookmarksAppRouter = router({
                 eq(bookmarks.userId, ctx.user.id),
               ),
             );
+          await recordOfflineSyncEvent(
+            tx,
+            ctx.user.id,
+            "bookmark",
+            input.bookmarkId,
+            "update",
+            ["tags"],
+          );
         }
 
         return {

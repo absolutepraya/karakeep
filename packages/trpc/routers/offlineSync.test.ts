@@ -1,11 +1,17 @@
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
+import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import {
   zOfflineSyncPullInputSchema,
   zOfflineSyncPushInputSchema,
 } from "@karakeep/shared/types/offlineSync";
+import type { CustomTestContext } from "../testUtils";
+import { defaultBeforeEach } from "../testUtils";
+
+beforeEach<CustomTestContext>(defaultBeforeEach(true));
 
 describe("offline sync contracts", () => {
+
   test("accepts a field-versioned bookmark update", () => {
     expect(
       zOfflineSyncPushInputSchema.parse({
@@ -96,5 +102,173 @@ describe("offline sync contracts", () => {
         mutations: [{ ...mutation, baseVersions: { title: 7, note: 2 } }],
       }),
     ).toThrow();
+  });
+});
+
+describe("Offline sync routes", () => {
+  test<CustomTestContext>("pull returns only the caller's events after its cursor", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const other = apiCallers[1];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "offline library record",
+    });
+    const privateBookmark = await other.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "private",
+    });
+
+    const snapshot = await owner.offlineSync.snapshot();
+    const delta = await owner.offlineSync.pull({ cursor: snapshot.cursor });
+
+    expect(snapshot.bookmarks.map((item) => item.id)).toContain(bookmark.id);
+    expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(
+      privateBookmark.id,
+    );
+    expect(delta.events).toEqual([]);
+  });
+
+  test<CustomTestContext>("replays mutations and merges independent fields while rejecting stale fields", async ({
+    apiCallers,
+  }) => {
+    const api = apiCallers[0];
+    const bookmark = await api.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "offline library record",
+    });
+    const titleMutation = {
+      idempotencyKey: "4b687efc-6212-4c34-b758-e72338ef8c4e",
+      kind: "bookmark.update" as const,
+      bookmarkId: bookmark.id,
+      fields: { title: "from phone" },
+      baseVersions: { title: 0 },
+    };
+
+    const first = await api.offlineSync.push({ mutations: [titleMutation] });
+    const replay = await api.offlineSync.push({ mutations: [titleMutation] });
+    const independentField = await api.offlineSync.push({
+      mutations: [
+        {
+          idempotencyKey: "bd6b94d7-2fc1-4100-bf5a-f866c40bfbdc",
+          kind: "bookmark.update",
+          bookmarkId: bookmark.id,
+          fields: { note: "merged note" },
+          baseVersions: { note: 0 },
+        },
+      ],
+    });
+    const conflict = await api.offlineSync.push({
+      mutations: [
+        {
+          idempotencyKey: "7d3ced67-588d-4a40-a00a-8c4902d500c0",
+          kind: "bookmark.update",
+          bookmarkId: bookmark.id,
+          fields: { title: "stale title" },
+          baseVersions: { title: 0 },
+        },
+      ],
+    });
+
+    expect(replay).toEqual(first);
+    expect(independentField.acknowledged).toHaveLength(1);
+    expect(conflict.conflicts).toEqual([
+      expect.objectContaining({
+        bookmarkId: bookmark.id,
+        field: "title",
+        localValue: "stale title",
+        serverValue: "from phone",
+        serverVersion: 1,
+      }),
+    ]);
+  });
+
+  test<CustomTestContext>("rejects a stale tag set as one field", async ({
+    apiCallers,
+  }) => {
+    const api = apiCallers[0];
+    const bookmark = await api.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "offline library record",
+    });
+    const tag = await api.tags.create({ name: "travel" });
+
+    await api.offlineSync.push({
+      mutations: [
+        {
+          idempotencyKey: "f3ad6f4a-e2d5-4435-baab-f4c48a841c99",
+          kind: "bookmark.tags",
+          bookmarkId: bookmark.id,
+          tagIds: [tag.id],
+          baseVersions: { tags: 0 },
+        },
+      ],
+    });
+    const conflict = await api.offlineSync.push({
+      mutations: [
+        {
+          idempotencyKey: "133b4960-ed90-4825-a918-861f7420e93a",
+          kind: "bookmark.tags",
+          bookmarkId: bookmark.id,
+          tagIds: [],
+          baseVersions: { tags: 0 },
+        },
+      ],
+    });
+
+    expect(conflict.conflicts).toEqual([
+      expect.objectContaining({
+        bookmarkId: bookmark.id,
+        field: "tags",
+        localValue: [],
+        serverVersion: 1,
+      }),
+    ]);
+  });
+
+  test<CustomTestContext>("emits a revocation and no longer returns revoked shared content", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const collaborator = apiCallers[1];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "shared offline record",
+    });
+    const list = await owner.lists.create({
+      name: "Shared",
+      icon: "folder",
+      type: "manual",
+    });
+    await owner.lists.addToList({ listId: list.id, bookmarkId: bookmark.id });
+    const collaboratorUser = await collaborator.users.whoami();
+    const { invitationId } = await owner.lists.addCollaborator({
+      listId: list.id,
+      email: collaboratorUser.email!,
+      role: "viewer",
+    });
+    await collaborator.lists.acceptInvitation({ invitationId });
+
+    const beforeRevocation = await collaborator.offlineSync.snapshot();
+    await owner.lists.removeCollaborator({
+      listId: list.id,
+      userId: collaboratorUser.id,
+    });
+    const afterRevocation = await collaborator.offlineSync.pull({
+      cursor: beforeRevocation.cursor,
+    });
+    const snapshot = await collaborator.offlineSync.snapshot();
+
+    expect(beforeRevocation.bookmarks.map((item) => item.id)).toContain(bookmark.id);
+    expect(afterRevocation.events).toContainEqual(
+      expect.objectContaining({
+        entityType: "list",
+        entityId: list.id,
+        operation: "revoke",
+      }),
+    );
+    expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(bookmark.id);
+    expect(snapshot.lists.map((item) => item.id)).not.toContain(list.id);
   });
 });
