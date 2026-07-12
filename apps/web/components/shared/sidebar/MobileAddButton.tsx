@@ -38,12 +38,15 @@ export default function MobileAddButton() {
         </DialogTrigger>
         <ResponsiveDialogContent
           hideCloseBtn
-          className="gap-0 p-3 sm:max-w-md sm:p-4"
+          className="max-h-[calc(var(--vvh)-2rem)] gap-0 p-3 sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:p-4"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{label}</DialogTitle>
           </DialogHeader>
-          <EditorCard onCreated={() => setOpen(false)} />
+          <EditorCard
+            className="min-h-[22rem]"
+            onCreated={() => setOpen(false)}
+          />
         </ResponsiveDialogContent>
       </Dialog>
     </li>

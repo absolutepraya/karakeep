@@ -8,7 +8,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useQuery } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
+import {
+  BrainCircuit,
+  FileDown,
+  Globe,
+  LoaderCircle,
+  Sparkles,
+  Tags,
+} from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 
@@ -18,6 +25,14 @@ const LABEL_BY_KIND = {
   summarizing: "Summarizing",
   embedding: "Embedding",
   importing: "Importing",
+} as const;
+
+const ICON_BY_KIND = {
+  crawling: Globe,
+  tagging: Tags,
+  summarizing: Sparkles,
+  embedding: BrainCircuit,
+  importing: FileDown,
 } as const;
 
 export default function ProcessingStatusIndicator() {
@@ -46,19 +61,29 @@ export default function ProcessingStatusIndicator() {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 rounded-xl p-2">
-        <p className="px-2 py-1 text-sm font-medium">Processing</p>
+        <div className="flex items-center gap-2 px-2 py-1">
+          <LoaderCircle className="size-4 animate-spin text-primary" />
+          <p className="text-sm font-medium">Processing</p>
+          <span className="ml-auto text-sm font-medium tabular-nums">
+            {data.total}
+          </span>
+        </div>
         <div className="mt-1 space-y-0.5">
-          {data.tasks.map((task) => (
-            <div
-              key={task.kind}
-              className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm"
-            >
-              <span className="text-muted-foreground">
-                {LABEL_BY_KIND[task.kind]}
-              </span>
-              <span className="font-medium tabular-nums">{task.count}</span>
-            </div>
-          ))}
+          {data.tasks.map((task) => {
+            const Icon = ICON_BY_KIND[task.kind];
+            return (
+              <div
+                key={task.kind}
+                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm"
+              >
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Icon className="size-3.5" />
+                  {LABEL_BY_KIND[task.kind]}
+                </span>
+                <span className="font-medium tabular-nums">{task.count}</span>
+              </div>
+            );
+          })}
         </div>
       </PopoverContent>
     </Popover>

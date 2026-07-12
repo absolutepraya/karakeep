@@ -174,7 +174,7 @@ export default function EditorCard({
     grid: "h-96",
     // A touch taller than the old h-48 so the destination-folder row and the
     // Save button both fit inside the compact masonry card.
-    masonry: "h-60",
+    masonry: "h-72",
     list: undefined,
     compact: undefined,
   });
@@ -317,14 +317,14 @@ export default function EditorCard({
           </div>
         </div>
         <Separator />
-        <FormItem className="min-h-0 flex-1">
+        <FormItem className="min-h-0 flex-1 pb-3">
           <FormControl>
             <div className="h-full w-full">
               <Textarea
                 ref={inputRef}
                 disabled={isPending}
                 className={cn(
-                  "h-full w-full border-none bg-transparent p-0 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0",
+                  "h-full w-full border-none bg-transparent p-0 pb-3 text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0",
                   { "resize-none": bookmarkLayout !== "list" },
                 )}
                 placeholder={t("editor.placeholder_v2")}
