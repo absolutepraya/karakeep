@@ -25,32 +25,62 @@ export const zOfflineSyncOperationSchema = z.enum([
 export type ZOfflineSyncOperation = z.infer<typeof zOfflineSyncOperationSchema>;
 
 export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
-  z.object({
-    idempotencyKey: z.string().uuid(),
-    kind: z.literal("bookmark.update"),
-    bookmarkId: z.string(),
-    fields: z
-      .object({
-        title: z.string().max(MAX_BOOKMARK_TITLE_LENGTH).nullish().optional(),
-        archived: z.boolean().optional(),
-        favourited: z.boolean().optional(),
-        note: z.string().optional(),
-        summary: z.string().nullish().optional(),
-        url: z.string().url().optional(),
-        description: z.string().nullish().optional(),
-        author: z.string().nullish().optional(),
-        publisher: z.string().nullish().optional(),
-        text: z.string().nullish().optional(),
-      })
-      .refine((value) => Object.keys(value).length > 0),
-    baseVersions: z.record(z.string(), z.number().int().nonnegative()),
-  }),
+  z
+    .object({
+      idempotencyKey: z.string().uuid(),
+      kind: z.literal("bookmark.update"),
+      bookmarkId: z.string(),
+      fields: z
+        .object({
+          title: z
+            .string()
+            .max(MAX_BOOKMARK_TITLE_LENGTH)
+            .nullish()
+            .optional(),
+          archived: z.boolean().optional(),
+          favourited: z.boolean().optional(),
+          note: z.string().optional(),
+          summary: z.string().nullish().optional(),
+          url: z.string().url().optional(),
+          description: z.string().nullish().optional(),
+          author: z.string().nullish().optional(),
+          publisher: z.string().nullish().optional(),
+          text: z.string().nullish().optional(),
+        })
+        .refine((value) => Object.keys(value).length > 0),
+      baseVersions: z.record(z.string(), z.number().int().nonnegative()),
+    })
+    .superRefine(({ fields, baseVersions }, ctx) => {
+      const changedFields = Object.keys(fields);
+
+      for (const field of changedFields) {
+        if (!(field in baseVersions)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Missing base version for changed field "${field}"`,
+            path: ["baseVersions", field],
+          });
+        }
+      }
+
+      for (const field of Object.keys(baseVersions)) {
+        if (!changedFields.includes(field)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Base version provided for unchanged field "${field}"`,
+            path: ["baseVersions", field],
+          });
+        }
+      }
+    }),
   z.object({
     idempotencyKey: z.string().uuid(),
     kind: z.literal("bookmark.tags"),
     bookmarkId: z.string(),
     tagIds: z.array(z.string()),
-    baseVersions: z.object({ tags: z.number().int().nonnegative() }),
+    baseVersions: z
+      .object({ tags: z.number().int().nonnegative() })
+      .strict(),
   }),
 ]);
 export type ZOfflineSyncMutation = z.infer<typeof zOfflineSyncMutationSchema>;
