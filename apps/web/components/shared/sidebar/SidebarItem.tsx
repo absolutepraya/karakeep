@@ -42,10 +42,10 @@ export default function SidebarItem({
       className={cn(
         "ease-(--ease-out) group relative flex min-w-0 items-center justify-between overflow-hidden rounded-xl text-sm transition-[background-color,color,box-shadow,ring-color] duration-150",
         isActive
-          ? "shadow-xs bg-background text-foreground"
-          : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+          ? "bg-primary/[0.07] text-foreground shadow-inner shadow-primary/10 ring-1 ring-inset ring-primary/30"
+          : "text-muted-foreground hover:bg-primary/[0.05] hover:text-foreground hover:shadow-inner hover:shadow-primary/10",
         dropHighlight &&
-          "bg-primary/10 text-foreground shadow-inner shadow-primary/20 ring-1 ring-inset ring-primary/60",
+          "bg-primary/12 text-foreground shadow-inner shadow-primary/30 ring-1 ring-inset ring-primary/70",
         className,
       )}
       style={style}
