@@ -13,12 +13,12 @@ import {
   applyEvents,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
+  listPendingMutations,
   offlineLibraryDb,
   purgeOfflineLibrary,
   queryBookmarks,
   recordThumbnailAccess,
   replaceSnapshot,
-  listPendingMutations,
   searchBookmarks,
 } from "./repository";
 
@@ -86,6 +86,7 @@ const bookmark = (overrides: Partial<ZBookmark> = {}): ZBookmark => ({
 const snapshotWith = (overrides: Partial<ZBookmark> = {}): ZOfflineSyncSnapshot => ({
   bookmarks: [bookmark(overrides)],
   lists: [],
+  bookmarkListMemberships: [],
   cursor: "12",
 });
 
@@ -128,22 +129,66 @@ test("searches only replicated fields", async () => {
   await expect(searchBookmarks("private archive")).resolves.toEqual([]);
 });
 
-test("purge removes every user-scoped table", async () => {
+test("filters by explicit membership and searches associated list names", async () => {
+  const membershipSnapshot: ZOfflineSyncSnapshot = {
+    ...snapshot,
+    lists: [
+      {
+        id: "list-1",
+        name: "Reading queue",
+        description: null,
+        icon: "folder",
+        parentId: null,
+        type: "manual",
+        query: null,
+        public: false,
+        hasCollaborators: false,
+        userRole: "owner",
+      },
+    ],
+    bookmarkListMemberships: [{ bookmarkId: "bookmark-1", listId: "list-1" }],
+  };
+  await replaceSnapshot(membershipSnapshot);
+
+  await expect(queryBookmarks({ listId: "list-1" })).resolves.toMatchObject({
+    bookmarks: [{ id: "bookmark-1" }],
+  });
+  await expect(searchBookmarks("reading queue")).resolves.toMatchObject([
+    { id: "bookmark-1" },
+  ]);
+});
+
+test("purge removes every user-scoped table and its cached thumbnails", async () => {
   await replaceSnapshot(snapshot);
   await enqueueMutation(pendingMutation);
+  await recordThumbnailAccess("/api/assets/private");
+  thumbnailCaches.set(
+    "karakeep-thumbnails",
+    new Map([["/api/assets/private", new Response("private")]]),
+  );
   await purgeOfflineLibrary();
 
   await expect(offlineLibraryDb.bookmarks.count()).resolves.toBe(0);
   await expect(offlineLibraryDb.outbox.count()).resolves.toBe(0);
+  await expect(offlineLibraryDb.thumbnailAccess.count()).resolves.toBe(0);
+  expect(thumbnailCaches.has("karakeep-thumbnails")).toBe(false);
 });
 
-test("evicts the oldest thumbnail records before bookmark metadata", async () => {
+test("evicts the oldest cached thumbnail before bookmark metadata", async () => {
   await replaceSnapshot(snapshot);
   await recordThumbnailAccess("/api/assets/old", new Date("2026-07-11T00:00:00Z"));
   await recordThumbnailAccess("/api/assets/new", new Date("2026-07-12T00:00:00Z"));
+  thumbnailCaches.set(
+    "karakeep-thumbnails",
+    new Map([
+      ["/api/assets/old", new Response("old")],
+      ["/api/assets/new", new Response("new")],
+    ]),
+  );
   await evictLeastRecentlyUsedThumbnails(1);
 
-  await expect(caches.open("karakeep-thumbnails")).resolves.toBeDefined();
+  expect(thumbnailCaches.get("karakeep-thumbnails")?.has("/api/assets/old")).toBe(false);
+  expect(thumbnailCaches.get("karakeep-thumbnails")?.has("/api/assets/new")).toBe(true);
   await expect(offlineLibraryDb.bookmarks.count()).resolves.toBe(1);
   await expect(offlineLibraryDb.thumbnailAccess.toArray()).resolves.toEqual([
     { url: "/api/assets/new", lastAccessedAt: new Date("2026-07-12T00:00:00Z").getTime() },
@@ -169,6 +214,49 @@ test("applies deletion events and advances the replica cursor together", async (
   });
 });
 
+test("preserves stale state across empty delta batches", async () => {
+  const updateEvent: ZOfflineSyncEvent = {
+    sequence: 13,
+    userId: "user-1",
+    entityType: "bookmark",
+    entityId: "bookmark-1",
+    operation: "update",
+    changedFields: ["title"],
+    createdAt: new Date("2026-07-13T00:00:00Z"),
+  };
+  await replaceSnapshot(snapshot);
+  await applyEvents([updateEvent], "13");
+  await applyEvents([], "14");
+
+  await expect(offlineLibraryDb.metadata.get("replicaState")).resolves.toEqual({
+    key: "replicaState",
+    value: "stale",
+  });
+});
+
+test("purges all replica data and thumbnails on list revocation", async () => {
+  const revokeEvent: ZOfflineSyncEvent = {
+    sequence: 13,
+    userId: "user-1",
+    entityType: "list",
+    entityId: "list-1",
+    operation: "revoke",
+    changedFields: [],
+    createdAt: new Date("2026-07-13T00:00:00Z"),
+  };
+  await replaceSnapshot(snapshot);
+  await recordThumbnailAccess("/api/assets/revoked");
+  thumbnailCaches.set(
+    "karakeep-thumbnails",
+    new Map([["/api/assets/revoked", new Response("revoked")]]),
+  );
+  await applyEvents([revokeEvent], "13");
+
+  await expect(offlineLibraryDb.bookmarks.count()).resolves.toBe(0);
+  await expect(offlineLibraryDb.thumbnailAccess.count()).resolves.toBe(0);
+  expect(thumbnailCaches.has("karakeep-thumbnails")).toBe(false);
+});
+
 test("queues supported mutations with the local bookmark update", async () => {
   await replaceSnapshot(snapshot);
   await enqueueMutation(pendingMutation);
@@ -179,4 +267,39 @@ test("queues supported mutations with the local bookmark update", async () => {
   await expect(listPendingMutations()).resolves.toMatchObject([
     { idempotencyKey: pendingMutation.idempotencyKey, kind: "bookmark.update" },
   ]);
+});
+
+test("queues tag mutations with the optimistic local tag set", async () => {
+  const tagMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "b72a6d48-2d46-4f3a-8a85-650c2f4dcbd1",
+    kind: "bookmark.tags",
+    bookmarkId: "bookmark-1",
+    tagIds: ["tag-2"],
+    baseVersions: { tags: 0 },
+  };
+  await replaceSnapshot(snapshot);
+  await enqueueMutation(tagMutation);
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [{ tags: [{ id: "tag-2" }] }],
+  });
+  await expect(listPendingMutations()).resolves.toMatchObject([
+    { idempotencyKey: tagMutation.idempotencyKey, kind: "bookmark.tags" },
+  ]);
+});
+
+test("rejects unsupported mutations before changing the replica", async () => {
+  await replaceSnapshot(snapshot);
+
+  await expect(
+    enqueueMutation({
+      idempotencyKey: "d2436c5e-5a6e-4fb1-9eb0-c1d57fb5a47d",
+      kind: "bookmark.delete",
+      bookmarkId: "bookmark-1",
+    } as unknown as ZOfflineSyncMutation),
+  ).rejects.toThrow("Unsupported offline mutation");
+  await expect(offlineLibraryDb.outbox.count()).resolves.toBe(0);
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [{ title: "Offline article" }],
+  });
 });

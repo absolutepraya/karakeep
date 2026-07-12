@@ -145,6 +145,50 @@ describe("Offline sync routes", () => {
     expect(delta.events).toEqual([]);
   });
 
+  test<CustomTestContext>("scopes snapshot memberships to accessible lists", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const other = apiCallers[1];
+    const ownerBookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "owned membership",
+    });
+    const otherBookmark = await other.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "foreign membership",
+    });
+    const ownerList = await owner.lists.create({
+      name: "Owner list",
+      icon: "folder",
+      type: "manual",
+    });
+    const otherList = await other.lists.create({
+      name: "Other list",
+      icon: "folder",
+      type: "manual",
+    });
+    await owner.lists.addToList({
+      listId: ownerList.id,
+      bookmarkId: ownerBookmark.id,
+    });
+    await other.lists.addToList({
+      listId: otherList.id,
+      bookmarkId: otherBookmark.id,
+    });
+
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(snapshot.bookmarkListMemberships).toContainEqual({
+      bookmarkId: ownerBookmark.id,
+      listId: ownerList.id,
+    });
+    expect(snapshot.bookmarkListMemberships).not.toContainEqual({
+      bookmarkId: otherBookmark.id,
+      listId: otherList.id,
+    });
+  });
+
   test<CustomTestContext>("returns only ordered caller deltas after a cursor", async ({
     apiCallers,
   }) => {
@@ -326,6 +370,10 @@ describe("Offline sync routes", () => {
     const snapshot = await collaborator.offlineSync.snapshot();
 
     expect(beforeRevocation.bookmarks.map((item) => item.id)).toContain(bookmark.id);
+    expect(beforeRevocation.bookmarkListMemberships).toContainEqual({
+      bookmarkId: bookmark.id,
+      listId: list.id,
+    });
     expect(afterRevocation.events).toContainEqual(
       expect.objectContaining({
         entityType: "list",
@@ -335,6 +383,10 @@ describe("Offline sync routes", () => {
     );
     expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(bookmark.id);
     expect(snapshot.lists.map((item) => item.id)).not.toContain(list.id);
+    expect(snapshot.bookmarkListMemberships).not.toContainEqual({
+      bookmarkId: bookmark.id,
+      listId: list.id,
+    });
   });
 
   test<CustomTestContext>("delivers owner bookmark updates and deletes to shared collaborators", async ({

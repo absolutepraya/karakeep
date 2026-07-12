@@ -1,5 +1,8 @@
-import { DEFAULT_NUM_BOOKMARKS_PER_PAGE, type ZBookmark, type ZSortOrder } from "@karakeep/shared/types/bookmarks";
-import type { ZBookmarkList } from "@karakeep/shared/types/lists";
+import {
+  DEFAULT_NUM_BOOKMARKS_PER_PAGE,
+  type ZBookmark,
+  type ZSortOrder,
+} from "@karakeep/shared/types/bookmarks";
 import type { ZCursor } from "@karakeep/shared/types/pagination";
 import {
   zOfflineSyncMutationSchema,
@@ -32,11 +35,6 @@ type OfflineBookmarkPage = {
   nextCursor: ZCursor | null;
 };
 
-type BookmarkWithLists = ZBookmark & {
-  listIds?: string[];
-  lists?: Array<{ id: string }>;
-};
-
 type StoredConflict = ZOfflineSyncConflict & { id: string };
 
 export { offlineLibraryDb };
@@ -47,15 +45,20 @@ export async function replaceSnapshot(snapshot: ZOfflineSyncSnapshot): Promise<v
     "rw",
     offlineLibraryDb.bookmarks,
     offlineLibraryDb.lists,
+    offlineLibraryDb.bookmarkListMemberships,
     offlineLibraryDb.metadata,
     async () => {
       await Promise.all([
         offlineLibraryDb.bookmarks.clear(),
         offlineLibraryDb.lists.clear(),
+        offlineLibraryDb.bookmarkListMemberships.clear(),
       ]);
       await Promise.all([
         offlineLibraryDb.bookmarks.bulkPut(snapshot.bookmarks),
         offlineLibraryDb.lists.bulkPut(snapshot.lists),
+        offlineLibraryDb.bookmarkListMemberships.bulkPut(
+          snapshot.bookmarkListMemberships,
+        ),
         offlineLibraryDb.metadata.bulkPut([
           { key: SYNC_CURSOR_KEY, value: snapshot.cursor },
           { key: REPLICA_STATE_KEY, value: "ready" },
@@ -69,12 +72,27 @@ export async function applyEvents(
   events: ZOfflineSyncEvent[],
   cursor: ZOfflineSyncCursor,
 ): Promise<void> {
+  if (
+    events.some(
+      (event) => event.entityType === "list" && event.operation === "revoke",
+    )
+  ) {
+    await purgeOfflineLibrary();
+    return;
+  }
+
   await offlineLibraryDb.transaction(
     "rw",
     offlineLibraryDb.bookmarks,
     offlineLibraryDb.lists,
+    offlineLibraryDb.bookmarkListMemberships,
     offlineLibraryDb.metadata,
     async () => {
+      const replicaState = await offlineLibraryDb.metadata.get(REPLICA_STATE_KEY);
+      const hasUnmaterializedEvents = events.some(
+        (event) => event.operation !== "delete" && event.operation !== "revoke",
+      );
+
       await Promise.all(
         events.map(async (event) => {
           if (event.operation !== "delete" && event.operation !== "revoke") {
@@ -82,22 +100,33 @@ export async function applyEvents(
           }
 
           if (event.entityType === "bookmark") {
-            await offlineLibraryDb.bookmarks.delete(event.entityId);
-          } else {
-            await offlineLibraryDb.lists.delete(event.entityId);
+            await Promise.all([
+              offlineLibraryDb.bookmarks.delete(event.entityId),
+              offlineLibraryDb.bookmarkListMemberships
+                .where("bookmarkId")
+                .equals(event.entityId)
+                .delete(),
+            ]);
+            return;
           }
+
+          await Promise.all([
+            offlineLibraryDb.lists.delete(event.entityId),
+            offlineLibraryDb.bookmarkListMemberships
+              .where("listId")
+              .equals(event.entityId)
+              .delete(),
+          ]);
         }),
       );
       await offlineLibraryDb.metadata.bulkPut([
         { key: SYNC_CURSOR_KEY, value: cursor },
         {
           key: REPLICA_STATE_KEY,
-          value: events.some(
-            (event) =>
-              event.operation !== "delete" && event.operation !== "revoke",
-          )
-            ? "stale"
-            : "ready",
+          value:
+            replicaState?.value === "stale" || hasUnmaterializedEvents
+              ? "stale"
+              : replicaState?.value ?? "ready",
         },
       ]);
     },
@@ -107,12 +136,21 @@ export async function applyEvents(
 export async function queryBookmarks(
   query: OfflineBookmarkQuery = {},
 ): Promise<OfflineBookmarkPage> {
-  const [bookmarks, cursor] = await Promise.all([
+  const [bookmarks, memberships, cursor] = await Promise.all([
     offlineLibraryDb.bookmarks.toArray(),
+    offlineLibraryDb.bookmarkListMemberships.toArray(),
     offlineLibraryDb.metadata.get(SYNC_CURSOR_KEY),
   ]);
   const sortOrder = query.sortOrder ?? "desc";
   const limit = Math.max(1, query.limit ?? DEFAULT_NUM_BOOKMARKS_PER_PAGE);
+  const bookmarkIdsInList =
+    query.listId === undefined
+      ? undefined
+      : new Set(
+          memberships
+            .filter((membership) => membership.listId === query.listId)
+            .map((membership) => membership.bookmarkId),
+        );
   const filtered = bookmarks
     .filter((bookmark) => {
       if (query.archived !== undefined && bookmark.archived !== query.archived) {
@@ -130,17 +168,17 @@ export async function queryBookmarks(
       ) {
         return false;
       }
-      if (query.listId !== undefined) {
-        const bookmarkWithLists = bookmark as BookmarkWithLists;
-        const listIds = bookmarkWithLists.listIds ?? bookmarkWithLists.lists?.map((list) => list.id) ?? [];
-        if (!listIds.includes(query.listId)) {
-          return false;
-        }
+      if (
+        bookmarkIdsInList !== undefined &&
+        !bookmarkIdsInList.has(bookmark.id)
+      ) {
+        return false;
       }
       return true;
     })
     .sort((left, right) => {
-      const createdAtDifference = left.createdAt.getTime() - right.createdAt.getTime();
+      const createdAtDifference =
+        left.createdAt.getTime() - right.createdAt.getTime();
       if (createdAtDifference !== 0) {
         return sortOrder === "asc" ? createdAtDifference : -createdAtDifference;
       }
@@ -168,22 +206,27 @@ export async function queryBookmarks(
 
 export async function searchBookmarks(query: string): Promise<ZBookmark[]> {
   const tokens = query
-    .toLocaleLowerCase()
+    .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
   if (tokens.length === 0) {
     return [];
   }
 
-  const [bookmarks, lists] = await Promise.all([
+  const [bookmarks, lists, memberships] = await Promise.all([
     offlineLibraryDb.bookmarks.toArray(),
     offlineLibraryDb.lists.toArray(),
+    offlineLibraryDb.bookmarkListMemberships.toArray(),
   ]);
   const listNameById = new Map(lists.map((list) => [list.id, list.name]));
+  const listIdsByBookmarkId = new Map<string, string[]>();
+  for (const membership of memberships) {
+    const listIds = listIdsByBookmarkId.get(membership.bookmarkId) ?? [];
+    listIds.push(membership.listId);
+    listIdsByBookmarkId.set(membership.bookmarkId, listIds);
+  }
 
   return bookmarks.filter((bookmark) => {
-    const bookmarkWithLists = bookmark as BookmarkWithLists;
-    const listIds = bookmarkWithLists.listIds ?? bookmarkWithLists.lists?.map((list) => list.id) ?? [];
     const content = bookmark.content;
     const replicatedContent =
       content.type === "link"
@@ -199,11 +242,13 @@ export async function searchBookmarks(query: string): Promise<ZBookmark[]> {
       bookmark.summary,
       ...replicatedContent,
       ...bookmark.tags.map((tag) => tag.name),
-      ...listIds.map((listId) => listNameById.get(listId)),
+      ...(listIdsByBookmarkId.get(bookmark.id) ?? []).map((listId) =>
+        listNameById.get(listId),
+      ),
     ]
       .filter((value): value is string => typeof value === "string")
       .join(" ")
-      .toLocaleLowerCase();
+      .toLowerCase();
 
     return tokens.every((token) => searchableText.includes(token));
   });
@@ -306,6 +351,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
     [
       offlineLibraryDb.bookmarks,
       offlineLibraryDb.lists,
+      offlineLibraryDb.bookmarkListMemberships,
       offlineLibraryDb.metadata,
       offlineLibraryDb.outbox,
       offlineLibraryDb.conflicts,
@@ -315,6 +361,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
       await Promise.all([
         offlineLibraryDb.bookmarks.clear(),
         offlineLibraryDb.lists.clear(),
+        offlineLibraryDb.bookmarkListMemberships.clear(),
         offlineLibraryDb.metadata.clear(),
         offlineLibraryDb.outbox.clear(),
         offlineLibraryDb.conflicts.clear(),

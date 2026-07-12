@@ -112,9 +112,18 @@ export const zOfflineSyncEventSchema = z.object({
 });
 export type ZOfflineSyncEvent = z.infer<typeof zOfflineSyncEventSchema>;
 
+export const zOfflineSyncBookmarkListMembershipSchema = z.object({
+  bookmarkId: z.string(),
+  listId: z.string(),
+});
+export type ZOfflineSyncBookmarkListMembership = z.infer<
+  typeof zOfflineSyncBookmarkListMembershipSchema
+>;
+
 export const zOfflineSyncSnapshotSchema = z.object({
   bookmarks: z.array(zBookmarkSchema),
   lists: z.array(zBookmarkListSchema),
+  bookmarkListMemberships: z.array(zOfflineSyncBookmarkListMembershipSchema),
   cursor: zOfflineSyncCursorSchema,
 });
 export type ZOfflineSyncSnapshot = z.infer<typeof zOfflineSyncSnapshotSchema>;

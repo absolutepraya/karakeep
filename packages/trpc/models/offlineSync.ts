@@ -488,15 +488,33 @@ export async function buildOfflineSyncSnapshot(
       ...ownedBookmarks.map((bookmark) => bookmark.id),
       ...sharedBookmarks.map((bookmark) => bookmark.id),
     ]);
+    const snapshotLists = lists.map((list) => list.asZBookmarkList());
+    const listIds = snapshotLists.map((list) => list.id);
     const bookmarkRows = await Promise.all(
       [...bookmarkIds].map(async (bookmarkId) =>
         (await Bookmark.fromId(transactionContext, bookmarkId, false)).asZBookmark(),
       ),
     );
+    const bookmarkListMemberships =
+      bookmarkIds.size === 0 || listIds.length === 0
+        ? []
+        : await tx
+            .select({
+              bookmarkId: bookmarksInLists.bookmarkId,
+              listId: bookmarksInLists.listId,
+            })
+            .from(bookmarksInLists)
+            .where(
+              and(
+                inArray(bookmarksInLists.bookmarkId, [...bookmarkIds]),
+                inArray(bookmarksInLists.listId, listIds),
+              ),
+            );
 
     return {
       bookmarks: bookmarkRows,
-      lists: lists.map((list) => list.asZBookmarkList()),
+      lists: snapshotLists,
+      bookmarkListMemberships,
       cursor: await currentCursor(tx, ctx.user.id),
     };
   });
