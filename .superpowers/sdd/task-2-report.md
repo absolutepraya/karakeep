@@ -49,7 +49,7 @@ The repository pre-commit hook attempted unrelated project-wide React Doctor, li
 
 - Bookmark mutations now capture all currently authorized shared-list recipients inside their source transaction. Owner updates, text changes, tag changes, and deletes append recipient-specific bookmark journal entries; deletion captures recipients before relationship cascades.
 - Pushes reject multi-mutation batches, which constrains the public contract to one idempotent mutation per request. This makes each stored mutation receipt the exact replay result and prevents a replay from advancing a cursor beyond events returned to the client. The input schema also rejects duplicate idempotency keys.
-- Offline bookmark updates invoke the same post-commit effects as online edits: archive/favourite rules, search reindexing, and edited webhooks. The focused regression coverage verifies the effect path through existing mocks.
+- Offline bookmark updates invoke the same post-commit effects as online edits: archive/favourite and tag-added/tag-removed rules, search reindexing, and edited webhooks.
 - Each source list mutation that emits a sync event now opens one outer Drizzle transaction, reloads its `List` or `ListInvitation` using a transaction-scoped context, and records the journal before that transaction returns. This covers creation, metadata edits, merges, parent and child deletion, list membership, collaborator invitations and role changes, removal, leave, and invitation acceptance. Recipient lists are read before member/list cascades.
 - `offlineSync.test.ts` covers collaborator pulls after owner bookmark updates and deletes, nonempty ordered deltas, foreign-user exclusion, unauthorized bookmark/list/thumbnail isolation, exact receipt replay behavior, and duplicate key rejection.
 
@@ -60,3 +60,15 @@ All commands ran in `offline-library-pwa` with `NO_COLOR=false`:
 1. `pnpm --filter @karakeep/trpc test -- offlineSync.test.ts`: passed, 20 files and 420 tests.
 2. `pnpm --filter @karakeep/trpc test -- bookmarks.test.ts lists.test.ts`: passed, 20 files and 420 tests.
 3. `pnpm --filter @karakeep/trpc typecheck`: passed, `tsc --noEmit`.
+
+### Follow-up Review Remediation
+
+- Field-version increments are now separate from event insertion. `recordOfflineSyncEvents` advances each changed bookmark field exactly once, then fans out recipient events without additional version writes. The shared-bookmark regression proves an online shared update produces version `1`, allowing a subsequent offline push with `baseVersions.title = 1`.
+- Offline tag replacement computes the in-transaction attach and detach delta, applies only changed tag rows, and dispatches the corresponding `tagAdded` and `tagRemoved` rule events after commit alongside the existing reindex and edited-webhook effects.
+- Bookmark deletion now discovers shared-list recipients inside `Bookmark.delete`'s active transaction before the bookmark delete cascades relationships, then records recipient events in that same transaction.
+- The ordered-delta regression snapshots a caller, interleaves a foreign user's bookmark and list mutations, and verifies the caller receives only its two sequence-ordered events with no foreign bookmark/list data in the snapshot or delta.
+
+### Follow-up Verification
+
+1. `NO_COLOR=false pnpm --filter @karakeep/trpc test -- offlineSync.test.ts`: passed, 20 files and 421 tests.
+2. `NO_COLOR=false pnpm --filter @karakeep/trpc typecheck`: passed, `tsc --noEmit`.

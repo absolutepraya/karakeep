@@ -770,15 +770,16 @@ export const bookmarksAppRouter = router({
     .use(ensureBookmarkOwnership)
     .mutation(async ({ input, ctx }) => {
       addLogFields<"bookmark.delete">({ "bookmark.id": input.bookmarkId });
-      const recipients = await ctx.db.transaction((tx) =>
-        getOfflineSyncBookmarkRecipientIds(tx, ctx.user.id, input.bookmarkId),
-      );
       const bookmark = await Bookmark.fromId(ctx, input.bookmarkId, false);
       await bookmark.delete(async (tx) => {
         await recordOfflineSyncEvents(
           tx,
           ctx.user.id,
-          recipients,
+          await getOfflineSyncBookmarkRecipientIds(
+            tx,
+            ctx.user.id,
+            input.bookmarkId,
+          ),
           "bookmark",
           input.bookmarkId,
           "delete",

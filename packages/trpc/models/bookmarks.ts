@@ -923,11 +923,12 @@ export class Bookmark extends BareBookmark {
   }
 
   async delete(
-    afterDelete?: (tx: KarakeepDBTransaction) => Promise<void>,
+    beforeDelete?: (tx: KarakeepDBTransaction) => Promise<void>,
   ) {
     this.ensureOwnership();
     let wasDeleted = false;
     await this.ctx.db.transaction(async (tx) => {
+      await beforeDelete?.(tx);
       const deleted = await tx
         .delete(bookmarks)
         .where(
@@ -937,7 +938,6 @@ export class Bookmark extends BareBookmark {
           ),
         );
       wasDeleted = deleted.changes > 0;
-      await afterDelete?.(tx);
     });
 
     await SearchIndexingQueue.enqueue(

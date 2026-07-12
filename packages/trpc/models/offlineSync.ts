@@ -239,11 +239,16 @@ async function applyBookmarkUpdate(
   }
 }
 
+type BookmarkTagDelta = {
+  attached: string[];
+  detached: string[];
+};
+
 async function applyBookmarkTags(
   tx: KarakeepDBTransaction,
   userId: string,
   mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.tags" }>,
-): Promise<void> {
+): Promise<BookmarkTagDelta> {
   const tagIds = [...new Set(mutation.tagIds)];
   if (tagIds.length > 0) {
     const ownedTags = await tx
@@ -263,53 +268,86 @@ async function applyBookmarkTags(
     }
   }
 
-  await tx
-    .delete(tagsOnBookmarks)
+  const currentTags = await tx
+    .select({ tagId: tagsOnBookmarks.tagId })
+    .from(tagsOnBookmarks)
     .where(eq(tagsOnBookmarks.bookmarkId, mutation.bookmarkId));
-  if (tagIds.length > 0) {
+  const currentTagIds = new Set(currentTags.map(({ tagId }) => tagId));
+  const requestedTagIds = new Set(tagIds);
+  const detached = currentTags
+    .map(({ tagId }) => tagId)
+    .filter((tagId) => !requestedTagIds.has(tagId));
+  const attached = tagIds.filter((tagId) => !currentTagIds.has(tagId));
+
+  if (detached.length > 0) {
+    await tx
+      .delete(tagsOnBookmarks)
+      .where(
+        and(
+          eq(tagsOnBookmarks.bookmarkId, mutation.bookmarkId),
+          inArray(tagsOnBookmarks.tagId, detached),
+        ),
+      );
+  }
+  if (attached.length > 0) {
     await tx.insert(tagsOnBookmarks).values(
-      tagIds.map((tagId) => ({
+      attached.map((tagId) => ({
         bookmarkId: mutation.bookmarkId,
         tagId,
         attachedBy: "human" as const,
       })),
     );
   }
-  await tx
-    .update(bookmarks)
-    .set({ modifiedAt: new Date() })
-    .where(eq(bookmarks.id, mutation.bookmarkId));
+  if (attached.length > 0 || detached.length > 0) {
+    await tx
+      .update(bookmarks)
+      .set({ modifiedAt: new Date() })
+      .where(eq(bookmarks.id, mutation.bookmarkId));
+  }
+
+  return { attached, detached };
 }
 
 async function triggerBookmarkUpdateEffects(
   ctx: AuthedContext,
   mutation: ZOfflineSyncMutation,
+  tagDelta: BookmarkTagDelta | undefined,
 ): Promise<void> {
   const bookmark = (
     await Bookmark.fromId(ctx, mutation.bookmarkId, false)
   ).asZBookmark();
 
-  if (
-    mutation.kind === "bookmark.update" &&
-    (mutation.fields.favourited === true || mutation.fields.archived === true)
-  ) {
-    await RuleEngine.triggerOnEvent(
-      bookmark.userId,
-      mutation.bookmarkId,
-      [
-        ...(mutation.fields.favourited === true
-          ? [{ type: "favourited" as const }]
-          : []),
-        ...(mutation.fields.archived === true
-          ? [{ type: "archived" as const }]
-          : []),
-      ],
-      undefined,
-      ctx.db,
-    );
-  }
+  const ruleEvents =
+    mutation.kind === "bookmark.tags"
+      ? [
+          ...(tagDelta?.detached.map((tagId) => ({
+            type: "tagRemoved" as const,
+            tagId,
+          })) ?? []),
+          ...(tagDelta?.attached.map((tagId) => ({
+            type: "tagAdded" as const,
+            tagId,
+          })) ?? []),
+        ]
+      : [
+          ...(mutation.fields.favourited === true
+            ? [{ type: "favourited" as const }]
+            : []),
+          ...(mutation.fields.archived === true
+            ? [{ type: "archived" as const }]
+            : []),
+        ];
 
   await Promise.all([
+    ruleEvents.length > 0
+      ? RuleEngine.triggerOnEvent(
+          bookmark.userId,
+          mutation.bookmarkId,
+          ruleEvents,
+          undefined,
+          ctx.db,
+        )
+      : Promise.resolve(),
     triggerSearchReindex(mutation.bookmarkId, { groupId: ctx.user.id }),
     new WebhooksService(ctx.db).triggerWebhook(
       mutation.bookmarkId,
@@ -320,6 +358,40 @@ async function triggerBookmarkUpdateEffects(
   ]);
 }
 
+async function advanceOfflineSyncFieldVersions(
+  tx: KarakeepDBTransaction,
+  entityType: ZOfflineSyncEntityType,
+  entityId: string,
+  operation: ZOfflineSyncOperation,
+  changedFields: string[],
+): Promise<void> {
+  if (entityType !== "bookmark" || operation !== "update") return;
+
+  for (const field of changedFields) {
+    if (!bookmarkFieldNames.has(field)) continue;
+    const [existing] = await tx
+      .select({ version: offlineSyncFieldVersions.version })
+      .from(offlineSyncFieldVersions)
+      .where(
+        and(
+          eq(offlineSyncFieldVersions.bookmarkId, entityId),
+          eq(offlineSyncFieldVersions.field, field),
+        ),
+      );
+    const version = (existing?.version ?? 0) + 1;
+    await tx
+      .insert(offlineSyncFieldVersions)
+      .values({ bookmarkId: entityId, field, version })
+      .onConflictDoUpdate({
+        target: [
+          offlineSyncFieldVersions.bookmarkId,
+          offlineSyncFieldVersions.field,
+        ],
+        set: { version },
+      });
+  }
+}
+
 export async function recordOfflineSyncEvent(
   tx: KarakeepDBTransaction,
   userId: string,
@@ -328,32 +400,6 @@ export async function recordOfflineSyncEvent(
   operation: ZOfflineSyncOperation,
   changedFields: string[],
 ): Promise<number> {
-  if (entityType === "bookmark" && operation === "update") {
-    for (const field of changedFields) {
-      if (!bookmarkFieldNames.has(field)) continue;
-      const [existing] = await tx
-        .select({ version: offlineSyncFieldVersions.version })
-        .from(offlineSyncFieldVersions)
-        .where(
-          and(
-            eq(offlineSyncFieldVersions.bookmarkId, entityId),
-            eq(offlineSyncFieldVersions.field, field),
-          ),
-        );
-      const version = (existing?.version ?? 0) + 1;
-      await tx
-        .insert(offlineSyncFieldVersions)
-        .values({ bookmarkId: entityId, field, version })
-        .onConflictDoUpdate({
-          target: [
-            offlineSyncFieldVersions.bookmarkId,
-            offlineSyncFieldVersions.field,
-          ],
-          set: { version },
-        });
-    }
-  }
-
   const [event] = await tx
     .insert(offlineSyncEvents)
     .values({
@@ -394,6 +440,14 @@ export async function recordOfflineSyncEvents(
   operation: ZOfflineSyncOperation,
   changedFields: string[],
 ): Promise<number[]> {
+  await advanceOfflineSyncFieldVersions(
+    tx,
+    entityType,
+    entityId,
+    operation,
+    changedFields,
+  );
+
   const sequences: number[] = [];
   for (const userId of new Set([ownerId, ...recipientIds])) {
     sequences.push(
@@ -491,6 +545,7 @@ export async function applyOfflineSyncMutations(
   }
 
   let appliedMutation: ZOfflineSyncMutation | undefined;
+  let appliedTagDelta: BookmarkTagDelta | undefined;
   try {
     const result = await ctx.db.transaction(
       async (tx) => {
@@ -507,9 +562,7 @@ export async function applyOfflineSyncMutations(
               ),
             ),
           );
-        if (receipt) {
-          return receipt.result as ZOfflineSyncPushResult;
-        }
+        if (receipt) return receipt.result as ZOfflineSyncPushResult;
 
         await assertBookmarkOwner(tx, ctx.user.id, mutation.bookmarkId);
         const changedFields =
@@ -565,7 +618,7 @@ export async function applyOfflineSyncMutations(
         if (mutation.kind === "bookmark.update") {
           await applyBookmarkUpdate(tx, mutation);
         } else {
-          await applyBookmarkTags(tx, ctx.user.id, mutation);
+          appliedTagDelta = await applyBookmarkTags(tx, ctx.user.id, mutation);
         }
         const [sequence] = await recordOfflineSyncEvents(
           tx,
@@ -597,7 +650,11 @@ export async function applyOfflineSyncMutations(
       { behavior: "immediate" },
     );
     if (appliedMutation) {
-      await triggerBookmarkUpdateEffects(ctx, appliedMutation);
+      await triggerBookmarkUpdateEffects(
+        ctx,
+        appliedMutation,
+        appliedTagDelta,
+      );
     }
     return result;
   } catch (error) {

@@ -145,6 +145,56 @@ describe("Offline sync routes", () => {
     expect(delta.events).toEqual([]);
   });
 
+  test<CustomTestContext>("returns only ordered caller deltas after a cursor", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const other = apiCallers[1];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "owner record",
+    });
+    const snapshot = await owner.offlineSync.snapshot();
+    await owner.bookmarks.updateBookmark({
+      bookmarkId: bookmark.id,
+      title: "first owner delta",
+    });
+    const foreignBookmark = await other.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "foreign private record",
+    });
+    const secondOwnerBookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "second owner delta",
+    });
+    const foreignList = await other.lists.create({
+      name: "foreign private list",
+      icon: "folder",
+      type: "manual",
+    });
+
+    const delta = await owner.offlineSync.pull({ cursor: snapshot.cursor });
+
+    expect(delta.events).toHaveLength(2);
+    expect(delta.events.map((event) => event.sequence)).toEqual(
+      [...delta.events.map((event) => event.sequence)].sort((a, b) => a - b),
+    );
+    expect(delta.events.map((event) => event.entityId)).toEqual([
+      bookmark.id,
+      secondOwnerBookmark.id,
+    ]);
+    expect(delta.events.map((event) => event.entityId)).not.toContain(
+      foreignBookmark.id,
+    );
+    expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(
+      foreignBookmark.id,
+    );
+    expect(snapshot.lists.map((item) => item.id)).not.toContain(foreignList.id);
+    expect(
+      JSON.stringify({ snapshot, delta }).includes(foreignBookmark.id),
+    ).toBe(false);
+  });
+
   test<CustomTestContext>("replays mutations and merges independent fields while rejecting stale fields", async ({
     apiCallers,
   }) => {
@@ -318,6 +368,17 @@ describe("Offline sync routes", () => {
     const afterUpdate = await collaborator.offlineSync.pull({
       cursor: beforeUpdate.cursor,
     });
+    const versionOnePush = await owner.offlineSync.push({
+      mutations: [
+        {
+          idempotencyKey: "8ca4a420-602a-4e5a-b5f2-05be95a49461",
+          kind: "bookmark.update",
+          bookmarkId: bookmark.id,
+          fields: { title: "offline version one" },
+          baseVersions: { title: 1 },
+        },
+      ],
+    });
     await owner.bookmarks.deleteBookmark({ bookmarkId: bookmark.id });
     const afterDelete = await collaborator.offlineSync.pull({
       cursor: afterUpdate.cursor,
@@ -331,7 +392,16 @@ describe("Offline sync routes", () => {
         operation: "update",
       }),
     ]);
+    expect(versionOnePush.acknowledged).toEqual([
+      "8ca4a420-602a-4e5a-b5f2-05be95a49461",
+    ]);
     expect(afterDelete.events).toEqual([
+      expect.objectContaining({
+        userId: collaboratorUser.id,
+        entityType: "bookmark",
+        entityId: bookmark.id,
+        operation: "update",
+      }),
       expect.objectContaining({
         userId: collaboratorUser.id,
         entityType: "bookmark",
