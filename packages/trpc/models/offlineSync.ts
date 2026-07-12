@@ -14,6 +14,7 @@ import {
   offlineSyncMutationReceipts,
   tagsOnBookmarks,
 } from "@karakeep/db/schema";
+import { triggerSearchReindex } from "@karakeep/shared-server";
 import type {
   ZOfflineSyncConflict,
   ZOfflineSyncEntityType,
@@ -26,8 +27,10 @@ import type {
 
 import type { AuthedContext } from "../index";
 import { Bookmark } from "./bookmarks";
+import { RuleEngine } from "../lib/ruleEngine";
 import { List } from "./lists";
 
+import { WebhooksService } from "./webhooks.service";
 const bookmarkFieldNames = new Set([
   "title",
   "archived",
@@ -278,6 +281,45 @@ async function applyBookmarkTags(
     .where(eq(bookmarks.id, mutation.bookmarkId));
 }
 
+async function triggerBookmarkUpdateEffects(
+  ctx: AuthedContext,
+  mutation: ZOfflineSyncMutation,
+): Promise<void> {
+  const bookmark = (
+    await Bookmark.fromId(ctx, mutation.bookmarkId, false)
+  ).asZBookmark();
+
+  if (
+    mutation.kind === "bookmark.update" &&
+    (mutation.fields.favourited === true || mutation.fields.archived === true)
+  ) {
+    await RuleEngine.triggerOnEvent(
+      bookmark.userId,
+      mutation.bookmarkId,
+      [
+        ...(mutation.fields.favourited === true
+          ? [{ type: "favourited" as const }]
+          : []),
+        ...(mutation.fields.archived === true
+          ? [{ type: "archived" as const }]
+          : []),
+      ],
+      undefined,
+      ctx.db,
+    );
+  }
+
+  await Promise.all([
+    triggerSearchReindex(mutation.bookmarkId, { groupId: ctx.user.id }),
+    new WebhooksService(ctx.db).triggerWebhook(
+      mutation.bookmarkId,
+      "edited",
+      bookmark.userId,
+      { groupId: ctx.user.id },
+    ),
+  ]);
+}
+
 export async function recordOfflineSyncEvent(
   tx: KarakeepDBTransaction,
   userId: string,
@@ -324,6 +366,48 @@ export async function recordOfflineSyncEvent(
     })
     .returning({ sequence: offlineSyncEvents.sequence });
   return event.sequence;
+}
+
+export async function getOfflineSyncBookmarkRecipientIds(
+  tx: KarakeepDBTransaction,
+  ownerId: string,
+  bookmarkId: string,
+): Promise<string[]> {
+  const collaborators = await tx
+    .select({ userId: listCollaborators.userId })
+    .from(bookmarksInLists)
+    .innerJoin(
+      listCollaborators,
+      eq(listCollaborators.listId, bookmarksInLists.listId),
+    )
+    .where(eq(bookmarksInLists.bookmarkId, bookmarkId));
+
+  return [...new Set([ownerId, ...collaborators.map(({ userId }) => userId)])];
+}
+
+export async function recordOfflineSyncEvents(
+  tx: KarakeepDBTransaction,
+  ownerId: string,
+  recipientIds: string[],
+  entityType: ZOfflineSyncEntityType,
+  entityId: string,
+  operation: ZOfflineSyncOperation,
+  changedFields: string[],
+): Promise<number[]> {
+  const sequences: number[] = [];
+  for (const userId of new Set([ownerId, ...recipientIds])) {
+    sequences.push(
+      await recordOfflineSyncEvent(
+        tx,
+        userId,
+        entityType,
+        entityId,
+        operation,
+        changedFields,
+      ),
+    );
+  }
+  return sequences;
 }
 
 export async function buildOfflineSyncSnapshot(
@@ -399,117 +483,123 @@ export async function applyOfflineSyncMutations(
   ctx: AuthedContext,
   mutations: ZOfflineSyncMutation[],
 ): Promise<ZOfflineSyncPushResult> {
-  try {
-    return await ctx.db.transaction(
-      async (tx) => {
-        const acknowledged: string[] = [];
-        const conflicts: ZOfflineSyncConflict[] = [];
+  if (mutations.length !== 1) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Offline sync pushes require exactly one mutation",
+    });
+  }
 
-        for (const mutation of mutations) {
-          const [receipt] = await tx
-            .select({ result: offlineSyncMutationReceipts.result })
-            .from(offlineSyncMutationReceipts)
+  let appliedMutation: ZOfflineSyncMutation | undefined;
+  try {
+    const result = await ctx.db.transaction(
+      async (tx) => {
+        const mutation = mutations[0];
+        const [receipt] = await tx
+          .select({ result: offlineSyncMutationReceipts.result })
+          .from(offlineSyncMutationReceipts)
+          .where(
+            and(
+              eq(offlineSyncMutationReceipts.userId, ctx.user.id),
+              eq(
+                offlineSyncMutationReceipts.idempotencyKey,
+                mutation.idempotencyKey,
+              ),
+            ),
+          );
+        if (receipt) {
+          return receipt.result as ZOfflineSyncPushResult;
+        }
+
+        await assertBookmarkOwner(tx, ctx.user.id, mutation.bookmarkId);
+        const changedFields =
+          mutation.kind === "bookmark.update"
+            ? Object.keys(mutation.fields)
+            : ["tags"];
+        const conflicts: ZOfflineSyncConflict[] = [];
+        const baseVersions = mutation.baseVersions as Record<string, number>;
+        for (const field of changedFields) {
+          const [version] = await tx
+            .select({ version: offlineSyncFieldVersions.version })
+            .from(offlineSyncFieldVersions)
             .where(
               and(
-                eq(offlineSyncMutationReceipts.userId, ctx.user.id),
-                eq(
-                  offlineSyncMutationReceipts.idempotencyKey,
-                  mutation.idempotencyKey,
-                ),
+                eq(offlineSyncFieldVersions.bookmarkId, mutation.bookmarkId),
+                eq(offlineSyncFieldVersions.field, field),
               ),
             );
-          if (receipt) {
-            const replay = receipt.result as ZOfflineSyncPushResult;
-            if (mutations.length === 1) {
-              return replay;
-            }
-            acknowledged.push(...replay.acknowledged);
-            conflicts.push(...replay.conflicts);
-            continue;
-          }
-
-          await assertBookmarkOwner(tx, ctx.user.id, mutation.bookmarkId);
-          const changedFields =
-            mutation.kind === "bookmark.update"
-              ? Object.keys(mutation.fields)
-              : ["tags"];
-          const mutationConflicts: ZOfflineSyncConflict[] = [];
-          const baseVersions = mutation.baseVersions as Record<string, number>;
-          for (const field of changedFields) {
-            const [version] = await tx
-              .select({ version: offlineSyncFieldVersions.version })
-              .from(offlineSyncFieldVersions)
-              .where(
-                and(
-                  eq(offlineSyncFieldVersions.bookmarkId, mutation.bookmarkId),
-                  eq(offlineSyncFieldVersions.field, field),
-                ),
-              );
-            const serverVersion = version?.version ?? 0;
-            if (baseVersions[field] !== serverVersion) {
-              mutationConflicts.push({
-                bookmarkId: mutation.bookmarkId,
+          const serverVersion = version?.version ?? 0;
+          if (baseVersions[field] !== serverVersion) {
+            conflicts.push({
+              bookmarkId: mutation.bookmarkId,
+              field,
+              localValue:
+                mutation.kind === "bookmark.update"
+                  ? mutation.fields[field as keyof typeof mutation.fields]
+                  : mutation.tagIds,
+              serverValue: await getBookmarkFieldValue(
+                tx,
+                mutation.bookmarkId,
                 field,
-                localValue:
-                  mutation.kind === "bookmark.update"
-                    ? mutation.fields[field as keyof typeof mutation.fields]
-                    : mutation.tagIds,
-                serverValue: await getBookmarkFieldValue(
-                  tx,
-                  mutation.bookmarkId,
-                  field,
-                ),
-                serverVersion,
-              });
-            }
+              ),
+              serverVersion,
+            });
           }
+        }
 
-          let mutationResult: ZOfflineSyncPushResult;
-          if (mutationConflicts.length > 0) {
-            mutationResult = {
-              acknowledged: [],
-              conflicts: mutationConflicts,
-              cursor: await currentCursor(tx, ctx.user.id),
-            };
-            conflicts.push(...mutationConflicts);
-          } else {
-            if (mutation.kind === "bookmark.update") {
-              await applyBookmarkUpdate(tx, mutation);
-            } else {
-              await applyBookmarkTags(tx, ctx.user.id, mutation);
-            }
-            const sequence = await recordOfflineSyncEvent(
-              tx,
-              ctx.user.id,
-              "bookmark",
-              mutation.bookmarkId,
-              "update",
-              changedFields,
-            );
-            mutationResult = {
-              acknowledged: [mutation.idempotencyKey],
-              conflicts: [],
-              cursor: cursorForSequence(sequence),
-            };
-            acknowledged.push(mutation.idempotencyKey);
-          }
-
+        if (conflicts.length > 0) {
+          const result = {
+            acknowledged: [],
+            conflicts,
+            cursor: await currentCursor(tx, ctx.user.id),
+          };
           await tx.insert(offlineSyncMutationReceipts).values({
             userId: ctx.user.id,
             idempotencyKey: mutation.idempotencyKey,
-            result: mutationResult,
+            result,
             createdAt: new Date(),
           });
+          return result;
         }
 
-        return {
-          acknowledged,
-          conflicts,
-          cursor: await currentCursor(tx, ctx.user.id),
+        if (mutation.kind === "bookmark.update") {
+          await applyBookmarkUpdate(tx, mutation);
+        } else {
+          await applyBookmarkTags(tx, ctx.user.id, mutation);
+        }
+        const [sequence] = await recordOfflineSyncEvents(
+          tx,
+          ctx.user.id,
+          await getOfflineSyncBookmarkRecipientIds(
+            tx,
+            ctx.user.id,
+            mutation.bookmarkId,
+          ),
+          "bookmark",
+          mutation.bookmarkId,
+          "update",
+          changedFields,
+        );
+        const result = {
+          acknowledged: [mutation.idempotencyKey],
+          conflicts: [],
+          cursor: cursorForSequence(sequence),
         };
+        await tx.insert(offlineSyncMutationReceipts).values({
+          userId: ctx.user.id,
+          idempotencyKey: mutation.idempotencyKey,
+          result,
+          createdAt: new Date(),
+        });
+        appliedMutation = mutation;
+        return result;
       },
       { behavior: "immediate" },
     );
+    if (appliedMutation) {
+      await triggerBookmarkUpdateEffects(ctx, appliedMutation);
+    }
+    return result;
   } catch (error) {
     if (error instanceof TRPCError) throw error;
     throw new TRPCError({

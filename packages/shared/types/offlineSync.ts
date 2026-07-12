@@ -86,7 +86,7 @@ export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
 export type ZOfflineSyncMutation = z.infer<typeof zOfflineSyncMutationSchema>;
 
 export const zOfflineSyncPushInputSchema = z.object({
-  mutations: z.array(zOfflineSyncMutationSchema),
+  mutations: z.array(zOfflineSyncMutationSchema).length(1),
 });
 export type ZOfflineSyncPushInput = z.infer<
   typeof zOfflineSyncPushInputSchema

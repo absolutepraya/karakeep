@@ -28,6 +28,21 @@ describe("offline sync contracts", () => {
     ).toBe("bookmark.update");
   });
 
+  test("accepts exactly one mutation per push", () => {
+    const mutation = {
+      idempotencyKey: "0a42a35d-afe8-4b34-91ba-1ca4767c1fe0",
+      bookmarkId: "bookmark-1",
+      kind: "bookmark.update" as const,
+      fields: { title: "Read later" },
+      baseVersions: { title: 7 },
+    };
+    expect(() =>
+      zOfflineSyncPushInputSchema.parse({
+        mutations: [mutation, { ...mutation, idempotencyKey: "2d068a43-97e4-4417-9ca3-202fd12415d5" }],
+      }),
+    ).toThrow();
+  });
+
   test("rejects uploads and destructive operations", () => {
     expect(() =>
       zOfflineSyncPushInputSchema.parse({
@@ -270,5 +285,59 @@ describe("Offline sync routes", () => {
     );
     expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(bookmark.id);
     expect(snapshot.lists.map((item) => item.id)).not.toContain(list.id);
+  });
+
+  test<CustomTestContext>("delivers owner bookmark updates and deletes to shared collaborators", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const collaborator = apiCallers[1];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "shared content",
+    });
+    const list = await owner.lists.create({
+      name: "Shared",
+      icon: "folder",
+      type: "manual",
+    });
+    await owner.lists.addToList({ listId: list.id, bookmarkId: bookmark.id });
+    const collaboratorUser = await collaborator.users.whoami();
+    const { invitationId } = await owner.lists.addCollaborator({
+      listId: list.id,
+      email: collaboratorUser.email!,
+      role: "viewer",
+    });
+    await collaborator.lists.acceptInvitation({ invitationId });
+    const beforeUpdate = await collaborator.offlineSync.snapshot();
+
+    await owner.bookmarks.updateBookmark({
+      bookmarkId: bookmark.id,
+      title: "updated by owner",
+    });
+    const afterUpdate = await collaborator.offlineSync.pull({
+      cursor: beforeUpdate.cursor,
+    });
+    await owner.bookmarks.deleteBookmark({ bookmarkId: bookmark.id });
+    const afterDelete = await collaborator.offlineSync.pull({
+      cursor: afterUpdate.cursor,
+    });
+
+    expect(afterUpdate.events).toEqual([
+      expect.objectContaining({
+        userId: collaboratorUser.id,
+        entityType: "bookmark",
+        entityId: bookmark.id,
+        operation: "update",
+      }),
+    ]);
+    expect(afterDelete.events).toEqual([
+      expect.objectContaining({
+        userId: collaboratorUser.id,
+        entityType: "bookmark",
+        entityId: bookmark.id,
+        operation: "delete",
+      }),
+    ]);
   });
 });

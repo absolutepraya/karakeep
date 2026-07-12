@@ -68,7 +68,11 @@ import { getBookmarkIdsFromMatcher } from "../lib/search";
 import { Asset } from "../models/assets";
 import { BareBookmark, Bookmark } from "../models/bookmarks";
 import { WebhooksService } from "../models/webhooks.service";
-import { recordOfflineSyncEvent } from "../models/offlineSync";
+import {
+  getOfflineSyncBookmarkRecipientIds,
+  recordOfflineSyncEvent,
+  recordOfflineSyncEvents,
+} from "../models/offlineSync";
 
 const bookmarksProcedure = createScopedAuthedProcedure("bookmarks");
 
@@ -625,9 +629,14 @@ export const bookmarksAppRouter = router({
             );
         }
         if (offlineChangedFields.length > 0) {
-          await recordOfflineSyncEvent(
+          await recordOfflineSyncEvents(
             tx,
             ctx.user.id,
+            await getOfflineSyncBookmarkRecipientIds(
+              tx,
+              ctx.user.id,
+              input.bookmarkId,
+            ),
             "bookmark",
             input.bookmarkId,
             "update",
@@ -726,9 +735,14 @@ export const bookmarksAppRouter = router({
               eq(bookmarks.userId, ctx.user.id),
             ),
           );
-        await recordOfflineSyncEvent(
+        await recordOfflineSyncEvents(
           tx,
           ctx.user.id,
+          await getOfflineSyncBookmarkRecipientIds(
+            tx,
+            ctx.user.id,
+            input.bookmarkId,
+          ),
           "bookmark",
           input.bookmarkId,
           "update",
@@ -756,12 +770,15 @@ export const bookmarksAppRouter = router({
     .use(ensureBookmarkOwnership)
     .mutation(async ({ input, ctx }) => {
       addLogFields<"bookmark.delete">({ "bookmark.id": input.bookmarkId });
+      const recipients = await ctx.db.transaction((tx) =>
+        getOfflineSyncBookmarkRecipientIds(tx, ctx.user.id, input.bookmarkId),
+      );
       const bookmark = await Bookmark.fromId(ctx, input.bookmarkId, false);
-      await bookmark.delete();
-      await ctx.db.transaction(async (tx) => {
-        await recordOfflineSyncEvent(
+      await bookmark.delete(async (tx) => {
+        await recordOfflineSyncEvents(
           tx,
           ctx.user.id,
+          recipients,
           "bookmark",
           input.bookmarkId,
           "delete",
@@ -1272,9 +1289,14 @@ export const bookmarksAppRouter = router({
                 eq(bookmarks.userId, ctx.user.id),
               ),
             );
-          await recordOfflineSyncEvent(
+          await recordOfflineSyncEvents(
             tx,
             ctx.user.id,
+            await getOfflineSyncBookmarkRecipientIds(
+              tx,
+              ctx.user.id,
+              input.bookmarkId,
+            ),
             "bookmark",
             input.bookmarkId,
             "update",
