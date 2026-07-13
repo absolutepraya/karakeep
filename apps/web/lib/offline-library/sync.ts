@@ -64,7 +64,8 @@ export class OfflineLibrarySyncCoordinator {
   private retryAttempt = 0;
   private retryTimer: RetryTimer | undefined;
   private generation = 0;
-  private isActive = true;
+  private isActive = false;
+  private userId: string | null = null;
   private runningSync: Promise<void> | null = null;
   private runningGeneration: number | null = null;
   private status: OfflineLibraryStatus = { kind: "initializing" };
@@ -82,6 +83,9 @@ export class OfflineLibrarySyncCoordinator {
   }
 
   async syncNow(): Promise<void> {
+    if (!this.isActive) {
+      throw new Error("Offline sync requires an authenticated user");
+    }
     const generation = this.generation;
     if (this.runningSync) {
       if (this.runningGeneration === generation) {
@@ -103,16 +107,19 @@ export class OfflineLibrarySyncCoordinator {
     return await this.runningSync;
   }
 
-  activate(): void {
+  activate(userId: string): void {
     this.generation += 1;
     this.isActive = true;
+    this.userId = userId;
   }
 
-  deactivate(): void {
+  async deactivate(): Promise<void> {
     this.generation += 1;
     this.isActive = false;
+    this.userId = null;
     this.clearRetry();
     this.setStatus({ kind: "initializing" });
+    await this.runningSync;
   }
 
   async queueBookmarkUpdate(mutation: BookmarkUpdateMutation): Promise<void> {
@@ -133,10 +140,18 @@ export class OfflineLibrarySyncCoordinator {
 
   async markOffline(): Promise<void> {
     this.clearRetry();
+    const [pendingWrites, conflictCount] = await Promise.all([
+      this.pendingWriteCount(),
+      offlineLibraryDb.conflicts.count(),
+    ]);
+    if (conflictCount > 0) {
+      this.setStatus({ kind: "conflict", pendingWrites, conflictCount });
+      return;
+    }
     this.setStatus({
       kind: "offline",
       lastSyncedAt: this.lastSyncedAt,
-      pendingWrites: await this.pendingWriteCount(),
+      pendingWrites,
     });
   }
 

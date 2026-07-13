@@ -103,6 +103,7 @@ test("does not mark the replica online until pull succeeds", async () => {
   const client = makeClient();
   vi.mocked(client.pull).mockRejectedValueOnce(new Error("captive portal"));
   const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
 
   await expect(coordinator.syncNow()).rejects.toThrow("captive portal");
   expect(coordinator.getStatus()).toMatchObject({ kind: "error" });
@@ -113,6 +114,7 @@ test("replays queued writes once, then applies the returned delta", async () => 
   await enqueueMutation(pendingMutation);
   const client = makeClient();
   const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
 
   await coordinator.syncNow();
 
@@ -123,6 +125,7 @@ test("replays queued writes once, then applies the returned delta", async () => 
 test("takes an atomic snapshot before the first online state", async () => {
   const client = makeClient();
   const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
 
   await coordinator.syncNow();
 
@@ -148,6 +151,7 @@ test("saves conflicts and prioritizes them over online status", async () => {
     ],
   });
   const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
 
   await coordinator.syncNow();
 

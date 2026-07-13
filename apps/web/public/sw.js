@@ -131,8 +131,10 @@ self.addEventListener("message", (event) => {
       .then((cacheNames) =>
         Promise.all(
           cacheNames
-            .filter((cacheName) =>
-              cacheName.startsWith(KARAKEEP_THUMBNAIL_CACHE_PREFIX),
+            .filter(
+              (cacheName) =>
+                cacheName === "karakeep-thumbnails" ||
+                cacheName.startsWith(KARAKEEP_THUMBNAIL_CACHE_PREFIX),
             )
             .map((cacheName) => caches.delete(cacheName)),
         ),
@@ -234,32 +236,27 @@ async function handleThumbnail(event) {
   const cachedResponse = await cache.match(event.request);
 
   if (cachedResponse) {
-    event.waitUntil(
-      Promise.all([
-        notifyThumbnailUse(event),
-        revalidateThumbnail(cache, event.request),
-      ]),
-    );
+    event.waitUntil(revalidateThumbnail(cache, event));
     return cachedResponse;
   }
 
   const response = await fetch(event.request);
   if (isCacheableThumbnail(response)) {
     event.waitUntil(
-      Promise.all([
-        cache.put(event.request, response.clone()),
-        notifyThumbnailUse(event),
-      ]),
+      cache
+        .put(event.request, response.clone())
+        .then(() => notifyThumbnailUse(event)),
     );
   }
   return response;
 }
 
-async function revalidateThumbnail(cache, request) {
+async function revalidateThumbnail(cache, event) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(event.request);
     if (isCacheableThumbnail(response)) {
-      await cache.put(request, response.clone());
+      await cache.put(event.request, response.clone());
+      await notifyThumbnailUse(event);
     }
   } catch {
     // A cached thumbnail is still usable while the revalidation request fails.

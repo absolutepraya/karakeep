@@ -27,6 +27,9 @@ const thumbnailCaches = new Map<string, Map<string, Response>>();
 Object.defineProperty(globalThis, "caches", {
   configurable: true,
   value: {
+    async keys() {
+      return [...thumbnailCaches.keys()];
+    },
     async delete(name: string) {
       return thumbnailCaches.delete(name);
     },

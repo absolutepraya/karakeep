@@ -1,7 +1,15 @@
 "use client";
 
 import type { TRPCClient } from "@trpc/client";
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import type { AppRouter } from "@karakeep/trpc/routers/_app";
 
@@ -40,11 +48,10 @@ export function createOfflineSyncClient(
   };
 }
 
-function clearUserCaches(): void {
-  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
-    return;
+async function clearUserCaches(): Promise<void> {
+  if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+    navigator.serviceWorker.controller?.postMessage({ type: "CLEAR_USER_CACHES" });
   }
-  navigator.serviceWorker.controller?.postMessage({ type: "CLEAR_USER_CACHES" });
 }
 
 export function OfflineLibraryProvider({
@@ -56,6 +63,9 @@ export function OfflineLibraryProvider({
     () => new OfflineLibrarySyncCoordinator(createOfflineSyncClient(trpcClient)),
     [trpcClient],
   );
+  const activeUserIdRef = useRef<string | null>(null);
+  const lifecycleRef = useRef<Promise<void>>(Promise.resolve());
+  const userId = sessionStatus === "authenticated" ? session?.user?.id ?? null : null;
   const [status, setStatus] = useState<OfflineLibraryStatus>(
     coordinator.getStatus(),
   );
@@ -69,54 +79,78 @@ export function OfflineLibraryProvider({
   }, [coordinator]);
 
   useEffect(() => {
-    if (sessionStatus === "authenticated" && session?.user?.id) {
-      coordinator.activate();
-      const sync = () => {
+    const sync = () => {
+      if (activeUserIdRef.current) {
         void coordinator.syncNow().catch(() => undefined);
-      };
-      const onVisibilityChange = () => {
-        if (document.visibilityState === "visible") {
-          sync();
-        }
-      };
-      const onOnline = () => sync();
-      const onOffline = () => {
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        sync();
+      }
+    };
+    const onOffline = () => {
+      if (activeUserIdRef.current) {
         void coordinator.markOffline();
-      };
-      const onWorkerMessage = (
-        event: MessageEvent<{ type?: string }>,
-      ) => {
-        if (event.data?.type === "THUMBNAIL_USED") {
-          void coordinator.afterThumbnailCacheWrite();
-        }
-      };
-      const hasServiceWorker = "serviceWorker" in navigator;
+      }
+    };
+    const onWorkerMessage = (event: MessageEvent<{ type?: string }>) => {
+      if (event.data?.type === "THUMBNAIL_USED") {
+        void coordinator.afterThumbnailCacheWrite();
+      }
+    };
+    const serviceWorker = navigator.serviceWorker;
+    const hasServiceWorker =
+      typeof serviceWorker?.addEventListener === "function" &&
+      typeof serviceWorker.removeEventListener === "function";
 
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", onOffline);
+    if (hasServiceWorker) {
+      serviceWorker.addEventListener("message", onWorkerMessage);
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", onOffline);
       if (hasServiceWorker) {
-        navigator.serviceWorker.addEventListener("message", onWorkerMessage);
+        serviceWorker.removeEventListener("message", onWorkerMessage);
+      }
+    };
+  }, [coordinator]);
+
+  useEffect(() => {
+    let cancelled = false;
+    lifecycleRef.current = lifecycleRef.current.then(async () => {
+      const previousUserId = activeUserIdRef.current;
+      if (previousUserId !== userId && previousUserId !== null) {
+        await coordinator.deactivate();
+        await purgeOfflineLibrary();
+        await clearUserCaches();
+        activeUserIdRef.current = null;
       }
 
-
-      sync();
-      document.addEventListener("visibilitychange", onVisibilityChange);
-      window.addEventListener("online", onOnline);
-      window.addEventListener("offline", onOffline);
-      return () => {
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-        window.removeEventListener("online", onOnline);
-        window.removeEventListener("offline", onOffline);
-        if (hasServiceWorker) {
-          navigator.serviceWorker.removeEventListener("message", onWorkerMessage);
+      if (userId === null) {
+        if (previousUserId === null) {
+          await coordinator.deactivate();
+          await purgeOfflineLibrary();
+          await clearUserCaches();
         }
-        coordinator.deactivate();
-      };
-    }
+        return;
+      }
 
-    if (sessionStatus !== "loading") {
-      coordinator.deactivate();
-      void purgeOfflineLibrary().finally(clearUserCaches);
-    }
-  }, [coordinator, session?.user?.id, sessionStatus]);
+      if (cancelled) {
+        return;
+      }
+      coordinator.activate(userId);
+      activeUserIdRef.current = userId;
+      void coordinator.syncNow().catch(() => undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [coordinator, userId]);
 
   const value = useMemo<OfflineLibraryContextValue>(
     () => ({

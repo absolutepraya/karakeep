@@ -17,7 +17,8 @@ import { offlineLibraryDb } from "./schema";
 
 const SYNC_CURSOR_KEY = "syncCursor";
 const REPLICA_STATE_KEY = "replicaState";
-const THUMBNAIL_CACHE_PREFIX = "karakeep-thumbnails:";
+const LEGACY_THUMBNAIL_CACHE_NAME = "karakeep-thumbnails";
+const THUMBNAIL_CACHE_PREFIX = `${LEGACY_THUMBNAIL_CACHE_NAME}:`;
 
 type OfflineBookmarkQuery = {
   archived?: boolean;
@@ -374,10 +375,15 @@ export async function purgeOfflineLibrary(): Promise<void> {
     },
   );
   const cacheStorage = globalThis.caches;
-  const cacheNames = (await cacheStorage?.keys()) ?? [];
+  const cacheNames =
+    typeof cacheStorage?.keys === "function" ? await cacheStorage.keys() : [];
   await Promise.all(
     cacheNames
-      .filter((cacheName) => cacheName.startsWith(THUMBNAIL_CACHE_PREFIX))
+      .filter(
+        (cacheName) =>
+          cacheName === LEGACY_THUMBNAIL_CACHE_NAME ||
+          cacheName.startsWith(THUMBNAIL_CACHE_PREFIX),
+      )
       .map((cacheName) => cacheStorage?.delete(cacheName)),
   );
 }
@@ -408,10 +414,15 @@ export async function evictLeastRecentlyUsedThumbnails(
   }
 
   const cacheStorage = globalThis.caches;
-  const cacheNames = (await cacheStorage?.keys()) ?? [];
+  const cacheNames =
+    typeof cacheStorage?.keys === "function" ? await cacheStorage.keys() : [];
   const thumbnailCaches = await Promise.all(
     cacheNames
-      .filter((cacheName) => cacheName.startsWith(THUMBNAIL_CACHE_PREFIX))
+      .filter(
+        (cacheName) =>
+          cacheName === LEGACY_THUMBNAIL_CACHE_NAME ||
+          cacheName.startsWith(THUMBNAIL_CACHE_PREFIX),
+      )
       .map(async (cacheName) => await cacheStorage?.open(cacheName)),
   );
   for (const thumbnailRecord of thumbnailRecords) {
