@@ -271,13 +271,15 @@ export class OfflineLibrarySyncCoordinator {
       return;
     }
     for (let index = 0; index < mutations.length; index += 1) {
-      this.setStatus({
-        kind: "syncing",
-        phase: "pushing",
-        completed: index,
-        total: mutations.length,
-        pendingWrites: mutations.length - index,
-      });
+      if (this.status.kind !== "online") {
+        this.setStatus({
+          kind: "syncing",
+          phase: "pushing",
+          completed: index,
+          total: mutations.length,
+          pendingWrites: mutations.length - index,
+        });
+      }
       const mutation = mutations[index];
       if (!mutation) {
         continue;
@@ -303,13 +305,15 @@ export class OfflineLibrarySyncCoordinator {
     let cursor = initialCursor;
     let completed = 0;
     while (true) {
-      this.setStatus({
-        kind: "syncing",
-        phase: "pulling",
-        completed,
-        total: completed + 1,
-        pendingWrites: await this.pendingWriteCount(),
-      });
+      if (this.status.kind !== "online") {
+        this.setStatus({
+          kind: "syncing",
+          phase: "pulling",
+          completed,
+          total: completed + 1,
+          pendingWrites: await this.pendingWriteCount(),
+        });
+      }
       const delta = await this.client.pull({ cursor });
       if (!this.isCurrentGeneration(generation)) {
         return;

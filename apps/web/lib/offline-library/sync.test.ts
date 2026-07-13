@@ -197,6 +197,28 @@ test("takes an atomic snapshot before the first online state", async () => {
   });
 });
 
+test("keeps an online replica online during a background delta sync", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  const client = makeClient();
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  const statuses: string[] = [];
+  const unsubscribe = coordinator.subscribe((status) => {
+    statuses.push(status.kind);
+  });
+  statuses.length = 0;
+
+  await coordinator.syncNow();
+  unsubscribe();
+
+  expect(client.pull).toHaveBeenCalledTimes(2);
+  expect(statuses).not.toContain("syncing");
+  expect(coordinator.getStatus()).toMatchObject({ kind: "online" });
+});
+
 test("saves conflicts and prioritizes them over online status", async () => {
   await replaceSnapshot(snapshot, "user-1");
   await enqueueMutation(pendingMutation, "user-1");
