@@ -73,7 +73,7 @@ vi.mock("./BookmarksGrid", () => ({
     bookmarks,
     fetchNextPage,
   }: {
-    bookmarks: Array<{ id: string }>;
+    bookmarks: { id: string }[];
     fetchNextPage: () => void;
   }) => (
     <div>
@@ -177,7 +177,7 @@ describe("UpdatableBookmarksGrid", () => {
 
   it("ignores a superseded local next page and keeps the new query cursor", async () => {
     const oldNextPage = Promise.withResolvers<{
-      bookmarks: Array<{ id: string }>;
+      bookmarks: { id: string }[];
       cursor: string | null;
       nextCursor: { id: string; createdAt: Date } | null;
     }>();

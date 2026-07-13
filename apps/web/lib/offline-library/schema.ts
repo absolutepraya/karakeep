@@ -1,4 +1,5 @@
-import Dexie, { type Table } from "dexie";
+import Dexie from "dexie";
+import type { Table } from "dexie";
 
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type { ZBookmarkList } from "@karakeep/shared/types/lists";

@@ -258,10 +258,10 @@ async function applyBookmarkUpdate(
   }
 }
 
-type BookmarkTagDelta = {
+interface BookmarkTagDelta {
   attached: string[];
   detached: string[];
-};
+}
 
 async function applyBookmarkTags(
   tx: KarakeepDBTransaction,

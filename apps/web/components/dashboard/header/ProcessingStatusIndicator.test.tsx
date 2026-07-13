@@ -9,16 +9,16 @@ import type { OfflineLibraryStatus } from "@/lib/offline-library/sync";
 import ProcessingStatusIndicator from "./ProcessingStatusIndicator";
 
 const mocks = vi.hoisted(() => ({
-  conflicts: [] as Array<{
+  conflicts: [] as {
     bookmarkId: string;
     field: string;
     localValue: unknown;
     serverValue: unknown;
     serverVersion: number;
-  }>,
+  }[],
   serverProcessing: {
     total: 0,
-    tasks: [] as Array<{ kind: "crawling" | "embedding"; count: number }>,
+    tasks: [] as { kind: "crawling" | "embedding"; count: number }[],
   },
   status: {
     kind: "online",

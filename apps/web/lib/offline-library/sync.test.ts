@@ -2,7 +2,8 @@ import "fake-indexeddb/auto";
 
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { BookmarkTypes, type ZBookmark } from "@karakeep/shared/types/bookmarks";
+import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
+import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type {
   ZOfflineSyncMutation,
   ZOfflineSyncPullResult,
@@ -16,7 +17,8 @@ import {
   offlineLibraryDb,
   replaceSnapshot,
 } from "./repository";
-import { OfflineLibrarySyncCoordinator, type OfflineSyncClient } from "./sync";
+import { OfflineLibrarySyncCoordinator } from "./sync";
+import type { OfflineSyncClient } from "./sync";
 
 const bookmark: ZBookmark = {
   id: "bookmark-1",

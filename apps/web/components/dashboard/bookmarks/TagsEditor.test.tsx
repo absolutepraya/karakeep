@@ -31,7 +31,7 @@ vi.mock("@/lib/i18n/client", () => ({
   }),
 }));
 vi.mock("@/lib/utils", () => ({
-  cn: (...classes: Array<string | false | null | undefined>) =>
+  cn: (...classes: (string | false | null | undefined)[]) =>
     classes.filter(Boolean).join(" "),
 }));
 vi.mock("@tanstack/react-query", () => ({

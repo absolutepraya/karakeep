@@ -10,7 +10,7 @@ const BUILD_VERSION = "test-build";
 const SHELL_CACHE = `karakeep-shell:${WORKER_SCOPE}:${BUILD_VERSION}`;
 const THUMBNAIL_CACHE = `karakeep-thumbnails:${WORKER_SCOPE}:${BUILD_VERSION}`;
 
-type WorkerEvent = {
+interface WorkerEvent {
   clientId?: string;
   data?: unknown;
   request?: {
@@ -22,7 +22,7 @@ type WorkerEvent = {
   source?: { id: string };
   respondWith: (response: Promise<Response> | Response) => void;
   waitUntil: (work: Promise<unknown>) => void;
-};
+}
 
 function createWorkerHarness() {
   const listeners = new Map<string, (event: WorkerEvent) => void>();

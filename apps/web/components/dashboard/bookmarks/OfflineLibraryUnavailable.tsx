@@ -1,8 +1,8 @@
 import React from "react";
 
-type OfflineLibraryUnavailableProps = {
+interface OfflineLibraryUnavailableProps {
   error?: boolean;
-};
+}
 
 export default function OfflineLibraryUnavailable({
   error = false,

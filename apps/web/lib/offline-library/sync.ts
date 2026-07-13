@@ -45,11 +45,11 @@ type OfflineLibraryStatus =
   | { kind: "error"; message: string; retryAt: Date; pendingWrites: number }
   | { kind: "conflict"; pendingWrites: number; conflictCount: number };
 
-type OfflineSyncClient = {
+interface OfflineSyncClient {
   snapshot: () => Promise<ZOfflineSyncSnapshot>;
   pull: (input: { cursor: string }) => Promise<ZOfflineSyncPullResult>;
   push: (input: ZOfflineSyncPushInput) => Promise<ZOfflineSyncPushResult>;
-};
+}
 
 type OfflineLibraryStatusListener = (status: OfflineLibraryStatus) => void;
 type RetryTimer = Parameters<typeof globalThis.clearTimeout>[0];

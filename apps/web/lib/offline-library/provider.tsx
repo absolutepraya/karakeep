@@ -3,7 +3,6 @@
 import type { TRPCClient } from "@trpc/client";
 import React, {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -16,25 +15,25 @@ import type { AppRouter } from "@karakeep/trpc/routers/_app";
 import { useSession } from "@/lib/auth/client";
 
 import { getReplicaOwnerUserId, purgeOfflineLibrary } from "./repository";
-import {
-  OfflineLibrarySyncCoordinator,
-  type BookmarkTagsMutation,
-  type BookmarkUpdateMutation,
-  type OfflineLibraryStatus,
-  type OfflineSyncClient,
+import { OfflineLibrarySyncCoordinator } from "./sync";
+import type {
+  BookmarkTagsMutation,
+  BookmarkUpdateMutation,
+  OfflineLibraryStatus,
+  OfflineSyncClient,
 } from "./sync";
 
-type OfflineLibraryContextValue = {
+interface OfflineLibraryContextValue {
   status: OfflineLibraryStatus;
   syncNow: () => Promise<void>;
   queueBookmarkUpdate: (mutation: BookmarkUpdateMutation) => Promise<void>;
   queueBookmarkTags: (mutation: BookmarkTagsMutation) => Promise<void>;
-};
+}
 
-type OfflineLibraryProviderProps = {
+interface OfflineLibraryProviderProps {
   children: React.ReactNode;
   trpcClient: TRPCClient<AppRouter>;
-};
+}
 
 const OfflineLibraryContext = createContext<OfflineLibraryContextValue | null>(null);
 

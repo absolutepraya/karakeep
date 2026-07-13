@@ -50,21 +50,21 @@ type OfflineUpdateFields = Extract<
   ZOfflineSyncMutation,
   { kind: "bookmark.update" }
 >["fields"];
-type BookmarkTagInput = {
+interface BookmarkTagInput {
   tagId?: string;
   tagName?: string;
   attachedBy?: "human" | "ai";
-};
+}
 
-export type OfflineSafeBookmarkTagsInput = {
+export interface OfflineSafeBookmarkTagsInput {
   bookmarkId: string;
   attach: BookmarkTagInput[];
   detach: BookmarkTagInput[];
-};
+}
 
-export type OfflineQueuedMutation = {
+export interface OfflineQueuedMutation {
   kind: "queued";
-};
+}
 
 export interface OfflineSafeBookmarkMutation<TInput, TResult> {
   mutate: (input: TInput) => void;

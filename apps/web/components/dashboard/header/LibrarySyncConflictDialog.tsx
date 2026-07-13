@@ -13,11 +13,11 @@ import { Button } from "@/components/ui/button";
 import { offlineLibraryDb } from "@/lib/offline-library/repository";
 import type { ZOfflineSyncConflict } from "@karakeep/shared/types/offlineSync";
 
-type LibrarySyncConflictDialogProps = {
+interface LibrarySyncConflictDialogProps {
   conflict: ZOfflineSyncConflict | null;
   onChooseLocal: (conflict: ZOfflineSyncConflict) => Promise<void>;
   onChooseServer: (conflict: ZOfflineSyncConflict) => Promise<void>;
-};
+}
 
 function formatValue(value: unknown): string {
   if (value === undefined) return "Not set";

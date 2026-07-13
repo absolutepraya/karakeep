@@ -251,7 +251,7 @@ describe("Offline sync routes", () => {
 
     expect(delta.events).toHaveLength(2);
     expect(delta.events.map((event) => event.sequence)).toEqual(
-      [...delta.events.map((event) => event.sequence)].sort((a, b) => a - b),
+      delta.events.map((event) => event.sequence).sort((a, b) => a - b),
     );
     expect(delta.events.map((event) => event.entityId)).toEqual([
       bookmark.id,

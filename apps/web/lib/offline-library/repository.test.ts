@@ -2,7 +2,8 @@ import "fake-indexeddb/auto";
 
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-import { BookmarkTypes, type ZBookmark } from "@karakeep/shared/types/bookmarks";
+import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
+import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type {
   ZOfflineSyncEvent,
   ZOfflineSyncMutation,

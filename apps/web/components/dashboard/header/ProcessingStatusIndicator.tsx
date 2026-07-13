@@ -28,10 +28,8 @@ import {
 } from "@/lib/offline-library/provider";
 import { offlineLibraryDb } from "@/lib/offline-library/repository";
 import { useTRPC } from "@karakeep/shared-react/trpc";
-import {
-  zBookmarkSchema,
-  type ZBookmark,
-} from "@karakeep/shared/types/bookmarks";
+import { zBookmarkSchema } from "@karakeep/shared/types/bookmarks";
+import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type {
   ZOfflineSyncConflict,
   ZOfflineSyncMutation,

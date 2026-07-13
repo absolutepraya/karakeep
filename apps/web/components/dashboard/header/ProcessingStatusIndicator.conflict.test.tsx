@@ -6,7 +6,8 @@ import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BookmarkTypes, type ZBookmark } from "@karakeep/shared/types/bookmarks";
+import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
+import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type { OfflineLibraryStatus } from "@/lib/offline-library/sync";
 import {
   offlineLibraryDb,

@@ -1,16 +1,16 @@
-import {
-  DEFAULT_NUM_BOOKMARKS_PER_PAGE,
-  type ZBookmark,
-  type ZSortOrder,
+import { DEFAULT_NUM_BOOKMARKS_PER_PAGE } from "@karakeep/shared/types/bookmarks";
+import type {
+  ZBookmark,
+  ZSortOrder,
 } from "@karakeep/shared/types/bookmarks";
 import type { ZCursor } from "@karakeep/shared/types/pagination";
-import {
-  zOfflineSyncMutationSchema,
-  type ZOfflineSyncConflict,
-  type ZOfflineSyncCursor,
-  type ZOfflineSyncEvent,
-  type ZOfflineSyncMutation,
-  type ZOfflineSyncSnapshot,
+import { zOfflineSyncMutationSchema } from "@karakeep/shared/types/offlineSync";
+import type {
+  ZOfflineSyncConflict,
+  ZOfflineSyncCursor,
+  ZOfflineSyncEvent,
+  ZOfflineSyncMutation,
+  ZOfflineSyncSnapshot,
 } from "@karakeep/shared/types/offlineSync";
 
 import { offlineLibraryDb } from "./schema";
@@ -21,7 +21,7 @@ const REPLICA_OWNER_USER_ID_KEY = "replicaOwnerUserId";
 const LEGACY_THUMBNAIL_CACHE_NAME = "karakeep-thumbnails";
 const THUMBNAIL_CACHE_PREFIX = `${LEGACY_THUMBNAIL_CACHE_NAME}:`;
 
-type OfflineBookmarkQuery = {
+interface OfflineBookmarkQuery {
   archived?: boolean;
   favourited?: boolean;
   tagId?: string;
@@ -30,13 +30,13 @@ type OfflineBookmarkQuery = {
   sortOrder?: Exclude<ZSortOrder, "relevance">;
   cursor?: ZCursor | null;
   limit?: number;
-};
+}
 
-type OfflineBookmarkPage = {
+interface OfflineBookmarkPage {
   bookmarks: ZBookmark[];
   cursor: ZOfflineSyncCursor | null;
   nextCursor: ZCursor | null;
-};
+}
 
 type StoredConflict = ZOfflineSyncConflict & { id: string };
 
@@ -476,7 +476,7 @@ export async function enqueueMutation(
 
 export async function listPendingMutations(
   ownerUserId: string,
-): Promise<Array<ZOfflineSyncMutation & { queuedAt: number }>> {
+): Promise<(ZOfflineSyncMutation & { queuedAt: number })[]> {
   const mutations = await offlineLibraryDb.outbox
     .where("ownerUserId")
     .equals(ownerUserId)

@@ -33,7 +33,7 @@ vi.mock("@/lib/store/useSortOrderStore", () => ({
   useSortOrderStore: () => ({ setSortOrder: vi.fn() }),
 }));
 vi.mock("@/components/dashboard/bookmarks/BookmarksGrid", () => ({
-  default: ({ bookmarks }: { bookmarks: Array<{ id: string }> }) => (
+  default: ({ bookmarks }: { bookmarks: { id: string }[] }) => (
     <div>
       {bookmarks.map((bookmark) => (
         <span key={bookmark.id}>{bookmark.id}</span>

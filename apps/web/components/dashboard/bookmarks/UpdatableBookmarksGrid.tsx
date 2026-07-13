@@ -5,16 +5,16 @@ import React, {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
+import type { ReactNode } from "react";
 import UploadDropzone from "@/components/dashboard/UploadDropzone";
 import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
 import {
   isOfflineReplicaReady,
   offlineLibraryDb,
   queryBookmarks,
-  type OfflineBookmarkQuery,
 } from "@/lib/offline-library/repository";
+import type { OfflineBookmarkQuery } from "@/lib/offline-library/repository";
 import { useSortOrderStore } from "@/lib/store/useSortOrderStore";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
@@ -29,14 +29,14 @@ import { useTRPC } from "@karakeep/shared-react/trpc";
 import BookmarksGrid from "./BookmarksGrid";
 import OfflineLibraryUnavailable from "./OfflineLibraryUnavailable";
 
-type UpdatableBookmarksGridProps = {
+interface UpdatableBookmarksGridProps {
   query: Omit<ZGetBookmarksRequest, "sortOrder" | "includeContent">;
   bookmarks: ZGetBookmarksResponse;
   showEditorCard?: boolean;
   itemsPerPage?: number;
-};
+}
 
-type LocalBookmarkPagination = {
+interface LocalBookmarkPagination {
   bookmarks: ZGetBookmarksResponse["bookmarks"];
   hasNextPage: boolean;
   fetchNextPage: () => void;
@@ -45,7 +45,7 @@ type LocalBookmarkPagination = {
   isReady: boolean;
   bookmarkCount: number;
   error: Error | null;
-};
+}
 
 function toOfflineQuery(
   query: Omit<ZGetBookmarksRequest, "sortOrder" | "includeContent">,
