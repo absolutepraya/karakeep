@@ -1,0 +1,12 @@
+worktree_path = ".worktrees"
+port_offset_interval = 100
+max_slots = 9
+
+# Worktrees share this repository's root local data and environment files.
+# Do not migrate the shared database automatically during worktree setup.
+setup = [
+  "pnpm install --frozen-lockfile",
+  "ln -sf ../../.env apps/web/.env",
+  "ln -sf ../../.env apps/workers/.env",
+  "ln -sf ../../.env packages/db/.env",
+]
