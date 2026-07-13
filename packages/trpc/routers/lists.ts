@@ -1,6 +1,15 @@
 import { experimental_trpcMiddleware } from "@trpc/server";
 import { z } from "zod";
 
+import { eq } from "drizzle-orm";
+
+import type { KarakeepDBTransaction } from "@karakeep/db";
+
+import {
+  bookmarkLists,
+  listCollaborators,
+  listInvitations,
+} from "@karakeep/db/schema";
 import {
   zBookmarkListSchema,
   zEditBookmarkListSchemaWithValidation,
@@ -20,8 +29,47 @@ import {
 import { ListInvitation } from "../models/listInvitations";
 import { List } from "../models/lists";
 import { ensureBookmarkOwnership } from "./bookmarks";
+import { recordOfflineSyncEvent } from "../models/offlineSync";
 
 const listsProcedure = createScopedAuthedProcedure("lists");
+
+function asTransactionContext(
+  ctx: AuthedContext,
+  db: KarakeepDBTransaction,
+): AuthedContext {
+  return { ...ctx, db } as unknown as AuthedContext;
+}
+
+async function recordListSyncEvent(
+  tx: KarakeepDBTransaction,
+  userIds: string[],
+  listId: string,
+  operation: "create" | "update" | "delete" | "revoke",
+  changedFields: string[],
+) {
+  for (const userId of new Set(userIds)) {
+    await recordOfflineSyncEvent(
+      tx,
+      userId,
+      "list",
+      listId,
+      operation,
+      changedFields,
+    );
+  }
+}
+
+async function listSyncUserIds(
+  ctx: AuthedContext,
+  listId: string,
+  ownerId: string,
+) {
+  const collaborators = await ctx.db
+    .select({ userId: listCollaborators.userId })
+    .from(listCollaborators)
+    .where(eq(listCollaborators.listId, listId));
+  return [ownerId, ...collaborators.map((collaborator) => collaborator.userId)];
+}
 
 export const ensureListAtLeastViewer = experimental_trpcMiddleware<{
   ctx: AuthedContext;
@@ -79,7 +127,18 @@ export const listsAppRouter = router({
     .input(zNewBookmarkListSchema)
     .output(zBookmarkListSchema)
     .mutation(async ({ input, ctx }) => {
-      const list = await List.create(ctx, input);
+      const list = await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.create(transactionCtx, input);
+        await recordListSyncEvent(tx, [ctx.user.id], list.id, "create", [
+          "name",
+          "description",
+          "icon",
+          "parentId",
+          "query",
+        ]);
+        return list;
+      });
       addLogFields<"list.create">({ "list.id": list.id });
       return list.asZBookmarkList();
     }),
@@ -89,7 +148,31 @@ export const listsAppRouter = router({
     .use(ensureListAtLeastViewer)
     .use(ensureListAtLeastOwner)
     .mutation(async ({ input, ctx }) => {
-      await ctx.list.update(input);
+      const list = await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        await list.update(input);
+        const serialized = list.asZBookmarkList();
+        await recordListSyncEvent(
+          tx,
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
+          serialized.id,
+          "update",
+          [
+            ...(input.name !== undefined ? ["name"] : []),
+            ...(input.description !== undefined ? ["description"] : []),
+            ...(input.icon !== undefined ? ["icon"] : []),
+            ...(input.parentId !== undefined ? ["parentId"] : []),
+            ...(input.query !== undefined ? ["query"] : []),
+            ...(input.public !== undefined ? ["public"] : []),
+          ],
+        );
+        return serialized;
+      });
       if (input.public !== undefined) {
         logEvent({
           "event.name": "list.share",
@@ -98,21 +181,37 @@ export const listsAppRouter = router({
           "list.public": input.public,
         });
       }
-      return ctx.list.asZBookmarkList();
+      return list;
     }),
   merge: listsProcedure
     .input(zMergeListSchema)
     .mutation(async ({ input, ctx }) => {
-      const [sourceList, targetList] = await Promise.all([
-        List.fromId(ctx, input.sourceId),
-        List.fromId(ctx, input.targetId),
-      ]);
-      sourceList.ensureCanManage();
-      targetList.ensureCanManage();
-      return await sourceList.mergeInto(
-        targetList,
-        input.deleteSourceAfterMerge,
-      );
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const [sourceList, targetList] = await Promise.all([
+          List.fromId(transactionCtx, input.sourceId),
+          List.fromId(transactionCtx, input.targetId),
+        ]);
+        sourceList.ensureCanManage();
+        targetList.ensureCanManage();
+        const source = sourceList.asZBookmarkList();
+        const target = targetList.asZBookmarkList();
+        const [sourceUserIds, targetUserIds] = await Promise.all([
+          listSyncUserIds(transactionCtx, source.id, source.userId),
+          listSyncUserIds(transactionCtx, target.id, target.userId),
+        ]);
+        await sourceList.mergeInto(targetList, input.deleteSourceAfterMerge);
+        await recordListSyncEvent(tx, targetUserIds, target.id, "update", [
+          "bookmarks",
+        ]);
+        await recordListSyncEvent(
+          tx,
+          sourceUserIds,
+          source.id,
+          input.deleteSourceAfterMerge ? "delete" : "update",
+          input.deleteSourceAfterMerge ? [] : ["bookmarks"],
+        );
+      });
     }),
   delete: listsProcedure
     .input(
@@ -124,11 +223,37 @@ export const listsAppRouter = router({
     .use(ensureListAtLeastViewer)
     .use(ensureListAtLeastOwner)
     .mutation(async ({ ctx, input }) => {
-      if (input.deleteChildren) {
-        const children = await ctx.list.getChildren();
-        await Promise.all(children.map((l) => l.delete()));
-      }
-      await ctx.list.delete();
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        const serialized = list.asZBookmarkList();
+        const syncUserIds = await listSyncUserIds(
+          transactionCtx,
+          serialized.id,
+          serialized.userId,
+        );
+        if (input.deleteChildren) {
+          const children = await list.getChildren();
+          for (const child of children) {
+            const childList = child.asZBookmarkList();
+            const childUserIds = await listSyncUserIds(
+              transactionCtx,
+              childList.id,
+              childList.userId,
+            );
+            await child.delete();
+            await recordListSyncEvent(
+              tx,
+              childUserIds,
+              childList.id,
+              "delete",
+              [],
+            );
+          }
+        }
+        await list.delete();
+        await recordListSyncEvent(tx, syncUserIds, serialized.id, "delete", []);
+      });
     }),
   addToList: listsProcedure
     .input(
@@ -141,7 +266,23 @@ export const listsAppRouter = router({
     .use(ensureListAtLeastEditor)
     .use(ensureBookmarkOwnership)
     .mutation(async ({ input, ctx }) => {
-      await ctx.list.addBookmark(input.bookmarkId);
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        await list.addBookmark(input.bookmarkId);
+        const serialized = list.asZBookmarkList();
+        await recordListSyncEvent(
+          tx,
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
+          serialized.id,
+          "update",
+          ["bookmarks"],
+        );
+      });
     }),
   removeFromList: listsProcedure
     .input(
@@ -153,7 +294,23 @@ export const listsAppRouter = router({
     .use(ensureListAtLeastViewer)
     .use(ensureListAtLeastEditor)
     .mutation(async ({ input, ctx }) => {
-      await ctx.list.removeBookmark(input.bookmarkId);
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        await list.removeBookmark(input.bookmarkId);
+        const serialized = list.asZBookmarkList();
+        await recordListSyncEvent(
+          tx,
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
+          serialized.id,
+          "update",
+          ["bookmarks"],
+        );
+      });
     }),
   get: listsProcedure
     .input(
@@ -270,12 +427,19 @@ export const listsAppRouter = router({
     .use(ensureListAtLeastViewer)
     .use(ensureListAtLeastOwner)
     .mutation(async ({ input, ctx }) => {
-      return {
-        invitationId: await ctx.list.addCollaboratorByEmail(
+      const invitationId = await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        const invitationId = await list.addCollaboratorByEmail(
           input.email,
           input.role,
-        ),
-      };
+        );
+        await recordListSyncEvent(tx, [ctx.user.id], list.id, "update", [
+          "collaborators",
+        ]);
+        return invitationId;
+      });
+      return { invitationId };
     }),
   removeCollaborator: listsProcedure
     .input(
@@ -287,7 +451,31 @@ export const listsAppRouter = router({
     .use(ensureListAtLeastViewer)
     .use(ensureListAtLeastOwner)
     .mutation(async ({ input, ctx }) => {
-      await ctx.list.removeCollaborator(input.userId);
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        const serialized = list.asZBookmarkList();
+        const syncUserIds = await listSyncUserIds(
+          transactionCtx,
+          serialized.id,
+          serialized.userId,
+        );
+        await list.removeCollaborator(input.userId);
+        await recordListSyncEvent(
+          tx,
+          syncUserIds.filter((userId) => userId !== input.userId),
+          serialized.id,
+          "update",
+          ["collaborators"],
+        );
+        await recordListSyncEvent(
+          tx,
+          [input.userId],
+          serialized.id,
+          "revoke",
+          [],
+        );
+      });
     }),
   updateCollaboratorRole: listsProcedure
     .input(
@@ -300,7 +488,23 @@ export const listsAppRouter = router({
     .use(ensureListAtLeastViewer)
     .use(ensureListAtLeastOwner)
     .mutation(async ({ input, ctx }) => {
-      await ctx.list.updateCollaboratorRole(input.userId, input.role);
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        await list.updateCollaboratorRole(input.userId, input.role);
+        const serialized = list.asZBookmarkList();
+        await recordListSyncEvent(
+          tx,
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
+          serialized.id,
+          "update",
+          ["collaborators"],
+        );
+      });
     }),
   getCollaborators: listsProcedure
     .input(
@@ -348,8 +552,35 @@ export const listsAppRouter = router({
       }),
     )
     .use(ensureInvitationAccess)
-    .mutation(async ({ ctx }) => {
-      await ctx.invitation.accept();
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const invitation = await ListInvitation.fromId(
+          transactionCtx,
+          input.invitationId,
+        );
+        const [invitationData] = await tx
+          .select({
+            listId: listInvitations.listId,
+            listOwnerUserId: bookmarkLists.userId,
+          })
+          .from(listInvitations)
+          .innerJoin(
+            bookmarkLists,
+            eq(bookmarkLists.id, listInvitations.listId),
+          )
+          .where(eq(listInvitations.id, invitation.id));
+        await invitation.accept();
+        if (invitationData) {
+          await recordListSyncEvent(
+            tx,
+            [ctx.user.id, invitationData.listOwnerUserId],
+            invitationData.listId,
+            "create",
+            ["collaborators"],
+          );
+        }
+      });
     }),
 
   declineInvitation: listsProcedure
@@ -409,7 +640,19 @@ export const listsAppRouter = router({
       }),
     )
     .use(ensureListAtLeastViewer)
-    .mutation(async ({ ctx }) => {
-      await ctx.list.leaveList();
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        const serialized = list.asZBookmarkList();
+        await list.leaveList();
+        await recordListSyncEvent(
+          tx,
+          [ctx.user.id],
+          serialized.id,
+          "revoke",
+          [],
+        );
+      });
     }),
 });

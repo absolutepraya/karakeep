@@ -12,6 +12,7 @@ import { invitesAppRouter } from "./invites";
 import { listsAppRouter } from "./lists";
 import { promptsAppRouter } from "./prompts";
 import { publicBookmarks } from "./publicBookmarks";
+import { offlineSyncAppRouter } from "./offlineSync";
 import { rulesAppRouter } from "./rules";
 import { subscriptionsRouter } from "./subscriptions";
 import { tagsAppRouter } from "./tags";
@@ -36,6 +37,7 @@ export const appRouter = router({
   invites: invitesAppRouter,
   publicBookmarks: publicBookmarks,
   subscriptions: subscriptionsRouter,
+  offlineSync: offlineSyncAppRouter,
   config: configAppRouter,
 });
 // export type definition of API

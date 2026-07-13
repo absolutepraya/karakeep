@@ -14,6 +14,12 @@ import {
 import { useSession } from "@/lib/auth/client";
 import { useClientConfig } from "@/lib/clientConfig";
 import useUpload from "@/lib/hooks/upload-file";
+import {
+  OFFLINE_ONLINE_REQUIRED_MESSAGE,
+  isOfflineQueuedMutation,
+  useOfflineSafeBookmarkUpdate,
+} from "@/lib/hooks/useOfflineSafeBookmarkMutation";
+import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
 import { useTranslation } from "@/lib/i18n/client";
 import {
   Archive,
@@ -43,10 +49,7 @@ import {
 } from "@karakeep/shared-react/hooks/assets";
 import { useBookmarkGridContext } from "@karakeep/shared-react/hooks/bookmark-grid-context";
 import { useBookmarkListContext } from "@karakeep/shared-react/hooks/bookmark-list-context";
-import {
-  useRecrawlBookmark,
-  useUpdateBookmark,
-} from "@karakeep/shared-react/hooks/bookmarks";
+import { useRecrawlBookmark } from "@karakeep/shared-react/hooks/bookmarks";
 import { useRemoveBookmarkFromList } from "@karakeep/shared-react/hooks/lists";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
@@ -64,6 +67,7 @@ interface ActionItem {
   visible: boolean;
   disabled: boolean;
   className?: string;
+  disabledMessage?: string;
   onClick: () => void;
 }
 
@@ -90,6 +94,8 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
   const { data: session } = useSession();
 
   const demoMode = !!useClientConfig().demoMode;
+  const offlineStatus = useOfflineLibraryStatus();
+  const requiresOnline = offlineStatus.kind !== "online";
 
   // Check if the current user owns this bookmark
   const isOwner = session?.user?.id === bookmark.userId;
@@ -148,16 +154,29 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
   const { listId } = useBookmarkGridContext() ?? {};
   const withinListContext = useBookmarkListContext();
 
-  const onError = () => {
-    toast.error(t("common.something_went_wrong"));
+  const onError = (error?: unknown) => {
+    toast.error(
+      error instanceof Error ? error.message : t("common.something_went_wrong"),
+    );
   };
 
-  const updateBookmarkMutator = useUpdateBookmark({
-    onSuccess: () => {
-      toast.success(t("toasts.bookmarks.updated"));
-    },
-    onError,
-  });
+  const updateBookmarkMutator = useOfflineSafeBookmarkUpdate();
+  const updateBookmark = (input: {
+    bookmarkId: string;
+    archived?: boolean;
+    favourited?: boolean;
+  }) => {
+    void updateBookmarkMutator
+      .mutateAsync(input)
+      .then((result) => {
+        toast.success(
+          isOfflineQueuedMutation(result)
+            ? "Saved offline, will sync when connected"
+            : t("toasts.bookmarks.updated"),
+        );
+      })
+      .catch(onError);
+  };
 
   const crawlBookmarkMutator = useRecrawlBookmark({
     onSuccess: () => {
@@ -242,7 +261,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       title: t("actions.open_editor"),
       icon: <SquarePen className="mr-2 size-4" />,
       visible: isOwner && bookmark.content.type === BookmarkTypes.TEXT,
-      disabled: false,
+      disabled: requiresOnline,
+      disabledMessage: requiresOnline
+        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+        : undefined,
       onClick: () => setTextEditorOpen(true),
     },
     {
@@ -259,7 +281,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       visible: isOwner,
       disabled: demoMode,
       onClick: () =>
-        updateBookmarkMutator.mutate({
+        updateBookmark({
           bookmarkId: linkId,
           favourited: !bookmark.favourited,
         }),
@@ -276,7 +298,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       visible: isOwner,
       disabled: demoMode,
       onClick: () =>
-        updateBookmarkMutator.mutate({
+        updateBookmark({
           bookmarkId: linkId,
           archived: !bookmark.archived,
         }),
@@ -299,7 +321,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       title: t("actions.manage_lists"),
       icon: <List className="mr-2 size-4" />,
       visible: isOwner,
-      disabled: false,
+      disabled: requiresOnline,
+      disabledMessage: requiresOnline
+        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+        : undefined,
       onClick: () => setManageListsModalOpen(true),
     },
     {
@@ -315,7 +340,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
         !!withinListContext &&
         withinListContext.type === "manual",
       ),
-      disabled: demoMode,
+      disabled: demoMode || requiresOnline,
+      disabledMessage: requiresOnline
+        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+        : undefined,
       onClick: () =>
         removeFromListMutator.mutate({
           listId: listId!,
@@ -333,7 +361,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
           title: t("actions.preserve_offline_archive"),
           icon: <FileDown className="mr-2 size-4" />,
           visible: true,
-          disabled: demoMode,
+          disabled: demoMode || requiresOnline,
+          disabledMessage: requiresOnline
+            ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+            : undefined,
           onClick: () => {
             fullPageArchiveBookmarkMutator.mutate({
               bookmarkId: bookmark.id,
@@ -346,7 +377,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
           title: t("actions.preserve_as_pdf"),
           icon: <FileText className="mr-2 size-4" />,
           visible: true,
-          disabled: demoMode,
+          disabled: demoMode || requiresOnline,
+          disabledMessage: requiresOnline
+            ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+            : undefined,
           onClick: () => {
             preservePdfMutator.mutate({
               bookmarkId: bookmark.id,
@@ -400,7 +434,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
           title: t("actions.refresh"),
           icon: <RotateCw className="mr-2 size-4" />,
           visible: bookmark.content.type === BookmarkTypes.LINK,
-          disabled: demoMode,
+          disabled: demoMode || requiresOnline,
+          disabledMessage: requiresOnline
+            ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+            : undefined,
           onClick: () =>
             crawlBookmarkMutator.mutate({ bookmarkId: bookmark.id }),
         },
@@ -422,7 +459,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
             : t("actions.add_banner"),
           icon: <ImagePlus className="mr-2 size-4" />,
           visible: true,
-          disabled: demoMode || isAttaching || isReplacing,
+          disabled: demoMode || isAttaching || isReplacing || requiresOnline,
+          disabledMessage: requiresOnline
+            ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+            : undefined,
           onClick: () => bannerFileInputRef.current?.click(),
         },
       ],
@@ -432,7 +472,10 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       title: t("actions.delete"),
       icon: <Trash2 className="mr-2 size-4" />,
       visible: isOwner,
-      disabled: demoMode,
+      disabled: demoMode || requiresOnline,
+      disabledMessage: requiresOnline
+        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
+        : undefined,
       className: "text-destructive",
       onClick: () => setDeleteBookmarkDialogOpen(true),
     },
@@ -500,6 +543,9 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
                       <DropdownMenuItem
                         key={subItem.id}
                         disabled={subItem.disabled}
+                        title={
+                          subItem.disabled ? subItem.disabledMessage : undefined
+                        }
                         onClick={subItem.onClick}
                       >
                         {subItem.icon}
@@ -514,6 +560,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
               <DropdownMenuItem
                 key={item.id}
                 disabled={item.disabled}
+                title={item.disabled ? item.disabledMessage : undefined}
                 className={item.className}
                 onClick={item.onClick}
               >

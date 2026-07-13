@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import VisualViewportSync from "@/components/VisualViewportSync";
+import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 import { Session, SessionProvider } from "@/lib/auth/client";
 import { UserLocalSettingsCtx } from "@/lib/userLocalSettings/bookmarksLayout";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,6 +21,7 @@ import {
 
 import { ClientConfigCtx } from "./clientConfig";
 import CustomI18nextProvider from "./i18n/provider";
+import { OfflineLibraryProvider } from "./offline-library/provider";
 import { ServerHintsCtx } from "./serverHints";
 
 function makeQueryClient() {
@@ -89,23 +91,26 @@ export default function Providers({
       <ServerHintsCtx.Provider value={{ isMobile }}>
         <UserLocalSettingsCtx.Provider value={userLocalSettings}>
           <SessionProvider session={session}>
+            <ServiceWorkerRegistration />
             <QueryClientProvider client={queryClient}>
               <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-                <CustomI18nextProvider lang={userLocalSettings.lang}>
-                  <ThemeProvider
-                    attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                    disableTransitionOnChange
-                  >
-                    <TooltipProvider
-                      delayDuration={450}
-                      skipDelayDuration={200}
+                <OfflineLibraryProvider trpcClient={trpcClient}>
+                  <CustomI18nextProvider lang={userLocalSettings.lang}>
+                    <ThemeProvider
+                      attribute="class"
+                      defaultTheme="system"
+                      enableSystem
+                      disableTransitionOnChange
                     >
-                      {children}
-                    </TooltipProvider>
-                  </ThemeProvider>
-                </CustomI18nextProvider>
+                      <TooltipProvider
+                        delayDuration={450}
+                        skipDelayDuration={200}
+                      >
+                        {children}
+                      </TooltipProvider>
+                    </ThemeProvider>
+                  </CustomI18nextProvider>
+                </OfflineLibraryProvider>
               </TRPCProvider>
             </QueryClientProvider>
           </SessionProvider>

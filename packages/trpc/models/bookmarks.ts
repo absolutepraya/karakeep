@@ -16,6 +16,7 @@ import {
 import invariant from "tiny-invariant";
 import { z } from "zod";
 
+import type { KarakeepDBTransaction } from "@karakeep/db";
 import { db as DONT_USE_db } from "@karakeep/db";
 import {
   assets,
@@ -921,16 +922,21 @@ export class Bookmark extends BareBookmark {
     );
   }
 
-  async delete() {
+  async delete(beforeDelete?: (tx: KarakeepDBTransaction) => Promise<void>) {
     this.ensureOwnership();
-    const deleted = await this.ctx.db
-      .delete(bookmarks)
-      .where(
-        and(
-          eq(bookmarks.userId, this.ctx.user.id),
-          eq(bookmarks.id, this.bookmark.id),
-        ),
-      );
+    let wasDeleted = false;
+    await this.ctx.db.transaction(async (tx) => {
+      await beforeDelete?.(tx);
+      const deleted = await tx
+        .delete(bookmarks)
+        .where(
+          and(
+            eq(bookmarks.userId, this.ctx.user.id),
+            eq(bookmarks.id, this.bookmark.id),
+          ),
+        );
+      wasDeleted = deleted.changes > 0;
+    });
 
     await SearchIndexingQueue.enqueue(
       {
@@ -960,7 +966,7 @@ export class Bookmark extends BareBookmark {
         groupId: this.ctx.user.id,
       },
     );
-    if (deleted.changes > 0) {
+    if (wasDeleted) {
       await this.cleanupAssets();
     }
   }

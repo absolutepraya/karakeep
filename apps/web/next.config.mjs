@@ -17,6 +17,8 @@ if (!process.env.SERVER_VERSION) {
   }
 }
 
+const serviceWorkerBuildVersion = process.env.SERVER_VERSION ?? "development";
+
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
@@ -24,6 +26,9 @@ const withBundleAnalyzer = bundleAnalyzer({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_SERVICE_WORKER_BUILD_VERSION: serviceWorkerBuildVersion,
+  },
   turbopack: {
     rules: {
       "*.svg": {

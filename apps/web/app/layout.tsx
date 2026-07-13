@@ -70,6 +70,14 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
       },
     ],
+    // iOS Safari ignores the manifest icons for Home Screen installation.
+    // apple-touch-icon is the only way to control the installed PWA icon.
+    apple: [
+      {
+        url: "/icons/logo-192.png",
+        sizes: "192x192",
+      },
+    ],
   },
 };
 

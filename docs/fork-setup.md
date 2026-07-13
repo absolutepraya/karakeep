@@ -63,6 +63,18 @@ Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
 - If `next dev` crashes with a stale Turbopack / `instrumentation.ts` parse issue, clear `apps/web/.next` and restart.
 
+### Verify the offline iPhone PWA
+
+1. Open Karakeep in Safari on an iPhone and use **Add to Home Screen**.
+2. Open the installed app, sign in, and wait until the library activity indicator shows **Online** with a successful sync time.
+3. Turn off Wi-Fi and cellular data, force-close the installed app, then reopen it. Confirm the bookmark grid, local-only search, and available thumbnails render without a network request.
+4. While offline, change a bookmark title, favorite state, or tags. Confirm the library activity indicator reports a pending write.
+5. Restore connectivity. Confirm the pending write disappears after one successful sync and the server state matches the local edit.
+6. Create a same-field edit from another signed-in device before reconnecting the offline phone. Confirm Karakeep presents a field-conflict choice instead of overwriting either value silently.
+7. Log out on the phone, reopen the installed app offline, and confirm that no bookmarks, thumbnails, search results, pending writes, or conflict records remain.
+
+PDFs, archived reader pages, uploads, crawler/AI jobs, sharing, list mutations, bulk destructive actions, and unsupported edits require a connection.
+
 ## Environment notes
 
 The root `.env` is the source of truth, but several processes load `.env` from their own working directory. That is why the symlinks above are required.
