@@ -12,6 +12,7 @@ import {
 import * as sharedServer from "@karakeep/shared-server";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
+import { RuleEngine } from "../lib/ruleEngine";
 import type { APICallerType, CustomTestContext } from "../testUtils";
 import { defaultBeforeEach, getApiKeyCallerForPlainKey } from "../testUtils";
 
@@ -1577,4 +1578,36 @@ describe("Bookmark Routes", () => {
       expect(result.bookmarkId).toBeNull();
     });
   });
+  test<CustomTestContext>("offline tag replacement dispatches tag-added rules", async ({
+    apiCallers,
+  }) => {
+    const api = apiCallers[0];
+    const triggerTag = await api.tags.create({ name: "offline-trigger" });
+    const bookmark = await api.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "offline tag rule",
+    });
+    const triggerRuleEvent = vi.spyOn(RuleEngine, "triggerOnEvent");
+
+    await api.offlineSync.push({
+      mutations: [
+        {
+          idempotencyKey: "f08dc652-918b-4bc1-9473-1ec352fe6e47",
+          kind: "bookmark.tags",
+          bookmarkId: bookmark.id,
+          tagIds: [triggerTag.id],
+          baseVersions: { tags: 0 },
+        },
+      ],
+    });
+
+    expect(triggerRuleEvent).toHaveBeenCalledWith(
+      bookmark.userId,
+      bookmark.id,
+      [{ type: "tagAdded", tagId: triggerTag.id }],
+      undefined,
+      expect.anything(),
+    );
+  });
+
 });

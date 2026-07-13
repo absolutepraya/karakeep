@@ -72,3 +72,4 @@ All commands ran in `offline-library-pwa` with `NO_COLOR=false`:
 
 1. `NO_COLOR=false pnpm --filter @karakeep/trpc test -- offlineSync.test.ts`: passed, 20 files and 421 tests.
 2. `NO_COLOR=false pnpm --filter @karakeep/trpc typecheck`: passed, `tsc --noEmit`.
+3. `NO_COLOR=false pnpm --filter @karakeep/trpc test -- bookmarks.test.ts`: passed, 20 files and 425 tests, including a `RuleEngine.triggerOnEvent` spy assertion that an offline tag replacement dispatches the expected `tagAdded` event.

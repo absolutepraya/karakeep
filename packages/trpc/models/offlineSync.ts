@@ -560,15 +560,50 @@ export async function pullOfflineSyncEvents(
         ),
       )
       .orderBy(asc(offlineSyncEvents.sequence));
+    const bookmarkEventIds = [
+      ...new Set(
+        events
+          .filter((event) => event.entityType === "bookmark")
+          .map((event) => event.entityId),
+      ),
+    ];
+    const [ownedBookmarks, sharedBookmarks] = await Promise.all([
+      bookmarkEventIds.length === 0
+        ? []
+        : tx
+            .select({ id: bookmarks.id })
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, ctx.user.id),
+                inArray(bookmarks.id, bookmarkEventIds),
+              ),
+            ),
+      bookmarkEventIds.length === 0
+        ? []
+        : tx
+            .select({ id: bookmarksInLists.bookmarkId })
+            .from(bookmarksInLists)
+            .innerJoin(
+              listCollaborators,
+              eq(listCollaborators.listId, bookmarksInLists.listId),
+            )
+            .where(
+              and(
+                eq(listCollaborators.userId, ctx.user.id),
+                inArray(bookmarksInLists.bookmarkId, bookmarkEventIds),
+              ),
+            ),
+    ]);
+    const authorizedBookmarkIds = [
+      ...new Set([
+        ...ownedBookmarks.map((bookmark) => bookmark.id),
+        ...sharedBookmarks.map((bookmark) => bookmark.id),
+      ]),
+    ];
     const fieldVersions = await getOfflineSyncBookmarkFieldVersions(
       tx,
-      [
-        ...new Set(
-          events
-            .filter((event) => event.entityType === "bookmark")
-            .map((event) => event.entityId),
-        ),
-      ],
+      authorizedBookmarkIds,
     );
 
     return {

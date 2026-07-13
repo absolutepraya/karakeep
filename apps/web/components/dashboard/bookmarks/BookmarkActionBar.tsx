@@ -11,7 +11,10 @@ import { Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
-import { useUpdateBookmark } from "@karakeep/shared-react/hooks/bookmarks";
+import {
+  isOfflineQueuedMutation,
+  useOfflineSafeBookmarkUpdate,
+} from "@/lib/hooks/useOfflineSafeBookmarkMutation";
 
 import BookmarkOptions from "./BookmarkOptions";
 import { FavouritedActionIcon } from "./icons";
@@ -29,11 +32,7 @@ export default function BookmarkActionBar({
   const demoMode = !!useClientConfig().demoMode;
   const isOwner = session?.user?.id === bookmark.userId;
   const canFavourite = isOwner && !demoMode && !isBulkEditEnabled;
-
-  const updateBookmark = useUpdateBookmark({
-    onSuccess: () => toast.success(t("toasts.bookmarks.updated")),
-    onError: () => toast.error(t("common.something_went_wrong")),
-  });
+  const updateBookmark = useOfflineSafeBookmarkUpdate();
 
   const favLabel = bookmark.favourited
     ? t("actions.unfavorite")
@@ -58,10 +57,25 @@ export default function BookmarkActionBar({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            updateBookmark.mutate({
-              bookmarkId: bookmark.id,
-              favourited: !bookmark.favourited,
-            });
+            void updateBookmark
+              .mutateAsync({
+                bookmarkId: bookmark.id,
+                favourited: !bookmark.favourited,
+              })
+              .then((result) => {
+                toast.success(
+                  isOfflineQueuedMutation(result)
+                    ? "Saved offline, will sync when connected"
+                    : t("toasts.bookmarks.updated"),
+                );
+              })
+              .catch((error) =>
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : t("common.something_went_wrong"),
+                ),
+              );
           }}
         >
           <FavouritedActionIcon favourited={bookmark.favourited} size={16} />

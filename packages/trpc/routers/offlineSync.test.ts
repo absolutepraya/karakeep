@@ -438,6 +438,68 @@ describe("Offline sync routes", () => {
     });
   });
 
+  test<CustomTestContext>("withholds historical bookmark field versions after a collaborator is revoked", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const collaborator = apiCallers[1];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "historical shared offline record",
+    });
+    const list = await owner.lists.create({
+      name: "Shared",
+      icon: "folder",
+      type: "manual",
+    });
+    await owner.lists.addToList({ listId: list.id, bookmarkId: bookmark.id });
+    const collaboratorUser = await collaborator.users.whoami();
+    const { invitationId } = await owner.lists.addCollaborator({
+      listId: list.id,
+      email: collaboratorUser.email!,
+      role: "viewer",
+    });
+    await collaborator.lists.acceptInvitation({ invitationId });
+
+    const beforeUpdate = await collaborator.offlineSync.snapshot();
+    await owner.bookmarks.updateBookmark({
+      bookmarkId: bookmark.id,
+      title: "updated before revocation",
+    });
+    await owner.lists.removeCollaborator({
+      listId: list.id,
+      userId: collaboratorUser.id,
+    });
+
+    const delta = await collaborator.offlineSync.pull({
+      cursor: beforeUpdate.cursor,
+    });
+
+    expect(delta.events).toContainEqual(
+      expect.objectContaining({
+        entityType: "bookmark",
+        entityId: bookmark.id,
+        changedFields: ["title"],
+        fieldVersions: [],
+      }),
+    );
+    expect(delta.events).toContainEqual(
+      expect.objectContaining({
+        entityType: "list",
+        entityId: list.id,
+        operation: "revoke",
+        fieldVersions: [],
+      }),
+    );
+    expect(
+      delta.events.flatMap((event) =>
+        event.fieldVersions.filter(
+          (fieldVersion) => fieldVersion.bookmarkId === bookmark.id,
+        ),
+      ),
+    ).toEqual([]);
+  });
+
   test<CustomTestContext>("delivers owner bookmark updates and deletes to shared collaborators", async ({
     apiCallers,
   }) => {

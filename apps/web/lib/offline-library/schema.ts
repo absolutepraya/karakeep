@@ -27,8 +27,8 @@ export class OfflineLibraryDatabase extends Dexie {
   bookmarkFieldVersions!: Table<ZOfflineSyncBookmarkFieldVersion, [string, string]>;
   thumbnailAccess!: Table<{ url: string; lastAccessedAt: number }, string>;
 
-  constructor() {
-    super("karakeep-offline-library");
+  constructor(databaseName = "karakeep-offline-library") {
+    super(databaseName);
     this.version(1).stores({
       bookmarks: "id, archived, favourited, createdAt, modifiedAt, userId, *tags.id",
       lists: "id, userRole, parentId",
@@ -43,9 +43,17 @@ export class OfflineLibraryDatabase extends Dexie {
     this.version(3).stores({
       outbox: "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, kind, queuedAt",
     });
-    this.version(4).stores({
-      bookmarkFieldVersions: "[bookmarkId+field], bookmarkId, field",
-    });
+    this.version(4)
+      .stores({
+        bookmarkFieldVersions: "[bookmarkId+field], bookmarkId, field",
+      })
+      .upgrade(async (tx) => {
+        await tx.table("metadata").delete("syncCursor");
+        await tx.table("metadata").put({
+          key: "replicaState",
+          value: "stale",
+        });
+      });
   }
 }
 

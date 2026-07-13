@@ -28,6 +28,11 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { useDialogFormReset } from "@/lib/hooks/useDialogFormReset";
+import {
+  isOfflineQueuedMutation,
+  useOfflineSafeBookmarkUpdate,
+} from "@/lib/hooks/useOfflineSafeBookmarkMutation";
+import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,7 +41,6 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 
-import { useUpdateBookmark } from "@karakeep/shared-react/hooks/bookmarks";
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import {
   BookmarkTypes,
@@ -67,6 +71,8 @@ export function EditBookmarkDialog({
 }) {
   const api = useTRPC();
   const { t } = useTranslation();
+  const offlineStatus = useOfflineLibraryStatus();
+  const requiresOnline = offlineStatus.kind !== "online";
 
   const { data: assetContent, isLoading: isAssetContentLoading } = useQuery(
     api.bookmarks.getBookmark.queryOptions(
@@ -75,7 +81,10 @@ export function EditBookmarkDialog({
         includeContent: true,
       },
       {
-        enabled: open && bookmark.content.type == BookmarkTypes.ASSET,
+        enabled:
+          open &&
+          !requiresOnline &&
+          bookmark.content.type === BookmarkTypes.ASSET,
         select: (b) =>
           b.content.type == BookmarkTypes.ASSET ? b.content.content : null,
       },
@@ -118,31 +127,34 @@ export function EditBookmarkDialog({
     defaultValues: bookmarkToDefault(bookmark),
   });
 
-  const { mutate: updateBookmarkMutate, isPending: isUpdatingBookmark } =
-    useUpdateBookmark({
-      onSuccess: (updatedBookmark) => {
-        toast({ description: "Bookmark details updated successfully!" });
-        // Close the dialog after successful detail update
-        setOpen(false);
-        // Reset form with potentially updated data
-        form.reset(bookmarkToDefault(updatedBookmark));
-      },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          title: "Failed to update bookmark",
-          description: error.message,
-        });
-      },
-    });
+  const updateBookmarkMutation = useOfflineSafeBookmarkUpdate();
 
-  function onSubmit(values: BookmarkFormValues) {
-    // Ensure optional fields that are empty strings are sent as null/undefined if appropriate
+  async function onSubmit(values: BookmarkFormValues) {
     const payload = {
       ...values,
       title: values.title ?? null,
     };
-    updateBookmarkMutate(payload);
+    try {
+      const result = await updateBookmarkMutation.mutateAsync(payload);
+      toast({
+        description: isOfflineQueuedMutation(result)
+          ? "Saved offline, will sync when connected"
+          : "Bookmark details updated successfully!",
+      });
+      setOpen(false);
+      form.reset(
+        isOfflineQueuedMutation(result)
+          ? bookmarkToDefault(bookmark)
+          : bookmarkToDefault(result),
+      );
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to update bookmark",
+        description:
+          error instanceof Error ? error.message : "Unable to update bookmark",
+      });
+    }
   }
 
   // Reset form only when dialog is initially opened to preserve unsaved changes
@@ -172,6 +184,12 @@ export function EditBookmarkDialog({
               </DialogTitle>
               <DialogDescription>
                 {t("bookmark_editor.subtitle")}
+                {requiresOnline && (
+                  <span className="mt-2 block" role="status">
+                    Dates and extracted asset content require an internet
+                    connection.
+                  </span>
+                )}
               </DialogDescription>
             </DialogHeader>
 
@@ -288,7 +306,7 @@ export function EditBookmarkDialog({
                       <FormControl>
                         <Textarea
                           className="min-h-28 resize-y sm:min-h-36"
-                          disabled={isAssetContentLoading}
+                          disabled={isAssetContentLoading || requiresOnline}
                           placeholder="Extracted Content"
                           {...field}
                           value={field.value ?? ""}
@@ -355,6 +373,12 @@ export function EditBookmarkDialog({
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
+                                disabled={requiresOnline}
+                                title={
+                                  requiresOnline
+                                    ? "This action requires an internet connection."
+                                    : undefined
+                                }
                                 variant="outline"
                                 className={cn(
                                   "h-10 w-full pl-3 text-left font-normal sm:h-11",
@@ -402,6 +426,12 @@ export function EditBookmarkDialog({
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
+                                  disabled={requiresOnline}
+                                  title={
+                                    requiresOnline
+                                      ? "This action requires an internet connection."
+                                      : undefined
+                                  }
                                   variant="outline"
                                   className={cn(
                                     "h-10 w-full pl-3 text-left font-normal sm:h-11",
@@ -459,13 +489,13 @@ export function EditBookmarkDialog({
                 variant="secondary"
                 className="h-11 flex-1"
                 onClick={() => setOpen(false)}
-                disabled={isUpdatingBookmark}
+                disabled={updateBookmarkMutation.isPending}
               >
                 {t("actions.cancel")}
               </Button>
               <ActionButton
                 type="submit"
-                loading={isUpdatingBookmark}
+                loading={updateBookmarkMutation.isPending}
                 className="h-11 flex-1"
               >
                 {t("bookmark_editor.save_changes")}
