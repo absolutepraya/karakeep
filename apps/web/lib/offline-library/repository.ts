@@ -26,6 +26,7 @@ type OfflineBookmarkQuery = {
   favourited?: boolean;
   tagId?: string;
   listId?: string;
+  rssFeedId?: string;
   sortOrder?: Exclude<ZSortOrder, "relevance">;
   cursor?: ZCursor | null;
   limit?: number;
@@ -48,16 +49,20 @@ export async function replaceSnapshot(
 ): Promise<void> {
   await offlineLibraryDb.transaction(
     "rw",
-    offlineLibraryDb.bookmarks,
-    offlineLibraryDb.lists,
-    offlineLibraryDb.bookmarkListMemberships,
-    offlineLibraryDb.bookmarkFieldVersions,
-    offlineLibraryDb.metadata,
+    [
+      offlineLibraryDb.bookmarks,
+      offlineLibraryDb.lists,
+      offlineLibraryDb.bookmarkListMemberships,
+      offlineLibraryDb.bookmarkRssFeedMemberships,
+      offlineLibraryDb.bookmarkFieldVersions,
+      offlineLibraryDb.metadata,
+    ],
     async () => {
       await Promise.all([
         offlineLibraryDb.bookmarks.clear(),
         offlineLibraryDb.lists.clear(),
         offlineLibraryDb.bookmarkListMemberships.clear(),
+        offlineLibraryDb.bookmarkRssFeedMemberships.clear(),
         offlineLibraryDb.bookmarkFieldVersions.clear(),
       ]);
       await Promise.all([
@@ -65,6 +70,9 @@ export async function replaceSnapshot(
         offlineLibraryDb.lists.bulkPut(snapshot.lists),
         offlineLibraryDb.bookmarkListMemberships.bulkPut(
           snapshot.bookmarkListMemberships,
+        ),
+        offlineLibraryDb.bookmarkRssFeedMemberships.bulkPut(
+          snapshot.bookmarkRssFeedMemberships,
         ),
         offlineLibraryDb.bookmarkFieldVersions.bulkPut(
           snapshot.bookmarkFieldVersions,
@@ -94,11 +102,14 @@ export async function applyEvents(
 
   await offlineLibraryDb.transaction(
     "rw",
-    offlineLibraryDb.bookmarks,
-    offlineLibraryDb.lists,
-    offlineLibraryDb.bookmarkListMemberships,
-    offlineLibraryDb.bookmarkFieldVersions,
-    offlineLibraryDb.metadata,
+    [
+      offlineLibraryDb.bookmarks,
+      offlineLibraryDb.lists,
+      offlineLibraryDb.bookmarkListMemberships,
+      offlineLibraryDb.bookmarkRssFeedMemberships,
+      offlineLibraryDb.bookmarkFieldVersions,
+      offlineLibraryDb.metadata,
+    ],
     async () => {
       const replicaState = await offlineLibraryDb.metadata.get(REPLICA_STATE_KEY);
       const hasUnmaterializedEvents = events.some(
@@ -111,6 +122,10 @@ export async function applyEvents(
             await Promise.all([
               offlineLibraryDb.bookmarks.delete(event.entityId),
               offlineLibraryDb.bookmarkListMemberships
+                .where("bookmarkId")
+                .equals(event.entityId)
+                .delete(),
+              offlineLibraryDb.bookmarkRssFeedMemberships
                 .where("bookmarkId")
                 .equals(event.entityId)
                 .delete(),
@@ -164,19 +179,29 @@ export async function getBookmarkFieldVersion(
 export async function queryBookmarks(
   query: OfflineBookmarkQuery = {},
 ): Promise<OfflineBookmarkPage> {
-  const [bookmarks, memberships, cursor] = await Promise.all([
-    offlineLibraryDb.bookmarks.toArray(),
-    offlineLibraryDb.bookmarkListMemberships.toArray(),
-    offlineLibraryDb.metadata.get(SYNC_CURSOR_KEY),
-  ]);
+  const [bookmarks, listMemberships, rssFeedMemberships, cursor] =
+    await Promise.all([
+      offlineLibraryDb.bookmarks.toArray(),
+      offlineLibraryDb.bookmarkListMemberships.toArray(),
+      offlineLibraryDb.bookmarkRssFeedMemberships.toArray(),
+      offlineLibraryDb.metadata.get(SYNC_CURSOR_KEY),
+    ]);
   const sortOrder = query.sortOrder ?? "desc";
   const limit = Math.max(1, query.limit ?? DEFAULT_NUM_BOOKMARKS_PER_PAGE);
   const bookmarkIdsInList =
     query.listId === undefined
       ? undefined
       : new Set(
-          memberships
+          listMemberships
             .filter((membership) => membership.listId === query.listId)
+            .map((membership) => membership.bookmarkId),
+        );
+  const bookmarkIdsInRssFeed =
+    query.rssFeedId === undefined
+      ? undefined
+      : new Set(
+          rssFeedMemberships
+            .filter((membership) => membership.rssFeedId === query.rssFeedId)
             .map((membership) => membership.bookmarkId),
         );
   const filtered = bookmarks
@@ -199,6 +224,12 @@ export async function queryBookmarks(
       if (
         bookmarkIdsInList !== undefined &&
         !bookmarkIdsInList.has(bookmark.id)
+      ) {
+        return false;
+      }
+      if (
+        bookmarkIdsInRssFeed !== undefined &&
+        !bookmarkIdsInRssFeed.has(bookmark.id)
       ) {
         return false;
       }
@@ -405,6 +436,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
       offlineLibraryDb.bookmarks,
       offlineLibraryDb.lists,
       offlineLibraryDb.bookmarkListMemberships,
+      offlineLibraryDb.bookmarkRssFeedMemberships,
       offlineLibraryDb.bookmarkFieldVersions,
       offlineLibraryDb.metadata,
       offlineLibraryDb.outbox,
@@ -416,6 +448,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
         offlineLibraryDb.bookmarks.clear(),
         offlineLibraryDb.lists.clear(),
         offlineLibraryDb.bookmarkListMemberships.clear(),
+        offlineLibraryDb.bookmarkRssFeedMemberships.clear(),
         offlineLibraryDb.bookmarkFieldVersions.clear(),
         offlineLibraryDb.metadata.clear(),
         offlineLibraryDb.outbox.clear(),

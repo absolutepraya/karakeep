@@ -129,6 +129,28 @@ describe("UpdatableBookmarksGrid", () => {
     expect(mocks.getBookmarks).not.toHaveBeenCalled();
   });
 
+  it("passes an RSS feed page's query to the offline replica", async () => {
+    mocks.queryBookmarks.mockResolvedValue({
+      bookmarks: [{ id: "feed-bookmark" }],
+      cursor: "1",
+      nextCursor: null,
+    });
+    mocks.countBookmarks.mockResolvedValue(2);
+    mocks.isOfflineReplicaReady.mockResolvedValue(true);
+
+    render(
+      <UpdatableBookmarksGrid
+        query={{ rssFeedId: "feed-1" }}
+        bookmarks={serverPage}
+      />,
+    );
+
+    expect(await screen.findByText("feed-bookmark")).toBeTruthy();
+    expect(mocks.queryBookmarks).toHaveBeenCalledWith(
+      expect.objectContaining({ rssFeedId: "feed-1" }),
+    );
+  });
+
   it("uses the local unavailable state for a cold offline launch before constructing a server query", async () => {
     mocks.status = { kind: "initializing" };
     mocks.queryBookmarks.mockResolvedValue({

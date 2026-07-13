@@ -9,6 +9,8 @@ import {
   bookmarkTexts,
   bookmarkTags,
   listCollaborators,
+  rssFeedImportsTable,
+  rssFeedsTable,
   offlineSyncEvents,
   offlineSyncFieldVersions,
   offlineSyncMutationReceipts,
@@ -529,11 +531,35 @@ export async function buildOfflineSyncSnapshot(
             ),
       getOfflineSyncBookmarkFieldVersions(tx, [...bookmarkIds]),
     ]);
+    const bookmarkRssFeedMemberships =
+      bookmarkIds.size === 0
+        ? []
+        : (
+            await tx
+              .select({
+                bookmarkId: rssFeedImportsTable.bookmarkId,
+                rssFeedId: rssFeedImportsTable.rssFeedId,
+              })
+              .from(rssFeedImportsTable)
+              .innerJoin(
+                rssFeedsTable,
+                eq(rssFeedImportsTable.rssFeedId, rssFeedsTable.id),
+              )
+              .where(
+                and(
+                  inArray(rssFeedImportsTable.bookmarkId, [...bookmarkIds]),
+                  eq(rssFeedsTable.userId, ctx.user.id),
+                ),
+              )
+          ).flatMap(({ bookmarkId, rssFeedId }) =>
+            bookmarkId === null ? [] : [{ bookmarkId, rssFeedId }],
+          );
 
     return {
       bookmarks: bookmarkRows,
       lists: snapshotLists,
       bookmarkListMemberships,
+      bookmarkRssFeedMemberships,
       bookmarkFieldVersions,
       cursor: await currentCursor(tx, ctx.user.id),
     };

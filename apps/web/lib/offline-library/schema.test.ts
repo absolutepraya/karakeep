@@ -15,6 +15,7 @@ test("defines every offline-library table", async () => {
   expect(offlineLibraryDb.tables.map((table) => table.name).sort()).toEqual([
     "bookmarkFieldVersions",
     "bookmarkListMemberships",
+    "bookmarkRssFeedMemberships",
     "bookmarks",
     "conflicts",
     "lists",

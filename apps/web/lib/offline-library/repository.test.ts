@@ -91,6 +91,7 @@ const snapshotWith = (overrides: Partial<ZBookmark> = {}): ZOfflineSyncSnapshot 
   bookmarks: [bookmark(overrides)],
   lists: [],
   bookmarkListMemberships: [],
+  bookmarkRssFeedMemberships: [],
   bookmarkFieldVersions: [
     { bookmarkId: "bookmark-1", field: "title", version: 0 },
     { bookmarkId: "bookmark-1", field: "tags", version: 0 },
@@ -165,6 +166,28 @@ test("filters by explicit membership and searches associated list names", async 
   await expect(searchBookmarks("reading queue")).resolves.toMatchObject([
     { id: "bookmark-1" },
   ]);
+});
+
+test("filters an offline RSS feed page to bookmarks imported from that feed", async () => {
+  await replaceSnapshot(
+    {
+      ...snapshot,
+      bookmarks: [
+        bookmark({ id: "feed-bookmark", source: "rss" }),
+        bookmark({ id: "unrelated-bookmark", source: "rss" }),
+      ],
+      bookmarkRssFeedMemberships: [
+        { bookmarkId: "feed-bookmark", rssFeedId: "feed-1" },
+        { bookmarkId: "unrelated-bookmark", rssFeedId: "feed-2" },
+      ],
+    },
+    "user-1",
+  );
+
+  await expect(queryBookmarks({ rssFeedId: "feed-1" })).resolves.toMatchObject({
+    bookmarks: [{ id: "feed-bookmark" }],
+    nextCursor: null,
+  });
 });
 
 test("purge removes every user-scoped table and its cached thumbnails", async () => {

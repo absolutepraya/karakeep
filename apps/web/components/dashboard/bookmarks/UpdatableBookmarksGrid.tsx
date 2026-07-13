@@ -56,6 +56,7 @@ function toOfflineQuery(
     favourited: query.favourited,
     tagId: query.tagId,
     listId: query.listId,
+    rssFeedId: query.rssFeedId,
     cursor: query.cursor ?? null,
     limit: query.limit,
     sortOrder,
@@ -82,6 +83,7 @@ function useLocalBookmarkPagination(
     favourited,
     tagId,
     listId,
+    rssFeedId,
     cursor,
     limit,
     sortOrder,
@@ -115,6 +117,7 @@ function useLocalBookmarkPagination(
         favourited,
         tagId,
         listId,
+        rssFeedId,
         cursor,
         limit,
         sortOrder,
@@ -144,7 +147,7 @@ function useLocalBookmarkPagination(
         setIsLoaded(true);
       },
     );
-  }, [archived, cursor, enabled, favourited, limit, listId, sortOrder, tagId]);
+  }, [archived, cursor, enabled, favourited, limit, listId, rssFeedId, sortOrder, tagId]);
 
   const fetchNextPage = useCallback(async () => {
     if (!enabled || !nextCursor || isFetchingNextPage) {
@@ -159,6 +162,7 @@ function useLocalBookmarkPagination(
         favourited,
         tagId,
         listId,
+        rssFeedId,
         cursor: nextCursor,
         limit,
         sortOrder,
@@ -193,6 +197,7 @@ function useLocalBookmarkPagination(
     listId,
     nextCursor,
     sortOrder,
+    rssFeedId,
     tagId,
   ]);
 

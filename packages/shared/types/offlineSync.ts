@@ -130,10 +130,22 @@ export type ZOfflineSyncBookmarkListMembership = z.infer<
   typeof zOfflineSyncBookmarkListMembershipSchema
 >;
 
+export const zOfflineSyncBookmarkRssFeedMembershipSchema = z.object({
+  bookmarkId: z.string(),
+  rssFeedId: z.string(),
+});
+export type ZOfflineSyncBookmarkRssFeedMembership = z.infer<
+  typeof zOfflineSyncBookmarkRssFeedMembershipSchema
+>;
+
+
 export const zOfflineSyncSnapshotSchema = z.object({
   bookmarks: z.array(zBookmarkSchema),
   lists: z.array(zBookmarkListSchema),
   bookmarkListMemberships: z.array(zOfflineSyncBookmarkListMembershipSchema),
+  bookmarkRssFeedMemberships: z.array(
+    zOfflineSyncBookmarkRssFeedMembershipSchema,
+  ),
   bookmarkFieldVersions: z.array(zOfflineSyncBookmarkFieldVersionSchema),
   cursor: zOfflineSyncCursorSchema,
 });

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { rssFeedImportsTable } from "@karakeep/db/schema";
+
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import {
   zOfflineSyncPullInputSchema,
@@ -186,6 +188,34 @@ describe("Offline sync routes", () => {
     expect(snapshot.bookmarkListMemberships).not.toContainEqual({
       bookmarkId: otherBookmark.id,
       listId: otherList.id,
+    });
+  });
+
+  test<CustomTestContext>("replicates RSS feed memberships for the owner's bookmarks", async ({
+    apiCallers,
+    db,
+  }) => {
+    const owner = apiCallers[0];
+    const rssBookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.LINK,
+      url: "https://example.com/rss-entry",
+    });
+    const feed = await owner.feeds.create({
+      name: "Offline feed",
+      url: "https://example.com/feed.xml",
+      enabled: true,
+    });
+    await db.insert(rssFeedImportsTable).values({
+      rssFeedId: feed.id,
+      entryId: "entry-1",
+      bookmarkId: rssBookmark.id,
+    });
+
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(snapshot.bookmarkRssFeedMemberships).toContainEqual({
+      bookmarkId: rssBookmark.id,
+      rssFeedId: feed.id,
     });
   });
 

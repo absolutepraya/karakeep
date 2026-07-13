@@ -89,6 +89,7 @@ beforeEach(async () => {
     bookmarks: [],
     lists: [],
     bookmarkListMemberships: [],
+    bookmarkRssFeedMemberships: [],
     bookmarkFieldVersions: [],
     cursor: "1",
   });
@@ -148,6 +149,7 @@ test("purges the private replica and worker caches after logout", async () => {
     bookmarks: [],
     lists: [],
     bookmarkListMemberships: [],
+    bookmarkRssFeedMemberships: [],
     bookmarkFieldVersions: [],
     cursor: "1",
   }, "user-1");
@@ -176,6 +178,7 @@ test("purges a persisted replica owned by another user before initial activation
       bookmarks: [],
       lists: [],
       bookmarkListMemberships: [],
+      bookmarkRssFeedMemberships: [],
       bookmarkFieldVersions: [],
       cursor: "1",
     },

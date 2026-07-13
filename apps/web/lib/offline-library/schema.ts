@@ -5,6 +5,7 @@ import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 import type {
   ZOfflineSyncBookmarkFieldVersion,
   ZOfflineSyncBookmarkListMembership,
+  ZOfflineSyncBookmarkRssFeedMembership,
   ZOfflineSyncConflict,
   ZOfflineSyncMutation,
 } from "@karakeep/shared/types/offlineSync";
@@ -21,6 +22,10 @@ export class OfflineLibraryDatabase extends Dexie {
   outbox!: Table<StoredOfflineSyncMutation, string>;
   bookmarkListMemberships!: Table<
     ZOfflineSyncBookmarkListMembership,
+    [string, string]
+  >;
+  bookmarkRssFeedMemberships!: Table<
+    ZOfflineSyncBookmarkRssFeedMembership,
     [string, string]
   >;
   conflicts!: Table<ZOfflineSyncConflict, string>;
@@ -54,6 +59,9 @@ export class OfflineLibraryDatabase extends Dexie {
           value: "stale",
         });
       });
+    this.version(5).stores({
+      bookmarkRssFeedMemberships: "[bookmarkId+rssFeedId], bookmarkId, rssFeedId",
+    });
   }
 }
 
