@@ -31,8 +31,8 @@ export function TagsEditor({
   placeholder,
 }: {
   tags: ZBookmarkTags[];
-  onAttach: (tag: { tagName: string; tagId?: string }) => void;
-  onDetach: (tag: { tagName: string; tagId: string }) => void;
+  onAttach: (tag: { tagName: string; tagId?: string }) => void | Promise<void>;
+  onDetach: (tag: { tagName: string; tagId: string }) => void | Promise<void>;
   disabled?: boolean;
   allowCreation?: boolean;
   placeholder?: string;
@@ -164,7 +164,7 @@ export function TagsEditor({
     return baseOptions;
   }, [filteredOptions, trimmedInputValue, allowCreation]);
 
-  const onChange = (
+  const onChange = async (
     actionMeta:
       | { action: "create-option"; name: string }
       | { action: "select-option"; id: string; name: string }
@@ -176,14 +176,15 @@ export function TagsEditor({
   ) => {
     switch (actionMeta.action) {
       case "remove-value": {
-        setOptimisticTags((prev) => prev.filter((t) => t.id != actionMeta.id));
-        onDetach({
+        await onDetach({
           tagId: actionMeta.id,
           tagName: actionMeta.name,
         });
+        setOptimisticTags((prev) => prev.filter((t) => t.id != actionMeta.id));
         break;
       }
       case "create-option": {
+        await onAttach({ tagName: actionMeta.name });
         const tempId = generateTempId();
         setOptimisticTags((prev) => [
           ...prev,
@@ -193,28 +194,24 @@ export function TagsEditor({
             attachedBy: "human" as const,
           },
         ]);
-        onAttach({ tagName: actionMeta.name });
         break;
       }
       case "select-option": {
-        setOptimisticTags((prev) => {
-          if (prev.some((tag) => tag.id === actionMeta.id)) {
-            return prev;
-          }
-
-          return [
-            ...prev,
-            {
-              id: actionMeta.id,
-              name: actionMeta.name,
-              attachedBy: "human" as const,
-            },
-          ];
-        });
-        onAttach({
+        if (optimisticTags.some((tag) => tag.id === actionMeta.id)) {
+          return;
+        }
+        await onAttach({
           tagName: actionMeta.name,
           tagId: actionMeta.id,
         });
+        setOptimisticTags((prev) => [
+          ...prev,
+          {
+            id: actionMeta.id,
+            name: actionMeta.name,
+            attachedBy: "human" as const,
+          },
+        ]);
         break;
       }
     }
@@ -222,7 +219,9 @@ export function TagsEditor({
 
   const createTag = () => {
     if (!inputValue.trim()) return;
-    onChange({ action: "create-option", name: inputValue.trim() });
+    void onChange({ action: "create-option", name: inputValue.trim() }).catch(
+      () => undefined,
+    );
     setInputValue("");
   };
 
@@ -235,17 +234,19 @@ export function TagsEditor({
       optimisticTags.length > 0
     ) {
       const lastTag = optimisticTags.slice(-1)[0];
-      onChange({
+      void onChange({
         action: "remove-value",
         id: lastTag.id,
         name: lastTag.name,
-      });
+      }).catch(() => undefined);
     }
   };
 
   const handleSelect = (option: DisplayOption) => {
     if (option.isCreateOption) {
-      onChange({ action: "create-option", name: option.name });
+      void onChange({ action: "create-option", name: option.name }).catch(
+        () => undefined,
+      );
       setInputValue("");
       inputRef.current?.focus();
       return;
@@ -253,18 +254,18 @@ export function TagsEditor({
 
     // If already selected, remove it
     if (selectedValues.includes(option.id)) {
-      onChange({
+      void onChange({
         action: "remove-value",
         id: option.id,
         name: option.name,
-      });
+      }).catch(() => undefined);
     } else {
       // Add the new tag
-      onChange({
+      void onChange({
         action: "select-option",
         id: option.id,
         name: option.name,
-      });
+      }).catch(() => undefined);
     }
 
     // Reset input and keep focus
@@ -328,11 +329,11 @@ export function TagsEditor({
                           className="rounded-full text-muted-foreground outline-none ring-offset-background transition-colors hover:text-foreground focus:ring-1 focus:ring-ring focus:ring-offset-2"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onChange({
+                            void onChange({
                               action: "remove-value",
                               id: tag.id,
                               name: tag.name,
-                            });
+                            }).catch(() => undefined);
                           }}
                         >
                           <X className="h-3 w-3" />

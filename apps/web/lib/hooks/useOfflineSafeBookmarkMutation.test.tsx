@@ -121,6 +121,20 @@ describe("useOfflineSafeBookmarkMutation", () => {
     expect(mocks.queueBookmarkUpdate).not.toHaveBeenCalled();
   });
 
+  it("rejects a mixed offline update instead of discarding its unsupported field", async () => {
+    const { result } = renderHook(() => useOfflineSafeBookmarkUpdate());
+
+    await expect(
+      result.current.mutateAsync({
+        bookmarkId: "b1",
+        title: "Keep this title",
+        createdAt: new Date("2026-07-13T00:00:00Z"),
+      }),
+    ).rejects.toThrow("requires an internet connection");
+
+    expect(mocks.queueBookmarkUpdate).not.toHaveBeenCalled();
+  });
+
   it("uses the existing online mutation when connectivity is verified", async () => {
     mockOnlineStatus();
     mocks.onlineUpdateMutateAsync.mockResolvedValue({ id: "b1" });

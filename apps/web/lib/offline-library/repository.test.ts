@@ -395,6 +395,47 @@ test("queues supported mutations with the local bookmark update", async () => {
   ]);
 });
 
+test("coalesces repeated offline field edits into the final intent", async () => {
+  const firstMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "87bd61bb-35c0-4a54-bf39-e7cec9d43c9a",
+    kind: "bookmark.update",
+    bookmarkId: "bookmark-1",
+    fields: { favourited: true },
+    baseVersions: { favourited: 0 },
+  };
+  const secondMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "b0b596a3-0ff2-4554-8d96-d0f2b593013a",
+    kind: "bookmark.update",
+    bookmarkId: "bookmark-1",
+    fields: { favourited: false },
+    baseVersions: { favourited: 0 },
+  };
+  await replaceSnapshot(
+    {
+      ...snapshot,
+      bookmarkFieldVersions: [
+        ...snapshot.bookmarkFieldVersions,
+        { bookmarkId: "bookmark-1", field: "favourited", version: 0 },
+      ],
+    },
+    "user-1",
+  );
+
+  await enqueueMutation(firstMutation, "user-1");
+  await enqueueMutation(secondMutation, "user-1");
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [{ favourited: false }],
+  });
+  await expect(listPendingMutations("user-1")).resolves.toEqual([
+    expect.objectContaining({
+      idempotencyKey: firstMutation.idempotencyKey,
+      fields: { favourited: false },
+      baseVersions: { favourited: 0 },
+    }),
+  ]);
+});
+
 test("queues tag mutations with the optimistic local tag set", async () => {
   const tagMutation: ZOfflineSyncMutation = {
     idempotencyKey: "b72a6d48-2d46-4f3a-8a85-650c2f4dcbd1",
@@ -411,6 +452,35 @@ test("queues tag mutations with the optimistic local tag set", async () => {
   });
   await expect(listPendingMutations("user-1")).resolves.toMatchObject([
     { idempotencyKey: tagMutation.idempotencyKey, kind: "bookmark.tags" },
+  ]);
+});
+
+test("coalesces repeated offline tag replacements into the final tag set", async () => {
+  const firstMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "8fbb9a9d-2c3f-4c1c-a76f-9297d2aa7e5f",
+    kind: "bookmark.tags",
+    bookmarkId: "bookmark-1",
+    tagIds: ["tag-2"],
+    baseVersions: { tags: 0 },
+  };
+  const secondMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "59a4d8f4-a009-4ecb-8c67-fd5e1790f0a8",
+    kind: "bookmark.tags",
+    bookmarkId: "bookmark-1",
+    tagIds: ["tag-1"],
+    baseVersions: { tags: 0 },
+  };
+  await replaceSnapshot(snapshot, "user-1");
+
+  await enqueueMutation(firstMutation, "user-1");
+  await enqueueMutation(secondMutation, "user-1");
+
+  await expect(listPendingMutations("user-1")).resolves.toEqual([
+    expect.objectContaining({
+      idempotencyKey: firstMutation.idempotencyKey,
+      tagIds: ["tag-1"],
+      baseVersions: { tags: 0 },
+    }),
   ]);
 });
 

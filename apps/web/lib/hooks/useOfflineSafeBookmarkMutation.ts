@@ -31,7 +31,21 @@ const OFFLINE_UPDATE_FIELDS = [
   "text",
 ] as const;
 
+
 type OfflineUpdateField = (typeof OFFLINE_UPDATE_FIELDS)[number];
+
+const OFFLINE_UPDATE_FIELD_SET: Record<OfflineUpdateField, true> = {
+  title: true,
+  archived: true,
+  favourited: true,
+  note: true,
+  summary: true,
+  url: true,
+  description: true,
+  author: true,
+  publisher: true,
+  text: true,
+};
 type OfflineUpdateFields = Extract<
   ZOfflineSyncMutation,
   { kind: "bookmark.update" }
@@ -90,6 +104,16 @@ function queueMutationIdempotencyKey(): string {
 function getOfflineUpdateFields(
   input: ZUpdateBookmarksRequest,
 ): OfflineUpdateFields {
+  for (const [field, value] of Object.entries(input)) {
+    if (
+      field !== "bookmarkId" &&
+      value !== undefined &&
+      !Object.hasOwn(OFFLINE_UPDATE_FIELD_SET, field)
+    ) {
+      throw new OfflineMutationOnlineRequiredError();
+    }
+  }
+
   return Object.fromEntries(
     OFFLINE_UPDATE_FIELDS.flatMap((field) => {
       const value = input[field];

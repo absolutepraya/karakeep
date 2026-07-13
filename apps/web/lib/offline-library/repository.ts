@@ -330,10 +330,88 @@ export async function enqueueMutation(
     offlineLibraryDb.bookmarks,
     offlineLibraryDb.outbox,
     async () => {
-      const bookmark = await offlineLibraryDb.bookmarks.get(mutation.bookmarkId);
+      const queuedAt = Date.now();
+      const pendingMutations = await offlineLibraryDb.outbox
+        .where("ownerUserId")
+        .equals(ownerUserId)
+        .sortBy("queuedAt");
+      const matchingMutations = pendingMutations.filter(
+        (pendingMutation) =>
+          pendingMutation.bookmarkId === parsedMutation.data.bookmarkId &&
+          pendingMutation.kind === parsedMutation.data.kind,
+      );
+      let queuedMutation: ZOfflineSyncMutation = parsedMutation.data;
+      let supersededMutationKeys: string[] = [];
+      let preservedQueuedAt = queuedAt;
+
+      if (parsedMutation.data.kind === "bookmark.update") {
+        const pendingUpdates = matchingMutations.filter(
+          (
+            pendingMutation,
+          ): pendingMutation is Extract<
+            ZOfflineSyncMutation,
+            { kind: "bookmark.update" }
+          > & { ownerUserId: string; queuedAt: number } =>
+            pendingMutation.kind === "bookmark.update",
+        );
+        const primaryMutation = pendingUpdates[0];
+        if (primaryMutation) {
+          const fields = { ...primaryMutation.fields };
+          const baseVersions = { ...primaryMutation.baseVersions };
+
+          for (const pendingUpdate of pendingUpdates.slice(1)) {
+            Object.assign(fields, pendingUpdate.fields);
+            for (const field of Object.keys(pendingUpdate.fields)) {
+              baseVersions[field] ??= pendingUpdate.baseVersions[field]!;
+            }
+          }
+          Object.assign(fields, parsedMutation.data.fields);
+          for (const field of Object.keys(parsedMutation.data.fields)) {
+            baseVersions[field] ??= parsedMutation.data.baseVersions[field]!;
+          }
+
+          queuedMutation = {
+            idempotencyKey: primaryMutation.idempotencyKey,
+            kind: "bookmark.update",
+            bookmarkId: parsedMutation.data.bookmarkId,
+            fields,
+            baseVersions,
+          };
+          supersededMutationKeys = pendingUpdates
+            .slice(1)
+            .map((pendingMutation) => pendingMutation.idempotencyKey);
+          preservedQueuedAt = primaryMutation.queuedAt;
+        }
+      } else {
+        const pendingTags = matchingMutations.filter(
+          (
+            pendingMutation,
+          ): pendingMutation is Extract<
+            ZOfflineSyncMutation,
+            { kind: "bookmark.tags" }
+          > & { ownerUserId: string; queuedAt: number } =>
+            pendingMutation.kind === "bookmark.tags",
+        );
+        const primaryMutation = pendingTags[0];
+        if (primaryMutation) {
+          queuedMutation = {
+            ...parsedMutation.data,
+            idempotencyKey: primaryMutation.idempotencyKey,
+            baseVersions: primaryMutation.baseVersions,
+          };
+          supersededMutationKeys = pendingTags
+            .slice(1)
+            .map((pendingMutation) => pendingMutation.idempotencyKey);
+          preservedQueuedAt = primaryMutation.queuedAt;
+        }
+      }
+
+      const bookmark = await offlineLibraryDb.bookmarks.get(
+        parsedMutation.data.bookmarkId,
+      );
       if (bookmark) {
-        if (mutation.kind === "bookmark.update") {
-          const fields = mutation.fields;
+        if (parsedMutation.data.kind === "bookmark.update") {
+          const fields = parsedMutation.data.fields;
           const updatedBookmark: ZBookmark = {
             ...bookmark,
             ...(fields.title !== undefined ? { title: fields.title } : {}),
@@ -373,7 +451,7 @@ export async function enqueueMutation(
           const tagsById = new Map(bookmark.tags.map((tag) => [tag.id, tag]));
           await offlineLibraryDb.bookmarks.put({
             ...bookmark,
-            tags: mutation.tagIds.map(
+            tags: parsedMutation.data.tagIds.map(
               (tagId) =>
                 tagsById.get(tagId) ?? {
                   id: tagId,
@@ -384,10 +462,13 @@ export async function enqueueMutation(
           });
         }
       }
+      if (supersededMutationKeys.length > 0) {
+        await offlineLibraryDb.outbox.bulkDelete(supersededMutationKeys);
+      }
       await offlineLibraryDb.outbox.put({
-        ...parsedMutation.data,
+        ...queuedMutation,
         ownerUserId,
-        queuedAt: Date.now(),
+        queuedAt: preservedQueuedAt,
       });
     },
   );

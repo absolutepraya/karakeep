@@ -50,25 +50,31 @@ export function BookmarkTagsEditor({
         tags={bookmark.tags}
         disabled={disabled}
         allowCreation={!requiresOnline}
-        onAttach={({ tagName, tagId }) => {
-          void updateTags
-            .mutateAsync({
+        onAttach={async ({ tagName, tagId }) => {
+          try {
+            const result = await updateTags.mutateAsync({
               bookmarkId: bookmark.id,
               attach: [{ tagName, tagId }],
               detach: [],
-            })
-            .then(notifyTagSave)
-            .catch(notifyTagSaveError);
+            });
+            notifyTagSave(result);
+          } catch (error) {
+            notifyTagSaveError(error);
+            throw error;
+          }
         }}
-        onDetach={({ tagId }) => {
-          void updateTags
-            .mutateAsync({
+        onDetach={async ({ tagId }) => {
+          try {
+            const result = await updateTags.mutateAsync({
               bookmarkId: bookmark.id,
               attach: [],
               detach: [{ tagId }],
-            })
-            .then(notifyTagSave)
-            .catch(notifyTagSaveError);
+            });
+            notifyTagSave(result);
+          } catch (error) {
+            notifyTagSaveError(error);
+            throw error;
+          }
         }}
       />
     </div>

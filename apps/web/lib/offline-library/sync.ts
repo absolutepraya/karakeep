@@ -71,6 +71,7 @@ export class OfflineLibrarySyncCoordinator {
   private userId: string | null = null;
   private runningSync: Promise<void> | null = null;
   private runningGeneration: number | null = null;
+  private outboxOperation: Promise<void> = Promise.resolve();
   private status: OfflineLibraryStatus = { kind: "initializing" };
 
   constructor(private readonly client: OfflineSyncClient) {}
@@ -103,7 +104,9 @@ export class OfflineLibrarySyncCoordinator {
 
     this.clearRetry();
     this.runningGeneration = generation;
-    this.runningSync = this.synchronize(generation).finally(() => {
+    this.runningSync = this.serializeOutboxOperation(() =>
+      this.synchronize(generation),
+    ).finally(() => {
       this.runningGeneration = null;
       this.runningSync = null;
     });
@@ -129,22 +132,28 @@ export class OfflineLibrarySyncCoordinator {
     if (!this.isActive || this.userId === null) {
       throw new Error("Offline writes require an authenticated user");
     }
+    const userId = this.userId;
     if (mutation.kind !== "bookmark.update") {
       throw new TypeError("Unsupported offline mutation");
     }
-    await enqueueMutation(mutation, this.userId);
-    await this.refreshDerivedStatus();
+    await this.serializeOutboxOperation(async () => {
+      await enqueueMutation(mutation, userId);
+      await this.refreshDerivedStatus();
+    });
   }
 
   async queueBookmarkTags(mutation: BookmarkTagsMutation): Promise<void> {
     if (!this.isActive || this.userId === null) {
       throw new Error("Offline writes require an authenticated user");
     }
+    const userId = this.userId;
     if (mutation.kind !== "bookmark.tags") {
       throw new TypeError("Unsupported offline mutation");
     }
-    await enqueueMutation(mutation, this.userId);
-    await this.refreshDerivedStatus();
+    await this.serializeOutboxOperation(async () => {
+      await enqueueMutation(mutation, userId);
+      await this.refreshDerivedStatus();
+    });
   }
 
   async markOffline(): Promise<void> {
@@ -356,6 +365,17 @@ export class OfflineLibrarySyncCoordinator {
     if (this.status.kind === "error") {
       this.setStatus({ ...this.status, pendingWrites });
     }
+  }
+
+  private async serializeOutboxOperation<T>(
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const result = this.outboxOperation.then(operation, operation);
+    this.outboxOperation = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return await result;
   }
 
   private async pendingWriteCount(): Promise<number> {

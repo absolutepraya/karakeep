@@ -126,6 +126,61 @@ test("replays queued writes once, then applies the returned delta", async () => 
   await expect(listPendingMutations("user-1")).resolves.toHaveLength(0);
 });
 
+test("replays the final repeated offline edit without a version conflict", async () => {
+  const firstMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "87bd61bb-35c0-4a54-bf39-e7cec9d43c9a",
+    kind: "bookmark.update",
+    bookmarkId: bookmark.id,
+    fields: { favourited: true },
+    baseVersions: { favourited: 0 },
+  };
+  const secondMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "b0b596a3-0ff2-4554-8d96-d0f2b593013a",
+    kind: "bookmark.update",
+    bookmarkId: bookmark.id,
+    fields: { favourited: false },
+    baseVersions: { favourited: 0 },
+  };
+  await replaceSnapshot(
+    {
+      ...snapshot,
+      bookmarkFieldVersions: [
+        ...snapshot.bookmarkFieldVersions,
+        { bookmarkId: bookmark.id, field: "favourited", version: 0 },
+      ],
+    },
+    "user-1",
+  );
+  const client = makeClient();
+  vi.mocked(client.push).mockImplementation(async ({ mutations }) => ({
+    acknowledged: mutations.map((mutation) => mutation.idempotencyKey),
+    conflicts: [],
+    cursor: "12",
+  }));
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+  await coordinator.markOffline();
+
+  await coordinator.queueBookmarkUpdate(firstMutation);
+  await coordinator.queueBookmarkUpdate(secondMutation);
+  await coordinator.syncNow();
+
+  expect(client.push).toHaveBeenCalledWith({
+    mutations: [
+      expect.objectContaining({
+        idempotencyKey: firstMutation.idempotencyKey,
+        fields: { favourited: false },
+        baseVersions: { favourited: 0 },
+      }),
+    ],
+  });
+  await expect(listPendingMutations("user-1")).resolves.toEqual([]);
+  expect(coordinator.getStatus()).toMatchObject({
+    kind: "online",
+    pendingWrites: 0,
+  });
+});
+
 test("takes an atomic snapshot before the first online state", async () => {
   const client = makeClient();
   const coordinator = new OfflineLibrarySyncCoordinator(client);
