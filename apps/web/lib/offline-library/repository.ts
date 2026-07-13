@@ -17,7 +17,7 @@ import { offlineLibraryDb } from "./schema";
 
 const SYNC_CURSOR_KEY = "syncCursor";
 const REPLICA_STATE_KEY = "replicaState";
-const THUMBNAIL_CACHE_NAME = "karakeep-thumbnails";
+const THUMBNAIL_CACHE_PREFIX = "karakeep-thumbnails:";
 
 type OfflineBookmarkQuery = {
   archived?: boolean;
@@ -373,7 +373,13 @@ export async function purgeOfflineLibrary(): Promise<void> {
       ]);
     },
   );
-  await globalThis.caches?.delete(THUMBNAIL_CACHE_NAME);
+  const cacheStorage = globalThis.caches;
+  const cacheNames = (await cacheStorage?.keys()) ?? [];
+  await Promise.all(
+    cacheNames
+      .filter((cacheName) => cacheName.startsWith(THUMBNAIL_CACHE_PREFIX))
+      .map((cacheName) => cacheStorage?.delete(cacheName)),
+  );
 }
 
 export async function recordThumbnailAccess(
@@ -401,9 +407,17 @@ export async function evictLeastRecentlyUsedThumbnails(
     return 0;
   }
 
-  const cache = await globalThis.caches?.open(THUMBNAIL_CACHE_NAME);
+  const cacheStorage = globalThis.caches;
+  const cacheNames = (await cacheStorage?.keys()) ?? [];
+  const thumbnailCaches = await Promise.all(
+    cacheNames
+      .filter((cacheName) => cacheName.startsWith(THUMBNAIL_CACHE_PREFIX))
+      .map(async (cacheName) => await cacheStorage?.open(cacheName)),
+  );
   for (const thumbnailRecord of thumbnailRecords) {
-    await cache?.delete(thumbnailRecord.url);
+    await Promise.all(
+      thumbnailCaches.map(async (cache) => await cache?.delete(thumbnailRecord.url)),
+    );
   }
   await offlineLibraryDb.thumbnailAccess.bulkDelete(
     thumbnailRecords.map((thumbnailRecord) => thumbnailRecord.url),

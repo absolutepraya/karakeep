@@ -284,14 +284,16 @@ test("purges all replica data and thumbnails on list revocation", async () => {
   await replaceSnapshot(snapshot);
   await recordThumbnailAccess("/api/assets/revoked");
   thumbnailCaches.set(
-    "karakeep-thumbnails",
+    "karakeep-thumbnails:https://app.example/:v1",
     new Map([["/api/assets/revoked", new Response("revoked")]]),
   );
   await applyEvents([revokeEvent], "13");
 
   await expect(offlineLibraryDb.bookmarks.count()).resolves.toBe(0);
   await expect(offlineLibraryDb.thumbnailAccess.count()).resolves.toBe(0);
-  expect(thumbnailCaches.has("karakeep-thumbnails")).toBe(false);
+  expect(
+    thumbnailCaches.has("karakeep-thumbnails:https://app.example/:v1"),
+  ).toBe(false);
 });
 
 test("queues supported mutations with the local bookmark update", async () => {

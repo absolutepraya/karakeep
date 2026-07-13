@@ -21,6 +21,7 @@ import {
 
 import { ClientConfigCtx } from "./clientConfig";
 import CustomI18nextProvider from "./i18n/provider";
+import { OfflineLibraryProvider } from "./offline-library/provider";
 import { ServerHintsCtx } from "./serverHints";
 
 function makeQueryClient() {
@@ -93,21 +94,23 @@ export default function Providers({
             <ServiceWorkerRegistration />
             <QueryClientProvider client={queryClient}>
               <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-                <CustomI18nextProvider lang={userLocalSettings.lang}>
-                  <ThemeProvider
-                    attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                    disableTransitionOnChange
-                  >
-                    <TooltipProvider
-                      delayDuration={450}
-                      skipDelayDuration={200}
+                <OfflineLibraryProvider trpcClient={trpcClient}>
+                  <CustomI18nextProvider lang={userLocalSettings.lang}>
+                    <ThemeProvider
+                      attribute="class"
+                      defaultTheme="system"
+                      enableSystem
+                      disableTransitionOnChange
                     >
-                      {children}
-                    </TooltipProvider>
-                  </ThemeProvider>
-                </CustomI18nextProvider>
+                      <TooltipProvider
+                        delayDuration={450}
+                        skipDelayDuration={200}
+                      >
+                        {children}
+                      </TooltipProvider>
+                    </ThemeProvider>
+                  </CustomI18nextProvider>
+                </OfflineLibraryProvider>
               </TRPCProvider>
             </QueryClientProvider>
           </SessionProvider>
