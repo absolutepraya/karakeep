@@ -207,7 +207,8 @@ FROM aio_builder AS workers
 # is done for them.
 RUN rm /etc/s6-overlay/s6-rc.d/svc-workers/dependencies.d/init-db-migration \
     && touch /etc/s6-overlay/s6-rc.d/user/contents.d/svc-workers
-ENV USING_LEGACY_SEPARATE_CONTAINERS=true
+ENV USING_LEGACY_SEPARATE_CONTAINERS=true \
+    WORKER_PROFILE=screenshot-first
 
 ################# The cli ##############
 
