@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { OfflineLibraryStatus } from "@/lib/offline-library/sync";
@@ -67,15 +67,41 @@ vi.mock("@/lib/offline-library/repository", () => ({
   },
 }));
 
-vi.mock("@/components/ui/popover", () => ({
-  Popover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  PopoverTrigger: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-  PopoverContent: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-}));
+vi.mock("@/components/ui/popover", () => {
+  const PopoverContext = React.createContext<{
+    open: boolean;
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  } | null>(null);
+
+  return {
+    Popover: ({ children }: { children: React.ReactNode }) => {
+      const [open, setOpen] = React.useState(false);
+      return (
+        <PopoverContext.Provider value={{ open, setOpen }}>
+          {children}
+        </PopoverContext.Provider>
+      );
+    },
+    PopoverTrigger: ({
+      children,
+    }: {
+      children: React.ReactElement<{ onClick?: React.MouseEventHandler }>;
+    }) => {
+      const context = React.useContext(PopoverContext);
+      if (!context) throw new Error("PopoverTrigger requires Popover");
+      return React.cloneElement(children, {
+        onClick: (event: React.MouseEvent) => {
+          children.props.onClick?.(event);
+          context.setOpen((open) => !open);
+        },
+      });
+    },
+    PopoverContent: ({ children }: { children: React.ReactNode }) => {
+      const context = React.useContext(PopoverContext);
+      return context?.open ? <div>{children}</div> : null;
+    },
+  };
+});
 
 afterEach(cleanup);
 
@@ -104,11 +130,38 @@ describe("ProcessingStatusIndicator", () => {
     mockServerProcessing({ total: 0, tasks: [] });
 
     render(<ProcessingStatusIndicator />);
+    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
 
     expect(
       screen.getByRole("button", { name: /library activity.*offline.*2/i }),
     ).toBeTruthy();
     expect(screen.getByText("2 pending writes")).toBeTruthy();
+  });
+
+  it("shows the last successful sync and safely retries after an error", async () => {
+    mockLibraryStatus({
+      kind: "online",
+      lastSyncedAt: new Date("2026-07-12T00:00:00Z"),
+      pendingWrites: 0,
+    });
+    mockServerProcessing({ total: 0, tasks: [] });
+    const { rerender } = render(<ProcessingStatusIndicator />);
+
+    mockLibraryStatus({
+      kind: "error",
+      message: "Network unavailable",
+      retryAt: new Date("2026-07-12T00:05:00Z"),
+      pendingWrites: 2,
+    });
+    mocks.syncNow.mockRejectedValueOnce(new Error("retry failed"));
+    rerender(<ProcessingStatusIndicator />);
+
+    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
+    expect(screen.getByText(/Network unavailable/)).toBeTruthy();
+    expect(screen.getByText(/Last synced/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry sync" }));
+    await waitFor(() => expect(mocks.syncNow).toHaveBeenCalledTimes(1));
   });
 
   it("shows sync progress and queued writes", () => {
@@ -122,6 +175,7 @@ describe("ProcessingStatusIndicator", () => {
     mockServerProcessing({ total: 0, tasks: [] });
 
     render(<ProcessingStatusIndicator />);
+    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
 
     expect(
       screen.getByRole("button", {
@@ -141,6 +195,7 @@ describe("ProcessingStatusIndicator", () => {
     mockServerProcessing({ total: 0, tasks: [] });
 
     render(<ProcessingStatusIndicator />);
+    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
 
     expect(
       screen.getByRole("button", { name: /library activity.*1 conflict/i }),
@@ -150,12 +205,10 @@ describe("ProcessingStatusIndicator", () => {
     ).toBeTruthy();
   });
 
-  it("keeps server processing separate from local synchronization", () => {
+  it("opens the activity popover and keeps server processing separate", () => {
     mockLibraryStatus({
-      kind: "syncing",
-      phase: "pulling",
-      completed: 5,
-      total: 10,
+      kind: "offline",
+      lastSyncedAt: new Date("2026-07-12T00:00:00Z"),
       pendingWrites: 1,
     });
     mockServerProcessing({
@@ -165,7 +218,13 @@ describe("ProcessingStatusIndicator", () => {
 
     render(<ProcessingStatusIndicator />);
 
-    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
+    const trigger = screen.getByRole("button", { name: /library activity/i });
+    expect(screen.queryByText("Library sync")).toBeNull();
+    expect(trigger.querySelector("svg")?.getAttribute("class")).not.toContain(
+      "animate-spin",
+    );
+
+    fireEvent.click(trigger);
     expect(screen.getByText("Library sync")).toBeTruthy();
     expect(screen.getByText("Background processing")).toBeTruthy();
     expect(screen.getByText("Crawling")).toBeTruthy();

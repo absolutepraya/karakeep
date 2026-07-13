@@ -248,6 +248,7 @@ async function chooseServerConflictValue(conflict: ZOfflineSyncConflict) {
     "rw",
     [
       offlineLibraryDb.bookmarks,
+      offlineLibraryDb.bookmarkFieldVersions,
       offlineLibraryDb.outbox,
       offlineLibraryDb.conflicts,
     ],
@@ -261,6 +262,11 @@ async function chooseServerConflictValue(conflict: ZOfflineSyncConflict) {
       await offlineLibraryDb.bookmarks.put(
         updateBookmarkField(bookmark, field, conflict.serverValue),
       );
+      await offlineLibraryDb.bookmarkFieldVersions.put({
+        bookmarkId: conflict.bookmarkId,
+        field,
+        version: conflict.serverVersion,
+      });
       await offlineLibraryDb.conflicts.delete(getConflictId(conflict));
     },
   );
@@ -273,6 +279,7 @@ export default function ProcessingStatusIndicator() {
   const [conflicts, setConflicts] = React.useState<ZOfflineSyncConflict[]>([]);
   const [selectedConflict, setSelectedConflict] =
     React.useState<ZOfflineSyncConflict | null>(null);
+  const lastSuccessfulSyncRef = React.useRef<Date | null>(null);
   const { data } = useQuery(
     api.bookmarks.getProcessingStatus.queryOptions(undefined, {
       refetchInterval: 15_000,
@@ -301,6 +308,12 @@ export default function ProcessingStatusIndicator() {
     return () => {
       cancelled = true;
     };
+  }, [status]);
+
+  React.useEffect(() => {
+    if (status.kind === "online" || status.kind === "offline") {
+      lastSuccessfulSyncRef.current = status.lastSyncedAt;
+    }
   }, [status]);
 
   let Icon = CheckCircle2;
@@ -332,7 +345,7 @@ export default function ProcessingStatusIndicator() {
       break;
     case "error":
       libraryState = "sync error";
-      libraryDetail = status.message;
+      libraryDetail = `${status.message}. ${lastSyncedLabel(lastSuccessfulSyncRef.current)}`;
       pendingWrites = status.pendingWrites;
       Icon = TriangleAlert;
       needsAttention = true;
@@ -386,7 +399,7 @@ export default function ProcessingStatusIndicator() {
             aria-label={buttonLabel}
           >
             <Icon
-              className={`size-4 ${isSyncing || serverProcessing.total > 0 ? "animate-spin" : ""} ${needsAttention ? "text-destructive" : "text-primary"}`}
+              className={`size-4 ${isSyncing ? "animate-spin" : ""} ${needsAttention ? "text-destructive" : "text-primary"}`}
             />
             {pendingWrites > 0 && (
               <span className="text-sm font-medium tabular-nums">{pendingWrites}</span>
@@ -416,7 +429,11 @@ export default function ProcessingStatusIndicator() {
               )}
               {pendingWrites > 0 && <p>{pendingWritesLabel(pendingWrites)}</p>}
               {status.kind === "error" && (
-                <Button type="button" size="sm" onClick={() => void retrySync()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void retrySync().catch(() => undefined)}
+                >
                   Retry sync
                 </Button>
               )}
