@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import VisualViewportSync from "@/components/VisualViewportSync";
+import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 import { Session, SessionProvider } from "@/lib/auth/client";
 import { UserLocalSettingsCtx } from "@/lib/userLocalSettings/bookmarksLayout";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -89,6 +90,7 @@ export default function Providers({
       <ServerHintsCtx.Provider value={{ isMobile }}>
         <UserLocalSettingsCtx.Provider value={userLocalSettings}>
           <SessionProvider session={session}>
+            <ServiceWorkerRegistration />
             <QueryClientProvider client={queryClient}>
               <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
                 <CustomI18nextProvider lang={userLocalSettings.lang}>
