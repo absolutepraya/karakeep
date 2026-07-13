@@ -200,6 +200,7 @@ export function TagsEditor({
         if (optimisticTags.some((tag) => tag.id === actionMeta.id)) {
           return;
         }
+
         await onAttach({
           tagName: actionMeta.name,
           tagId: actionMeta.id,

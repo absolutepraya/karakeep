@@ -78,6 +78,9 @@ auth_failures.log
 .codex
 .claude/worktrees
 
+# Local domain and agent context
+CONTEXT.md
+
 # Karakeep dev launcher (./start-dev.sh -d) pids + logs
 .dev/
 jean.json

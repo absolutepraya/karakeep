@@ -1099,15 +1099,17 @@ export const bookmarksAppRouter = router({
                 eq(bookmarks.summarizationStatus, "pending"),
               ),
             ),
-          ctx.db
-            .select({ count: count() })
-            .from(bookmarks)
-            .where(
-              and(
-                eq(bookmarks.userId, ctx.user.id),
-                eq(bookmarks.embeddingStatus, "pending"),
-              ),
-            ),
+          serverConfig.embedding.enableAutoIndexing
+            ? ctx.db
+                .select({ count: count() })
+                .from(bookmarks)
+                .where(
+                  and(
+                    eq(bookmarks.userId, ctx.user.id),
+                    eq(bookmarks.embeddingStatus, "pending"),
+                  ),
+                )
+            : Promise.resolve([{ count: 0 }]),
           ctx.db
             .select({ count: count() })
             .from(importSessions)
