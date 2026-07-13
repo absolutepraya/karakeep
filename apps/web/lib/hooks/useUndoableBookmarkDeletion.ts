@@ -37,13 +37,21 @@ export function useUndoableBookmarkDeletion() {
           return;
         }
         resolved = true;
-
         void Promise.allSettled(
           deletableBookmarkIds.map((bookmarkId) =>
             deleteBookmark({ bookmarkId }),
           ),
         ).then((results) => {
-          deletableBookmarkIds.forEach(clearPending);
+          // Only restore visibility for bookmarks that failed to delete.
+          // For successful deletions, the pending filter is harmless: the
+          // refetched query data won't contain the bookmark. Clearing pending
+          // immediately would cause a brief reappearance between clearPending
+          // and the debounced query refetch (~250ms later).
+          results.forEach((result, index) => {
+            if (result.status === "rejected") {
+              clearPending(deletableBookmarkIds[index]);
+            }
+          });
           if (results.some((result) => result.status === "rejected")) {
             toast.error(t("common.something_went_wrong"));
           }

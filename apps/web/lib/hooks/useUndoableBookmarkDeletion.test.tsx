@@ -58,9 +58,13 @@ describe("useUndoableBookmarkDeletion", () => {
         bookmarkId: "bookmark-1",
       });
     });
+    // Successful deletions keep the pending ID: the refetched query data
+    // won't contain the bookmark, so the filter is a harmless no-op.
+    // Clearing pending immediately would cause a brief reappearance
+    // between clearPending and the debounced query refetch.
     expect(
       usePendingBookmarkDeletionStore.getState().pendingBookmarkIds,
-    ).toEqual([]);
+    ).toEqual(["bookmark-1"]);
   });
 
   it("restores visibility and skips deletion when Undo is clicked", () => {
@@ -103,4 +107,31 @@ describe("useUndoableBookmarkDeletion", () => {
       bookmarkId: "bookmark-2",
     });
   });
+
+  it("restores visibility when deletion fails", async () => {
+    mocks.deleteBookmark.mockRejectedValueOnce(new Error("Network error"));
+
+    const { result } = renderHook(() => useUndoableBookmarkDeletion());
+
+    act(() => {
+      result.current.scheduleDelete("bookmark-1");
+    });
+
+    expect(
+      usePendingBookmarkDeletionStore.getState().pendingBookmarkIds,
+    ).toEqual(["bookmark-1"]);
+
+    const toastOptions = mocks.toast.mock.calls[0]?.[1];
+    act(() => {
+      toastOptions?.onAutoClose?.();
+    });
+
+    await waitFor(() => {
+      expect(mocks.toast.error).toHaveBeenCalled();
+    });
+    expect(
+      usePendingBookmarkDeletionStore.getState().pendingBookmarkIds,
+    ).toEqual([]);
+  });
 });
+
