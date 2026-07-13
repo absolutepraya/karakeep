@@ -96,6 +96,8 @@ const allEnv = z.object({
   CRAWLER_HEADLESS_BROWSER: stringBool("true"),
   BROWSER_WEB_URL: z.string().optional(),
   BROWSER_WEBSOCKET_URL: z.string().optional(),
+  BROWSERLESS_URL: z.string().url().optional(),
+  BROWSERLESS_TOKEN: z.string().min(1).optional(),
   BROWSER_CONNECT_ONDEMAND: stringBool("false"),
   BROWSER_COOKIE_PATH: z.string().optional(),
   CRAWLER_JOB_TIMEOUT_SEC: z.coerce.number().default(60),
@@ -343,6 +345,8 @@ const serverConfigSchema = allEnv.transform((val, ctx) => {
       headlessBrowser: val.CRAWLER_HEADLESS_BROWSER,
       browserWebUrl: val.BROWSER_WEB_URL,
       browserWebSocketUrl: val.BROWSER_WEBSOCKET_URL,
+      browserlessUrl: val.BROWSERLESS_URL,
+      browserlessToken: val.BROWSERLESS_TOKEN,
       browserConnectOnDemand: val.BROWSER_CONNECT_ONDEMAND,
       browserCookiePath: val.BROWSER_COOKIE_PATH,
       jobTimeoutSec: val.CRAWLER_JOB_TIMEOUT_SEC,
@@ -509,6 +513,22 @@ const serverConfigSchema = allEnv.transform((val, ctx) => {
       code: z.ZodIssueCode.custom,
       message:
         "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT is required when OTEL_EVENT_LOGS_EXPORT_ENABLED is true",
+      fatal: true,
+    });
+    return z.NEVER;
+  }
+  if (val.BROWSERLESS_URL && !val.BROWSERLESS_TOKEN) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "BROWSERLESS_TOKEN is required when BROWSERLESS_URL is set",
+      fatal: true,
+    });
+    return z.NEVER;
+  }
+  if (val.BROWSERLESS_TOKEN && !val.BROWSERLESS_URL) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "BROWSERLESS_URL is required when BROWSERLESS_TOKEN is set",
       fatal: true,
     });
     return z.NEVER;
