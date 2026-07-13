@@ -1056,20 +1056,14 @@ export const bookmarksAppRouter = router({
         total: z.number(),
         tasks: z.array(
           z.object({
-            kind: z.enum([
-              "crawling",
-              "tagging",
-              "summarizing",
-              "embedding",
-              "importing",
-            ]),
+            kind: z.enum(["crawling", "tagging", "summarizing", "importing"]),
             count: z.number(),
           }),
         ),
       }),
     )
     .query(async ({ ctx }) => {
-      const [crawling, tagging, summarizing, embedding, importing] =
+      const [crawling, tagging, summarizing, importing] =
         await Promise.all([
           ctx.db
             .select({ count: count() })
@@ -1099,17 +1093,6 @@ export const bookmarksAppRouter = router({
                 eq(bookmarks.summarizationStatus, "pending"),
               ),
             ),
-          serverConfig.embedding.enableAutoIndexing
-            ? ctx.db
-                .select({ count: count() })
-                .from(bookmarks)
-                .where(
-                  and(
-                    eq(bookmarks.userId, ctx.user.id),
-                    eq(bookmarks.embeddingStatus, "pending"),
-                  ),
-                )
-            : Promise.resolve([{ count: 0 }]),
           ctx.db
             .select({ count: count() })
             .from(importSessions)
@@ -1125,7 +1108,6 @@ export const bookmarksAppRouter = router({
         { kind: "crawling" as const, count: crawling[0]?.count ?? 0 },
         { kind: "tagging" as const, count: tagging[0]?.count ?? 0 },
         { kind: "summarizing" as const, count: summarizing[0]?.count ?? 0 },
-        { kind: "embedding" as const, count: embedding[0]?.count ?? 0 },
         { kind: "importing" as const, count: importing[0]?.count ?? 0 },
       ].filter((task) => task.count > 0);
 

@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
   }[],
   serverProcessing: {
     total: 0,
-    tasks: [] as { kind: "crawling" | "embedding"; count: number }[],
+    tasks: [] as { kind: "crawling" | "tagging"; count: number }[],
   },
   status: {
     kind: "online",
@@ -217,7 +217,10 @@ describe("ProcessingStatusIndicator", () => {
     });
     mockServerProcessing({
       total: 3,
-      tasks: [{ kind: "crawling", count: 3 }],
+      tasks: [
+        { kind: "crawling", count: 1 },
+        { kind: "tagging", count: 2 },
+      ],
     });
 
     render(<ProcessingStatusIndicator />);
@@ -232,5 +235,7 @@ describe("ProcessingStatusIndicator", () => {
     expect(screen.getByText("Library sync")).toBeTruthy();
     expect(screen.getByText("Background processing")).toBeTruthy();
     expect(screen.getByText("Crawling")).toBeTruthy();
+    expect(screen.getByText("Tagging")).toBeTruthy();
+    expect(screen.queryByText("Embedding")).toBeNull();
   });
 });
