@@ -160,6 +160,27 @@ Expected service shape:
 - `meilisearch`
 - `watchtower`
 
+### Embedding cleanup preflight
+
+Before applying the stale-embedding cleanup migration, capture evidence that the embeddings queue is empty:
+
+```bash
+docker exec -i karakeep-fork-web-1 node <<'NODE'
+const Database = require("better-sqlite3");
+const db = new Database("/data/queue.db", { readonly: true });
+const rows = db.prepare(
+  "SELECT queue, status, COUNT(*) AS count FROM tasks WHERE queue = 'embeddings' GROUP BY queue, status",
+).all();
+if (rows.length !== 0) {
+  console.error(JSON.stringify(rows));
+  process.exit(1);
+}
+console.log("Embedding queue is empty");
+NODE
+```
+
+A non-empty result blocks the cleanup. Do not run the migration until this command reports `Embedding queue is empty`.
+
 Key parameters:
 - `KARAKEEP_PORT`
 - `KARAKEEP_IMAGE`
