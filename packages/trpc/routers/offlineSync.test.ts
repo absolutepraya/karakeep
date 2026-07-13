@@ -239,6 +239,55 @@ describe("Offline sync routes", () => {
     ).toBe(false);
   });
 
+  test<CustomTestContext>("returns only authorized current field versions in snapshots and deltas", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const other = apiCallers[1];
+    const ownerBookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "owned version",
+    });
+    const otherBookmark = await other.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "foreign version",
+    });
+    await owner.bookmarks.updateBookmark({
+      bookmarkId: ownerBookmark.id,
+      title: "owned title v1",
+    });
+    await other.bookmarks.updateBookmark({
+      bookmarkId: otherBookmark.id,
+      title: "foreign title v1",
+    });
+
+    const snapshot = await owner.offlineSync.snapshot();
+    expect(snapshot.bookmarkFieldVersions).toContainEqual({
+      bookmarkId: ownerBookmark.id,
+      field: "title",
+      version: 1,
+    });
+    expect(snapshot.bookmarkFieldVersions).not.toContainEqual(
+      expect.objectContaining({ bookmarkId: otherBookmark.id }),
+    );
+
+    await owner.bookmarks.updateBookmark({
+      bookmarkId: ownerBookmark.id,
+      note: "owned note v1",
+    });
+    const delta = await owner.offlineSync.pull({ cursor: snapshot.cursor });
+
+    expect(delta.events).toContainEqual(
+      expect.objectContaining({
+        entityId: ownerBookmark.id,
+        changedFields: ["note"],
+        fieldVersions: [
+          { bookmarkId: ownerBookmark.id, field: "note", version: 1 },
+        ],
+      }),
+    );
+  });
+
   test<CustomTestContext>("replays mutations and merges independent fields while rejecting stale fields", async ({
     apiCallers,
   }) => {

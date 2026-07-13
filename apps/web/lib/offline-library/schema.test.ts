@@ -12,6 +12,7 @@ test("defines every offline-library table", async () => {
   await offlineLibraryDb.open();
 
   expect(offlineLibraryDb.tables.map((table) => table.name).sort()).toEqual([
+    "bookmarkFieldVersions",
     "bookmarkListMemberships",
     "bookmarks",
     "conflicts",

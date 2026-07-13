@@ -62,6 +62,9 @@ const snapshot: ZOfflineSyncSnapshot = {
   bookmarks: [bookmark],
   lists: [],
   bookmarkListMemberships: [],
+  bookmarkFieldVersions: [
+    { bookmarkId: bookmark.id, field: "title", version: 0 },
+  ],
   cursor: "12",
 };
 

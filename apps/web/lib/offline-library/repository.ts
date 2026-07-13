@@ -51,18 +51,23 @@ export async function replaceSnapshot(
     offlineLibraryDb.bookmarks,
     offlineLibraryDb.lists,
     offlineLibraryDb.bookmarkListMemberships,
+    offlineLibraryDb.bookmarkFieldVersions,
     offlineLibraryDb.metadata,
     async () => {
       await Promise.all([
         offlineLibraryDb.bookmarks.clear(),
         offlineLibraryDb.lists.clear(),
         offlineLibraryDb.bookmarkListMemberships.clear(),
+        offlineLibraryDb.bookmarkFieldVersions.clear(),
       ]);
       await Promise.all([
         offlineLibraryDb.bookmarks.bulkPut(snapshot.bookmarks),
         offlineLibraryDb.lists.bulkPut(snapshot.lists),
         offlineLibraryDb.bookmarkListMemberships.bulkPut(
           snapshot.bookmarkListMemberships,
+        ),
+        offlineLibraryDb.bookmarkFieldVersions.bulkPut(
+          snapshot.bookmarkFieldVersions,
         ),
         offlineLibraryDb.metadata.bulkPut([
           { key: SYNC_CURSOR_KEY, value: snapshot.cursor },
@@ -92,6 +97,7 @@ export async function applyEvents(
     offlineLibraryDb.bookmarks,
     offlineLibraryDb.lists,
     offlineLibraryDb.bookmarkListMemberships,
+    offlineLibraryDb.bookmarkFieldVersions,
     offlineLibraryDb.metadata,
     async () => {
       const replicaState = await offlineLibraryDb.metadata.get(REPLICA_STATE_KEY);
@@ -99,12 +105,8 @@ export async function applyEvents(
         (event) => event.operation !== "delete" && event.operation !== "revoke",
       );
 
-      await Promise.all(
-        events.map(async (event) => {
-          if (event.operation !== "delete" && event.operation !== "revoke") {
-            return;
-          }
-
+      for (const event of events) {
+        if (event.operation === "delete" || event.operation === "revoke") {
           if (event.entityType === "bookmark") {
             await Promise.all([
               offlineLibraryDb.bookmarks.delete(event.entityId),
@@ -112,8 +114,12 @@ export async function applyEvents(
                 .where("bookmarkId")
                 .equals(event.entityId)
                 .delete(),
+              offlineLibraryDb.bookmarkFieldVersions
+                .where("bookmarkId")
+                .equals(event.entityId)
+                .delete(),
             ]);
-            return;
+            continue;
           }
 
           await Promise.all([
@@ -123,8 +129,11 @@ export async function applyEvents(
               .equals(event.entityId)
               .delete(),
           ]);
-        }),
-      );
+          continue;
+        }
+
+        await offlineLibraryDb.bookmarkFieldVersions.bulkPut(event.fieldVersions);
+      }
       const nextReplicaState =
         replicaState?.value === "ready" && !hasUnmaterializedEvents
           ? "ready"
@@ -142,6 +151,15 @@ export async function applyEvents(
     },
   );
 }
+export async function getBookmarkFieldVersion(
+  bookmarkId: string,
+  field: string,
+): Promise<number | undefined> {
+  return (
+    await offlineLibraryDb.bookmarkFieldVersions.get([bookmarkId, field])
+  )?.version;
+}
+
 
 export async function queryBookmarks(
   query: OfflineBookmarkQuery = {},
@@ -387,6 +405,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
       offlineLibraryDb.bookmarks,
       offlineLibraryDb.lists,
       offlineLibraryDb.bookmarkListMemberships,
+      offlineLibraryDb.bookmarkFieldVersions,
       offlineLibraryDb.metadata,
       offlineLibraryDb.outbox,
       offlineLibraryDb.conflicts,
@@ -397,6 +416,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
         offlineLibraryDb.bookmarks.clear(),
         offlineLibraryDb.lists.clear(),
         offlineLibraryDb.bookmarkListMemberships.clear(),
+        offlineLibraryDb.bookmarkFieldVersions.clear(),
         offlineLibraryDb.metadata.clear(),
         offlineLibraryDb.outbox.clear(),
         offlineLibraryDb.conflicts.clear(),
@@ -423,6 +443,12 @@ export async function getReplicaOwnerUserId(): Promise<string | null> {
   return (
     (await offlineLibraryDb.metadata.get(REPLICA_OWNER_USER_ID_KEY))?.value ??
     null
+  );
+}
+
+export async function isOfflineReplicaReady(): Promise<boolean> {
+  return (
+    (await offlineLibraryDb.metadata.get(REPLICA_STATE_KEY))?.value === "ready"
   );
 }
 

@@ -101,6 +101,15 @@ export const zOfflineSyncConflictSchema = z.object({
 });
 export type ZOfflineSyncConflict = z.infer<typeof zOfflineSyncConflictSchema>;
 
+export const zOfflineSyncBookmarkFieldVersionSchema = z.object({
+  bookmarkId: z.string(),
+  field: z.string(),
+  version: z.number().int().nonnegative(),
+});
+export type ZOfflineSyncBookmarkFieldVersion = z.infer<
+  typeof zOfflineSyncBookmarkFieldVersionSchema
+>;
+
 export const zOfflineSyncEventSchema = z.object({
   sequence: z.number().int().nonnegative(),
   userId: z.string(),
@@ -108,6 +117,7 @@ export const zOfflineSyncEventSchema = z.object({
   entityId: z.string(),
   operation: zOfflineSyncOperationSchema,
   changedFields: z.array(z.string()),
+  fieldVersions: z.array(zOfflineSyncBookmarkFieldVersionSchema),
   createdAt: z.coerce.date(),
 });
 export type ZOfflineSyncEvent = z.infer<typeof zOfflineSyncEventSchema>;
@@ -124,6 +134,7 @@ export const zOfflineSyncSnapshotSchema = z.object({
   bookmarks: z.array(zBookmarkSchema),
   lists: z.array(zBookmarkListSchema),
   bookmarkListMemberships: z.array(zOfflineSyncBookmarkListMembershipSchema),
+  bookmarkFieldVersions: z.array(zOfflineSyncBookmarkFieldVersionSchema),
   cursor: zOfflineSyncCursorSchema,
 });
 export type ZOfflineSyncSnapshot = z.infer<typeof zOfflineSyncSnapshotSchema>;

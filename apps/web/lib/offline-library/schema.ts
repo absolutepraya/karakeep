@@ -3,10 +3,12 @@ import Dexie, { type Table } from "dexie";
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 import type {
+  ZOfflineSyncBookmarkFieldVersion,
   ZOfflineSyncBookmarkListMembership,
   ZOfflineSyncConflict,
   ZOfflineSyncMutation,
 } from "@karakeep/shared/types/offlineSync";
+
 type StoredOfflineSyncMutation = ZOfflineSyncMutation & {
   ownerUserId: string;
   queuedAt: number;
@@ -22,6 +24,7 @@ export class OfflineLibraryDatabase extends Dexie {
     [string, string]
   >;
   conflicts!: Table<ZOfflineSyncConflict, string>;
+  bookmarkFieldVersions!: Table<ZOfflineSyncBookmarkFieldVersion, [string, string]>;
   thumbnailAccess!: Table<{ url: string; lastAccessedAt: number }, string>;
 
   constructor() {
@@ -39,6 +42,9 @@ export class OfflineLibraryDatabase extends Dexie {
     });
     this.version(3).stores({
       outbox: "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, kind, queuedAt",
+    });
+    this.version(4).stores({
+      bookmarkFieldVersions: "[bookmarkId+field], bookmarkId, field",
     });
   }
 }

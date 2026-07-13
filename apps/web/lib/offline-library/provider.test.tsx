@@ -89,6 +89,7 @@ beforeEach(async () => {
     bookmarks: [],
     lists: [],
     bookmarkListMemberships: [],
+    bookmarkFieldVersions: [],
     cursor: "1",
   });
   trpc.offlineSync.pull.query.mockResolvedValue({ events: [], cursor: "1" });
@@ -126,6 +127,7 @@ test("purges the private replica and worker caches after logout", async () => {
     bookmarks: [],
     lists: [],
     bookmarkListMemberships: [],
+    bookmarkFieldVersions: [],
     cursor: "1",
   }, "user-1");
   session.current = { data: null, status: "unauthenticated" };
@@ -153,6 +155,7 @@ test("purges a persisted replica owned by another user before initial activation
       bookmarks: [],
       lists: [],
       bookmarkListMemberships: [],
+      bookmarkFieldVersions: [],
       cursor: "1",
     },
     "user-1",

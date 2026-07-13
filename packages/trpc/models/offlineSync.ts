@@ -16,6 +16,7 @@ import {
 } from "@karakeep/db/schema";
 import { triggerSearchReindex } from "@karakeep/shared-server";
 import type {
+  ZOfflineSyncBookmarkFieldVersion,
   ZOfflineSyncConflict,
   ZOfflineSyncEntityType,
   ZOfflineSyncMutation,
@@ -65,6 +66,22 @@ async function currentCursor(
     .from(offlineSyncEvents)
     .where(eq(offlineSyncEvents.userId, userId));
   return cursorForSequence(result?.sequence);
+}
+
+async function getOfflineSyncBookmarkFieldVersions(
+  tx: KarakeepDBTransaction,
+  bookmarkIds: string[],
+): Promise<ZOfflineSyncBookmarkFieldVersion[]> {
+  if (bookmarkIds.length === 0) return [];
+
+  return await tx
+    .select({
+      bookmarkId: offlineSyncFieldVersions.bookmarkId,
+      field: offlineSyncFieldVersions.field,
+      version: offlineSyncFieldVersions.version,
+    })
+    .from(offlineSyncFieldVersions)
+    .where(inArray(offlineSyncFieldVersions.bookmarkId, bookmarkIds));
 }
 
 async function getBookmarkFieldValue(
@@ -495,10 +512,10 @@ export async function buildOfflineSyncSnapshot(
         (await Bookmark.fromId(transactionContext, bookmarkId, false)).asZBookmark(),
       ),
     );
-    const bookmarkListMemberships =
+    const [bookmarkListMemberships, bookmarkFieldVersions] = await Promise.all([
       bookmarkIds.size === 0 || listIds.length === 0
         ? []
-        : await tx
+        : tx
             .select({
               bookmarkId: bookmarksInLists.bookmarkId,
               listId: bookmarksInLists.listId,
@@ -509,12 +526,15 @@ export async function buildOfflineSyncSnapshot(
                 inArray(bookmarksInLists.bookmarkId, [...bookmarkIds]),
                 inArray(bookmarksInLists.listId, listIds),
               ),
-            );
+            ),
+      getOfflineSyncBookmarkFieldVersions(tx, [...bookmarkIds]),
+    ]);
 
     return {
       bookmarks: bookmarkRows,
       lists: snapshotLists,
       bookmarkListMemberships,
+      bookmarkFieldVersions,
       cursor: await currentCursor(tx, ctx.user.id),
     };
   });
@@ -540,11 +560,28 @@ export async function pullOfflineSyncEvents(
         ),
       )
       .orderBy(asc(offlineSyncEvents.sequence));
+    const fieldVersions = await getOfflineSyncBookmarkFieldVersions(
+      tx,
+      [
+        ...new Set(
+          events
+            .filter((event) => event.entityType === "bookmark")
+            .map((event) => event.entityId),
+        ),
+      ],
+    );
+
     return {
       events: events.map((event) => ({
         ...event,
         entityType: event.entityType as ZOfflineSyncEntityType,
         operation: event.operation as ZOfflineSyncOperation,
+        fieldVersions: fieldVersions.filter(
+          (fieldVersion) =>
+            event.entityType === "bookmark" &&
+            fieldVersion.bookmarkId === event.entityId &&
+            event.changedFields.includes(fieldVersion.field),
+        ),
       })),
       cursor: await currentCursor(tx, ctx.user.id),
     };

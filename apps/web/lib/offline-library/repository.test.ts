@@ -13,6 +13,7 @@ import {
   applyEvents,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
+  getBookmarkFieldVersion,
   listPendingMutations,
   offlineLibraryDb,
   purgeOfflineLibrary,
@@ -90,9 +91,12 @@ const snapshotWith = (overrides: Partial<ZBookmark> = {}): ZOfflineSyncSnapshot 
   bookmarks: [bookmark(overrides)],
   lists: [],
   bookmarkListMemberships: [],
+  bookmarkFieldVersions: [
+    { bookmarkId: "bookmark-1", field: "title", version: 0 },
+    { bookmarkId: "bookmark-1", field: "tags", version: 0 },
+  ],
   cursor: "12",
 });
-
 const snapshot = snapshotWith();
 
 const pendingMutation: ZOfflineSyncMutation = {
@@ -121,6 +125,8 @@ test("replaces a snapshot atomically and preserves its cursor", async () => {
     cursor: snapshot.cursor,
     bookmarks: [{ id: "bookmark-1" }],
   });
+  await expect(getBookmarkFieldVersion("bookmark-1", "title")).resolves.toBe(0);
+  await expect(getBookmarkFieldVersion("bookmark-1", "note")).resolves.toBeUndefined();
 });
 
 test("searches only replicated fields", async () => {
@@ -206,6 +212,7 @@ test("applies deletion events and advances the replica cursor together", async (
     entityId: "bookmark-1",
     operation: "delete",
     changedFields: [],
+    fieldVersions: [],
     createdAt: new Date("2026-07-13T00:00:00Z"),
   };
   await replaceSnapshot(snapshot, "user-1");
@@ -215,6 +222,57 @@ test("applies deletion events and advances the replica cursor together", async (
     cursor: "13",
     bookmarks: [],
   });
+});
+
+test("replaces, applies, and removes bookmark field versions atomically", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  await applyEvents(
+    [
+      {
+        sequence: 13,
+        userId: "user-1",
+        entityType: "bookmark",
+        entityId: "bookmark-1",
+        operation: "update",
+        changedFields: ["title"],
+        fieldVersions: [
+          { bookmarkId: "bookmark-1", field: "title", version: 1 },
+        ],
+        createdAt: new Date("2026-07-13T00:00:00Z"),
+      },
+    ],
+    "13",
+  );
+  await expect(getBookmarkFieldVersion("bookmark-1", "title")).resolves.toBe(1);
+
+  await replaceSnapshot(
+    {
+      ...snapshot,
+      bookmarkFieldVersions: [
+        { bookmarkId: "bookmark-1", field: "note", version: 2 },
+      ],
+    },
+    "user-1",
+  );
+  await expect(getBookmarkFieldVersion("bookmark-1", "title")).resolves.toBeUndefined();
+  await expect(getBookmarkFieldVersion("bookmark-1", "note")).resolves.toBe(2);
+
+  await applyEvents(
+    [
+      {
+        sequence: 14,
+        userId: "user-1",
+        entityType: "bookmark",
+        entityId: "bookmark-1",
+        operation: "delete",
+        changedFields: [],
+        fieldVersions: [],
+        createdAt: new Date("2026-07-13T00:00:00Z"),
+      },
+    ],
+    "14",
+  );
+  await expect(getBookmarkFieldVersion("bookmark-1", "note")).resolves.toBeUndefined();
 });
 
 test("does not establish a replica cursor from an empty cold delta", async () => {
@@ -239,6 +297,7 @@ test("does not establish a replica cursor from a deletion-only cold delta", asyn
         entityId: "bookmark-1",
         operation: "delete",
         changedFields: [],
+        fieldVersions: [],
         createdAt: new Date("2026-07-13T00:00:00Z"),
       },
     ],
@@ -262,6 +321,7 @@ test("preserves stale state across empty delta batches", async () => {
     entityId: "bookmark-1",
     operation: "update",
     changedFields: ["title"],
+    fieldVersions: [],
     createdAt: new Date("2026-07-13T00:00:00Z"),
   };
   await replaceSnapshot(snapshot, "user-1");
@@ -282,6 +342,7 @@ test("purges all replica data and thumbnails on list revocation", async () => {
     entityId: "list-1",
     operation: "revoke",
     changedFields: [],
+    fieldVersions: [],
     createdAt: new Date("2026-07-13T00:00:00Z"),
   };
   await replaceSnapshot(snapshot, "user-1");
