@@ -75,7 +75,7 @@ export interface OfflineSafeBookmarkMutation<TInput, TResult> {
 export const OFFLINE_ONLINE_REQUIRED_MESSAGE =
   "This action requires an internet connection.";
 
-export class OfflineMutationOnlineRequiredError extends Error {
+class OfflineMutationOnlineRequiredError extends Error {
   constructor(message = OFFLINE_ONLINE_REQUIRED_MESSAGE) {
     super(message);
     this.name = "OfflineMutationOnlineRequiredError";

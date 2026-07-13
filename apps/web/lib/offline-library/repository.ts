@@ -569,13 +569,6 @@ export async function isOfflineReplicaReady(): Promise<boolean> {
   );
 }
 
-export async function setReplicaOwnerUserId(userId: string): Promise<void> {
-  await offlineLibraryDb.metadata.put({
-    key: REPLICA_OWNER_USER_ID_KEY,
-    value: userId,
-  });
-}
-
 export async function recordThumbnailAccess(
   url: string,
   accessedAt = new Date(),

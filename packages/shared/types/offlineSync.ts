@@ -3,17 +3,17 @@ import { z } from "zod";
 import { MAX_BOOKMARK_TITLE_LENGTH, zBookmarkSchema } from "./bookmarks";
 import { zBookmarkListSchema } from "./lists";
 
-export const zOfflineSyncCursorSchema = z
+const zOfflineSyncCursorSchema = z
   .string()
   .regex(/^(0|[1-9]\d*)$/, "Cursor must be a decimal sequence");
 export type ZOfflineSyncCursor = z.infer<typeof zOfflineSyncCursorSchema>;
 
-export const zOfflineSyncEntityTypeSchema = z.enum(["bookmark", "list"]);
+const zOfflineSyncEntityTypeSchema = z.enum(["bookmark", "list"]);
 export type ZOfflineSyncEntityType = z.infer<
   typeof zOfflineSyncEntityTypeSchema
 >;
 
-export const zOfflineSyncOperationSchema = z.enum([
+const zOfflineSyncOperationSchema = z.enum([
   "create",
   "update",
   "delete",
@@ -81,7 +81,7 @@ export const zOfflineSyncPushInputSchema = z.object({
 });
 export type ZOfflineSyncPushInput = z.infer<typeof zOfflineSyncPushInputSchema>;
 
-export const zOfflineSyncConflictSchema = z.object({
+const zOfflineSyncConflictSchema = z.object({
   bookmarkId: z.string(),
   field: z.string(),
   localValue: z.unknown(),
@@ -90,7 +90,7 @@ export const zOfflineSyncConflictSchema = z.object({
 });
 export type ZOfflineSyncConflict = z.infer<typeof zOfflineSyncConflictSchema>;
 
-export const zOfflineSyncBookmarkFieldVersionSchema = z.object({
+const zOfflineSyncBookmarkFieldVersionSchema = z.object({
   bookmarkId: z.string(),
   field: z.string(),
   version: z.number().int().nonnegative(),
@@ -99,7 +99,7 @@ export type ZOfflineSyncBookmarkFieldVersion = z.infer<
   typeof zOfflineSyncBookmarkFieldVersionSchema
 >;
 
-export const zOfflineSyncEventSchema = z.object({
+const zOfflineSyncEventSchema = z.object({
   sequence: z.number().int().nonnegative(),
   userId: z.string(),
   entityType: zOfflineSyncEntityTypeSchema,
@@ -111,7 +111,7 @@ export const zOfflineSyncEventSchema = z.object({
 });
 export type ZOfflineSyncEvent = z.infer<typeof zOfflineSyncEventSchema>;
 
-export const zOfflineSyncBookmarkListMembershipSchema = z.object({
+const zOfflineSyncBookmarkListMembershipSchema = z.object({
   bookmarkId: z.string(),
   listId: z.string(),
 });
@@ -119,7 +119,7 @@ export type ZOfflineSyncBookmarkListMembership = z.infer<
   typeof zOfflineSyncBookmarkListMembershipSchema
 >;
 
-export const zOfflineSyncBookmarkRssFeedMembershipSchema = z.object({
+const zOfflineSyncBookmarkRssFeedMembershipSchema = z.object({
   bookmarkId: z.string(),
   rssFeedId: z.string(),
 });
@@ -142,7 +142,6 @@ export type ZOfflineSyncSnapshot = z.infer<typeof zOfflineSyncSnapshotSchema>;
 export const zOfflineSyncPullInputSchema = z.object({
   cursor: zOfflineSyncCursorSchema,
 });
-export type ZOfflineSyncPullInput = z.infer<typeof zOfflineSyncPullInputSchema>;
 
 export const zOfflineSyncPullResultSchema = z.object({
   events: z.array(zOfflineSyncEventSchema),

@@ -39,7 +39,7 @@ const OfflineLibraryContext = createContext<OfflineLibraryContextValue | null>(
   null,
 );
 
-export function createOfflineSyncClient(
+function createOfflineSyncClient(
   trpcClient: TRPCClient<AppRouter>,
 ): OfflineSyncClient {
   return {
