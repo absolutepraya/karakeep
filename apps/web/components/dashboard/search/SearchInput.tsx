@@ -22,6 +22,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useDoBookmarkSearch } from "@/lib/hooks/bookmark-search";
+import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,7 @@ const SearchInput = React.forwardRef<
   React.HTMLAttributes<HTMLInputElement> & { loading?: boolean }
 >(({ className, ...props }, ref) => {
   const { t } = useTranslation();
+  const offlineLibraryStatus = useOfflineLibraryStatus();
   const {
     debounceSearch,
     searchQuery,
@@ -261,6 +263,12 @@ const SearchInput = React.forwardRef<
             </PopoverContent>
           </Popover>
         </Command>
+        {offlineLibraryStatus.kind === "offline" && (
+          <p className="mt-2 text-xs text-muted-foreground" role="status">
+            Local results only. Searches saved bookmark metadata, notes, links,
+            tags, and lists.
+          </p>
+        )}
       </div>
 
       <div className="hidden items-center gap-2 sm:flex">

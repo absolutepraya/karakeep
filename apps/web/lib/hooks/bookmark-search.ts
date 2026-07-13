@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
+import { searchBookmarks } from "@/lib/offline-library/repository";
 import { useSortOrderStore } from "@/lib/store/useSortOrderStore";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 
+import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { parseSearchQuery } from "@karakeep/shared/searchQueryParser";
 
@@ -37,10 +40,7 @@ export function useDoBookmarkSearch() {
 
   useEffect(() => {
     return () => {
-      if (!timeoutId.current) {
-        return;
-      }
-      clearTimeout(timeoutId.current);
+      clearTimeout(timeoutId.current ?? undefined);
     };
   }, [timeoutId]);
 
@@ -71,6 +71,12 @@ export function useBookmarkSearch() {
   const api = useTRPC();
   const { searchQuery } = useSearchQuery();
   const sortOrder = useSortOrderStore((state) => state.sortOrder);
+  const status = useOfflineLibraryStatus();
+  const isOffline = status.kind === "offline";
+  const [localBookmarks, setLocalBookmarks] = useState<ZBookmark[] | null>(
+    null,
+  );
+  const [localError, setLocalError] = useState<Error | null>(null);
 
   const {
     data,
@@ -88,6 +94,7 @@ export function useBookmarkSearch() {
         sortOrder,
       },
       {
+        enabled: !isOffline,
         placeholderData: keepPreviousData,
         gcTime: 0,
         initialCursor: null,
@@ -97,8 +104,63 @@ export function useBookmarkSearch() {
   );
 
   useEffect(() => {
+    if (isOffline) {
+      return;
+    }
     refetch();
-  }, [refetch, sortOrder]);
+  }, [isOffline, refetch, sortOrder]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isOffline) {
+      setLocalBookmarks(null);
+      setLocalError(null);
+      return;
+    }
+
+    setLocalBookmarks(null);
+    setLocalError(null);
+    void searchBookmarks(searchQuery).then(
+      (bookmarks) => {
+        if (!cancelled) {
+          setLocalBookmarks(bookmarks);
+        }
+      },
+      (reason: unknown) => {
+        if (!cancelled) {
+          setLocalError(
+            reason instanceof Error
+              ? reason
+              : new Error("Unable to search the offline library"),
+          );
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOffline, searchQuery]);
+
+  if (isOffline) {
+    if (localError) {
+      throw localError;
+    }
+
+    return {
+      error: undefined,
+      data:
+        localBookmarks === null
+          ? undefined
+          : { pages: [{ bookmarks: localBookmarks }] },
+      isPending: localBookmarks === null,
+      isPlaceholderData: false,
+      hasNextPage: false,
+      fetchNextPage: () => Promise.resolve(),
+      isFetchingNextPage: false,
+    };
+  }
 
   if (error) {
     throw error;
