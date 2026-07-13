@@ -101,6 +101,27 @@ function queueMutationIdempotencyKey(): string {
   return crypto.randomUUID();
 }
 
+const offlineTagIntentQueues = new Map<string, Promise<void>>();
+
+function serializeOfflineTagIntent<T>(
+  bookmarkId: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const previous = offlineTagIntentQueues.get(bookmarkId) ?? Promise.resolve();
+  const result = previous.catch(() => undefined).then(operation);
+  const tail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  offlineTagIntentQueues.set(bookmarkId, tail);
+  void tail.finally(() => {
+    if (offlineTagIntentQueues.get(bookmarkId) === tail) {
+      offlineTagIntentQueues.delete(bookmarkId);
+    }
+  });
+  return result;
+}
+
 function getOfflineUpdateFields(
   input: ZUpdateBookmarksRequest,
 ): OfflineUpdateFields {
@@ -244,30 +265,32 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
           throw new OfflineMutationOnlineRequiredError();
         }
 
-        const bookmark = await offlineLibraryDb.bookmarks.get(input.bookmarkId);
-        if (!bookmark) {
-          throw new OfflineMutationOnlineRequiredError();
-        }
+        return await serializeOfflineTagIntent(input.bookmarkId, async () => {
+          const bookmark = await offlineLibraryDb.bookmarks.get(input.bookmarkId);
+          if (!bookmark) {
+            throw new OfflineMutationOnlineRequiredError();
+          }
 
-        const tagIds = new Set(bookmark.tags.map((tag) => tag.id));
-        for (const tag of input.detach) {
-          tagIds.delete(tag.tagId!);
-        }
-        for (const tag of input.attach) {
-          tagIds.add(tag.tagId!);
-        }
+          const tagIds = new Set(bookmark.tags.map((tag) => tag.id));
+          for (const tag of input.detach) {
+            tagIds.delete(tag.tagId!);
+          }
+          for (const tag of input.attach) {
+            tagIds.add(tag.tagId!);
+          }
 
-        const baseVersions = await getRequiredFieldVersions(input.bookmarkId, [
-          "tags",
-        ]);
-        await queueBookmarkTags({
-          idempotencyKey: queueMutationIdempotencyKey(),
-          kind: "bookmark.tags",
-          bookmarkId: input.bookmarkId,
-          tagIds: [...tagIds],
-          baseVersions: { tags: baseVersions.tags! },
+          const baseVersions = await getRequiredFieldVersions(input.bookmarkId, [
+            "tags",
+          ]);
+          await queueBookmarkTags({
+            idempotencyKey: queueMutationIdempotencyKey(),
+            kind: "bookmark.tags",
+            bookmarkId: input.bookmarkId,
+            tagIds: [...tagIds],
+            baseVersions: { tags: baseVersions.tags! },
+          });
+          return { kind: "queued" };
         });
-        return { kind: "queued" };
       } catch (error) {
         const mutationError =
           error instanceof Error ? error : new Error("Unable to save tags");
