@@ -134,4 +134,3 @@ describe("useUndoableBookmarkDeletion", () => {
     ).toEqual([]);
   });
 });
-
