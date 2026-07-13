@@ -147,6 +147,10 @@ export function OfflineLibraryProvider({
       }
       coordinator.activate(userId);
       activeUserIdRef.current = userId;
+      if (navigator.onLine === false) {
+        await coordinator.markOffline();
+        return;
+      }
       void coordinator.syncNow().catch(() => undefined);
     });
     return () => {

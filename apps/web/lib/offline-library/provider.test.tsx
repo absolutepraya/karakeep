@@ -98,6 +98,10 @@ beforeEach(async () => {
 afterEach(async () => {
   await offlineLibraryDb.delete();
   vi.clearAllMocks();
+  Object.defineProperty(navigator, "onLine", {
+    configurable: true,
+    value: true,
+  });
 });
 
 test("starts synchronization only for an authenticated session", async () => {
@@ -120,6 +124,23 @@ test("starts synchronization only for an authenticated session", async () => {
       value: "user-1",
     });
   });
+});
+
+test("does not start synchronization on a cold offline launch", async () => {
+  Object.defineProperty(navigator, "onLine", {
+    configurable: true,
+    value: false,
+  });
+  const screen = render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <Status />
+    </OfflineLibraryProvider>,
+  );
+
+  await waitFor(() => {
+    expect(screen.getByText("offline")).toBeTruthy();
+  });
+  expect(trpc.offlineSync.snapshot.query).not.toHaveBeenCalled();
 });
 
 test("purges the private replica and worker caches after logout", async () => {

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
 import { searchBookmarks } from "@/lib/offline-library/repository";
 import { useSortOrderStore } from "@/lib/store/useSortOrderStore";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
@@ -67,57 +66,15 @@ export function useDoBookmarkSearch() {
   };
 }
 
-export function useBookmarkSearch() {
-  const api = useTRPC();
+export function useLocalBookmarkSearch() {
   const { searchQuery } = useSearchQuery();
-  const sortOrder = useSortOrderStore((state) => state.sortOrder);
-  const status = useOfflineLibraryStatus();
-  const isOffline = status.kind === "offline";
   const [localBookmarks, setLocalBookmarks] = useState<ZBookmark[] | null>(
     null,
   );
   const [localError, setLocalError] = useState<Error | null>(null);
 
-  const {
-    data,
-    isPending,
-    isPlaceholderData,
-    error,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useInfiniteQuery(
-    api.bookmarks.searchBookmarks.infiniteQueryOptions(
-      {
-        text: searchQuery,
-        sortOrder,
-      },
-      {
-        enabled: !isOffline,
-        placeholderData: keepPreviousData,
-        gcTime: 0,
-        initialCursor: null,
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
-      },
-    ),
-  );
-
-  useEffect(() => {
-    if (isOffline) {
-      return;
-    }
-    refetch();
-  }, [isOffline, refetch, sortOrder]);
-
   useEffect(() => {
     let cancelled = false;
-
-    if (!isOffline) {
-      setLocalBookmarks(null);
-      setLocalError(null);
-      return;
-    }
 
     setLocalBookmarks(null);
     setLocalError(null);
@@ -141,36 +98,59 @@ export function useBookmarkSearch() {
     return () => {
       cancelled = true;
     };
-  }, [isOffline, searchQuery]);
+  }, [searchQuery]);
 
-  if (isOffline) {
-    if (localError) {
-      throw localError;
-    }
-
-    return {
-      error: undefined,
-      data:
-        localBookmarks === null
-          ? undefined
-          : { pages: [{ bookmarks: localBookmarks }] },
-      isPending: localBookmarks === null,
-      isPlaceholderData: false,
-      hasNextPage: false,
-      fetchNextPage: () => Promise.resolve(),
-      isFetchingNextPage: false,
-    };
+  if (localError) {
+    throw localError;
   }
+
+  return {
+    data:
+      localBookmarks === null
+        ? undefined
+        : { pages: [{ bookmarks: localBookmarks }] },
+    hasNextPage: false,
+    fetchNextPage: () => Promise.resolve(),
+    isFetchingNextPage: false,
+  };
+}
+
+export function useServerBookmarkSearch() {
+  const api = useTRPC();
+  const { searchQuery } = useSearchQuery();
+  const sortOrder = useSortOrderStore((state) => state.sortOrder);
+  const {
+    data,
+    error,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteQuery(
+    api.bookmarks.searchBookmarks.infiniteQueryOptions(
+      {
+        text: searchQuery,
+        sortOrder,
+      },
+      {
+        placeholderData: keepPreviousData,
+        gcTime: 0,
+        initialCursor: null,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+      },
+    ),
+  );
+
+  useEffect(() => {
+    void refetch();
+  }, [refetch, sortOrder]);
 
   if (error) {
     throw error;
   }
 
   return {
-    error,
     data,
-    isPending,
-    isPlaceholderData,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,

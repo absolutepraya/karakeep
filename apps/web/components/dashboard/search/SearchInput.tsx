@@ -70,6 +70,8 @@ const SearchInput = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const { t } = useTranslation();
   const offlineLibraryStatus = useOfflineLibraryStatus();
+  const browserIsOffline =
+    typeof navigator !== "undefined" && navigator.onLine === false;
   const {
     debounceSearch,
     searchQuery,
@@ -263,7 +265,7 @@ const SearchInput = React.forwardRef<
             </PopoverContent>
           </Popover>
         </Command>
-        {offlineLibraryStatus.kind === "offline" && (
+        {(offlineLibraryStatus.kind === "offline" || browserIsOffline) && (
           <p className="mt-2 text-xs text-muted-foreground" role="status">
             Local results only. Searches saved bookmark metadata, notes, links,
             tags, and lists.
