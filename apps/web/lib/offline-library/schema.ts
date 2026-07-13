@@ -7,11 +7,16 @@ import type {
   ZOfflineSyncConflict,
   ZOfflineSyncMutation,
 } from "@karakeep/shared/types/offlineSync";
+type StoredOfflineSyncMutation = ZOfflineSyncMutation & {
+  ownerUserId: string;
+  queuedAt: number;
+};
+
 export class OfflineLibraryDatabase extends Dexie {
   bookmarks!: Table<ZBookmark, string>;
   lists!: Table<ZBookmarkList, string>;
   metadata!: Table<{ key: string; value: string }, string>;
-  outbox!: Table<ZOfflineSyncMutation & { queuedAt: number }, string>;
+  outbox!: Table<StoredOfflineSyncMutation, string>;
   bookmarkListMemberships!: Table<
     ZOfflineSyncBookmarkListMembership,
     [string, string]
@@ -31,6 +36,9 @@ export class OfflineLibraryDatabase extends Dexie {
     });
     this.version(2).stores({
       bookmarkListMemberships: "[bookmarkId+listId], bookmarkId, listId",
+    });
+    this.version(3).stores({
+      outbox: "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, kind, queuedAt",
     });
   }
 }

@@ -99,7 +99,7 @@ afterEach(async () => {
 });
 
 test("does not mark the replica online until pull succeeds", async () => {
-  await replaceSnapshot(snapshot);
+  await replaceSnapshot(snapshot, "user-1");
   const client = makeClient();
   vi.mocked(client.pull).mockRejectedValueOnce(new Error("captive portal"));
   const coordinator = new OfflineLibrarySyncCoordinator(client);
@@ -110,8 +110,8 @@ test("does not mark the replica online until pull succeeds", async () => {
 });
 
 test("replays queued writes once, then applies the returned delta", async () => {
-  await replaceSnapshot(snapshot);
-  await enqueueMutation(pendingMutation);
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
   const client = makeClient();
   const coordinator = new OfflineLibrarySyncCoordinator(client);
   coordinator.activate("user-1");
@@ -119,7 +119,7 @@ test("replays queued writes once, then applies the returned delta", async () => 
   await coordinator.syncNow();
 
   expect(client.push).toHaveBeenCalledTimes(1);
-  await expect(listPendingMutations()).resolves.toHaveLength(0);
+  await expect(listPendingMutations("user-1")).resolves.toHaveLength(0);
 });
 
 test("takes an atomic snapshot before the first online state", async () => {
@@ -134,8 +134,8 @@ test("takes an atomic snapshot before the first online state", async () => {
 });
 
 test("saves conflicts and prioritizes them over online status", async () => {
-  await replaceSnapshot(snapshot);
-  await enqueueMutation(pendingMutation);
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
   const client = makeClient();
   vi.mocked(client.push).mockResolvedValueOnce({
     ...acknowledgedPush,
@@ -159,5 +159,87 @@ test("saves conflicts and prioritizes them over online status", async () => {
     kind: "conflict",
     pendingWrites: 1,
     conflictCount: 1,
+  });
+});
+
+test("keeps pending mutations bound to their authenticated principal", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
+  await expect(offlineLibraryDb.outbox.get(pendingMutation.idempotencyKey)).resolves.toMatchObject({
+    ownerUserId: "user-1",
+  });
+
+  await expect(listPendingMutations("user-2")).resolves.toHaveLength(0);
+});
+
+test("takes a snapshot instead of reusing another principal's cursor", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  await offlineLibraryDb.metadata.put({
+    key: "replicaOwnerUserId",
+    value: "user-1",
+  });
+  await enqueueMutation(pendingMutation, "user-1");
+  const client = makeClient();
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-2");
+
+  await coordinator.syncNow();
+
+  expect(client.snapshot).toHaveBeenCalledOnce();
+  expect(client.pull).not.toHaveBeenCalled();
+  expect(client.push).not.toHaveBeenCalled();
+  await expect(offlineLibraryDb.outbox.count()).resolves.toBe(0);
+});
+
+test("preserves a conflict status when connectivity is lost", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
+  const client = makeClient();
+  vi.mocked(client.push).mockResolvedValueOnce({
+    ...acknowledgedPush,
+    acknowledged: [],
+    conflicts: [
+      {
+        bookmarkId: bookmark.id,
+        field: "title",
+        localValue: "Updated offline",
+        serverValue: "Updated on server",
+        serverVersion: 1,
+      },
+    ],
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+  await coordinator.markOffline();
+
+  expect(coordinator.getStatus()).toMatchObject({ kind: "conflict", conflictCount: 1 });
+});
+
+test("evicts thumbnails after storage usage crosses the quota threshold", async () => {
+  await offlineLibraryDb.thumbnailAccess.put({
+    url: "/api/assets/thumbnail",
+    lastAccessedAt: Date.now(),
+  });
+  const originalStorage = navigator.storage;
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: {
+      estimate: vi
+        .fn()
+        .mockResolvedValueOnce({ usage: 80, quota: 100 })
+        .mockResolvedValueOnce({ usage: 79, quota: 100 }),
+    },
+  });
+  const client = makeClient();
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+
+  await coordinator.afterThumbnailCacheWrite();
+
+  await expect(offlineLibraryDb.thumbnailAccess.count()).resolves.toBe(0);
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: originalStorage,
   });
 });

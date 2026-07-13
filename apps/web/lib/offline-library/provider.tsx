@@ -15,7 +15,7 @@ import type { AppRouter } from "@karakeep/trpc/routers/_app";
 
 import { useSession } from "@/lib/auth/client";
 
-import { purgeOfflineLibrary } from "./repository";
+import { getReplicaOwnerUserId, purgeOfflineLibrary } from "./repository";
 import {
   OfflineLibrarySyncCoordinator,
   type BookmarkTagsMutation,
@@ -124,20 +124,22 @@ export function OfflineLibraryProvider({
     let cancelled = false;
     lifecycleRef.current = lifecycleRef.current.then(async () => {
       const previousUserId = activeUserIdRef.current;
-      if (previousUserId !== userId && previousUserId !== null) {
+      if (userId === null) {
         await coordinator.deactivate();
         await purgeOfflineLibrary();
         await clearUserCaches();
         activeUserIdRef.current = null;
+        return;
       }
 
-      if (userId === null) {
-        if (previousUserId === null) {
-          await coordinator.deactivate();
-          await purgeOfflineLibrary();
-          await clearUserCaches();
-        }
-        return;
+      const persistedOwnerUserId = await getReplicaOwnerUserId();
+      const principalChanged =
+        previousUserId !== null && previousUserId !== userId;
+      if (principalChanged || persistedOwnerUserId !== userId) {
+        await coordinator.deactivate();
+        await purgeOfflineLibrary();
+        await clearUserCaches();
+        activeUserIdRef.current = null;
       }
 
       if (cancelled) {
@@ -155,12 +157,26 @@ export function OfflineLibraryProvider({
   const value = useMemo<OfflineLibraryContextValue>(
     () => ({
       status,
-      syncNow: async () => await coordinator.syncNow(),
-      queueBookmarkUpdate: async (mutation) =>
-        await coordinator.queueBookmarkUpdate(mutation),
-      queueBookmarkTags: async (mutation) => await coordinator.queueBookmarkTags(mutation),
+      syncNow: async () => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline sync requires an authenticated user");
+        }
+        await coordinator.syncNow();
+      },
+      queueBookmarkUpdate: async (mutation) => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline writes require an authenticated user");
+        }
+        await coordinator.queueBookmarkUpdate(mutation);
+      },
+      queueBookmarkTags: async (mutation) => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline writes require an authenticated user");
+        }
+        await coordinator.queueBookmarkTags(mutation);
+      },
     }),
-    [coordinator, status],
+    [coordinator, status, userId],
   );
 
   return (

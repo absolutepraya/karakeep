@@ -115,7 +115,7 @@ afterEach(async () => {
 });
 
 test("replaces a snapshot atomically and preserves its cursor", async () => {
-  await replaceSnapshot(snapshot);
+  await replaceSnapshot(snapshot, "user-1");
 
   await expect(queryBookmarks({ archived: false })).resolves.toMatchObject({
     cursor: snapshot.cursor,
@@ -124,7 +124,7 @@ test("replaces a snapshot atomically and preserves its cursor", async () => {
 });
 
 test("searches only replicated fields", async () => {
-  await replaceSnapshot(snapshotWith({ title: "Offline article", note: "airplane" }));
+  await replaceSnapshot(snapshotWith({ title: "Offline article", note: "airplane" }), "user-1");
 
   await expect(searchBookmarks("airplane")).resolves.toMatchObject([
     { id: "bookmark-1" },
@@ -151,7 +151,7 @@ test("filters by explicit membership and searches associated list names", async 
     ],
     bookmarkListMemberships: [{ bookmarkId: "bookmark-1", listId: "list-1" }],
   };
-  await replaceSnapshot(membershipSnapshot);
+  await replaceSnapshot(membershipSnapshot, "user-1");
 
   await expect(queryBookmarks({ listId: "list-1" })).resolves.toMatchObject({
     bookmarks: [{ id: "bookmark-1" }],
@@ -162,8 +162,8 @@ test("filters by explicit membership and searches associated list names", async 
 });
 
 test("purge removes every user-scoped table and its cached thumbnails", async () => {
-  await replaceSnapshot(snapshot);
-  await enqueueMutation(pendingMutation);
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
   await recordThumbnailAccess("/api/assets/private");
   thumbnailCaches.set(
     "karakeep-thumbnails",
@@ -178,7 +178,7 @@ test("purge removes every user-scoped table and its cached thumbnails", async ()
 });
 
 test("evicts the oldest cached thumbnail before bookmark metadata", async () => {
-  await replaceSnapshot(snapshot);
+  await replaceSnapshot(snapshot, "user-1");
   await recordThumbnailAccess("/api/assets/old", new Date("2026-07-11T00:00:00Z"));
   await recordThumbnailAccess("/api/assets/new", new Date("2026-07-12T00:00:00Z"));
   thumbnailCaches.set(
@@ -208,7 +208,7 @@ test("applies deletion events and advances the replica cursor together", async (
     changedFields: [],
     createdAt: new Date("2026-07-13T00:00:00Z"),
   };
-  await replaceSnapshot(snapshot);
+  await replaceSnapshot(snapshot, "user-1");
   await applyEvents([event], "13");
 
   await expect(queryBookmarks()).resolves.toMatchObject({
@@ -264,7 +264,7 @@ test("preserves stale state across empty delta batches", async () => {
     changedFields: ["title"],
     createdAt: new Date("2026-07-13T00:00:00Z"),
   };
-  await replaceSnapshot(snapshot);
+  await replaceSnapshot(snapshot, "user-1");
   await applyEvents([updateEvent], "13");
   await applyEvents([], "14");
 
@@ -284,7 +284,7 @@ test("purges all replica data and thumbnails on list revocation", async () => {
     changedFields: [],
     createdAt: new Date("2026-07-13T00:00:00Z"),
   };
-  await replaceSnapshot(snapshot);
+  await replaceSnapshot(snapshot, "user-1");
   await recordThumbnailAccess("/api/assets/revoked");
   thumbnailCaches.set(
     "karakeep-thumbnails:https://app.example/:v1",
@@ -300,13 +300,13 @@ test("purges all replica data and thumbnails on list revocation", async () => {
 });
 
 test("queues supported mutations with the local bookmark update", async () => {
-  await replaceSnapshot(snapshot);
-  await enqueueMutation(pendingMutation);
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
 
   await expect(queryBookmarks()).resolves.toMatchObject({
     bookmarks: [{ title: "Updated offline" }],
   });
-  await expect(listPendingMutations()).resolves.toMatchObject([
+  await expect(listPendingMutations("user-1")).resolves.toMatchObject([
     { idempotencyKey: pendingMutation.idempotencyKey, kind: "bookmark.update" },
   ]);
 });
@@ -319,26 +319,26 @@ test("queues tag mutations with the optimistic local tag set", async () => {
     tagIds: ["tag-2"],
     baseVersions: { tags: 0 },
   };
-  await replaceSnapshot(snapshot);
-  await enqueueMutation(tagMutation);
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(tagMutation, "user-1");
 
   await expect(queryBookmarks()).resolves.toMatchObject({
     bookmarks: [{ tags: [{ id: "tag-2" }] }],
   });
-  await expect(listPendingMutations()).resolves.toMatchObject([
+  await expect(listPendingMutations("user-1")).resolves.toMatchObject([
     { idempotencyKey: tagMutation.idempotencyKey, kind: "bookmark.tags" },
   ]);
 });
 
 test("rejects unsupported mutations before changing the replica", async () => {
-  await replaceSnapshot(snapshot);
+  await replaceSnapshot(snapshot, "user-1");
 
   await expect(
     enqueueMutation({
       idempotencyKey: "d2436c5e-5a6e-4fb1-9eb0-c1d57fb5a47d",
       kind: "bookmark.delete",
       bookmarkId: "bookmark-1",
-    } as unknown as ZOfflineSyncMutation),
+    } as unknown as ZOfflineSyncMutation, "user-1"),
   ).rejects.toThrow("Unsupported offline mutation");
   await expect(offlineLibraryDb.outbox.count()).resolves.toBe(0);
   await expect(queryBookmarks()).resolves.toMatchObject({

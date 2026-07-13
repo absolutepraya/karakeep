@@ -8,10 +8,13 @@ import type {
 
 import {
   applyEvents,
+  deleteAcknowledgedMutations,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
+  getReplicaOwnerUserId,
   listPendingMutations,
   offlineLibraryDb,
+  purgeOfflineLibrary,
   replaceSnapshot,
   saveConflict,
 } from "./repository";
@@ -123,18 +126,24 @@ export class OfflineLibrarySyncCoordinator {
   }
 
   async queueBookmarkUpdate(mutation: BookmarkUpdateMutation): Promise<void> {
+    if (!this.isActive || this.userId === null) {
+      throw new Error("Offline writes require an authenticated user");
+    }
     if (mutation.kind !== "bookmark.update") {
       throw new TypeError("Unsupported offline mutation");
     }
-    await enqueueMutation(mutation);
+    await enqueueMutation(mutation, this.userId);
     await this.refreshDerivedStatus();
   }
 
   async queueBookmarkTags(mutation: BookmarkTagsMutation): Promise<void> {
+    if (!this.isActive || this.userId === null) {
+      throw new Error("Offline writes require an authenticated user");
+    }
     if (mutation.kind !== "bookmark.tags") {
       throw new TypeError("Unsupported offline mutation");
     }
-    await enqueueMutation(mutation);
+    await enqueueMutation(mutation, this.userId);
     await this.refreshDerivedStatus();
   }
 
@@ -186,12 +195,21 @@ export class OfflineLibrarySyncCoordinator {
 
   private async synchronize(generation: number): Promise<void> {
     try {
+      if (!this.isCurrentGeneration(generation) || this.userId === null) {
+        return;
+      }
+      const userId = this.userId;
+      let cursor = await this.getSyncCursor();
+      const replicaOwnerUserId = await getReplicaOwnerUserId();
       if (!this.isCurrentGeneration(generation)) {
         return;
       }
-      const cursor = await this.getSyncCursor();
-      if (!this.isCurrentGeneration(generation)) {
-        return;
+      if (replicaOwnerUserId !== userId) {
+        await purgeOfflineLibrary();
+        if (!this.isCurrentGeneration(generation)) {
+          return;
+        }
+        cursor = null;
       }
       if (cursor === null) {
         this.setStatus({
@@ -205,9 +223,9 @@ export class OfflineLibrarySyncCoordinator {
         if (!this.isCurrentGeneration(generation)) {
           return;
         }
-        await replaceSnapshot(snapshot);
+        await replaceSnapshot(snapshot, userId);
       } else {
-        await this.pushOutbox(generation);
+        await this.pushOutbox(generation, userId);
         if (!this.isCurrentGeneration(generation)) {
           return;
         }
@@ -236,8 +254,8 @@ export class OfflineLibrarySyncCoordinator {
     }
   }
 
-  private async pushOutbox(generation: number): Promise<void> {
-    const mutations = await listPendingMutations();
+  private async pushOutbox(generation: number, userId: string): Promise<void> {
+    const mutations = await listPendingMutations(userId);
     if (!this.isCurrentGeneration(generation)) {
       return;
     }
@@ -258,7 +276,7 @@ export class OfflineLibrarySyncCoordinator {
         return;
       }
       await Promise.all([
-        offlineLibraryDb.outbox.bulkDelete(result.acknowledged),
+        deleteAcknowledgedMutations(userId, result.acknowledged),
         ...result.conflicts.map((conflict) => saveConflict(conflict)),
       ]);
       if (!this.isCurrentGeneration(generation)) {
@@ -341,7 +359,9 @@ export class OfflineLibrarySyncCoordinator {
   }
 
   private async pendingWriteCount(): Promise<number> {
-    return await offlineLibraryDb.outbox.count();
+    return this.userId === null
+      ? 0
+      : (await listPendingMutations(this.userId)).length;
   }
 
   private nextRetryDelay(): number {

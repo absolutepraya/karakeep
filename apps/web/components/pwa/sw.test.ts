@@ -28,6 +28,7 @@ function createWorkerHarness() {
   const listeners = new Map<string, (event: WorkerEvent) => void>();
   const cacheEntries = new Map<string, Map<string, Response>>();
   const fetch = vi.fn<(request: Request | string) => Promise<Response>>();
+  const events: string[] = [];
   const clients = {
     claim: vi.fn().mockResolvedValue(undefined),
     get: vi.fn().mockResolvedValue(undefined),
@@ -59,6 +60,7 @@ function createWorkerHarness() {
         }),
         put: vi.fn(async (request: Request | string, response: Response) => {
           entries.set(keyOf(request), response);
+          events.push("cache.put");
         }),
       };
     }),
@@ -108,6 +110,7 @@ function createWorkerHarness() {
     cacheEntries,
     caches,
     clients,
+    events,
     dispatch,
     fetch,
     self,
@@ -279,5 +282,25 @@ describe("service worker cache boundaries", () => {
     await expect(dispatched.response?.then((response) => response.text())).resolves.toBe(
       "offline",
     );
+  });
+  it("signals thumbnail use only after the thumbnail response is persisted", async () => {
+    const worker = createWorkerHarness();
+    const postMessage = vi.fn(() => worker.events.push("thumbnail.used"));
+    worker.clients.get.mockResolvedValue({ postMessage });
+    worker.fetch.mockResolvedValue(
+      new Response("image", {
+        headers: { "content-type": "image/webp" },
+        status: 200,
+      }),
+    );
+
+    const dispatched = await worker.dispatch("fetch", {
+      clientId: "client-1",
+      request: getRequest("/api/assets/thumbnail"),
+    });
+    await dispatched.response;
+    await Promise.all(dispatched.work);
+
+    expect(worker.events).toEqual(["cache.put", "thumbnail.used"]);
   });
 });

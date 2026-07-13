@@ -17,6 +17,7 @@ import { offlineLibraryDb } from "./schema";
 
 const SYNC_CURSOR_KEY = "syncCursor";
 const REPLICA_STATE_KEY = "replicaState";
+const REPLICA_OWNER_USER_ID_KEY = "replicaOwnerUserId";
 const LEGACY_THUMBNAIL_CACHE_NAME = "karakeep-thumbnails";
 const THUMBNAIL_CACHE_PREFIX = `${LEGACY_THUMBNAIL_CACHE_NAME}:`;
 
@@ -41,7 +42,10 @@ type StoredConflict = ZOfflineSyncConflict & { id: string };
 export { offlineLibraryDb };
 export type { OfflineBookmarkPage, OfflineBookmarkQuery };
 
-export async function replaceSnapshot(snapshot: ZOfflineSyncSnapshot): Promise<void> {
+export async function replaceSnapshot(
+  snapshot: ZOfflineSyncSnapshot,
+  ownerUserId: string,
+): Promise<void> {
   await offlineLibraryDb.transaction(
     "rw",
     offlineLibraryDb.bookmarks,
@@ -63,6 +67,7 @@ export async function replaceSnapshot(snapshot: ZOfflineSyncSnapshot): Promise<v
         offlineLibraryDb.metadata.bulkPut([
           { key: SYNC_CURSOR_KEY, value: snapshot.cursor },
           { key: REPLICA_STATE_KEY, value: "ready" },
+          { key: REPLICA_OWNER_USER_ID_KEY, value: ownerUserId },
         ]),
       ]);
     },
@@ -261,10 +266,14 @@ export async function searchBookmarks(query: string): Promise<ZBookmark[]> {
 
 export async function enqueueMutation(
   mutation: ZOfflineSyncMutation,
+  ownerUserId: string,
 ): Promise<void> {
   const parsedMutation = zOfflineSyncMutationSchema.safeParse(mutation);
   if (!parsedMutation.success) {
     throw new TypeError("Unsupported offline mutation");
+  }
+  if (ownerUserId.length === 0) {
+    throw new TypeError("Offline mutations require an owner");
   }
 
   await offlineLibraryDb.transaction(
@@ -328,16 +337,37 @@ export async function enqueueMutation(
       }
       await offlineLibraryDb.outbox.put({
         ...parsedMutation.data,
+        ownerUserId,
         queuedAt: Date.now(),
       });
     },
   );
 }
 
-export async function listPendingMutations(): Promise<
-  Array<ZOfflineSyncMutation & { queuedAt: number }>
-> {
-  return await offlineLibraryDb.outbox.orderBy("queuedAt").toArray();
+export async function listPendingMutations(
+  ownerUserId: string,
+): Promise<Array<ZOfflineSyncMutation & { queuedAt: number }>> {
+  const mutations = await offlineLibraryDb.outbox
+    .where("ownerUserId")
+    .equals(ownerUserId)
+    .sortBy("queuedAt");
+  return mutations.map(({ ownerUserId: _, ...mutation }) => mutation);
+}
+
+export async function deleteAcknowledgedMutations(
+  ownerUserId: string,
+  idempotencyKeys: string[],
+): Promise<void> {
+  const acknowledged = new Set(idempotencyKeys);
+  const mutations = await offlineLibraryDb.outbox
+    .where("ownerUserId")
+    .equals(ownerUserId)
+    .toArray();
+  await offlineLibraryDb.outbox.bulkDelete(
+    mutations
+      .filter((mutation) => acknowledged.has(mutation.idempotencyKey))
+      .map((mutation) => mutation.idempotencyKey),
+  );
 }
 
 export async function saveConflict(
@@ -384,8 +414,23 @@ export async function purgeOfflineLibrary(): Promise<void> {
           cacheName === LEGACY_THUMBNAIL_CACHE_NAME ||
           cacheName.startsWith(THUMBNAIL_CACHE_PREFIX),
       )
+
       .map((cacheName) => cacheStorage?.delete(cacheName)),
   );
+}
+
+export async function getReplicaOwnerUserId(): Promise<string | null> {
+  return (
+    (await offlineLibraryDb.metadata.get(REPLICA_OWNER_USER_ID_KEY))?.value ??
+    null
+  );
+}
+
+export async function setReplicaOwnerUserId(userId: string): Promise<void> {
+  await offlineLibraryDb.metadata.put({
+    key: REPLICA_OWNER_USER_ID_KEY,
+    value: userId,
+  });
 }
 
 export async function recordThumbnailAccess(
