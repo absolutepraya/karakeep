@@ -1609,5 +1609,4 @@ describe("Bookmark Routes", () => {
       expect.anything(),
     );
   });
-
 });

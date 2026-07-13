@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { OfflineLibraryStatus } from "@/lib/offline-library/sync";
@@ -32,9 +38,7 @@ function mockLibraryStatus(status: OfflineLibraryStatus) {
   mocks.status = status;
 }
 
-function mockServerProcessing(
-  processing: typeof mocks.serverProcessing,
-) {
+function mockServerProcessing(processing: typeof mocks.serverProcessing) {
   mocks.serverProcessing = processing;
 }
 

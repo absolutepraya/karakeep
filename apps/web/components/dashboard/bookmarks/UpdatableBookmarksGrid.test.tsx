@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ZGetBookmarksResponse } from "@karakeep/shared/types/bookmarks";
@@ -122,7 +128,10 @@ describe("UpdatableBookmarksGrid", () => {
     mocks.isOfflineReplicaReady.mockResolvedValue(true);
 
     render(
-      <UpdatableBookmarksGrid query={{ archived: false }} bookmarks={serverPage} />,
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={serverPage}
+      />,
     );
 
     expect(await screen.findByText("cached-bookmark")).toBeTruthy();
@@ -166,7 +175,10 @@ describe("UpdatableBookmarksGrid", () => {
     });
 
     render(
-      <UpdatableBookmarksGrid query={{ archived: false }} bookmarks={serverPage} />,
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={serverPage}
+      />,
     );
 
     expect(
@@ -210,13 +222,19 @@ describe("UpdatableBookmarksGrid", () => {
     mocks.isOfflineReplicaReady.mockResolvedValue(true);
 
     const view = render(
-      <UpdatableBookmarksGrid query={{ archived: false }} bookmarks={serverPage} />,
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={serverPage}
+      />,
     );
     expect(await screen.findByText("old-first")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
 
     view.rerender(
-      <UpdatableBookmarksGrid query={{ archived: true }} bookmarks={serverPage} />,
+      <UpdatableBookmarksGrid
+        query={{ archived: true }}
+        bookmarks={serverPage}
+      />,
     );
     expect(await screen.findByText("new-first")).toBeTruthy();
     oldNextPage.resolve({
@@ -224,9 +242,7 @@ describe("UpdatableBookmarksGrid", () => {
       cursor: null,
       nextCursor: null,
     });
-    await waitFor(() =>
-      expect(screen.queryByText("old-second")).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByText("old-second")).toBeNull());
 
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     expect(await screen.findByText("new-second")).toBeTruthy();
@@ -268,7 +284,10 @@ describe("UpdatableBookmarksGrid", () => {
     });
 
     render(
-      <UpdatableBookmarksGrid query={{ archived: false }} bookmarks={serverPage} />,
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={serverPage}
+      />,
     );
 
     expect(await screen.findByText("server-bookmark")).toBeTruthy();

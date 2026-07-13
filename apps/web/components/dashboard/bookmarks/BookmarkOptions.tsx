@@ -544,9 +544,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
                         key={subItem.id}
                         disabled={subItem.disabled}
                         title={
-                          subItem.disabled
-                            ? subItem.disabledMessage
-                            : undefined
+                          subItem.disabled ? subItem.disabledMessage : undefined
                         }
                         onClick={subItem.onClick}
                       >

@@ -492,18 +492,18 @@ export const bookmarksAppRouter = router({
     .use(ensureBookmarkOwnership)
     .mutation(async ({ input, ctx }) => {
       await ctx.db.transaction(async (tx) => {
-      const offlineChangedFields = [
-        ...(input.title !== undefined ? ["title"] : []),
-        ...(input.archived !== undefined ? ["archived"] : []),
-        ...(input.favourited !== undefined ? ["favourited"] : []),
-        ...(input.note !== undefined ? ["note"] : []),
-        ...(input.summary !== undefined ? ["summary"] : []),
-        ...(input.url !== undefined ? ["url"] : []),
-        ...(input.description !== undefined ? ["description"] : []),
-        ...(input.author !== undefined ? ["author"] : []),
-        ...(input.publisher !== undefined ? ["publisher"] : []),
-        ...(input.text !== undefined ? ["text"] : []),
-      ];
+        const offlineChangedFields = [
+          ...(input.title !== undefined ? ["title"] : []),
+          ...(input.archived !== undefined ? ["archived"] : []),
+          ...(input.favourited !== undefined ? ["favourited"] : []),
+          ...(input.note !== undefined ? ["note"] : []),
+          ...(input.summary !== undefined ? ["summary"] : []),
+          ...(input.url !== undefined ? ["url"] : []),
+          ...(input.description !== undefined ? ["description"] : []),
+          ...(input.author !== undefined ? ["author"] : []),
+          ...(input.publisher !== undefined ? ["publisher"] : []),
+          ...(input.text !== undefined ? ["text"] : []),
+        ];
 
         let somethingChanged = false;
 

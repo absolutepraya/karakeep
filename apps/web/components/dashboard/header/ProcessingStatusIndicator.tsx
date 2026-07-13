@@ -98,7 +98,10 @@ function updateBookmarkField(
 ) {
   let updated: unknown;
   if (field === "tags") {
-    if (!Array.isArray(value) || !value.every((tagId) => typeof tagId === "string")) {
+    if (
+      !Array.isArray(value) ||
+      !value.every((tagId) => typeof tagId === "string")
+    ) {
       throw new TypeError("Server tags must be an array of tag IDs");
     }
     const tagsById = new Map(bookmark.tags.map((tag) => [tag.id, tag]));
@@ -251,7 +254,9 @@ async function chooseServerConflictValue(conflict: ZOfflineSyncConflict) {
       offlineLibraryDb.conflicts,
     ],
     async () => {
-      const bookmark = await offlineLibraryDb.bookmarks.get(conflict.bookmarkId);
+      const bookmark = await offlineLibraryDb.bookmarks.get(
+        conflict.bookmarkId,
+      );
       if (!bookmark) {
         throw new Error("Offline bookmark is unavailable");
       }
@@ -371,7 +376,10 @@ export default function ProcessingStatusIndicator() {
   async function resolveWithLocalValue(conflict: ZOfflineSyncConflict) {
     await chooseLocalConflictValue(conflict);
     setConflicts((current) =>
-      current.filter((currentConflict) => getConflictId(currentConflict) !== getConflictId(conflict)),
+      current.filter(
+        (currentConflict) =>
+          getConflictId(currentConflict) !== getConflictId(conflict),
+      ),
     );
     setSelectedConflict(null);
     void retrySync().catch(() => undefined);
@@ -380,7 +388,10 @@ export default function ProcessingStatusIndicator() {
   async function resolveWithServerValue(conflict: ZOfflineSyncConflict) {
     await chooseServerConflictValue(conflict);
     setConflicts((current) =>
-      current.filter((currentConflict) => getConflictId(currentConflict) !== getConflictId(conflict)),
+      current.filter(
+        (currentConflict) =>
+          getConflictId(currentConflict) !== getConflictId(conflict),
+      ),
     );
     setSelectedConflict(null);
     void retrySync().catch(() => undefined);
@@ -400,7 +411,9 @@ export default function ProcessingStatusIndicator() {
               className={`size-4 ${isSyncing ? "animate-spin" : ""} ${needsAttention ? "text-destructive" : "text-primary"}`}
             />
             {pendingWrites > 0 && (
-              <span className="text-sm font-medium tabular-nums">{pendingWrites}</span>
+              <span className="text-sm font-medium tabular-nums">
+                {pendingWrites}
+              </span>
             )}
             {serverProcessing.total > 0 && (
               <span className="flex items-center gap-1 text-sm font-medium tabular-nums">
@@ -436,7 +449,9 @@ export default function ProcessingStatusIndicator() {
                 </Button>
               )}
               {status.kind === "offline" && pendingWrites > 0 && (
-                <p>Queued changes will sync automatically when you reconnect.</p>
+                <p>
+                  Queued changes will sync automatically when you reconnect.
+                </p>
               )}
               {status.kind === "conflict" && (
                 <Button
@@ -458,7 +473,10 @@ export default function ProcessingStatusIndicator() {
             >
               <div className="flex items-center gap-2 px-2 py-1">
                 <LoaderCircle className="size-4 animate-spin text-primary" />
-                <p id="background-processing-heading" className="text-sm font-medium">
+                <p
+                  id="background-processing-heading"
+                  className="text-sm font-medium"
+                >
                   Background processing
                 </p>
                 <span className="ml-auto text-sm font-medium tabular-nums">
@@ -477,7 +495,9 @@ export default function ProcessingStatusIndicator() {
                         <TaskIcon className="size-3.5" />
                         {LABEL_BY_KIND[task.kind]}
                       </span>
-                      <span className="font-medium tabular-nums">{task.count}</span>
+                      <span className="font-medium tabular-nums">
+                        {task.count}
+                      </span>
                     </div>
                   );
                 })}

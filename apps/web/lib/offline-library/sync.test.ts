@@ -191,7 +191,10 @@ test("takes an atomic snapshot before the first online state", async () => {
   await coordinator.syncNow();
 
   expect(client.snapshot).toHaveBeenCalledTimes(1);
-  expect(coordinator.getStatus()).toMatchObject({ kind: "online", pendingWrites: 0 });
+  expect(coordinator.getStatus()).toMatchObject({
+    kind: "online",
+    pendingWrites: 0,
+  });
 });
 
 test("saves conflicts and prioritizes them over online status", async () => {
@@ -226,7 +229,9 @@ test("saves conflicts and prioritizes them over online status", async () => {
 test("keeps pending mutations bound to their authenticated principal", async () => {
   await replaceSnapshot(snapshot, "user-1");
   await enqueueMutation(pendingMutation, "user-1");
-  await expect(offlineLibraryDb.outbox.get(pendingMutation.idempotencyKey)).resolves.toMatchObject({
+  await expect(
+    offlineLibraryDb.outbox.get(pendingMutation.idempotencyKey),
+  ).resolves.toMatchObject({
     ownerUserId: "user-1",
   });
 
@@ -275,7 +280,10 @@ test("preserves a conflict status when connectivity is lost", async () => {
   await coordinator.syncNow();
   await coordinator.markOffline();
 
-  expect(coordinator.getStatus()).toMatchObject({ kind: "conflict", conflictCount: 1 });
+  expect(coordinator.getStatus()).toMatchObject({
+    kind: "conflict",
+    conflictCount: 1,
+  });
 });
 
 test("evicts thumbnails after storage usage crosses the quota threshold", async () => {

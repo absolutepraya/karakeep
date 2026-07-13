@@ -1,8 +1,5 @@
 import { DEFAULT_NUM_BOOKMARKS_PER_PAGE } from "@karakeep/shared/types/bookmarks";
-import type {
-  ZBookmark,
-  ZSortOrder,
-} from "@karakeep/shared/types/bookmarks";
+import type { ZBookmark, ZSortOrder } from "@karakeep/shared/types/bookmarks";
 import type { ZCursor } from "@karakeep/shared/types/pagination";
 import { zOfflineSyncMutationSchema } from "@karakeep/shared/types/offlineSync";
 import type {
@@ -111,7 +108,8 @@ export async function applyEvents(
       offlineLibraryDb.metadata,
     ],
     async () => {
-      const replicaState = await offlineLibraryDb.metadata.get(REPLICA_STATE_KEY);
+      const replicaState =
+        await offlineLibraryDb.metadata.get(REPLICA_STATE_KEY);
       const hasUnmaterializedEvents = events.some(
         (event) => event.operation !== "delete" && event.operation !== "revoke",
       );
@@ -147,7 +145,9 @@ export async function applyEvents(
           continue;
         }
 
-        await offlineLibraryDb.bookmarkFieldVersions.bulkPut(event.fieldVersions);
+        await offlineLibraryDb.bookmarkFieldVersions.bulkPut(
+          event.fieldVersions,
+        );
       }
       const nextReplicaState =
         replicaState?.value === "ready" && !hasUnmaterializedEvents
@@ -170,11 +170,9 @@ export async function getBookmarkFieldVersion(
   bookmarkId: string,
   field: string,
 ): Promise<number | undefined> {
-  return (
-    await offlineLibraryDb.bookmarkFieldVersions.get([bookmarkId, field])
-  )?.version;
+  return (await offlineLibraryDb.bookmarkFieldVersions.get([bookmarkId, field]))
+    ?.version;
 }
-
 
 export async function queryBookmarks(
   query: OfflineBookmarkQuery = {},
@@ -206,7 +204,10 @@ export async function queryBookmarks(
         );
   const filtered = bookmarks
     .filter((bookmark) => {
-      if (query.archived !== undefined && bookmark.archived !== query.archived) {
+      if (
+        query.archived !== undefined &&
+        bookmark.archived !== query.archived
+      ) {
         return false;
       }
       if (
@@ -422,7 +423,9 @@ export async function enqueueMutation(
               ? { favourited: fields.favourited }
               : {}),
             ...(fields.note !== undefined ? { note: fields.note } : {}),
-            ...(fields.summary !== undefined ? { summary: fields.summary } : {}),
+            ...(fields.summary !== undefined
+              ? { summary: fields.summary }
+              : {}),
           };
           if (updatedBookmark.content.type === "link") {
             updatedBookmark.content = {
@@ -612,7 +615,9 @@ export async function evictLeastRecentlyUsedThumbnails(
   );
   for (const thumbnailRecord of thumbnailRecords) {
     await Promise.all(
-      thumbnailCaches.map(async (cache) => await cache?.delete(thumbnailRecord.url)),
+      thumbnailCaches.map(
+        async (cache) => await cache?.delete(thumbnailRecord.url),
+      ),
     );
   }
   await offlineLibraryDb.thumbnailAccess.bulkDelete(

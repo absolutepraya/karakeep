@@ -66,7 +66,10 @@ function createWorkerHarness() {
     }),
   };
   const self = {
-    addEventListener: (type: string, listener: (event: WorkerEvent) => void) => {
+    addEventListener: (
+      type: string,
+      listener: (event: WorkerEvent) => void,
+    ) => {
       listeners.set(type, listener);
     },
     clients,
@@ -91,7 +94,10 @@ function createWorkerHarness() {
     self,
   });
 
-  const dispatch = async (type: string, event: Omit<WorkerEvent, "respondWith" | "waitUntil">) => {
+  const dispatch = async (
+    type: string,
+    event: Omit<WorkerEvent, "respondWith" | "waitUntil">,
+  ) => {
     const work: Promise<unknown>[] = [];
     let response: Promise<Response> | undefined;
     listeners.get(type)?.({
@@ -261,9 +267,9 @@ describe("service worker cache boundaries", () => {
       request,
     });
     await expect(dispatched.response).resolves.toHaveProperty("status", 200);
-    await expect(dispatched.response?.then((response) => response.text())).resolves.toBe(
-      "offline",
-    );
+    await expect(
+      dispatched.response?.then((response) => response.text()),
+    ).resolves.toBe("offline");
 
     cache.set(
       request.url,
@@ -279,9 +285,9 @@ describe("service worker cache boundaries", () => {
       request,
     });
 
-    await expect(dispatched.response?.then((response) => response.text())).resolves.toBe(
-      "offline",
-    );
+    await expect(
+      dispatched.response?.then((response) => response.text()),
+    ).resolves.toBe("offline");
   });
   it("signals thumbnail use only after the thumbnail response is persisted", async () => {
     const worker = createWorkerHarness();

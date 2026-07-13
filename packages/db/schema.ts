@@ -975,10 +975,7 @@ export const offlineSyncEvents = sqliteTable(
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   },
   (ose) => [
-    index("offlineSyncEvents_userId_sequence_idx").on(
-      ose.userId,
-      ose.sequence,
-    ),
+    index("offlineSyncEvents_userId_sequence_idx").on(ose.userId, ose.sequence),
   ],
 );
 

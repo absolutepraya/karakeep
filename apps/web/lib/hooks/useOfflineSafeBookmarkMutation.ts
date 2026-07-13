@@ -31,7 +31,6 @@ const OFFLINE_UPDATE_FIELDS = [
   "text",
 ] as const;
 
-
 type OfflineUpdateField = (typeof OFFLINE_UPDATE_FIELDS)[number];
 
 const OFFLINE_UPDATE_FIELD_SET: Record<OfflineUpdateField, true> = {
@@ -148,10 +147,10 @@ async function getRequiredFieldVersions(
   fields: string[],
 ): Promise<Record<string, number>> {
   const versions = await Promise.all(
-    fields.map(async (field) => [
-      field,
-      await getBookmarkFieldVersion(bookmarkId, field),
-    ] as const),
+    fields.map(
+      async (field) =>
+        [field, await getBookmarkFieldVersion(bookmarkId, field)] as const,
+    ),
   );
   const baseVersions: Record<string, number> = {};
   for (const [field, version] of versions) {
@@ -266,7 +265,9 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
         }
 
         return await serializeOfflineTagIntent(input.bookmarkId, async () => {
-          const bookmark = await offlineLibraryDb.bookmarks.get(input.bookmarkId);
+          const bookmark = await offlineLibraryDb.bookmarks.get(
+            input.bookmarkId,
+          );
           if (!bookmark) {
             throw new OfflineMutationOnlineRequiredError();
           }
@@ -279,9 +280,10 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
             tagIds.add(tag.tagId!);
           }
 
-          const baseVersions = await getRequiredFieldVersions(input.bookmarkId, [
-            "tags",
-          ]);
+          const baseVersions = await getRequiredFieldVersions(
+            input.bookmarkId,
+            ["tags"],
+          );
           await queueBookmarkTags({
             idempotencyKey: queueMutationIdempotencyKey(),
             kind: "bookmark.tags",

@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import LibrarySyncConflictDialog from "./LibrarySyncConflictDialog";
@@ -34,7 +40,9 @@ describe("LibrarySyncConflictDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Resolve library sync conflict" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Resolve library sync conflict" }),
+    ).toBeTruthy();
     expect(screen.getByText("title")).toBeTruthy();
     expect(screen.getByText("Offline title")).toBeTruthy();
     expect(screen.getByText("Server title")).toBeTruthy();
@@ -42,7 +50,9 @@ describe("LibrarySyncConflictDialog", () => {
   });
 
   it("keeps the dialog open when a resolution transaction fails", async () => {
-    const onChooseLocal = vi.fn().mockRejectedValue(new Error("transaction failed"));
+    const onChooseLocal = vi
+      .fn()
+      .mockRejectedValue(new Error("transaction failed"));
     render(
       <LibrarySyncConflictDialog
         conflict={conflict}

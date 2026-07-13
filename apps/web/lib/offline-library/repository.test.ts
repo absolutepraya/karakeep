@@ -88,7 +88,9 @@ const bookmark = (overrides: Partial<ZBookmark> = {}): ZBookmark => ({
   ...overrides,
 });
 
-const snapshotWith = (overrides: Partial<ZBookmark> = {}): ZOfflineSyncSnapshot => ({
+const snapshotWith = (
+  overrides: Partial<ZBookmark> = {},
+): ZOfflineSyncSnapshot => ({
   bookmarks: [bookmark(overrides)],
   lists: [],
   bookmarkListMemberships: [],
@@ -128,11 +130,16 @@ test("replaces a snapshot atomically and preserves its cursor", async () => {
     bookmarks: [{ id: "bookmark-1" }],
   });
   await expect(getBookmarkFieldVersion("bookmark-1", "title")).resolves.toBe(0);
-  await expect(getBookmarkFieldVersion("bookmark-1", "note")).resolves.toBeUndefined();
+  await expect(
+    getBookmarkFieldVersion("bookmark-1", "note"),
+  ).resolves.toBeUndefined();
 });
 
 test("searches only replicated fields", async () => {
-  await replaceSnapshot(snapshotWith({ title: "Offline article", note: "airplane" }), "user-1");
+  await replaceSnapshot(
+    snapshotWith({ title: "Offline article", note: "airplane" }),
+    "user-1",
+  );
 
   await expect(searchBookmarks("airplane")).resolves.toMatchObject([
     { id: "bookmark-1" },
@@ -209,8 +216,14 @@ test("purge removes every user-scoped table and its cached thumbnails", async ()
 
 test("evicts the oldest cached thumbnail before bookmark metadata", async () => {
   await replaceSnapshot(snapshot, "user-1");
-  await recordThumbnailAccess("/api/assets/old", new Date("2026-07-11T00:00:00Z"));
-  await recordThumbnailAccess("/api/assets/new", new Date("2026-07-12T00:00:00Z"));
+  await recordThumbnailAccess(
+    "/api/assets/old",
+    new Date("2026-07-11T00:00:00Z"),
+  );
+  await recordThumbnailAccess(
+    "/api/assets/new",
+    new Date("2026-07-12T00:00:00Z"),
+  );
   thumbnailCaches.set(
     "karakeep-thumbnails",
     new Map([
@@ -220,11 +233,18 @@ test("evicts the oldest cached thumbnail before bookmark metadata", async () => 
   );
   await evictLeastRecentlyUsedThumbnails(1);
 
-  expect(thumbnailCaches.get("karakeep-thumbnails")?.has("/api/assets/old")).toBe(false);
-  expect(thumbnailCaches.get("karakeep-thumbnails")?.has("/api/assets/new")).toBe(true);
+  expect(
+    thumbnailCaches.get("karakeep-thumbnails")?.has("/api/assets/old"),
+  ).toBe(false);
+  expect(
+    thumbnailCaches.get("karakeep-thumbnails")?.has("/api/assets/new"),
+  ).toBe(true);
   await expect(offlineLibraryDb.bookmarks.count()).resolves.toBe(1);
   await expect(offlineLibraryDb.thumbnailAccess.toArray()).resolves.toEqual([
-    { url: "/api/assets/new", lastAccessedAt: new Date("2026-07-12T00:00:00Z").getTime() },
+    {
+      url: "/api/assets/new",
+      lastAccessedAt: new Date("2026-07-12T00:00:00Z").getTime(),
+    },
   ]);
 });
 
@@ -278,7 +298,9 @@ test("replaces, applies, and removes bookmark field versions atomically", async 
     },
     "user-1",
   );
-  await expect(getBookmarkFieldVersion("bookmark-1", "title")).resolves.toBeUndefined();
+  await expect(
+    getBookmarkFieldVersion("bookmark-1", "title"),
+  ).resolves.toBeUndefined();
   await expect(getBookmarkFieldVersion("bookmark-1", "note")).resolves.toBe(2);
 
   await applyEvents(
@@ -296,7 +318,9 @@ test("replaces, applies, and removes bookmark field versions atomically", async 
     ],
     "14",
   );
-  await expect(getBookmarkFieldVersion("bookmark-1", "note")).resolves.toBeUndefined();
+  await expect(
+    getBookmarkFieldVersion("bookmark-1", "note"),
+  ).resolves.toBeUndefined();
 });
 
 test("does not establish a replica cursor from an empty cold delta", async () => {
@@ -489,11 +513,14 @@ test("rejects unsupported mutations before changing the replica", async () => {
   await replaceSnapshot(snapshot, "user-1");
 
   await expect(
-    enqueueMutation({
-      idempotencyKey: "d2436c5e-5a6e-4fb1-9eb0-c1d57fb5a47d",
-      kind: "bookmark.delete",
-      bookmarkId: "bookmark-1",
-    } as unknown as ZOfflineSyncMutation, "user-1"),
+    enqueueMutation(
+      {
+        idempotencyKey: "d2436c5e-5a6e-4fb1-9eb0-c1d57fb5a47d",
+        kind: "bookmark.delete",
+        bookmarkId: "bookmark-1",
+      } as unknown as ZOfflineSyncMutation,
+      "user-1",
+    ),
   ).rejects.toThrow("Unsupported offline mutation");
   await expect(offlineLibraryDb.outbox.count()).resolves.toBe(0);
   await expect(queryBookmarks()).resolves.toMatchObject({

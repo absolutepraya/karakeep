@@ -64,7 +64,6 @@ function SearchResults() {
 }
 
 function SearchComp() {
-
   const { setInSearchPage } = useInSearchPageStore();
 
   const { setSortOrder } = useSortOrderStore();

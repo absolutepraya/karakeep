@@ -121,7 +121,9 @@ test("starts synchronization only for an authenticated session", async () => {
     expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledTimes(1);
     expect(screen.getByText("online")).toBeTruthy();
     expect(postMessage).toHaveBeenCalledWith({ type: "CLEAR_USER_CACHES" });
-    await expect(offlineLibraryDb.metadata.get("replicaOwnerUserId")).resolves.toMatchObject({
+    await expect(
+      offlineLibraryDb.metadata.get("replicaOwnerUserId"),
+    ).resolves.toMatchObject({
       value: "user-1",
     });
   });
@@ -145,14 +147,17 @@ test("does not start synchronization on a cold offline launch", async () => {
 });
 
 test("purges the private replica and worker caches after logout", async () => {
-  await replaceSnapshot({
-    bookmarks: [],
-    lists: [],
-    bookmarkListMemberships: [],
-    bookmarkRssFeedMemberships: [],
-    bookmarkFieldVersions: [],
-    cursor: "1",
-  }, "user-1");
+  await replaceSnapshot(
+    {
+      bookmarks: [],
+      lists: [],
+      bookmarkListMemberships: [],
+      bookmarkRssFeedMemberships: [],
+      bookmarkFieldVersions: [],
+      cursor: "1",
+    },
+    "user-1",
+  );
   session.current = { data: null, status: "unauthenticated" };
   const postMessage = vi.fn();
   Object.defineProperty(navigator, "serviceWorker", {
@@ -203,7 +208,9 @@ test("purges a persisted replica owned by another user before initial activation
   await waitFor(async () => {
     expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce();
     expect(trpc.offlineSync.pull.query).not.toHaveBeenCalled();
-    await expect(offlineLibraryDb.metadata.get("replicaOwnerUserId")).resolves.toMatchObject({
+    await expect(
+      offlineLibraryDb.metadata.get("replicaOwnerUserId"),
+    ).resolves.toMatchObject({
       value: "user-2",
     });
     expect(postMessage).toHaveBeenCalledWith({ type: "CLEAR_USER_CACHES" });
@@ -221,7 +228,9 @@ test("purges before an in-process principal transition and snapshots the next us
       <Status />
     </OfflineLibraryProvider>,
   );
-  await waitFor(() => expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce());
+  await waitFor(() =>
+    expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce(),
+  );
 
   session.current = {
     data: { user: { id: "user-2" } },
@@ -235,7 +244,9 @@ test("purges before an in-process principal transition and snapshots the next us
 
   await waitFor(async () => {
     expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledTimes(2);
-    await expect(offlineLibraryDb.metadata.get("replicaOwnerUserId")).resolves.toMatchObject({
+    await expect(
+      offlineLibraryDb.metadata.get("replicaOwnerUserId"),
+    ).resolves.toMatchObject({
       value: "user-2",
     });
     expect(postMessage).toHaveBeenCalledWith({ type: "CLEAR_USER_CACHES" });
@@ -248,7 +259,9 @@ test("purges on logout before activating a later authenticated principal", async
       <Status />
     </OfflineLibraryProvider>,
   );
-  await waitFor(() => expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce());
+  await waitFor(() =>
+    expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce(),
+  );
 
   session.current = { data: null, status: "unauthenticated" };
   screen.rerender(
@@ -271,7 +284,9 @@ test("purges on logout before activating a later authenticated principal", async
   );
   await waitFor(async () => {
     expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledTimes(2);
-    await expect(offlineLibraryDb.metadata.get("replicaOwnerUserId")).resolves.toMatchObject({
+    await expect(
+      offlineLibraryDb.metadata.get("replicaOwnerUserId"),
+    ).resolves.toMatchObject({
       value: "user-2",
     });
   });
@@ -307,7 +322,9 @@ test("rejects unauthenticated public calls without leaving an outbox mutation fo
     </OfflineLibraryProvider>,
   );
 
-  await waitFor(() => expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce());
+  await waitFor(() =>
+    expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce(),
+  );
   expect(trpc.offlineSync.push.mutate).not.toHaveBeenCalled();
   await expect(offlineLibraryDb.outbox.count()).resolves.toBe(0);
 });

@@ -180,7 +180,9 @@ export class OfflineLibrarySyncCoordinator {
     }
 
     while (true) {
-      const { usage, quota } = await estimate.call(globalThis.navigator.storage);
+      const { usage, quota } = await estimate.call(
+        globalThis.navigator.storage,
+      );
       if (
         usage === undefined ||
         quota === undefined ||
@@ -294,7 +296,10 @@ export class OfflineLibrarySyncCoordinator {
     }
   }
 
-  private async pullDeltas(initialCursor: string, generation: number): Promise<void> {
+  private async pullDeltas(
+    initialCursor: string,
+    generation: number,
+  ): Promise<void> {
     let cursor = initialCursor;
     let completed = 0;
     while (true) {
@@ -385,20 +390,27 @@ export class OfflineLibrarySyncCoordinator {
   }
 
   private nextRetryDelay(): number {
-    const delay = RETRY_DELAYS_MS[Math.min(this.retryAttempt, RETRY_DELAYS_MS.length - 1)];
+    const delay =
+      RETRY_DELAYS_MS[Math.min(this.retryAttempt, RETRY_DELAYS_MS.length - 1)];
     this.retryAttempt += 1;
     return delay ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
   }
 
   private scheduleRetry(retryAt: Date): void {
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState !== "visible"
+    ) {
       return;
     }
     this.clearRetry();
     const delay = Math.max(0, retryAt.getTime() - Date.now());
     this.retryTimer = globalThis.setTimeout(() => {
       this.retryTimer = undefined;
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState !== "visible"
+      ) {
         return;
       }
       void this.syncNow().catch(() => undefined);

@@ -922,9 +922,7 @@ export class Bookmark extends BareBookmark {
     );
   }
 
-  async delete(
-    beforeDelete?: (tx: KarakeepDBTransaction) => Promise<void>,
-  ) {
+  async delete(beforeDelete?: (tx: KarakeepDBTransaction) => Promise<void>) {
     this.ensureOwnership();
     let wasDeleted = false;
     await this.ctx.db.transaction(async (tx) => {

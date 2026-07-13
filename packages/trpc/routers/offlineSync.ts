@@ -22,13 +22,14 @@ export const offlineSyncAppRouter = router({
   pull: offlineSyncProcedure
     .input(zOfflineSyncPullInputSchema)
     .output(zOfflineSyncPullResultSchema)
-    .query(async ({ ctx, input }) =>
-      await pullOfflineSyncEvents(ctx, input.cursor),
+    .query(
+      async ({ ctx, input }) => await pullOfflineSyncEvents(ctx, input.cursor),
     ),
   push: offlineSyncProcedure
     .input(zOfflineSyncPushInputSchema)
     .output(zOfflineSyncPushResultSchema)
-    .mutation(async ({ ctx, input }) =>
-      await applyOfflineSyncMutations(ctx, input.mutations),
+    .mutation(
+      async ({ ctx, input }) =>
+        await applyOfflineSyncMutations(ctx, input.mutations),
     ),
 });

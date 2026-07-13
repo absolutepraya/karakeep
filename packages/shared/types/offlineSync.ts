@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import {
-  MAX_BOOKMARK_TITLE_LENGTH,
-  zBookmarkSchema,
-} from "./bookmarks";
+import { MAX_BOOKMARK_TITLE_LENGTH, zBookmarkSchema } from "./bookmarks";
 import { zBookmarkListSchema } from "./lists";
 
 export const zOfflineSyncCursorSchema = z
@@ -32,11 +29,7 @@ export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
       bookmarkId: z.string(),
       fields: z
         .object({
-          title: z
-            .string()
-            .max(MAX_BOOKMARK_TITLE_LENGTH)
-            .nullish()
-            .optional(),
+          title: z.string().max(MAX_BOOKMARK_TITLE_LENGTH).nullish().optional(),
           archived: z.boolean().optional(),
           favourited: z.boolean().optional(),
           note: z.string().optional(),
@@ -78,9 +71,7 @@ export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
     kind: z.literal("bookmark.tags"),
     bookmarkId: z.string(),
     tagIds: z.array(z.string()),
-    baseVersions: z
-      .object({ tags: z.number().int().nonnegative() })
-      .strict(),
+    baseVersions: z.object({ tags: z.number().int().nonnegative() }).strict(),
   }),
 ]);
 export type ZOfflineSyncMutation = z.infer<typeof zOfflineSyncMutationSchema>;
@@ -88,9 +79,7 @@ export type ZOfflineSyncMutation = z.infer<typeof zOfflineSyncMutationSchema>;
 export const zOfflineSyncPushInputSchema = z.object({
   mutations: z.array(zOfflineSyncMutationSchema).length(1),
 });
-export type ZOfflineSyncPushInput = z.infer<
-  typeof zOfflineSyncPushInputSchema
->;
+export type ZOfflineSyncPushInput = z.infer<typeof zOfflineSyncPushInputSchema>;
 
 export const zOfflineSyncConflictSchema = z.object({
   bookmarkId: z.string(),
@@ -137,7 +126,6 @@ export const zOfflineSyncBookmarkRssFeedMembershipSchema = z.object({
 export type ZOfflineSyncBookmarkRssFeedMembership = z.infer<
   typeof zOfflineSyncBookmarkRssFeedMembershipSchema
 >;
-
 
 export const zOfflineSyncSnapshotSchema = z.object({
   bookmarks: z.array(zBookmarkSchema),

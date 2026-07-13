@@ -29,7 +29,8 @@ test("invalidates a ready v3 replica so v4 synchronizes a snapshot", async () =>
   const databaseName = "offline-library-v3-upgrade";
   const legacyDb = new Dexie(databaseName);
   legacyDb.version(1).stores({
-    bookmarks: "id, archived, favourited, createdAt, modifiedAt, userId, *tags.id",
+    bookmarks:
+      "id, archived, favourited, createdAt, modifiedAt, userId, *tags.id",
     lists: "id, userRole, parentId",
     metadata: "key",
     outbox: "idempotencyKey, bookmarkId, kind, queuedAt",
@@ -40,7 +41,8 @@ test("invalidates a ready v3 replica so v4 synchronizes a snapshot", async () =>
     bookmarkListMemberships: "[bookmarkId+listId], bookmarkId, listId",
   });
   legacyDb.version(3).stores({
-    outbox: "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, kind, queuedAt",
+    outbox:
+      "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, kind, queuedAt",
   });
 
   await legacyDb.open();
@@ -55,12 +57,16 @@ test("invalidates a ready v3 replica so v4 synchronizes a snapshot", async () =>
   try {
     await upgradedDb.open();
 
-    await expect(upgradedDb.metadata.get("syncCursor")).resolves.toBeUndefined();
+    await expect(
+      upgradedDb.metadata.get("syncCursor"),
+    ).resolves.toBeUndefined();
     await expect(upgradedDb.metadata.get("replicaState")).resolves.toEqual({
       key: "replicaState",
       value: "stale",
     });
-    await expect(upgradedDb.metadata.get("replicaOwnerUserId")).resolves.toEqual({
+    await expect(
+      upgradedDb.metadata.get("replicaOwnerUserId"),
+    ).resolves.toEqual({
       key: "replicaOwnerUserId",
       value: "user-1",
     });

@@ -33,7 +33,11 @@ vi.mock("@/lib/hooks/bookmark-search", () => ({
 }));
 
 vi.mock("@/lib/offline-library/provider", () => ({
-  useOfflineLibraryStatus: () => ({ kind: "online", lastSyncedAt: new Date(), pendingWrites: 0 }),
+  useOfflineLibraryStatus: () => ({
+    kind: "online",
+    lastSyncedAt: new Date(),
+    pendingWrites: 0,
+  }),
 }));
 
 vi.mock("@/lib/i18n/client", () => ({

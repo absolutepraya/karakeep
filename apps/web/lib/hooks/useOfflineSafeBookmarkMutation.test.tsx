@@ -105,8 +105,8 @@ describe("useOfflineSafeBookmarkMutation", () => {
   });
 
   it("does not queue a multi-field update when any field version is absent", async () => {
-    mocks.getBookmarkFieldVersion.mockImplementation(async (_bookmarkId, field) =>
-      field === "note" ? undefined : 4,
+    mocks.getBookmarkFieldVersion.mockImplementation(
+      async (_bookmarkId, field) => (field === "note" ? undefined : 4),
     );
     const { result } = renderHook(() => useOfflineSafeBookmarkUpdate());
 
@@ -194,7 +194,10 @@ describe("useOfflineSafeBookmarkMutation", () => {
     mocks.getBookmark.mockImplementation(async () => localBookmark);
     mocks.getBookmarkFieldVersion.mockResolvedValue(3);
     mocks.queueBookmarkTags.mockImplementation(
-      async (mutation: { tagIds: string[]; baseVersions: { tags: number } }) => {
+      async (mutation: {
+        tagIds: string[];
+        baseVersions: { tags: number };
+      }) => {
         queueCount += 1;
         if (queueCount === 1) {
           await firstQueue;
@@ -209,9 +212,10 @@ describe("useOfflineSafeBookmarkMutation", () => {
         };
         outbox = {
           tagIds: mutation.tagIds,
-          baseVersions: outbox.baseVersions.tags === -1
-            ? mutation.baseVersions
-            : outbox.baseVersions,
+          baseVersions:
+            outbox.baseVersions.tags === -1
+              ? mutation.baseVersions
+              : outbox.baseVersions,
         };
       },
     );

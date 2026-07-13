@@ -30,13 +30,17 @@ export class OfflineLibraryDatabase extends Dexie {
     [string, string]
   >;
   conflicts!: Table<ZOfflineSyncConflict, string>;
-  bookmarkFieldVersions!: Table<ZOfflineSyncBookmarkFieldVersion, [string, string]>;
+  bookmarkFieldVersions!: Table<
+    ZOfflineSyncBookmarkFieldVersion,
+    [string, string]
+  >;
   thumbnailAccess!: Table<{ url: string; lastAccessedAt: number }, string>;
 
   constructor(databaseName = "karakeep-offline-library") {
     super(databaseName);
     this.version(1).stores({
-      bookmarks: "id, archived, favourited, createdAt, modifiedAt, userId, *tags.id",
+      bookmarks:
+        "id, archived, favourited, createdAt, modifiedAt, userId, *tags.id",
       lists: "id, userRole, parentId",
       metadata: "key",
       outbox: "idempotencyKey, bookmarkId, kind, queuedAt",
@@ -47,7 +51,8 @@ export class OfflineLibraryDatabase extends Dexie {
       bookmarkListMemberships: "[bookmarkId+listId], bookmarkId, listId",
     });
     this.version(3).stores({
-      outbox: "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, kind, queuedAt",
+      outbox:
+        "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, kind, queuedAt",
     });
     this.version(4)
       .stores({
@@ -61,7 +66,8 @@ export class OfflineLibraryDatabase extends Dexie {
         });
       });
     this.version(5).stores({
-      bookmarkRssFeedMemberships: "[bookmarkId+rssFeedId], bookmarkId, rssFeedId",
+      bookmarkRssFeedMemberships:
+        "[bookmarkId+rssFeedId], bookmarkId, rssFeedId",
     });
   }
 }

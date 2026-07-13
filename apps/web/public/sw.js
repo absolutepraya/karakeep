@@ -42,7 +42,8 @@ const isStaticAsset = ({ url }) =>
     url.pathname === "/manifest.webmanifest");
 
 const isThumbnail = ({ url }) =>
-  url.origin === self.location.origin && url.pathname.startsWith("/api/assets/");
+  url.origin === self.location.origin &&
+  url.pathname.startsWith("/api/assets/");
 
 const isRscOrDataRequest = ({ request, url }) =>
   request.headers.has("RSC") ||

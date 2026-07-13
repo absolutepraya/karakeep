@@ -13,7 +13,6 @@ import { defaultBeforeEach } from "../testUtils";
 beforeEach<CustomTestContext>(defaultBeforeEach(true));
 
 describe("offline sync contracts", () => {
-
   test("accepts a field-versioned bookmark update", () => {
     expect(
       zOfflineSyncPushInputSchema.parse({
@@ -40,7 +39,13 @@ describe("offline sync contracts", () => {
     };
     expect(() =>
       zOfflineSyncPushInputSchema.parse({
-        mutations: [mutation, { ...mutation, idempotencyKey: "2d068a43-97e4-4417-9ca3-202fd12415d5" }],
+        mutations: [
+          mutation,
+          {
+            ...mutation,
+            idempotencyKey: "2d068a43-97e4-4417-9ca3-202fd12415d5",
+          },
+        ],
       }),
     ).toThrow();
   });
@@ -448,7 +453,9 @@ describe("Offline sync routes", () => {
     });
     const snapshot = await collaborator.offlineSync.snapshot();
 
-    expect(beforeRevocation.bookmarks.map((item) => item.id)).toContain(bookmark.id);
+    expect(beforeRevocation.bookmarks.map((item) => item.id)).toContain(
+      bookmark.id,
+    );
     expect(beforeRevocation.bookmarkListMemberships).toContainEqual({
       bookmarkId: bookmark.id,
       listId: list.id,
@@ -460,7 +467,9 @@ describe("Offline sync routes", () => {
         operation: "revoke",
       }),
     );
-    expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(bookmark.id);
+    expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(
+      bookmark.id,
+    );
     expect(snapshot.lists.map((item) => item.id)).not.toContain(list.id);
     expect(snapshot.bookmarkListMemberships).not.toContainEqual({
       bookmarkId: bookmark.id,

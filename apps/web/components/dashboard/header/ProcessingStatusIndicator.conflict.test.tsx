@@ -3,7 +3,13 @@
 import "fake-indexeddb/auto";
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
@@ -156,8 +162,12 @@ describe("ProcessingStatusIndicator conflict resolution", () => {
     render(<ProcessingStatusIndicator />);
 
     fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
-    fireEvent.click(await screen.findByRole("button", { name: "Resolve 1 conflict" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Use server value" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Resolve 1 conflict" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Use server value" }),
+    );
 
     await waitFor(async () => {
       expect(
@@ -166,7 +176,9 @@ describe("ProcessingStatusIndicator conflict resolution", () => {
           conflict.field,
         ]),
       ).toMatchObject({ version: conflict.serverVersion });
-      expect(await offlineLibraryDb.bookmarks.get(conflict.bookmarkId)).toMatchObject({
+      expect(
+        await offlineLibraryDb.bookmarks.get(conflict.bookmarkId),
+      ).toMatchObject({
         title: conflict.serverValue,
       });
       expect(await offlineLibraryDb.conflicts.count()).toBe(0);

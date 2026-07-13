@@ -13,15 +13,23 @@ vi.mock("@/components/ui/button", () => ({
 }));
 vi.mock("@/components/ui/command", () => ({
   Command: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  CommandEmpty: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  CommandGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  CommandEmpty: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  CommandGroup: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
   CommandItem: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   CommandList: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/components/ui/popover", () => ({
   Popover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  PopoverContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  PopoverTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  PopoverTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 vi.mock("@/lib/clientConfig", () => ({ useClientConfig: () => ({}) }));
 vi.mock("@/lib/i18n/client", () => ({
@@ -78,10 +86,12 @@ describe("TagsEditor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Remove Existing" }));
 
-    await waitFor(() => expect(onDetach).toHaveBeenCalledWith({
-      tagId: "tag-1",
-      tagName: "Existing",
-    }));
+    await waitFor(() =>
+      expect(onDetach).toHaveBeenCalledWith({
+        tagId: "tag-1",
+        tagName: "Existing",
+      }),
+    );
     expect(screen.getByText("Existing")).toBeTruthy();
   });
 });

@@ -215,7 +215,8 @@ async function applyBookmarkUpdate(
     publisher?: string | null;
   } = {};
   if (fields.url !== undefined) linkUpdates.url = fields.url.trim();
-  if (fields.description !== undefined) linkUpdates.description = fields.description;
+  if (fields.description !== undefined)
+    linkUpdates.description = fields.description;
   if (fields.author !== undefined) linkUpdates.author = fields.author;
   if (fields.publisher !== undefined) linkUpdates.publisher = fields.publisher;
 
@@ -274,10 +275,7 @@ async function applyBookmarkTags(
       .select({ id: bookmarkTags.id })
       .from(bookmarkTags)
       .where(
-        and(
-          eq(bookmarkTags.userId, userId),
-          inArray(bookmarkTags.id, tagIds),
-        ),
+        and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.id, tagIds)),
       );
     if (ownedTags.length !== tagIds.length) {
       throw new TRPCError({
@@ -511,7 +509,9 @@ export async function buildOfflineSyncSnapshot(
     const listIds = snapshotLists.map((list) => list.id);
     const bookmarkRows = await Promise.all(
       [...bookmarkIds].map(async (bookmarkId) =>
-        (await Bookmark.fromId(transactionContext, bookmarkId, false)).asZBookmark(),
+        (
+          await Bookmark.fromId(transactionContext, bookmarkId, false)
+        ).asZBookmark(),
       ),
     );
     const [bookmarkListMemberships, bookmarkFieldVersions] = await Promise.all([
@@ -572,7 +572,10 @@ export async function pullOfflineSyncEvents(
 ): Promise<ZOfflineSyncPullResult> {
   const sequence = Number(cursor);
   if (!Number.isSafeInteger(sequence) || sequence < 0) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid sync cursor" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Invalid sync cursor",
+    });
   }
 
   return await ctx.db.transaction(async (tx) => {
@@ -766,11 +769,7 @@ export async function applyOfflineSyncMutations(
       { behavior: "immediate" },
     );
     if (appliedMutation) {
-      await triggerBookmarkUpdateEffects(
-        ctx,
-        appliedMutation,
-        appliedTagDelta,
-      );
+      await triggerBookmarkUpdateEffects(ctx, appliedMutation, appliedTagDelta);
     }
     return result;
   } catch (error) {

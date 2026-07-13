@@ -1,11 +1,6 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import UploadDropzone from "@/components/dashboard/UploadDropzone";
 import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
@@ -147,7 +142,17 @@ function useLocalBookmarkPagination(
         setIsLoaded(true);
       },
     );
-  }, [archived, cursor, enabled, favourited, limit, listId, rssFeedId, sortOrder, tagId]);
+  }, [
+    archived,
+    cursor,
+    enabled,
+    favourited,
+    limit,
+    listId,
+    rssFeedId,
+    sortOrder,
+    tagId,
+  ]);
 
   const fetchNextPage = useCallback(async () => {
     if (!enabled || !nextCursor || isFetchingNextPage) {
@@ -284,12 +289,12 @@ function PendingBookmarksGrid({
 
   return (
     <BookmarkGrid
-      bookmarks={useLocalBookmarks ? local.bookmarks : initialBookmarks.bookmarks}
+      bookmarks={
+        useLocalBookmarks ? local.bookmarks : initialBookmarks.bookmarks
+      }
       hasNextPage={useLocalBookmarks ? local.hasNextPage : false}
       fetchNextPage={useLocalBookmarks ? local.fetchNextPage : () => undefined}
-      isFetchingNextPage={
-        useLocalBookmarks ? local.isFetchingNextPage : false
-      }
+      isFetchingNextPage={useLocalBookmarks ? local.isFetchingNextPage : false}
       showEditorCard={showEditorCard}
     />
   );
@@ -353,9 +358,7 @@ function OnlineBookmarksGrid({
       hasNextPage={
         useLocalBookmarks ? local.hasNextPage : (hasNextPage ?? false)
       }
-      fetchNextPage={
-        useLocalBookmarks ? local.fetchNextPage : fetchNextPage
-      }
+      fetchNextPage={useLocalBookmarks ? local.fetchNextPage : fetchNextPage}
       isFetchingNextPage={
         useLocalBookmarks
           ? local.isFetchingNextPage

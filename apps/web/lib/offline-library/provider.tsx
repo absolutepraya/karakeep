@@ -35,7 +35,9 @@ interface OfflineLibraryProviderProps {
   trpcClient: TRPCClient<AppRouter>;
 }
 
-const OfflineLibraryContext = createContext<OfflineLibraryContextValue | null>(null);
+const OfflineLibraryContext = createContext<OfflineLibraryContextValue | null>(
+  null,
+);
 
 export function createOfflineSyncClient(
   trpcClient: TRPCClient<AppRouter>,
@@ -49,7 +51,9 @@ export function createOfflineSyncClient(
 
 async function clearUserCaches(): Promise<void> {
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-    navigator.serviceWorker.controller?.postMessage({ type: "CLEAR_USER_CACHES" });
+    navigator.serviceWorker.controller?.postMessage({
+      type: "CLEAR_USER_CACHES",
+    });
   }
 }
 
@@ -59,12 +63,14 @@ export function OfflineLibraryProvider({
 }: OfflineLibraryProviderProps) {
   const { data: session, status: sessionStatus } = useSession();
   const coordinator = useMemo(
-    () => new OfflineLibrarySyncCoordinator(createOfflineSyncClient(trpcClient)),
+    () =>
+      new OfflineLibrarySyncCoordinator(createOfflineSyncClient(trpcClient)),
     [trpcClient],
   );
   const activeUserIdRef = useRef<string | null>(null);
   const lifecycleRef = useRef<Promise<void>>(Promise.resolve());
-  const userId = sessionStatus === "authenticated" ? session?.user?.id ?? null : null;
+  const userId =
+    sessionStatus === "authenticated" ? (session?.user?.id ?? null) : null;
   const [status, setStatus] = useState<OfflineLibraryStatus>(
     coordinator.getStatus(),
   );
@@ -192,7 +198,9 @@ export function OfflineLibraryProvider({
 function useOfflineLibraryContext(): OfflineLibraryContextValue {
   const context = useContext(OfflineLibraryContext);
   if (!context) {
-    throw new Error("useOfflineLibrary must be used within OfflineLibraryProvider");
+    throw new Error(
+      "useOfflineLibrary must be used within OfflineLibraryProvider",
+    );
   }
   return context;
 }

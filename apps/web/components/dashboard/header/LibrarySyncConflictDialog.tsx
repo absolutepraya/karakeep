@@ -52,11 +52,13 @@ export default function LibrarySyncConflictDialog({
       return;
     }
 
-    void offlineLibraryDb.bookmarks.get(conflict.bookmarkId).then((bookmark) => {
-      if (!cancelled) {
-        setBookmarkLabel(bookmark?.title || "Untitled bookmark");
-      }
-    });
+    void offlineLibraryDb.bookmarks
+      .get(conflict.bookmarkId)
+      .then((bookmark) => {
+        if (!cancelled) {
+          setBookmarkLabel(bookmark?.title || "Untitled bookmark");
+        }
+      });
 
     return () => {
       cancelled = true;
@@ -123,7 +125,6 @@ export default function LibrarySyncConflictDialog({
             {resolutionError}
           </p>
         )}
-
 
         <DialogFooter className="gap-2 sm:space-x-0">
           <Button

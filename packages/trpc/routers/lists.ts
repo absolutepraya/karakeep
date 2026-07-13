@@ -155,7 +155,11 @@ export const listsAppRouter = router({
         const serialized = list.asZBookmarkList();
         await recordListSyncEvent(
           tx,
-          await listSyncUserIds(transactionCtx, serialized.id, serialized.userId),
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
           serialized.id,
           "update",
           [
@@ -197,13 +201,9 @@ export const listsAppRouter = router({
           listSyncUserIds(transactionCtx, target.id, target.userId),
         ]);
         await sourceList.mergeInto(targetList, input.deleteSourceAfterMerge);
-        await recordListSyncEvent(
-          tx,
-          targetUserIds,
-          target.id,
-          "update",
-          ["bookmarks"],
-        );
+        await recordListSyncEvent(tx, targetUserIds, target.id, "update", [
+          "bookmarks",
+        ]);
         await recordListSyncEvent(
           tx,
           sourceUserIds,
@@ -434,13 +434,9 @@ export const listsAppRouter = router({
           input.email,
           input.role,
         );
-        await recordListSyncEvent(
-          tx,
-          [ctx.user.id],
-          list.id,
-          "update",
-          ["collaborators"],
-        );
+        await recordListSyncEvent(tx, [ctx.user.id], list.id, "update", [
+          "collaborators",
+        ]);
         return invitationId;
       });
       return { invitationId };
