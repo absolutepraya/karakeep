@@ -1,8 +1,36 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [".claude/**", ".github/skills/**", ".superpowers/**"],
   "workspaces": {
     "apps/web": {
-      "entry": "public/sw.js"
+      "entry": ["public/sw.js"]
+    },
+    "apps/browser-extension": {
+      "entry": [
+        "manifest.json",
+        "src/background/background.ts",
+        "src/content-scripts/singlefile-content-script.ts"
+      ]
+    },
+    "apps/mobile": {
+      "entry": [
+        "app.config.js",
+        "plugins/trust-local-certs.js",
+        "plugins/camera-not-required.js",
+        "components/ui/FAB/FAB.ios.tsx",
+        "components/ui/SearchInput/SearchInput.ios.tsx"
+      ]
+    },
+    "docs": {
+      "entry": [
+        "src/css/custom.css",
+        "src/theme/DocSidebarItem/Category/index.tsx",
+        "versioned_docs/version-v0.28.0/api/sidebar.ts",
+        "versioned_docs/version-v0.29.0/api/sidebar.ts",
+        "versioned_docs/version-v0.30.0/api/sidebar.ts",
+        "versioned_docs/version-v0.31.0/api/sidebar.ts",
+        "versioned_docs/version-v0.32.0/api/sidebar.ts"
+      ]
     }
-  },
+  }
 }
