@@ -233,6 +233,15 @@ The web container binds to localhost and is expected to sit behind nginx.
 
 ## VPS provisioning notes
 
+Before first startup, create and verify the private external renderer network. Compose does not create an `external: true` network:
+
+```bash
+if ! docker network inspect karakeep-renderer >/dev/null 2>&1; then
+  docker network create --internal karakeep-renderer
+fi
+test "$(docker network inspect --format '{{.Internal}}' karakeep-renderer)" = true
+```
+
 Typical high-level flow:
 
 ```bash
