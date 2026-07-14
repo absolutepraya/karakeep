@@ -1063,46 +1063,45 @@ export const bookmarksAppRouter = router({
       }),
     )
     .query(async ({ ctx }) => {
-      const [crawling, tagging, summarizing, importing] =
-        await Promise.all([
-          ctx.db
-            .select({ count: count() })
-            .from(bookmarkLinks)
-            .innerJoin(bookmarks, eq(bookmarks.id, bookmarkLinks.id))
-            .where(
-              and(
-                eq(bookmarks.userId, ctx.user.id),
-                eq(bookmarkLinks.crawlStatus, "pending"),
-              ),
+      const [crawling, tagging, summarizing, importing] = await Promise.all([
+        ctx.db
+          .select({ count: count() })
+          .from(bookmarkLinks)
+          .innerJoin(bookmarks, eq(bookmarks.id, bookmarkLinks.id))
+          .where(
+            and(
+              eq(bookmarks.userId, ctx.user.id),
+              eq(bookmarkLinks.crawlStatus, "pending"),
             ),
-          ctx.db
-            .select({ count: count() })
-            .from(bookmarks)
-            .where(
-              and(
-                eq(bookmarks.userId, ctx.user.id),
-                eq(bookmarks.taggingStatus, "pending"),
-              ),
+          ),
+        ctx.db
+          .select({ count: count() })
+          .from(bookmarks)
+          .where(
+            and(
+              eq(bookmarks.userId, ctx.user.id),
+              eq(bookmarks.taggingStatus, "pending"),
             ),
-          ctx.db
-            .select({ count: count() })
-            .from(bookmarks)
-            .where(
-              and(
-                eq(bookmarks.userId, ctx.user.id),
-                eq(bookmarks.summarizationStatus, "pending"),
-              ),
+          ),
+        ctx.db
+          .select({ count: count() })
+          .from(bookmarks)
+          .where(
+            and(
+              eq(bookmarks.userId, ctx.user.id),
+              eq(bookmarks.summarizationStatus, "pending"),
             ),
-          ctx.db
-            .select({ count: count() })
-            .from(importSessions)
-            .where(
-              and(
-                eq(importSessions.userId, ctx.user.id),
-                inArray(importSessions.status, ["pending", "running"]),
-              ),
+          ),
+        ctx.db
+          .select({ count: count() })
+          .from(importSessions)
+          .where(
+            and(
+              eq(importSessions.userId, ctx.user.id),
+              inArray(importSessions.status, ["pending", "running"]),
             ),
-        ]);
+          ),
+      ]);
 
       const tasks = [
         { kind: "crawling" as const, count: crawling[0]?.count ?? 0 },

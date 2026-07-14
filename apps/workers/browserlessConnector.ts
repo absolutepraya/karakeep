@@ -3,7 +3,9 @@ export function buildBrowserlessWebSocketUrl(
   token: string | undefined,
 ): string {
   if (!token) {
-    throw new Error("BROWSERLESS_TOKEN is required when BROWSERLESS_URL is set");
+    throw new Error(
+      "BROWSERLESS_TOKEN is required when BROWSERLESS_URL is set",
+    );
   }
   const url = new URL(baseUrl);
   url.searchParams.set("token", token);
