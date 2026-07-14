@@ -160,26 +160,46 @@ Expected service shape:
 - `meilisearch`
 - `watchtower`
 
-### Embedding cleanup preflight
+### Controlled embedding-cleanup rollout
 
-Before applying the stale-embedding cleanup migration, capture evidence that the embeddings queue is empty:
+The stale-embedding migration is safe only as a controlled rollout. An empty-queue preflight by itself is not sufficient: pause automatic updates, capture a fresh successful read-only check immediately before the controlled `web` start that applies the migration, then resume automatic updates.
 
-```bash
-docker exec -i karakeep-fork-web-1 node <<'NODE'
-const Database = require("better-sqlite3");
-const db = new Database("/data/queue.db", { readonly: true });
-const rows = db.prepare(
-  "SELECT queue, status, COUNT(*) AS count FROM tasks WHERE queue = 'embeddings' GROUP BY queue, status",
-).all();
-if (rows.length !== 0) {
-  console.error(JSON.stringify(rows));
-  process.exit(1);
-}
-console.log("Embedding queue is empty");
-NODE
-```
+From the directory containing the production compose file:
 
-A non-empty result blocks the cleanup. Do not run the migration until this command reports `Embedding queue is empty`.
+1. Pause Watchtower so it cannot recreate `web` during the gate:
+
+   ```bash
+   docker compose -f deploy/docker-compose.prod.yml stop watchtower
+   ```
+
+2. Immediately before the controlled application start, run this read-only check and record the command's `Embedding queue is empty` output with the deployment timestamp. A non-empty result blocks the cleanup. Do not reuse an earlier successful check or start `web` if this command fails:
+
+   ```bash
+   docker exec -i karakeep-fork-web-1 node <<'NODE'
+   const Database = require("better-sqlite3");
+   const db = new Database("/data/queue.db", { readonly: true });
+   const rows = db.prepare(
+     "SELECT queue, status, COUNT(*) AS count FROM tasks WHERE queue = 'embeddings' GROUP BY queue, status",
+   ).all();
+   if (rows.length !== 0) {
+     console.error(JSON.stringify(rows));
+     process.exit(1);
+   }
+   console.log("Embedding queue is empty");
+   NODE
+   ```
+
+3. Without any intervening application start, run the controlled `web` start that applies the migration:
+
+   ```bash
+   docker compose -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate web
+   ```
+
+4. Resume automatic updates only after the controlled start succeeds:
+
+   ```bash
+   docker compose -f deploy/docker-compose.prod.yml start watchtower
+   ```
 
 Key parameters:
 - `KARAKEEP_PORT`
