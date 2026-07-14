@@ -179,7 +179,7 @@ From the directory containing the production compose file:
    const Database = require("better-sqlite3");
    const db = new Database("/data/queue.db", { readonly: true });
    const rows = db.prepare(
-     "SELECT queue, status, COUNT(*) AS count FROM tasks WHERE queue = 'embeddings' GROUP BY queue, status",
+     "SELECT queue, status, COUNT(*) AS count FROM tasks WHERE queue = 'embeddings_queue' GROUP BY queue, status",
    ).all();
    if (rows.length !== 0) {
      console.error(JSON.stringify(rows));
@@ -189,13 +189,14 @@ From the directory containing the production compose file:
    NODE
    ```
 
-3. Without any intervening application start, run the controlled `web` start that applies the migration:
+3. Without any intervening application start, run the controlled `web` start and wait for its health check:
 
    ```bash
-   docker compose -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate web
+   docker compose -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 120 web
    ```
+   `--wait` completes only when `web` is healthy; the image starts its health endpoint only after its internal `init-db-migration` service completes. A timeout or health failure blocks the rollout, so do not start Watchtower.
 
-4. Resume automatic updates only after the controlled start succeeds:
+4. Resume automatic updates only after the controlled startup reports healthy:
 
    ```bash
    docker compose -f deploy/docker-compose.prod.yml start watchtower
