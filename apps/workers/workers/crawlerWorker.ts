@@ -35,6 +35,10 @@ import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { abortRace, abortRaceResolve, raceWith, timeoutRace } from "utils";
 import { withWorkerTracing, withWorkerEventLog } from "workerTracing";
 import { getBookmarkDetails, updateAsset } from "workerUtils";
+import {
+  buildBrowserlessWebSocketUrl,
+  redactBrowserConnectionUrl,
+} from "../browserlessConnector";
 import { z } from "zod";
 
 import type { ZCrawlLinkRequest } from "@karakeep/shared-server";
@@ -268,7 +272,21 @@ function startContextReaper() {
 }
 
 async function startBrowserInstance() {
-  if (serverConfig.crawler.browserWebSocketUrl) {
+  if (serverConfig.crawler.browserlessUrl) {
+    if (!serverConfig.crawler.browserConnectOnDemand) {
+      throw new Error(
+        "BROWSER_CONNECT_ONDEMAND must be true when BROWSERLESS_URL is set to avoid keeping a shared Browserless connection open",
+      );
+    }
+    const connectionUrl = buildBrowserlessWebSocketUrl(
+      serverConfig.crawler.browserlessUrl,
+      serverConfig.crawler.browserlessToken,
+    );
+    logger.info(
+      `[Crawler] Connecting to shared Browserless instance: ${redactBrowserConnectionUrl(connectionUrl)}`,
+    );
+    return await chromium.connect(connectionUrl, { timeout: 5000 });
+  } else if (serverConfig.crawler.browserWebSocketUrl) {
     logger.info(
       `[Crawler] Connecting to existing browser websocket address: ${redactUrlCredentials(serverConfig.crawler.browserWebSocketUrl)}`,
     );
@@ -352,6 +370,14 @@ export class CrawlerWorker {
           } else {
             globalBlocker = globalBlockerResult.data;
           }
+        }
+        if (
+          serverConfig.crawler.browserlessUrl &&
+          !serverConfig.crawler.browserConnectOnDemand
+        ) {
+          throw new Error(
+            "BROWSER_CONNECT_ONDEMAND must be true when BROWSERLESS_URL is set to avoid keeping a shared Browserless connection open",
+          );
         }
         if (!serverConfig.crawler.browserConnectOnDemand) {
           await launchBrowser();

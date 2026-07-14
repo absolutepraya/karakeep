@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: ["index.ts", "scripts/parseHtmlSubprocess.ts"],
+  entry: ["index.ts", "screenshotFirst.ts", "scripts/parseHtmlSubprocess.ts"],
   format: ["esm"],
   target: "node22",
   outDir: "dist",

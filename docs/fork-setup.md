@@ -132,17 +132,22 @@ Fork-specific notes:
 
 ## Build and deploy model
 
-This fork deploys with a **pull-based Docker flow**.
+This fork deploys with a **pull-based split Docker flow**.
 
 ### Build path
-- `.github/workflows/docker.yml` builds the `aio` image on CI success on `main`
-- the workflow pushes `ghcr.io/<owner>/karakeep:main`
-- it also pushes a `:sha-<sha>` image tag
+- `.github/workflows/docker.yml` builds the `web` and `workers` targets from the same successful `main` commit
+- the workflow first pushes matching immutable `:web-sha-<sha>` and `:workers-sha-<sha>` tags, then promotes both mutable release tags only after both builds succeed
+- the mutable release tags are `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main`
+- `web` runs Next.js and owns database migrations
+- `workers` runs background work with `WORKER_PROFILE=screenshot-first`
 
 ### Deploy path
 - the VPS runs a Watchtower container
-- Watchtower polls GHCR
-- when `:main` changes, Watchtower recreates the `web` service
+- Watchtower polls the paired release tags and rolls `web` and `workers` forward independently after their immutable images have both been published
+- this is a bounded rolling overlap, not an atomic multi-container switch: every release must keep `web` and `workers` compatible with the immediately preceding release, including database migrations
+- Compose starts workers only after web is healthy and Meilisearch has started
+- Browserless is a token-protected private service attached through the external `karakeep-renderer` network
+- only workers join `karakeep-renderer`; no Browserless port is public
 
 Important characteristics:
 - no SSH deploy from CI
@@ -156,19 +161,87 @@ Canonical compose file:
 
 Expected service shape:
 - `web`
-- `chrome`
+- `workers`
 - `meilisearch`
 - `watchtower`
 
+### Worker-only secrets and Browserless
+
+Create `.workers.env` beside the production compose file. It is mounted only into `workers`, never `web`, and must contain `BROWSERLESS_TOKEN`, proxy credentials, and `OPENAI_API_KEY`. Keep the token and all credential values out of source control. `BROWSERLESS_URL` targets the Browserless service through `karakeep-renderer`.
+
+Configure Browserless on its private host with:
+
+```text
+CONCURRENT=2
+QUEUED=4
+TIMEOUT=45000
+```
+
+Do not publish a Browserless port. The external `karakeep-renderer` Docker network is the only path from workers to Browserless.
+
+### Controlled embedding-cleanup rollout
+
+The stale-embedding migration is safe only as a controlled rollout. An empty-queue preflight by itself is not sufficient: pause automatic updates, capture a fresh successful read-only check immediately before the controlled `web` start that applies the migration, then resume automatic updates.
+
+From the directory containing the production compose file:
+
+1. Pause Watchtower so it cannot recreate `web` during the gate:
+
+   ```bash
+   docker compose -f deploy/docker-compose.prod.yml stop watchtower
+   ```
+
+2. Immediately before the controlled application start, run this read-only check and record the command's `Embedding queue is empty` output with the deployment timestamp. A non-empty result blocks the cleanup. Do not reuse an earlier successful check or start `web` if this command fails:
+
+   ```bash
+   docker exec -i karakeep-fork-web-1 node <<'NODE'
+   const Database = require("better-sqlite3");
+   const db = new Database("/data/queue.db", { readonly: true });
+   const rows = db.prepare(
+     "SELECT queue, status, COUNT(*) AS count FROM tasks WHERE queue = 'embeddings_queue' GROUP BY queue, status",
+   ).all();
+   if (rows.length !== 0) {
+     console.error(JSON.stringify(rows));
+     process.exit(1);
+   }
+   console.log("Embedding queue is empty");
+   NODE
+   ```
+
+3. Without any intervening application start, run the controlled `web` start and wait for its health check:
+
+   ```bash
+   docker compose -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 120 web
+   ```
+   `--wait` completes only when `web` is healthy; the image starts its health endpoint only after its internal `init-db-migration` service completes. A timeout or health failure blocks the rollout, so do not start Watchtower.
+
+4. Resume automatic updates only after the controlled startup reports healthy:
+
+   ```bash
+   docker compose -f deploy/docker-compose.prod.yml start watchtower
+   ```
+
 Key parameters:
 - `KARAKEEP_PORT`
-- `KARAKEEP_IMAGE`
+- `KARAKEEP_WEB_IMAGE`
+- `KARAKEEP_WORKERS_IMAGE`
+- `KARAKEEP_ENV_FILE`
+- `KARAKEEP_WORKERS_ENV_FILE`
 
-Each service sets a `mem_limit` (web `2g`, chrome `1g`, meilisearch `512m`, watchtower `128m`) as a ceiling to keep the stack from ballooning and thrashing swap on the shared 8GB VPS. `web` gets the most headroom because the all-in-one image runs the app plus the background workers (crawl/AI/OCR/asset processing). These are caps, not reservations; raise a value if a service is legitimately OOM-killed.
+Each service sets a `mem_limit` (web `512m`, workers `512m`, meilisearch `512m`, watchtower `128m`) as a ceiling to keep the stack from ballooning and thrashing swap on the shared 8GB VPS. These are caps, not reservations; raise a value if a service is legitimately OOM-killed.
 
 The web container binds to localhost and is expected to sit behind nginx.
 
 ## VPS provisioning notes
+
+Before first startup, create and verify the private external renderer network. Compose does not create an `external: true` network:
+
+```bash
+if ! docker network inspect karakeep-renderer >/dev/null 2>&1; then
+  docker network create --internal karakeep-renderer
+fi
+test "$(docker network inspect --format '{{.Internal}}' karakeep-renderer)" = true
+```
 
 Typical high-level flow:
 

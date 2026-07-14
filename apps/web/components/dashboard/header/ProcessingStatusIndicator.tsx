@@ -3,7 +3,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BrainCircuit,
   CheckCircle2,
   Cloud,
   CloudOff,
@@ -41,7 +40,6 @@ const LABEL_BY_KIND = {
   crawling: "Crawling",
   tagging: "Tagging",
   summarizing: "Summarizing",
-  embedding: "Embedding",
   importing: "Importing",
 } as const;
 
@@ -49,7 +47,6 @@ const ICON_BY_KIND = {
   crawling: Globe,
   tagging: Tags,
   summarizing: Sparkles,
-  embedding: BrainCircuit,
   importing: FileDown,
 } as const;
 
