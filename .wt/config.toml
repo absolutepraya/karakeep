@@ -2,11 +2,14 @@ worktree_path = ".worktrees"
 port_offset_interval = 100
 max_slots = 9
 
-# Worktrees share this repository's root local data and environment files.
-# Do not migrate the shared database automatically during worktree setup.
+# Worktrees isolate source and dependencies, but intentionally share the root
+# development environment. start-dev.sh does not yet namespace its ports,
+# containers, or DATA_DIR by WT_WORKSPACE_NAME. Run the local dev stack from
+# only one worktree at a time.
 setup = [
   "pnpm install --frozen-lockfile",
-  "ln -sf ../../.env apps/web/.env",
-  "ln -sf ../../.env apps/workers/.env",
-  "ln -sf ../../.env packages/db/.env",
+  "ln -sfn \"$WT_ROOT_PATH/.env\" .env",
+  "ln -sfn ../../.env apps/web/.env",
+  "ln -sfn ../../.env apps/workers/.env",
+  "ln -sfn ../../.env packages/db/.env",
 ]
