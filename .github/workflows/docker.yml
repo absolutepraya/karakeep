@@ -1,9 +1,8 @@
 name: Build and Push image
 
-# Pull-based deploy: this workflow only builds + pushes the AIO image to GHCR.
-# The VPS runs a Watchtower container that polls GHCR and redeploys when :main
-# changes, so no inbound SSH / deploy step is needed here (the VPS firewalls SSH
-# to Tailscale only). See deploy/docker-compose.prod.yml.
+# Pull-based deploy: this workflow builds + pushes version-compatible web and
+# workers images to GHCR. The VPS runs Watchtower, which polls those tags and
+# redeploys both Karakeep services without an inbound SSH deploy step.
 
 on:
   workflow_run:
@@ -50,23 +49,35 @@ jobs:
           short_sha="$(git rev-parse --short=12 HEAD)"
           {
             echo "image_name=${image_name}"
-            echo "image_ref=${image_name}:main"
             echo "sha_tag=sha-${short_sha}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build and push AIO image
+      - name: Build and push web image
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: docker/Dockerfile
-          target: aio
-          # Single-arch: the VPS is amd64 (Jetorbit). Building arm64 under QEMU
-          # roughly doubles build time for an image that is never run.
+          target: web
           platforms: linux/amd64
           build-args: SERVER_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
           push: true
           tags: |
-            ${{ steps.meta.outputs.image_ref }}
-            ${{ steps.meta.outputs.image_name }}:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.image_name }}:web-main
+            ${{ steps.meta.outputs.image_name }}:web-${{ steps.meta.outputs.sha_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push workers image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: workers
+          platforms: linux/amd64
+          build-args: SERVER_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_name }}:workers-main
+            ${{ steps.meta.outputs.image_name }}:workers-${{ steps.meta.outputs.sha_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

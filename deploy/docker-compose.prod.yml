@@ -1,24 +1,20 @@
 # Karakeep fork — staging/prod compose (pull-based deploy via Watchtower).
-# Deploy model: GitHub Actions builds + pushes ghcr.io/absolutepraya/karakeep:main;
-# the watchtower service below polls GHCR every 60s and redeploys `web` when the
-# :main digest changes. The VPS never needs inbound SSH.
+# Deploy model: GitHub Actions builds version-compatible web and workers images;
+# Watchtower polls GHCR every 60s and redeploys both Karakeep services when their
+# :web-main and :workers-main digests change. The VPS never needs inbound SSH.
 #
 # Per-instance overrides go in a sibling .env file (auto-read by compose):
 #   KARAKEEP_PORT  host port nginx proxies to (staging: 3100, prod: 3000)
 #   NEXTAUTH_SECRET, MEILI_MASTER_KEY, NEXTAUTH_URL, DISABLE_SIGNUPS, ...
 services:
   web:
-    image: ${KARAKEEP_IMAGE:-ghcr.io/absolutepraya/karakeep:main}
+    image: ${KARAKEEP_WEB_IMAGE:-ghcr.io/absolutepraya/karakeep:web-main}
     restart: unless-stopped
-    # Ceiling to stop runaway on the shared 8GB VPS (not a reservation).
-    # web runs the all-in-one app + workers (crawl/AI/OCR), so it gets the
-    # most headroom for bulk operations.
-    mem_limit: 2g
+    mem_limit: 512m
     depends_on:
-      - chrome
-      - meilisearch
+      meilisearch:
+        condition: service_started
     labels:
-      # Only this container is auto-updated by watchtower (label-enable mode).
       - com.centurylinklabs.watchtower.enable=true
     volumes:
       - data:/data
@@ -26,30 +22,42 @@ services:
       # Bound to localhost only; nginx reverse-proxies the public subdomain to it.
       - 127.0.0.1:${KARAKEEP_PORT:-3000}:3000
     env_file:
-      - .env
+      - ${KARAKEEP_ENV_FILE:-.env}
     environment:
       MEILI_ADDR: http://meilisearch:7700
-      BROWSER_WEB_URL: http://chrome:9222
       DATA_DIR: /data
 
-  chrome:
-    image: gcr.io/zenika-hub/alpine-chrome:124
+  workers:
+    image: ${KARAKEEP_WORKERS_IMAGE:-ghcr.io/absolutepraya/karakeep:workers-main}
     restart: unless-stopped
-    mem_limit: 1g
-    command:
-      - --no-sandbox
-      - --disable-gpu
-      - --disable-dev-shm-usage
-      - --remote-debugging-address=0.0.0.0
-      - --remote-debugging-port=9222
-      - --hide-scrollbars
+    mem_limit: 512m
+    depends_on:
+      web:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - data:/data
+    env_file:
+      - ${KARAKEEP_ENV_FILE:-.env}
+      - ${KARAKEEP_WORKERS_ENV_FILE:-.workers.env}
+    environment:
+      DATA_DIR: /data
+      MEILI_ADDR: http://meilisearch:7700
+      WORKER_PROFILE: screenshot-first
+      BROWSER_CONNECT_ONDEMAND: "true"
+    networks:
+      - default
+      - renderer
 
   meilisearch:
     image: getmeili/meilisearch:v1.41.0
     restart: unless-stopped
     mem_limit: 512m
     env_file:
-      - .env
+      - ${KARAKEEP_ENV_FILE:-.env}
     environment:
       MEILI_NO_ANALYTICS: "true"
     volumes:
@@ -71,3 +79,8 @@ services:
 volumes:
   data:
   meilisearch:
+
+networks:
+  renderer:
+    external: true
+    name: karakeep-renderer

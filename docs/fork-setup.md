@@ -132,17 +132,21 @@ Fork-specific notes:
 
 ## Build and deploy model
 
-This fork deploys with a **pull-based Docker flow**.
+This fork deploys with a **pull-based split Docker flow**.
 
 ### Build path
-- `.github/workflows/docker.yml` builds the `aio` image on CI success on `main`
-- the workflow pushes `ghcr.io/<owner>/karakeep:main`
-- it also pushes a `:sha-<sha>` image tag
+- `.github/workflows/docker.yml` builds the `web` and `workers` targets from the same successful `main` commit
+- the workflow pushes `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main`
+- it also pushes matching `:web-sha-<sha>` and `:workers-sha-<sha>` tags
+- `web` runs Next.js and owns database migrations
+- `workers` runs background work with `WORKER_PROFILE=screenshot-first`
 
 ### Deploy path
 - the VPS runs a Watchtower container
-- Watchtower polls GHCR
-- when `:main` changes, Watchtower recreates the `web` service
+- Watchtower polls GHCR and recreates both `web` and `workers` when their image digests change
+- workers wait until web is healthy and Meilisearch has started
+- Browserless is a token-protected private service attached through the external `karakeep-renderer` network
+- only workers join `karakeep-renderer`; no Browserless port is public
 
 Important characteristics:
 - no SSH deploy from CI
@@ -156,9 +160,23 @@ Canonical compose file:
 
 Expected service shape:
 - `web`
-- `chrome`
+- `workers`
 - `meilisearch`
 - `watchtower`
+
+### Worker-only secrets and Browserless
+
+Create `.workers.env` beside the production compose file. It is mounted only into `workers`, never `web`, and must contain `BROWSERLESS_TOKEN`, proxy credentials, and `OPENAI_API_KEY`. Keep the token and all credential values out of source control. `BROWSERLESS_URL` targets the Browserless service through `karakeep-renderer`.
+
+Configure Browserless on its private host with:
+
+```text
+CONCURRENT=2
+QUEUED=4
+TIMEOUT=45000
+```
+
+Do not publish a Browserless port. The external `karakeep-renderer` Docker network is the only path from workers to Browserless.
 
 ### Controlled embedding-cleanup rollout
 
@@ -204,9 +222,12 @@ From the directory containing the production compose file:
 
 Key parameters:
 - `KARAKEEP_PORT`
-- `KARAKEEP_IMAGE`
+- `KARAKEEP_WEB_IMAGE`
+- `KARAKEEP_WORKERS_IMAGE`
+- `KARAKEEP_ENV_FILE`
+- `KARAKEEP_WORKERS_ENV_FILE`
 
-Each service sets a `mem_limit` (web `2g`, chrome `1g`, meilisearch `512m`, watchtower `128m`) as a ceiling to keep the stack from ballooning and thrashing swap on the shared 8GB VPS. `web` gets the most headroom because the all-in-one image runs the app plus the background workers (crawl/AI/OCR/asset processing). These are caps, not reservations; raise a value if a service is legitimately OOM-killed.
+Each service sets a `mem_limit` (web `512m`, workers `512m`, meilisearch `512m`, watchtower `128m`) as a ceiling to keep the stack from ballooning and thrashing swap on the shared 8GB VPS. These are caps, not reservations; raise a value if a service is legitimately OOM-killed.
 
 The web container binds to localhost and is expected to sit behind nginx.
 
