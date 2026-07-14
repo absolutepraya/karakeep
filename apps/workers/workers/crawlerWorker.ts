@@ -285,7 +285,7 @@ async function startBrowserInstance() {
     logger.info(
       `[Crawler] Connecting to shared Browserless instance: ${redactBrowserConnectionUrl(connectionUrl)}`,
     );
-    return await chromium.connect(connectionUrl, { timeout: 5000 });
+    return await chromium.connectOverCDP(connectionUrl, { timeout: 5000 });
   } else if (serverConfig.crawler.browserWebSocketUrl) {
     logger.info(
       `[Crawler] Connecting to existing browser websocket address: ${redactUrlCredentials(serverConfig.crawler.browserWebSocketUrl)}`,
