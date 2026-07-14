@@ -1,7 +1,7 @@
-# Karakeep fork — staging/prod compose (pull-based deploy via Watchtower).
-# Deploy model: GitHub Actions builds version-compatible web and workers images;
-# Watchtower polls GHCR every 60s and redeploys both Karakeep services when their
-# :web-main and :workers-main digests change. The VPS never needs inbound SSH.
+# Karakeep fork production compose, pull-based deploy via Watchtower.
+# GitHub Actions first pushes immutable version-matched web and workers images,
+# then promotes their mutable release tags after both builds succeed. Watchtower
+# rolls each service independently, so adjacent releases must remain compatible.
 #
 # Per-instance overrides go in a sibling .env file (auto-read by compose):
 #   KARAKEEP_PORT  host port nginx proxies to (staging: 3100, prod: 3000)

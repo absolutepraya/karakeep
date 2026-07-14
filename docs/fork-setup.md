@@ -136,15 +136,16 @@ This fork deploys with a **pull-based split Docker flow**.
 
 ### Build path
 - `.github/workflows/docker.yml` builds the `web` and `workers` targets from the same successful `main` commit
-- the workflow pushes `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main`
-- it also pushes matching `:web-sha-<sha>` and `:workers-sha-<sha>` tags
+- the workflow first pushes matching immutable `:web-sha-<sha>` and `:workers-sha-<sha>` tags, then promotes both mutable release tags only after both builds succeed
+- the mutable release tags are `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main`
 - `web` runs Next.js and owns database migrations
 - `workers` runs background work with `WORKER_PROFILE=screenshot-first`
 
 ### Deploy path
 - the VPS runs a Watchtower container
-- Watchtower polls GHCR and recreates both `web` and `workers` when their image digests change
-- workers wait until web is healthy and Meilisearch has started
+- Watchtower polls the paired release tags and rolls `web` and `workers` forward independently after their immutable images have both been published
+- this is a bounded rolling overlap, not an atomic multi-container switch: every release must keep `web` and `workers` compatible with the immediately preceding release, including database migrations
+- Compose starts workers only after web is healthy and Meilisearch has started
 - Browserless is a token-protected private service attached through the external `karakeep-renderer` network
 - only workers join `karakeep-renderer`; no Browserless port is public
 

@@ -61,9 +61,7 @@ jobs:
           platforms: linux/amd64
           build-args: SERVER_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
           push: true
-          tags: |
-            ${{ steps.meta.outputs.image_name }}:web-main
-            ${{ steps.meta.outputs.image_name }}:web-${{ steps.meta.outputs.sha_tag }}
+          tags: ${{ steps.meta.outputs.image_name }}:web-${{ steps.meta.outputs.sha_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -76,8 +74,19 @@ jobs:
           platforms: linux/amd64
           build-args: SERVER_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
           push: true
-          tags: |
-            ${{ steps.meta.outputs.image_name }}:workers-main
-            ${{ steps.meta.outputs.image_name }}:workers-${{ steps.meta.outputs.sha_tag }}
+          tags: ${{ steps.meta.outputs.image_name }}:workers-${{ steps.meta.outputs.sha_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Promote paired release tags
+        env:
+          IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
+          SHA_TAG: ${{ steps.meta.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "${IMAGE_NAME}:web-main" \
+            "${IMAGE_NAME}:web-${SHA_TAG}"
+          docker buildx imagetools create \
+            --tag "${IMAGE_NAME}:workers-main" \
+            "${IMAGE_NAME}:workers-${SHA_TAG}"
