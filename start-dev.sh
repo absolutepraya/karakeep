@@ -131,10 +131,10 @@ pnpm run db:migrate
 
 echo "Starting web app and workers..."
 if [ "$DETACH" -eq 1 ]; then
-    nohup pnpm --filter @karakeep/web run dev -- --port "$WEB_PORT" > "$DEV_DIR/web.log" 2>&1 & WEB_PID=$!
+    nohup pnpm --filter @karakeep/web exec next dev --port "$WEB_PORT" > "$DEV_DIR/web.log" 2>&1 & WEB_PID=$!
     nohup pnpm workers > "$DEV_DIR/workers.log" 2>&1 & WORKERS_PID=$!
 else
-    pnpm --filter @karakeep/web run dev -- --port "$WEB_PORT" & WEB_PID=$!
+    pnpm --filter @karakeep/web exec next dev --port "$WEB_PORT" & WEB_PID=$!
     pnpm workers & WORKERS_PID=$!
 fi
 echo "$WEB_PID" > "$DEV_DIR/web.pid"
