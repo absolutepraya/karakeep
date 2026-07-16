@@ -363,16 +363,21 @@
   --vvh: 100dvh;
   --vvo: 0px;
   --vvb: 0px;
+  --dialog-safe-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
 
-/* Center a fixed dialog within the *visible* viewport (above the keyboard on
-   iOS, where the layout viewport doesn't shrink) and cap its height so long
-   dialogs scroll internally instead of spilling under the keyboard. Paired
+/* Center a fixed dialog within the visible viewport, respecting the mobile
+   safe area and capping its height so long dialogs scroll internally. Paired
    with `translate-y-[-50%]` on the element. */
 @layer components {
   .dialog-vv-center {
-    top: calc(var(--vvo) + var(--vvh) / 2);
-    max-height: var(--vvh);
+    top: calc(var(--vvo) + (var(--vvh) - var(--dialog-safe-bottom)) / 2);
+    max-height: calc(var(--vvh) - var(--dialog-safe-bottom));
+  }
+
+  .dialog-vv-bottom {
+    bottom: calc(var(--vvb) + var(--dialog-safe-bottom));
+    max-height: calc(var(--vvh) - var(--dialog-safe-bottom) - 0.75rem);
   }
 }
 

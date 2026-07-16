@@ -301,7 +301,7 @@ const ResponsiveDialogContent = React.forwardRef<
   <DialogContent
     ref={ref}
     className={cn(
-      "bottom-[var(--vvb)] left-0 top-auto max-h-[calc(var(--vvh)-0.75rem)] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-5 shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[calc(var(--vvo)+var(--vvh)/2)] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:p-6",
+      "dialog-vv-bottom left-0 top-auto w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-5 shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[calc(var(--vvo)+var(--vvh)/2)] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:p-6",
       className,
     )}
     {...props}
