@@ -7,8 +7,10 @@ import { TSidebarItem } from "./TSidebarItem";
 
 export default async function MobileSidebar({
   items,
+  itemClassName,
 }: {
   items: (t: TFunction) => TSidebarItem[];
+  itemClassName?: string;
 }) {
   // oxlint-disable-next-line rules-of-hooks
   const { t } = await useTranslation();
@@ -32,6 +34,7 @@ export default async function MobileSidebar({
             name={item.name}
             logo={item.icon}
             path={item.path}
+            className={itemClassName}
           />
         ))}
         <MobileAddButton />

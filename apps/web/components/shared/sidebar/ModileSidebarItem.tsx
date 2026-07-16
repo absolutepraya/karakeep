@@ -10,10 +10,12 @@ export default function MobileSidebarItem({
   name,
   logo,
   path,
+  className,
 }: {
   name: string;
   logo: React.ReactNode;
   path: string;
+  className?: string;
 }) {
   const currentPath = usePathname();
   const isActive = path == currentPath;
@@ -30,7 +32,10 @@ export default function MobileSidebarItem({
   return (
     // basis lets items keep a comfortable min width and scroll when there are
     // many; grow makes the few-item dashboard nav spread to fill the bar.
-    <li ref={ref} className="flex min-w-0 shrink-0 grow basis-[3.25rem]">
+    <li
+      ref={ref}
+      className={cn("flex min-w-0 shrink-0 grow basis-[3.25rem]", className)}
+    >
       <Link
         onClick={haptic}
         href={path}
