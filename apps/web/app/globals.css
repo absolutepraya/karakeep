@@ -362,13 +362,14 @@
 :root {
   --vvh: 100dvh;
   --vvo: 0px;
-  --vvb: 0px;
   --dialog-safe-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
 
 /* Center a fixed dialog within the visible viewport, respecting the mobile
-   safe area and capping its height so long dialogs scroll internally. Paired
-   with `translate-y-[-50%]` on the element. */
+   safe area and capping its height so long dialogs scroll internally. Bottom
+   sheets extend behind the home indicator and reserve that space as internal
+   padding, so their background never leaves a transparent strip below them.
+   Paired with `translate-y-[-50%]` on centered elements. */
 @layer components {
   .dialog-vv-center {
     top: calc(var(--vvo) + (var(--vvh) - var(--dialog-safe-bottom)) / 2);
@@ -376,8 +377,8 @@
   }
 
   .dialog-vv-bottom {
-    bottom: calc(var(--vvb) + var(--dialog-safe-bottom));
-    max-height: calc(var(--vvh) - var(--dialog-safe-bottom) - 0.75rem);
+    bottom: 0;
+    max-height: calc(var(--vvh) - 0.75rem);
   }
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import EditorCard from "@/components/dashboard/bookmarks/EditorCard";
 import {
   Dialog,
@@ -25,7 +25,14 @@ export default function MobileAddButton() {
     <li className="flex min-w-0 shrink-0 grow basis-[3.25rem]">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
-          onClick={haptic}
+          type="button"
+          onClick={() => {
+            // Keep the capture flow independent of Radix's composed trigger
+            // handler. This is more reliable on mobile browsers, where the
+            // haptic shim also runs as part of the tap.
+            setOpen(true);
+            haptic();
+          }}
           aria-label={label}
           title={label}
           className="ease-(--ease-out) flex w-full flex-col items-center justify-center gap-1 rounded-2xl bg-primary px-2 py-2 text-primary-foreground transition-[opacity,transform] duration-150 active:opacity-90"
@@ -48,7 +55,7 @@ export default function MobileAddButton() {
             </DialogDescription>
           </DialogHeader>
           <EditorCard
-            className="min-h-[22rem]"
+            className="mb-[calc(env(safe-area-inset-bottom)+1.5rem)] min-h-[22rem]"
             onCreated={() => setOpen(false)}
           />
         </ResponsiveDialogContent>

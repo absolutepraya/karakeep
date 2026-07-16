@@ -17,7 +17,6 @@ class MockVisualViewport extends EventTarget {
 afterEach(() => {
   document.documentElement.style.removeProperty("--vvh");
   document.documentElement.style.removeProperty("--vvo");
-  document.documentElement.style.removeProperty("--vvb");
   Object.defineProperty(window, "visualViewport", {
     configurable: true,
     value: undefined,
@@ -29,7 +28,7 @@ afterEach(() => {
 });
 
 describe("VisualViewportSync", () => {
-  it("tracks the keyboard-covered layout viewport space for bottom sheets", () => {
+  it("tracks the visible viewport dimensions for centered dialogs", () => {
     const viewport = new MockVisualViewport();
     Object.defineProperty(window, "innerHeight", {
       configurable: true,
@@ -50,11 +49,7 @@ describe("VisualViewportSync", () => {
     expect(document.documentElement.style.getPropertyValue("--vvo")).toBe(
       "0px",
     );
-    expect(document.documentElement.style.getPropertyValue("--vvb")).toBe(
-      "300px",
-    );
-
     view.unmount();
-    expect(document.documentElement.style.getPropertyValue("--vvb")).toBe("");
+    expect(document.documentElement.style.getPropertyValue("--vvh")).toBe("");
   });
 });

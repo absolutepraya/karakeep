@@ -248,10 +248,18 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideCloseBtn?: boolean;
+    position?: "center" | "bottom";
   }
 >(
   (
-    { className, children, hideCloseBtn = false, onFocusCapture, ...props },
+    {
+      className,
+      children,
+      hideCloseBtn = false,
+      position = "center",
+      onFocusCapture,
+      ...props
+    },
     ref,
   ) => {
     const [dialog, setDialog] = React.useState<HTMLElement | null>(null);
@@ -270,7 +278,8 @@ const DialogContent = React.forwardRef<
         <DialogPrimitive.Content
           ref={setDialogRef}
           className={cn(
-            "dialog-vv-center ease-(--ease-out) fixed left-[50%] z-50 grid w-full max-w-lg origin-center translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+            position === "bottom" ? "dialog-vv-bottom" : "dialog-vv-center",
+            "ease-(--ease-out) fixed left-[50%] z-50 grid w-full max-w-lg origin-center translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
             className,
           )}
           {...props}
@@ -300,6 +309,7 @@ const ResponsiveDialogContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogContent
     ref={ref}
+    position="bottom"
     className={cn(
       "dialog-vv-bottom left-0 top-auto w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-5 shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[calc(var(--vvo)+var(--vvh)/2)] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:p-6",
       className,
