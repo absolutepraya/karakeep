@@ -4,6 +4,7 @@ import { useState } from "react";
 import EditorCard from "@/components/dashboard/bookmarks/EditorCard";
 import {
   Dialog,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -42,6 +43,9 @@ export default function MobileAddButton() {
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{label}</DialogTitle>
+            <DialogDescription>
+              Create a new bookmark from a link, note, or pasted content.
+            </DialogDescription>
           </DialogHeader>
           <EditorCard
             className="min-h-[22rem]"
