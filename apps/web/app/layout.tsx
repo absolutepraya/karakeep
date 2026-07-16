@@ -120,7 +120,7 @@ export default async function RootLayout({
             {children}
             <ReactQueryDevtools initialIsOpen={false} />
           </Providers>
-          <Toaster />
+          <Toaster className="mobile-nav-toast-offset" />
         </NuqsAdapter>
         {process.env.NODE_ENV === "development" && (
           <Script
