@@ -124,8 +124,11 @@ export default async function RootLayout({
         </NuqsAdapter>
         {process.env.NODE_ENV === "development" && (
           <Script
-            src="https://unpkg.com/react-grab@0.1.44/dist/index.global.js"
-            strategy="afterInteractive"
+            // React Grab inspects and annotates the DOM. Loading it after the
+            // browser is idle keeps it out of React's hydration window,
+            // particularly on slower mobile devices.
+            src="https://unpkg.com/react-grab@0.1.48/dist/index.global.js"
+            strategy="lazyOnload"
             crossOrigin="anonymous"
           />
         )}

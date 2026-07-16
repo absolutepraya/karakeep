@@ -355,23 +355,30 @@
 }
 
 /* ============================================================
-   Visual-viewport vars — kept in sync by <VisualViewportSync> so dialogs
-   can re-center above the iOS on-screen keyboard. Fallbacks match the old
-   full-viewport centering for SSR / no-JS / desktop.
+   Visual-viewport vars: kept in sync by <VisualViewportSync> so dialogs can
+   stay visible above the iOS on-screen keyboard. Fallbacks match the old
+   full-viewport layout for SSR, no-JS, and desktop.
    ============================================================ */
 :root {
   --vvh: 100dvh;
   --vvo: 0px;
+  --dialog-safe-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
 
-/* Center a fixed dialog within the *visible* viewport (above the keyboard on
-   iOS, where the layout viewport doesn't shrink) and cap its height so long
-   dialogs scroll internally instead of spilling under the keyboard. Paired
-   with `translate-y-[-50%]` on the element. */
+/* Center a fixed dialog within the visible viewport, respecting the mobile
+   safe area and capping its height so long dialogs scroll internally. Bottom
+   sheets extend behind the home indicator and reserve that space as internal
+   padding, so their background never leaves a transparent strip below them.
+   Paired with `translate-y-[-50%]` on centered elements. */
 @layer components {
   .dialog-vv-center {
-    top: calc(var(--vvo) + var(--vvh) / 2);
-    max-height: var(--vvh);
+    top: calc(var(--vvo) + (var(--vvh) - var(--dialog-safe-bottom)) / 2);
+    max-height: calc(var(--vvh) - var(--dialog-safe-bottom));
+  }
+
+  .dialog-vv-bottom {
+    bottom: 0;
+    max-height: calc(var(--vvh) - 0.75rem);
   }
 }
 

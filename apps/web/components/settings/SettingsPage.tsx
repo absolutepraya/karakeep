@@ -29,6 +29,7 @@ export function SettingsPage({
         description={description}
         icon={icon}
         action={action}
+        variant="settings"
       />
       {children}
     </div>
@@ -86,8 +87,8 @@ export function SettingsSection({
       )}
       <CardContent
         className={cn(
-          "space-y-4 px-5 py-5",
-          hasHeader && "pt-5",
+          "space-y-3 px-5 py-4",
+          hasHeader && "pt-4",
           contentClassName,
         )}
       >

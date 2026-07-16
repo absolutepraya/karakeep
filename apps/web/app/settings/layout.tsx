@@ -140,7 +140,12 @@ export default async function SettingsLayout({
       <ReaderSettingsProvider>
         <SidebarLayout
           sidebar={<Sidebar items={settingsSidebarItems} />}
-          mobileSidebar={<MobileSidebar items={settingsSidebarItems} />}
+          mobileSidebar={
+            <MobileSidebar
+              items={settingsSidebarItems}
+              itemClassName="basis-20"
+            />
+          }
         >
           {/* Keep settings in a focused, centered reading column instead of
               stretching forms across the full 1400px content container. */}

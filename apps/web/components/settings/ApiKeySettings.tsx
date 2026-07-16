@@ -13,6 +13,8 @@ import { useTranslation } from "@/lib/i18n/server";
 import { api } from "@/server/api/client";
 import { KeyRound } from "lucide-react";
 
+import AddApiKey from "./AddApiKey";
+
 import DeleteApiKey from "./DeleteApiKey";
 import RegenerateApiKey from "./RegenerateApiKey";
 import { SettingsSection } from "./SettingsPage";
@@ -27,6 +29,7 @@ export default async function ApiKeys({ isAdmin }: { isAdmin: boolean }) {
     <SettingsSection
       title="Active keys"
       description="Manage existing credentials, review their scopes, and rotate anything that has outlived its trust window."
+      action={<AddApiKey isAdmin={isAdmin} />}
     >
       {keys.keys.length === 0 ? (
         <EmptyState

@@ -55,14 +55,15 @@ export default function RulesSettingsPage() {
       title={t("settings.rules.rules")}
       description={t("settings.rules.description")}
       icon={<GitBranch className="size-6 shrink-0 text-muted-foreground" />}
-      action={
-        <Button onClick={handleCreateRule} variant="default">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          {t("settings.rules.ceate_rule")}
-        </Button>
-      }
     >
-      <SettingsSection>
+      <SettingsSection
+        action={
+          <Button onClick={handleCreateRule} variant="default">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {t("settings.rules.ceate_rule")}
+          </Button>
+        }
+      >
         {!rules || isLoading ? (
           <FullPageSpinner />
         ) : (

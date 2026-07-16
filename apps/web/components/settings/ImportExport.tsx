@@ -90,7 +90,7 @@ function ImportSourceCard({
     <div className="shadow-xs rounded-xl border border-border/70 bg-background/80 p-4 transition-shadow duration-200 hover:shadow-sm">
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground [&_svg]:size-4">
+          <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground [&_svg]:size-4">
             {icon}
           </div>
           <div className="min-w-0 space-y-1">
@@ -170,7 +170,7 @@ function ExportCard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <div className="flex size-10 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground [&_svg]:size-4">
+            <div className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground [&_svg]:size-4">
               <Upload />
             </div>
             <p className="max-w-xl leading-6">

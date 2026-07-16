@@ -634,7 +634,10 @@ export default function StatsPage() {
                 return (
                   <SurfacePanel
                     key={asset.type}
-                    title={asset.type.replace(/([A-Z])/g, " $1").trim()}
+                    title={asset.type
+                      .replace(/([A-Z])/g, " $1")
+                      .trim()
+                      .replace(/^./, (character) => character.toUpperCase())}
                   >
                     <div className="space-y-4">
                       <div className="flex items-center justify-between gap-3">

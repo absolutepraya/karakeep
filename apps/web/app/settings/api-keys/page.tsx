@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import AddApiKey from "@/components/settings/AddApiKey";
 import ApiKeySettings from "@/components/settings/ApiKeySettings";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { useTranslation } from "@/lib/i18n/server";
@@ -24,7 +23,6 @@ export default async function ApiKeysPage() {
       title={t("settings.api_keys.api_keys")}
       description="Create, scope, rotate, and revoke keys for scripts, agents, and external integrations."
       icon={<KeyRound className="size-6 shrink-0 text-muted-foreground" />}
-      action={<AddApiKey isAdmin={isAdmin} />}
     >
       <ApiKeySettings isAdmin={isAdmin} />
     </SettingsPage>

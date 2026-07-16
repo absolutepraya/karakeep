@@ -23,10 +23,8 @@ export default async function Header() {
             <KarakeepLogo height={38} />
           </Link>
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
-          <div className="min-w-0 flex-1 lg:max-w-4xl">
-            <SearchInput />
-          </div>
+        <div className="min-w-0 flex-1">
+          <SearchInput className="w-full" />
         </div>
         <div className="ml-3 flex shrink-0 items-center gap-2 sm:ml-4">
           <ProcessingStatusIndicator />

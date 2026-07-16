@@ -21,6 +21,7 @@ import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useBookmarkLists } from "@karakeep/shared-react/hooks/lists";
 import { ZBookmarkList } from "@karakeep/shared/types/lists";
 import { listNameFromPath } from "@karakeep/shared/utils/listUtils";
+import { truncateListPath } from "./listPath";
 
 interface DataProps {
   isPending: boolean;
@@ -127,23 +128,26 @@ function ListSelectorComponent({
             </CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
               {visiblePaths?.map((path) => {
-                const l = path[path.length - 1];
-                const name = listNameFromPath(path);
+                const list = path[path.length - 1];
+                const fullName = listNameFromPath(path);
+                const name = truncateListPath(path);
                 return (
                   <CommandItem
-                    key={l.id}
-                    value={l.id}
-                    keywords={[l.name, l.icon]}
+                    key={list.id}
+                    value={list.id}
+                    keywords={[list.name, list.icon]}
                     onSelect={onSelect}
-                    className="cursor-pointer"
+                    className="min-w-0 cursor-pointer"
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        isItemSelected(l.id) ? "opacity-100" : "opacity-0",
+                        isItemSelected(list.id) ? "opacity-100" : "opacity-0",
                       )}
                     />
-                    {name}
+                    <span className="truncate" title={fullName}>
+                      {name}
+                    </span>
                   </CommandItem>
                 );
               })}
@@ -178,8 +182,11 @@ function BookmarkListSingleSelector({
     (path) => path[path.length - 1].id === value,
   );
   const selectedListName = selectedListPath
-    ? listNameFromPath(selectedListPath)
+    ? truncateListPath(selectedListPath)
     : null;
+  const selectedListTitle = selectedListPath
+    ? listNameFromPath(selectedListPath)
+    : undefined;
   return (
     <ListSelectorComponent
       onSelect={onSelect}
@@ -196,10 +203,12 @@ function BookmarkListSingleSelector({
         role="combobox"
         aria-expanded={open}
         aria-controls={listboxId}
-        className={cn("w-full justify-between", className)}
+        className={cn("w-full min-w-0 justify-between", className)}
         disabled={disabled}
       >
-        {selectedListName || placeholder}
+        <span className="min-w-0 flex-1 truncate" title={selectedListTitle}>
+          {selectedListName || placeholder}
+        </span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
     </ListSelectorComponent>
@@ -272,26 +281,29 @@ function BookmarkListMultiSelector({
         {selectedListsPaths && selectedListsPaths.length > 0 ? (
           <>
             {selectedListsPaths.map((path) => {
-              const listName = listNameFromPath(path);
+              const listName = truncateListPath(path);
+              const fullListName = listNameFromPath(path);
               const listId = path.at(-1)?.id;
               return (
                 <div
                   key={listId}
-                  className="flex min-h-7 space-x-1 rounded bg-accent px-2"
+                  className="flex min-h-7 max-w-full space-x-1 rounded bg-accent px-2"
                 >
-                  <div className="m-auto flex gap-2">
-                    {listName}
+                  <div className="m-auto flex min-w-0 gap-2">
+                    <span className="truncate" title={fullListName}>
+                      {listName}
+                    </span>
                     <button
                       type="button"
                       disabled={disabled}
-                      className="cursor-pointer rounded-full outline-none ring-offset-background focus:ring-1 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed"
+                      className="shrink-0 cursor-pointer rounded-full outline-none ring-offset-background focus:ring-1 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed"
                       onClick={(e) => {
                         e.stopPropagation();
                         removeSelection(listId);
                       }}
                     >
                       <X className="h-3 w-3" />
-                      <span className="sr-only">Remove {listName}</span>
+                      <span className="sr-only">Remove {fullListName}</span>
                     </button>
                   </div>
                 </div>

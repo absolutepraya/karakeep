@@ -34,7 +34,7 @@ export default function TagModal({
         <div className="px-5 py-4 sm:px-6 sm:py-5">
           <BookmarkTagsEditor bookmark={bookmark} />
         </div>
-        <div className="sticky bottom-0 border-t border-border/70 bg-card px-5 py-4 sm:px-6">
+        <div className="sticky bottom-0 border-t border-border/70 bg-card px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:px-6 sm:py-4">
           <DialogClose asChild>
             <Button type="button" variant="secondary" className="h-11 w-full">
               {t("actions.close")}
