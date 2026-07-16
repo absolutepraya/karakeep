@@ -2,13 +2,17 @@ worktree_path = ".worktrees"
 port_offset_interval = 100
 max_slots = 9
 
-# Worktrees isolate source and dependencies, but intentionally share the root
-# development environment. start-dev.sh does not yet namespace its ports,
-# containers, or DATA_DIR by WT_WORKSPACE_NAME. Run the local dev stack from
-# only one worktree at a time.
+# Each worktree receives a separate environment, persisted-state copy, ports,
+# and Docker container names. setup-worktree.sh snapshots the main workspace's
+# local data, which can be refreshed from production with `pnpm prod:pull-state`
+# before creating a worktree.
+#
+# The generated .env is intentionally worktree-local and gitignored. Its
+# DATA_DIR and service endpoints use WT_PORT_BASE, preventing concurrent
+# worktrees from sharing state or ports.
 setup = [
   "pnpm install --frozen-lockfile",
-  "ln -sfn \"$WT_ROOT_PATH/.env\" .env",
+  "bash \"$WT_ROOT_PATH/scripts/setup-worktree.sh\"",
   "ln -sfn ../../.env apps/web/.env",
   "ln -sfn ../../.env apps/workers/.env",
   "ln -sfn ../../.env packages/db/.env",

@@ -15,6 +15,34 @@ esac
 DEV_DIR=".dev"
 mkdir -p "$DEV_DIR"
 
+# Worktrees receive KARAKEEP_PORT, MEILI_ADDR, and BROWSER_WEB_URL from their
+# generated .env. The main workspace retains the conventional defaults.
+WORKSPACE_NAME="${WT_WORKSPACE_NAME:-main}"
+WORKSPACE_SLUG="$(printf '%s' "$WORKSPACE_NAME" | tr -cs '[:alnum:]_.-' '-')"
+MEILI_CONTAINER="karakeep-${WORKSPACE_SLUG}-meilisearch"
+CHROME_CONTAINER="karakeep-${WORKSPACE_SLUG}-chrome"
+WEB_PORT="${KARAKEEP_PORT:-3000}"
+MEILI_PORT=7700
+
+if [ -f ".env" ]; then
+    _web_port=$(grep "^KARAKEEP_PORT=" .env | cut -d'=' -f2-)
+    case "$_web_port" in
+        ''|*[!0-9]*) ;;
+        *) WEB_PORT="$_web_port" ;;
+    esac
+
+    _meili_addr=$(grep "^MEILI_ADDR=" .env | cut -d'=' -f2-)
+    _meili_port="${_meili_addr##*:}"; _meili_port="${_meili_port%%/*}"
+    case "$_meili_port" in
+        ''|*[!0-9]*) ;;
+        *) MEILI_PORT="$_meili_port" ;;
+    esac
+fi
+
+case "$WEB_PORT" in
+    ''|*[!0-9]*) echo "Error: KARAKEEP_PORT must be a port number."; exit 1 ;;
+esac
+
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -35,14 +63,13 @@ kill_tree() {
     kill "$pid" 2>/dev/null
 }
 
-# Headless-Chrome host port: derived from BROWSER_WEB_URL in .env (default 9222), so
-# karakeep's Chrome can use a free port when another local Chrome already owns 9222.
+# Headless-Chrome host port: derived from BROWSER_WEB_URL in .env (default 9222).
 CHROME_PORT=9222
 if [ -f ".env" ]; then
     _bw=$(grep "^BROWSER_WEB_URL=" .env | cut -d'=' -f2-)
     _p="${_bw##*:}"; _p="${_p%%/*}"
     case "$_p" in
-        ''|*[!0-9]*) ;;          # not a port number — keep the default
+        ''|*[!0-9]*) ;;
         *) CHROME_PORT="$_p" ;;
     esac
 fi
@@ -59,18 +86,19 @@ if ! command_exists pnpm; then
     exit 1
 fi
 
-# Start Meilisearch if not already running
-if ! port_in_use 7700; then
-    echo "Starting Meilisearch..."
-    docker run -d -p 7700:7700 --name karakeep-meilisearch getmeili/meilisearch:v1.41.0
+# Start Meilisearch if not already running.
+if ! port_in_use "$MEILI_PORT"; then
+    echo "Starting Meilisearch on port $MEILI_PORT..."
+    docker run -d -p "$MEILI_PORT:7700" --name "$MEILI_CONTAINER" getmeili/meilisearch:v1.41.0
 else
-    echo "Meilisearch is already running on port 7700"
+    echo "Meilisearch is already running on port $MEILI_PORT"
 fi
 
 # Start Chrome if not already running
+# Start Chrome if not already running.
 if ! port_in_use "$CHROME_PORT"; then
     echo "Starting headless Chrome on port $CHROME_PORT..."
-    docker run -d -p "$CHROME_PORT:9222" --name karakeep-chrome gcr.io/zenika-hub/alpine-chrome:124 \
+    docker run -d -p "$CHROME_PORT:9222" --name "$CHROME_CONTAINER" gcr.io/zenika-hub/alpine-chrome:124 \
         --no-sandbox \
         --disable-gpu \
         --disable-dev-shm-usage \
@@ -103,10 +131,10 @@ pnpm run db:migrate
 
 echo "Starting web app and workers..."
 if [ "$DETACH" -eq 1 ]; then
-    nohup pnpm web > "$DEV_DIR/web.log" 2>&1 & WEB_PID=$!
+    nohup pnpm --filter @karakeep/web run dev -- --port "$WEB_PORT" > "$DEV_DIR/web.log" 2>&1 & WEB_PID=$!
     nohup pnpm workers > "$DEV_DIR/workers.log" 2>&1 & WORKERS_PID=$!
 else
-    pnpm web & WEB_PID=$!
+    pnpm --filter @karakeep/web run dev -- --port "$WEB_PORT" & WEB_PID=$!
     pnpm workers & WORKERS_PID=$!
 fi
 echo "$WEB_PID" > "$DEV_DIR/web.pid"
@@ -118,8 +146,8 @@ cleanup() {
     echo "Shutting down services..."
     kill_tree "$WEB_PID"
     kill_tree "$WORKERS_PID"
-    docker stop karakeep-meilisearch karakeep-chrome 2>/dev/null
-    docker rm karakeep-meilisearch karakeep-chrome 2>/dev/null
+    docker stop "$MEILI_CONTAINER" "$CHROME_CONTAINER" 2>/dev/null
+    docker rm "$MEILI_CONTAINER" "$CHROME_CONTAINER" 2>/dev/null
     rm -f "$DEV_DIR/web.pid" "$DEV_DIR/workers.pid"
     exit 0
 }
@@ -128,7 +156,7 @@ cleanup() {
 echo "Waiting for web app to start..."
 ATTEMPT=0
 while [ $ATTEMPT -lt 30 ]; do
-    if nc -z localhost 3000 2>/dev/null; then
+    if nc -z localhost "$WEB_PORT" 2>/dev/null; then
         break
     fi
     sleep 1
@@ -140,8 +168,8 @@ fi
 
 echo ""
 echo "Development environment is running!"
-echo "  Web app:         http://localhost:3000"
-echo "  Meilisearch:     http://localhost:7700"
+echo "  Web app:         http://localhost:$WEB_PORT"
+echo "  Meilisearch:     http://localhost:$MEILI_PORT"
 echo "  Chrome debugger: http://localhost:$CHROME_PORT"
 
 if [ "$DETACH" -eq 1 ]; then

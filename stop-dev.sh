@@ -5,6 +5,11 @@
 
 DEV_DIR=".dev"
 
+WORKSPACE_NAME="${WT_WORKSPACE_NAME:-main}"
+WORKSPACE_SLUG="$(printf '%s' "$WORKSPACE_NAME" | tr -cs '[:alnum:]_.-' '-')"
+MEILI_CONTAINER="karakeep-${WORKSPACE_SLUG}-meilisearch"
+CHROME_CONTAINER="karakeep-${WORKSPACE_SLUG}-chrome"
+
 # Recursively terminate a process and all its descendants (portable: macOS + Linux).
 kill_tree() {
     local pid="$1" child
@@ -34,7 +39,7 @@ stop_proc "web app" "web.pid"
 stop_proc "workers" "workers.pid"
 
 echo "Stopping Meilisearch + Chrome containers..."
-docker stop karakeep-meilisearch karakeep-chrome 2>/dev/null
-docker rm karakeep-meilisearch karakeep-chrome 2>/dev/null
+docker stop "$MEILI_CONTAINER" "$CHROME_CONTAINER" 2>/dev/null
+docker rm "$MEILI_CONTAINER" "$CHROME_CONTAINER" 2>/dev/null
 
 echo "Done. Dev environment stopped."
