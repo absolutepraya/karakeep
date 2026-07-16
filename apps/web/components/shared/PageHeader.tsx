@@ -8,6 +8,7 @@ export function PageHeader({
   titleAction,
   action,
   className,
+  variant = "default",
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -16,8 +17,11 @@ export function PageHeader({
   titleAction?: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
+  variant?: "default" | "settings";
 }) {
   const hasDescription = Boolean(description);
+  const usesSettingsLayout = variant === "settings";
+  const useLargeIcon = hasDescription || usesSettingsLayout;
 
   return (
     <div
@@ -30,14 +34,14 @@ export function PageHeader({
         <div
           className={cn(
             "flex gap-4",
-            hasDescription ? "items-start" : "items-center",
+            useLargeIcon ? "items-start" : "items-center",
           )}
         >
           {icon && (
             <div
               className={cn(
                 "shrink-0 items-center justify-center bg-muted text-muted-foreground",
-                hasDescription
+                useLargeIcon
                   ? "mt-0.5 flex size-14 rounded-2xl [&_svg]:size-7"
                   : "flex size-11 rounded-xl [&_svg]:size-[1.375rem]",
               )}
@@ -45,9 +49,7 @@ export function PageHeader({
               {icon}
             </div>
           )}
-          <div
-            className={cn("min-w-0", hasDescription && "space-y-1.5 pt-0.5")}
-          >
+          <div className={cn("min-w-0", useLargeIcon && "space-y-1.5 pt-0.5")}>
             <div className="flex min-w-0 items-center gap-2">
               <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight text-foreground">
                 {title}

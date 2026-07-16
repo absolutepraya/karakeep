@@ -29,6 +29,7 @@ export function SettingsPage({
         description={description}
         icon={icon}
         action={action}
+        variant="settings"
       />
       {children}
     </div>
