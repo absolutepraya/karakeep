@@ -23,8 +23,8 @@ import {
 import { useTRPC } from "@karakeep/shared-react/trpc";
 
 import { BookmarkListSelector } from "../lists/BookmarkListSelector";
+import { truncateListPath } from "../lists/listPath";
 import ArchiveBookmarkButton from "./action-buttons/ArchiveBookmarkButton";
-import { truncateListPath } from "./listPath";
 
 export default function ManageListsModal({
   bookmarkId,
