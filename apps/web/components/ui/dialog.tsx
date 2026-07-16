@@ -5,6 +5,222 @@ import { cn } from "@/lib/utils";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
+const TEXT_ENTRY_INPUT_TYPES: Record<string, true> = {
+  email: true,
+  number: true,
+  password: true,
+  search: true,
+  tel: true,
+  text: true,
+  url: true,
+};
+
+const FOCUSED_FIELD_CLEARANCE = 12;
+
+function isTextEntryControl(
+  element: EventTarget | null,
+): element is HTMLElement {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element instanceof HTMLTextAreaElement || element.isContentEditable) {
+    return true;
+  }
+
+  return (
+    element instanceof HTMLInputElement &&
+    TEXT_ENTRY_INPUT_TYPES[element.type] === true
+  );
+}
+
+function getFocusedControlRect(control: HTMLElement) {
+  if (control.isContentEditable) {
+    const selection = window.getSelection();
+    if (
+      selection?.rangeCount &&
+      selection.anchorNode &&
+      control.contains(selection.anchorNode)
+    ) {
+      const rects = selection.getRangeAt(0).getClientRects();
+      const rect = rects.item(rects.length - 1);
+      if (rect) return rect;
+    }
+  }
+
+  return control.getBoundingClientRect();
+}
+
+function getLowerOcclusionBoundary(dialog: HTMLElement, control: HTMLElement) {
+  const visualViewport = window.visualViewport;
+  let boundary = visualViewport
+    ? visualViewport.offsetTop + visualViewport.height
+    : window.innerHeight;
+  const dialogRect = dialog.getBoundingClientRect();
+
+  for (const element of dialog.querySelectorAll<HTMLElement>("*")) {
+    if (element === control || element.contains(control)) continue;
+    if (
+      !["fixed", "sticky"].includes(window.getComputedStyle(element).position)
+    ) {
+      continue;
+    }
+
+    const rect = element.getBoundingClientRect();
+    if (
+      rect.top < dialogRect.top + dialogRect.height / 2 ||
+      rect.top >= boundary ||
+      rect.bottom <= dialogRect.top
+    ) {
+      continue;
+    }
+
+    boundary = rect.top;
+  }
+
+  return boundary - FOCUSED_FIELD_CLEARANCE;
+}
+
+function getScrollableAncestors(control: HTMLElement, dialog: HTMLElement) {
+  const containers: HTMLElement[] = [];
+  let ancestor = control.parentElement;
+
+  while (ancestor) {
+    const overflowY = window.getComputedStyle(ancestor).overflowY;
+    if (
+      ["auto", "scroll", "overlay"].includes(overflowY) &&
+      ancestor.scrollHeight > ancestor.clientHeight
+    ) {
+      containers.push(ancestor);
+    }
+    if (ancestor === dialog) break;
+    ancestor = ancestor.parentElement;
+  }
+
+  return containers;
+}
+
+export function revealFocusedTextEntry(
+  dialog: HTMLElement,
+  control: HTMLElement,
+) {
+  if (!dialog.contains(control)) return;
+
+  const visualViewport = window.visualViewport;
+  const topBoundary =
+    (visualViewport?.offsetTop ?? 0) + FOCUSED_FIELD_CLEARANCE;
+
+  for (const container of getScrollableAncestors(control, dialog)) {
+    const controlRect = getFocusedControlRect(control);
+    const bottomBoundary = getLowerOcclusionBoundary(dialog, control);
+    const offset =
+      controlRect.bottom > bottomBoundary
+        ? controlRect.bottom - bottomBoundary
+        : controlRect.top < topBoundary
+          ? controlRect.top - topBoundary
+          : 0;
+
+    if (!offset) return;
+
+    const availableScroll =
+      offset > 0
+        ? container.scrollHeight - container.clientHeight - container.scrollTop
+        : -container.scrollTop;
+    const scrollAmount =
+      offset > 0
+        ? Math.min(offset, Math.max(availableScroll, 0))
+        : Math.max(offset, availableScroll);
+
+    if (!scrollAmount) return;
+    container.scrollTop += scrollAmount;
+    if (Math.abs(scrollAmount) === Math.abs(offset)) return;
+  }
+}
+
+function setForwardedRef<T>(ref: React.ForwardedRef<T>, value: T | null) {
+  if (typeof ref === "function") {
+    ref(value);
+  } else if (ref) {
+    ref.current = value;
+  }
+}
+
+function useFocusedFieldReveal(dialog: HTMLElement | null) {
+  const [activeControl, setActiveControl] = React.useState<HTMLElement | null>(
+    null,
+  );
+  const firstFrame = React.useRef<number | null>(null);
+  const secondFrame = React.useRef<number | null>(null);
+
+  const scheduleReveal = React.useCallback(
+    (control: HTMLElement) => {
+      if (!dialog) return;
+
+      if (firstFrame.current !== null) {
+        window.cancelAnimationFrame(firstFrame.current);
+      }
+      if (secondFrame.current !== null) {
+        window.cancelAnimationFrame(secondFrame.current);
+      }
+      firstFrame.current = window.requestAnimationFrame(() => {
+        secondFrame.current = window.requestAnimationFrame(() => {
+          if (document.activeElement === control) {
+            revealFocusedTextEntry(dialog, control);
+          }
+        });
+      });
+    },
+    [dialog],
+  );
+
+  React.useEffect(() => {
+    if (!dialog) return;
+
+    const control = document.activeElement;
+    if (isTextEntryControl(control) && dialog.contains(control)) {
+      setActiveControl(control);
+      scheduleReveal(control);
+    }
+  }, [dialog, scheduleReveal]);
+
+  React.useEffect(() => {
+    if (!dialog || !activeControl) return;
+
+    const visualViewport = window.visualViewport;
+    const onViewportChange = () => scheduleReveal(activeControl);
+    visualViewport?.addEventListener("resize", onViewportChange);
+    visualViewport?.addEventListener("scroll", onViewportChange);
+
+    const resizeObserver = new ResizeObserver(() =>
+      scheduleReveal(activeControl),
+    );
+    resizeObserver.observe(activeControl);
+
+    return () => {
+      visualViewport?.removeEventListener("resize", onViewportChange);
+      visualViewport?.removeEventListener("scroll", onViewportChange);
+      resizeObserver.disconnect();
+    };
+  }, [activeControl, dialog, scheduleReveal]);
+
+  React.useEffect(
+    () => () => {
+      if (firstFrame.current !== null) {
+        window.cancelAnimationFrame(firstFrame.current);
+      }
+      if (secondFrame.current !== null) {
+        window.cancelAnimationFrame(secondFrame.current);
+      }
+    },
+    [],
+  );
+
+  return {
+    onFocusCapture(event: React.FocusEvent<HTMLElement>) {
+      if (!isTextEntryControl(event.target)) return;
+      setActiveControl(event.target);
+      scheduleReveal(event.target);
+    },
+  };
+}
+
 const Dialog = DialogPrimitive.Root;
 
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -33,27 +249,48 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideCloseBtn?: boolean;
   }
->(({ className, children, hideCloseBtn = false, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "dialog-vv-center ease-(--ease-out) fixed left-[50%] z-50 grid w-full max-w-lg origin-center translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      {!hideCloseBtn && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="size-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      )}
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+>(
+  (
+    { className, children, hideCloseBtn = false, onFocusCapture, ...props },
+    ref,
+  ) => {
+    const [dialog, setDialog] = React.useState<HTMLElement | null>(null);
+    const focusedFieldReveal = useFocusedFieldReveal(dialog);
+    const setDialogRef = React.useCallback(
+      (node: React.ElementRef<typeof DialogPrimitive.Content> | null) => {
+        setDialog(node);
+        setForwardedRef(ref, node);
+      },
+      [ref],
+    );
+
+    return (
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          ref={setDialogRef}
+          className={cn(
+            "dialog-vv-center ease-(--ease-out) fixed left-[50%] z-50 grid w-full max-w-lg origin-center translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+            className,
+          )}
+          {...props}
+          onFocusCapture={(event) => {
+            onFocusCapture?.(event);
+            focusedFieldReveal.onFocusCapture(event);
+          }}
+        >
+          {children}
+          {!hideCloseBtn && (
+            <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+              <X className="size-4" />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    );
+  },
+);
 
 const ResponsiveDialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
@@ -64,7 +301,7 @@ const ResponsiveDialogContent = React.forwardRef<
   <DialogContent
     ref={ref}
     className={cn(
-      "bottom-0 left-0 top-auto max-h-[calc(var(--vvh)_*_0.75)] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-5 shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[calc(var(--vvo)+var(--vvh)/2)] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:p-6",
+      "bottom-[var(--vvb)] left-0 top-auto max-h-[calc(var(--vvh)-0.75rem)] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.75rem] border-x-0 border-b-0 bg-card p-5 shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[calc(var(--vvo)+var(--vvh)/2)] sm:max-h-[calc(var(--vvh)-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:p-6",
       className,
     )}
     {...props}

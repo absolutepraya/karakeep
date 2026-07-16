@@ -3,15 +3,13 @@
 import { useEffect } from "react";
 
 /**
- * Keeps `--vvh` (visual-viewport height) and `--vvo` (its top offset) on the
- * <html> element in sync with the actual visible area.
+ * Keeps `--vvh` (visual-viewport height), `--vvo` (its top offset), and
+ * `--vvb` (the layout-viewport space below it) in sync with the visible area.
  *
- * iOS Safari does NOT shrink the layout viewport when the on-screen keyboard
- * opens — it just overlays it. A viewport-centered dialog therefore ends up
- * half-hidden behind the keyboard. Dialogs read these vars (see the
- * `.dialog-vv-center` rule in globals.css) to re-center within the *visible*
- * region and cap their height instead. On desktop / no-keyboard the vars equal
- * the full window, so centering is unchanged.
+ * iOS Safari does not shrink the layout viewport when the on-screen keyboard
+ * opens. Centered dialogs use the visible viewport's size and offset; bottom
+ * sheets use `--vvb` to keep their lower edge above the keyboard. On desktop
+ * and without a keyboard, the vars describe the full window.
  */
 export default function VisualViewportSync() {
   useEffect(() => {
@@ -21,6 +19,10 @@ export default function VisualViewportSync() {
     const sync = () => {
       root.style.setProperty("--vvh", `${vv.height}px`);
       root.style.setProperty("--vvo", `${vv.offsetTop}px`);
+      root.style.setProperty(
+        "--vvb",
+        `${Math.max(window.innerHeight - vv.height - vv.offsetTop, 0)}px`,
+      );
     };
     sync();
     vv.addEventListener("resize", sync);
@@ -30,6 +32,7 @@ export default function VisualViewportSync() {
       vv.removeEventListener("scroll", sync);
       root.style.removeProperty("--vvh");
       root.style.removeProperty("--vvo");
+      root.style.removeProperty("--vvb");
     };
   }, []);
   return null;

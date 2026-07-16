@@ -355,13 +355,14 @@
 }
 
 /* ============================================================
-   Visual-viewport vars — kept in sync by <VisualViewportSync> so dialogs
-   can re-center above the iOS on-screen keyboard. Fallbacks match the old
-   full-viewport centering for SSR / no-JS / desktop.
+   Visual-viewport vars: kept in sync by <VisualViewportSync> so dialogs can
+   stay visible above the iOS on-screen keyboard. Fallbacks match the old
+   full-viewport layout for SSR, no-JS, and desktop.
    ============================================================ */
 :root {
   --vvh: 100dvh;
   --vvo: 0px;
+  --vvb: 0px;
 }
 
 /* Center a fixed dialog within the *visible* viewport (above the keyboard on
