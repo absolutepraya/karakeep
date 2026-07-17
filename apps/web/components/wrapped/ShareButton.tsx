@@ -38,6 +38,7 @@ export function ShareButton({
 
       // Try native share API first (works well on mobile)
       if (
+        typeof navigator !== "undefined" &&
         typeof navigator.share !== "undefined" &&
         typeof navigator.canShare !== "undefined"
       ) {
@@ -67,6 +68,7 @@ export function ShareButton({
   };
 
   const isNativeShareAvailable =
+    typeof navigator !== "undefined" &&
     typeof navigator.share !== "undefined" &&
     typeof navigator.canShare !== "undefined";
 

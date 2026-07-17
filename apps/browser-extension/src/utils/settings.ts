@@ -42,8 +42,10 @@ export default function usePluginSettings() {
   const [isInit, setIsInit] = React.useState(false);
 
   React.useEffect(() => {
+    let cancelled = false;
     if (!isInit) {
-      getPluginSettings().then((settings) => {
+      void getPluginSettings().then((settings) => {
+        if (cancelled) return;
         setSettingsInternal(settings);
         setIsInit(true);
       });
@@ -63,6 +65,7 @@ export default function usePluginSettings() {
     };
     STORAGE.onChanged.addListener(onChange);
     return () => {
+      cancelled = true;
       STORAGE.onChanged.removeListener(onChange);
     };
   }, []);

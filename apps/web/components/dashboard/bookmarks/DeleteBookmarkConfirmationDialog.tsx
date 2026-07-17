@@ -1,4 +1,4 @@
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/action-button";
 import ActionConfirmingDialog from "@/components/ui/action-confirming-dialog";
 import { useTranslation } from "@/lib/i18n/client";
@@ -18,7 +18,6 @@ export default function DeleteBookmarkConfirmationDialog({
   setOpen: (v: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const currentPath = usePathname();
   const router = useRouter();
 
   const { scheduleDelete, pendingBookmarkIds } = useUndoableBookmarkDeletion();
@@ -37,7 +36,7 @@ export default function DeleteBookmarkConfirmationDialog({
           onClick={() => {
             scheduleDelete(bookmark.id);
             setOpen(false);
-            if (currentPath.includes(bookmark.id)) {
+            if (window.location.pathname.includes(bookmark.id)) {
               router.push("/dashboard/bookmarks");
             }
           }}

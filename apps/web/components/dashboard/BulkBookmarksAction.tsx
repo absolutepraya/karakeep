@@ -250,6 +250,8 @@ export default function BulkBookmarksAction() {
     },
   ];
 
+  const pendingBookmarkIdSet = new Set(pendingBookmarkIds);
+
   return (
     <div>
       <ActionConfirmingDialog
@@ -262,7 +264,7 @@ export default function BulkBookmarksAction() {
             type="button"
             variant="destructive"
             loading={selectedBookmarks.some((bookmark) =>
-              pendingBookmarkIds.includes(bookmark.id),
+              pendingBookmarkIdSet.has(bookmark.id),
             )}
             onClick={() => deleteBookmarks()}
           >

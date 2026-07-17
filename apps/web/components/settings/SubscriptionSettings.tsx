@@ -88,6 +88,7 @@ export default function SubscriptionSettings() {
       year: "numeric",
       month: "long",
       day: "numeric",
+      timeZone: "UTC",
     }).format(date);
   };
 

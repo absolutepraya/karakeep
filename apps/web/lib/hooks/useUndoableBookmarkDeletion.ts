@@ -22,8 +22,9 @@ export function useUndoableBookmarkDeletion() {
 
   const scheduleDeletes = useCallback(
     (bookmarkIds: string[]) => {
+      const pendingBookmarkIdSet = new Set(pendingBookmarkIds);
       const deletableBookmarkIds = bookmarkIds.filter(
-        (bookmarkId) => !pendingBookmarkIds.includes(bookmarkId),
+        (bookmarkId) => !pendingBookmarkIdSet.has(bookmarkId),
       );
       if (deletableBookmarkIds.length === 0) {
         return;

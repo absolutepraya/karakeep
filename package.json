@@ -31,8 +31,9 @@
     "preflight": "turbo run --no-daemon typecheck lint format",
     "preflight:fix": "turbo run --no-daemon typecheck lint:fix format:fix",
     "knip": "knip",
-    "doctor": "react-doctor --project @karakeep/web,@karakeep/browser-extension,@karakeep/mobile,@karakeep/landing,@karakeep/shared-react",
-    "doctor:staged": "react-doctor --project @karakeep/web,@karakeep/browser-extension,@karakeep/mobile,@karakeep/landing,@karakeep/shared-react --staged --no-score"
+    "doctor": "react-doctor --project @karakeep/web,@karakeep/browser-extension,@karakeep/mobile,@karakeep/landing,@karakeep/shared-react --scope full --no-score --blocking none",
+    "doctor:staged": "node scripts/run-react-doctor-staged.mjs",
+    "doctor:ci": "react-doctor --project @karakeep/web,@karakeep/browser-extension,@karakeep/mobile,@karakeep/landing,@karakeep/shared-react --scope full --blocking none --json | node scripts/check-react-doctor-score.mjs 99"
   },
   "dependencies": {
     "husky": "^9.0.11"
@@ -42,7 +43,7 @@
     "knip": "^6.15.0",
     "oxfmt": "^0.45.0",
     "oxlint": "^1.60.0",
-    "react-doctor": "^0.2.16",
+    "react-doctor": "0.7.8",
     "sherif": "^1.6.1",
     "turbo": "^2.5.5"
   },

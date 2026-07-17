@@ -16,14 +16,18 @@ function useSearchQuery() {
   const pathname = usePathname();
   const lastQuery = useRef(searchQuery);
 
-  // Only update the effective search query when on the search page.
-  // This prevents the query from resetting when intercepting routes
-  // change the URL (e.g., opening a bookmark preview dialog).
-  if (pathname.startsWith("/dashboard/search")) {
-    lastQuery.current = searchQuery;
-  }
+  const effectiveQuery = pathname.startsWith("/dashboard/search")
+    ? searchQuery
+    : lastQuery.current;
 
-  const effectiveQuery = lastQuery.current;
+  // Keep the most recent search query while an intercepting route changes the
+  // URL away from the search page.
+  useEffect(() => {
+    if (pathname.startsWith("/dashboard/search")) {
+      lastQuery.current = searchQuery;
+    }
+  }, [pathname, searchQuery]);
+
   const parsed = useMemo(
     () => parseSearchQuery(effectiveQuery),
     [effectiveQuery],

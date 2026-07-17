@@ -173,7 +173,6 @@ jobs:
 
   react-doctor:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -182,5 +181,5 @@ jobs:
       - name: Setup
         uses: ./tooling/github/setup
 
-      - name: React Doctor (React packages, report-only)
-        run: pnpm doctor --annotations
+      - name: "React Doctor (minimum score: 99)"
+        run: pnpm doctor:ci

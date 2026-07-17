@@ -17,7 +17,7 @@ import {
   ReaderSettingsPartial,
 } from "@karakeep/shared/types/readers";
 
-const LOCAL_STORAGE_KEY = "karakeep-reader-settings";
+const LOCAL_STORAGE_KEY = "karakeep-reader-settings:v1";
 
 function getLocalOverridesFromStorage(): ReaderSettingsPartial {
   if (typeof window === "undefined") return {};
