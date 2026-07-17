@@ -150,6 +150,7 @@ export const WrappedContent = forwardRef<HTMLDivElement, WrappedContentProps>(
                       ).toLocaleDateString("en-US", {
                         month: "long",
                         day: "numeric",
+                        timeZone: "UTC",
                       })}
                     </p>
                     {stats.firstBookmark.title && (
@@ -178,6 +179,7 @@ export const WrappedContent = forwardRef<HTMLDivElement, WrappedContentProps>(
                         {
                           month: "short",
                           day: "numeric",
+                          timeZone: "UTC",
                         },
                       )}
                     </p>

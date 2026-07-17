@@ -33,44 +33,47 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
   const readingProgressAnchor = progressData?.readingProgressAnchor;
   const readingProgressPercent = progressData?.readingProgressPercent;
 
-  // Capture initial reading progress on first load — stays stable across re-fetches
-  const initialProgressRef = useRef<{
+  // Capture the first loaded progress value, then retain it across query
+  // refetches. Effects keep render pure for concurrent React work.
+  const [initialProgress, setInitialProgress] = useState<{
     offset: number | null;
     anchor: string | null;
     percent: number | null;
   } | null>(null);
-  const previousBookmarkIdRef = useRef<string | null>(null);
   const lastSavedOffset = useRef<number | null>(null);
-
-  if (previousBookmarkIdRef.current !== bookmarkId) {
-    previousBookmarkIdRef.current = bookmarkId;
-    initialProgressRef.current = null;
-    lastSavedOffset.current = null;
-  }
-
-  // Only capture once data has loaded (offset transitions from undefined to a value)
-  if (!initialProgressRef.current && readingProgressOffset !== undefined) {
-    initialProgressRef.current = {
-      offset: readingProgressOffset ?? null,
-      anchor: readingProgressAnchor ?? null,
-      percent: readingProgressPercent ?? null,
-    };
-  }
-
-  if (
-    lastSavedOffset.current === null &&
-    initialProgressRef.current?.offset != null
-  ) {
-    lastSavedOffset.current = initialProgressRef.current.offset;
-  }
-
-  const initialOffset = initialProgressRef.current?.offset ?? null;
-  const initialAnchor = initialProgressRef.current?.anchor ?? null;
-  const initialPercent = initialProgressRef.current?.percent ?? null;
-
-  // Banner state
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [restoreRequested, setRestoreRequested] = useState(false);
+
+  useEffect(() => {
+    setInitialProgress(null);
+    lastSavedOffset.current = null;
+    setBannerDismissed(false);
+    setRestoreRequested(false);
+  }, [bookmarkId]);
+
+  useEffect(() => {
+    if (readingProgressOffset === undefined) return;
+
+    setInitialProgress(
+      (current) =>
+        current ?? {
+          offset: readingProgressOffset ?? null,
+          anchor: readingProgressAnchor ?? null,
+          percent: readingProgressPercent ?? null,
+        },
+    );
+  }, [readingProgressAnchor, readingProgressOffset, readingProgressPercent]);
+
+  useEffect(() => {
+    if (lastSavedOffset.current === null && initialProgress?.offset != null) {
+      lastSavedOffset.current = initialProgress.offset;
+    }
+  }, [initialProgress]);
+
+  const initialOffset = initialProgress?.offset ?? null;
+  const initialAnchor = initialProgress?.anchor ?? null;
+  const initialPercent = initialProgress?.percent ?? null;
+
   const showBanner =
     !!initialOffset &&
     initialOffset > 0 &&
@@ -78,14 +81,6 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
     initialPercent >= 10 &&
     initialPercent < 100 &&
     !bannerDismissed;
-
-  const bannerVisibleRef = useRef(false);
-  bannerVisibleRef.current = showBanner;
-
-  useEffect(() => {
-    setBannerDismissed(false);
-    setRestoreRequested(false);
-  }, [bookmarkId]);
 
   // Save mutation
   const { mutate: updateProgress } = useMutation(
@@ -101,7 +96,7 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
   // Lazy save — called by ScrollProgressTracker on idle/visibility/beforeunload/unmount
   const onSavePosition = useCallback(
     (position: ReadingPosition) => {
-      if (bannerVisibleRef.current) return;
+      if (showBanner) return;
       if (lastSavedOffset.current === position.offset) return;
       lastSavedOffset.current = position.offset;
       updateProgress({
@@ -111,15 +106,17 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
         readingProgressPercent: position.percent,
       });
     },
-    [bookmarkId, updateProgress],
+    [bookmarkId, showBanner, updateProgress],
   );
 
-  // Responsive — called on every throttled scroll for banner dismissal
-  const onScrollPositionChange = useCallback((position: ReadingPosition) => {
-    if (bannerVisibleRef.current && position.percent > 15) {
-      setBannerDismissed(true);
-    }
-  }, []);
+  const onScrollPositionChange = useCallback(
+    (position: ReadingPosition) => {
+      if (showBanner && position.percent > 15) {
+        setBannerDismissed(true);
+      }
+    },
+    [showBanner],
+  );
 
   const onContinue = useCallback(() => {
     setRestoreRequested(true);

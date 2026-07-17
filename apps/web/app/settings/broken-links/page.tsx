@@ -34,9 +34,10 @@ export default function BrokenLinksPage() {
   );
 
   const { scheduleDelete, pendingBookmarkIds } = useUndoableBookmarkDeletion();
+  const pendingBookmarkIdSet = new Set(pendingBookmarkIds);
   const visibleBookmarks =
     data?.bookmarks.filter(
-      (bookmark) => !pendingBookmarkIds.includes(bookmark.id),
+      (bookmark) => !pendingBookmarkIdSet.has(bookmark.id),
     ) ?? [];
 
   const { mutate: recrawlBookmark, isPending: isRecrawling } =
@@ -114,7 +115,7 @@ export default function BrokenLinksPage() {
                     <ActionButton
                       variant="ghostDestructive"
                       onClick={() => scheduleDelete(b.id)}
-                      loading={pendingBookmarkIds.includes(b.id)}
+                      loading={pendingBookmarkIdSet.has(b.id)}
                       className="flex items-center gap-2"
                     >
                       <Trash2 className="size-4" />

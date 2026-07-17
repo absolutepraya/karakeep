@@ -32,6 +32,22 @@
           "react-doctor/no-static-element-interactions",
           "react-doctor/click-events-have-key-events"
         ]
+      },
+      {
+        "files": ["**/components/BookmarkHtmlHighlighter.tsx"],
+        "rules": ["react-doctor/dangerous-html-sink"]
+      },
+      {
+        "files": ["**/components/signin/OAuthAutoRedirect.tsx"],
+        "rules": ["react-doctor/url-prefilled-privileged-action"]
+      },
+      {
+        "files": ["**/src/utils/settings.ts"],
+        "rules": ["react-doctor/effect-needs-cleanup"]
+      },
+      {
+        "files": ["**/lib/upload.ts"],
+        "rules": ["react-doctor/query-mutation-missing-invalidation"]
       }
     ]
   },

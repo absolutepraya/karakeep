@@ -46,10 +46,11 @@ const useBulkTagActionsStore = create<TagState>((set, get) => ({
   },
 
   setVisibleTagIds: (visibleTagIds: string[]) => {
+    const visibleTagIdSet = new Set(visibleTagIds);
     set({
       visibleTagIds,
       selectedTagIds: get().selectedTagIds.filter((id) =>
-        visibleTagIds.includes(id),
+        visibleTagIdSet.has(id),
       ),
     });
   },

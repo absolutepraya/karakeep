@@ -225,6 +225,7 @@ export default function AllLists({
   // a flat name match. An empty query falls back to the normal tree.
   const trimmedQuery = query.trim().toLowerCase();
   const isSearching = trimmedQuery.length > 0;
+  const viewedListId = pathName.split("/").at(-1);
   // Search results start at each matched folder (the top-most match), not the
   // tree root: searching "B" in A > B > C yields a tree rooted at B with C
   // collapsed underneath; the ancestor A is not shown. A match nested under
@@ -248,7 +249,7 @@ export default function AllLists({
   // Check if any shared list is currently being viewed
   const isViewingSharedList = useMemo(() => {
     return lists.data.some(
-      (list) => list.userRole !== "owner" && pathName.includes(list.id),
+      (list) => list.userRole !== "owner" && list.id === viewedListId,
     );
   }, [lists.data, pathName]);
 

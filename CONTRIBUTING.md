@@ -65,10 +65,11 @@ Depending on the change, also run:
 pnpm test
 pnpm knip
 pnpm doctor
+pnpm doctor:staged
 ```
 
 Notes:
-- `react.doctor` is advisory in pre-commit and may print noisy temp-package errors locally.
+- `pnpm doctor` and `pnpm doctor:staged` are advisory local checks. CI requires a React Doctor score of at least 99 through `pnpm doctor:ci`; see [`docs/react-doctor.md`](docs/react-doctor.md) for the baseline and accepted tool limitations.
 - `knip` is useful for repository cleanup, but is non-blocking in CI.
 
 ## Change expectations

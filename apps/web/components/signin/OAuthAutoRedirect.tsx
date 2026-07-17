@@ -13,7 +13,11 @@ export default function OAuthAutoRedirect({
   const clientConfig = useClientConfig();
   const searchParams = useSearchParams();
   const hasError = searchParams.has("error");
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = searchParams.get("callbackUrl");
+  const safeCallbackUrl =
+    callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//")
+      ? callbackUrl
+      : "/";
 
   const shouldRedirect =
     clientConfig.auth.oauthAutoRedirect &&
@@ -26,12 +30,12 @@ export default function OAuthAutoRedirect({
   useEffect(() => {
     if (shouldRedirect) {
       signIn(oauthProviderId, {
-        callbackUrl,
+        callbackUrl: safeCallbackUrl,
       });
     } else {
       setIsRedirecting(false);
     }
-  }, [shouldRedirect, oauthProviderId, callbackUrl]);
+  }, [shouldRedirect, oauthProviderId, safeCallbackUrl]);
 
   if (isRedirecting) {
     return (

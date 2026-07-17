@@ -44,26 +44,19 @@ export default function ReaderSettingsPage() {
   const [displayLineHeight, setDisplayLineHeight] =
     useState(effectiveLineHeight);
 
-  // Refs to track latest display values (avoids stale closures in callbacks)
-  const displayFontSizeRef = useRef(displayFontSize);
-  displayFontSizeRef.current = displayFontSize;
-  const displayLineHeightRef = useRef(displayLineHeight);
-  displayLineHeightRef.current = displayLineHeight;
-
   // Ref for the WebView preview component
   const previewRef = useRef<ReaderPreviewRef>(null);
 
-  // Functions to update preview styles
   const updatePreviewFontSize = useCallback(
     (fontSize: number) => {
       setDisplayFontSize(fontSize);
       previewRef.current?.updateStyles(
         effectiveFontFamily,
         fontSize,
-        displayLineHeightRef.current,
+        displayLineHeight,
       );
     },
-    [effectiveFontFamily],
+    [displayLineHeight, effectiveFontFamily],
   );
 
   const updatePreviewLineHeight = useCallback(
@@ -71,11 +64,11 @@ export default function ReaderSettingsPage() {
       setDisplayLineHeight(lineHeight);
       previewRef.current?.updateStyles(
         effectiveFontFamily,
-        displayFontSizeRef.current,
+        displayFontSize,
         lineHeight,
       );
     },
-    [effectiveFontFamily],
+    [displayFontSize, effectiveFontFamily],
   );
 
   // Sync display values with effective settings

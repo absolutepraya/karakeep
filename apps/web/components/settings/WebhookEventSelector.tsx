@@ -29,6 +29,7 @@ export function WebhookEventSelector({
 }) {
   const listboxId = useId();
   const [open, setOpen] = useState(false);
+  const selectedEventSet = new Set(value);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -54,14 +55,14 @@ export function WebhookEventSelector({
                   key={eventType}
                   value={eventType}
                   onSelect={() => {
-                    const newEvents = value.includes(eventType)
+                    const newEvents = selectedEventSet.has(eventType)
                       ? value.filter((e) => e !== eventType)
                       : [...value, eventType];
                     onChange(newEvents);
                   }}
                 >
                   {eventType}
-                  {value?.includes(eventType) && (
+                  {selectedEventSet.has(eventType) && (
                     <Check className="ml-auto h-4 w-4" />
                   )}
                 </CommandItem>

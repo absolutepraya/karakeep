@@ -102,6 +102,18 @@ export function useBookmarkImport() {
       return result;
     },
     onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries(
+          api.importSessions.listImportSessions.pathFilter(),
+        ),
+        queryClient.invalidateQueries(
+          api.importSessions.getImportSessionStats.pathFilter(),
+        ),
+        queryClient.invalidateQueries(
+          api.importSessions.getImportSessionResults.pathFilter(),
+        ),
+      ]);
+
       setImportProgress(null);
 
       if (result.counts.total === 0) {

@@ -226,12 +226,13 @@ function BookmarkListMultiSelector({
 }: MultiSelectionProps & DataProps & { disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const listboxId = useId();
+  const selectedListIdSet = new Set(value);
   const onSelect = (currentValue: string) => {
     if (disabled) {
       return;
     }
-    const newValue = value?.includes(currentValue)
-      ? value.filter((id) => id !== currentValue)
+    const newValue = selectedListIdSet.has(currentValue)
+      ? (value ?? []).filter((id) => id !== currentValue)
       : [...(value ?? []), currentValue];
     onChange(newValue);
   };
@@ -241,10 +242,10 @@ function BookmarkListMultiSelector({
     }
   };
 
-  const isItemSelected = (id: string) => !!value?.includes(id);
+  const isItemSelected = (id: string) => selectedListIdSet.has(id);
 
   const selectedListsPaths = allPaths?.filter((path) =>
-    value?.includes(path[path.length - 1].id),
+    selectedListIdSet.has(path[path.length - 1].id),
   );
   return (
     <ListSelectorComponent
@@ -326,12 +327,14 @@ export function BookmarkListSelector(props: BookmarkListSelectorProps) {
     ...selectorProps
   } = props;
   let { allPaths } = data ?? {};
+  const hiddenBookmarkIdSet = new Set(hideBookmarkIds);
+  const listTypeSet = new Set(listTypes);
   allPaths = allPaths?.filter((path) => {
     const lastItem = path[path.length - 1];
-    if (hideBookmarkIds.includes(lastItem.id)) {
-      return false;
-    }
-    if (!listTypes.includes(lastItem.type)) {
+    if (
+      hiddenBookmarkIdSet.has(lastItem.id) ||
+      !listTypeSet.has(lastItem.type)
+    ) {
       return false;
     }
     // Hide lists where user is a viewer (can't add/remove bookmarks)
@@ -341,7 +344,7 @@ export function BookmarkListSelector(props: BookmarkListSelectorProps) {
     if (!hideSubtreeOf) {
       return true;
     }
-    return !path.map((p) => p.id).includes(hideSubtreeOf);
+    return !path.some((item) => item.id === hideSubtreeOf);
   });
 
   return selectorProps.multiSelect ? (

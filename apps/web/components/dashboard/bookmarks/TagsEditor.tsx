@@ -120,6 +120,7 @@ export function TagsEditor({
   );
 
   const selectedValues = optimisticTags.map((tag) => tag.id);
+  const selectedValueSet = new Set(selectedValues);
 
   // Add "create new" option if input doesn't match any existing option
   const trimmedInputValue = inputValue.trim();
@@ -254,7 +255,7 @@ export function TagsEditor({
     }
 
     // If already selected, remove it
-    if (selectedValues.includes(option.id)) {
+    if (selectedValueSet.has(option.id)) {
       void onChange({
         action: "remove-value",
         id: option.id,
@@ -390,7 +391,7 @@ export function TagsEditor({
               ) : (
                 <CommandGroup>
                   {displayedOptions.map((option) => {
-                    const isSelected = selectedValues.includes(option.id);
+                    const isSelected = selectedValueSet.has(option.id);
                     return (
                       <CommandItem
                         key={

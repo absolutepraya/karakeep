@@ -23,8 +23,10 @@ export default function ServiceWorkerRegistration() {
   const sessionIdRef = useRef(session?.user?.id ?? null);
   const hasClearedUserCachesRef = useRef(false);
 
-  sessionStatusRef.current = status;
-  sessionIdRef.current = session?.user?.id ?? null;
+  useEffect(() => {
+    sessionStatusRef.current = status;
+    sessionIdRef.current = session?.user?.id ?? null;
+  }, [session?.user?.id, status]);
 
   const clearUserCaches = () => {
     if (hasClearedUserCachesRef.current || !("serviceWorker" in navigator)) {
