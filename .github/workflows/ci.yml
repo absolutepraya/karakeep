@@ -77,6 +77,9 @@ jobs:
         run: pnpm typecheck
   tests:
     runs-on: ubuntu-latest
+    # E2E builds the complete AIO image. Cap the job so a runner or Docker
+    # BuildKit stall fails with usable logs instead of consuming six hours.
+    timeout-minutes: 30
     steps:
       # Fork divergence: the E2E job builds the full AIO Docker image (Rust monolith +
       # full monorepo + native modules) plus several sidecar containers, which exhausts
@@ -111,6 +114,9 @@ jobs:
 
       - name: E2E Tests
         working-directory: packages/e2e_tests
+        env:
+          # Keep the last active Docker build step visible if E2E startup fails.
+          BUILDKIT_PROGRESS: plain
         run: pnpm test
 
       - name: Upload Docker Logs
@@ -148,11 +154,10 @@ jobs:
             echo "✅ Generated files are up to date!"
           fi
 
-  # Non-blocking quality reports: they surface findings but never fail the build
-  # (continue-on-error). Tighten to blocking once the findings are triaged.
+  # Non-blocking quality reports: they surface findings without making CI fail.
+  # Tighten Knip to blocking once its existing findings are triaged.
   knip:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -161,8 +166,10 @@ jobs:
       - name: Setup
         uses: ./tooling/github/setup
 
-      - name: Knip (unused files / deps / exports)
-        run: pnpm knip
+      - name: Knip (unused files / deps / exports, report-only)
+        # The existing baseline is intentionally advisory. Keep its findings in
+        # the log and Actions annotations without making the check non-green.
+        run: pnpm knip || echo "::warning title=Knip findings::Knip reported existing unused-code findings. See this step's log for details."
 
   react-doctor:
     runs-on: ubuntu-latest
