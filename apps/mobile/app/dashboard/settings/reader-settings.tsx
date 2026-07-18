@@ -44,39 +44,46 @@ export default function ReaderSettingsPage() {
   const [displayLineHeight, setDisplayLineHeight] =
     useState(effectiveLineHeight);
 
+  const displayFontSizeRef = useRef(displayFontSize);
+  const displayLineHeightRef = useRef(displayLineHeight);
+
   // Ref for the WebView preview component
   const previewRef = useRef<ReaderPreviewRef>(null);
 
   const updatePreviewFontSize = useCallback(
     (fontSize: number) => {
+      displayFontSizeRef.current = fontSize;
       setDisplayFontSize(fontSize);
       previewRef.current?.updateStyles(
         effectiveFontFamily,
         fontSize,
-        displayLineHeight,
+        displayLineHeightRef.current,
       );
     },
-    [displayLineHeight, effectiveFontFamily],
+    [effectiveFontFamily],
   );
 
   const updatePreviewLineHeight = useCallback(
     (lineHeight: number) => {
+      displayLineHeightRef.current = lineHeight;
       setDisplayLineHeight(lineHeight);
       previewRef.current?.updateStyles(
         effectiveFontFamily,
-        displayFontSize,
+        displayFontSizeRef.current,
         lineHeight,
       );
     },
-    [displayFontSize, effectiveFontFamily],
+    [effectiveFontFamily],
   );
 
   // Sync display values with effective settings
   useEffect(() => {
+    displayFontSizeRef.current = effectiveFontSize;
     setDisplayFontSize(effectiveFontSize);
   }, [effectiveFontSize]);
 
   useEffect(() => {
+    displayLineHeightRef.current = effectiveLineHeight;
     setDisplayLineHeight(effectiveLineHeight);
   }, [effectiveLineHeight]);
 

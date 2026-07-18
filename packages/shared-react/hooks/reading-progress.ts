@@ -36,43 +36,67 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
   // Capture the first loaded progress value, then retain it across query
   // refetches. Effects keep render pure for concurrent React work.
   const [initialProgress, setInitialProgress] = useState<{
+    bookmarkId: string;
     offset: number | null;
     anchor: string | null;
     percent: number | null;
   } | null>(null);
-  const lastSavedOffset = useRef<number | null>(null);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [restoreRequested, setRestoreRequested] = useState(false);
+  const lastSavedPosition = useRef<{
+    bookmarkId: string;
+    offset: number;
+  } | null>(null);
+  const [bannerDismissedBookmarkId, setBannerDismissedBookmarkId] = useState<
+    string | null
+  >(null);
+  const [restoreRequestedBookmarkId, setRestoreRequestedBookmarkId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
-    setInitialProgress(null);
-    lastSavedOffset.current = null;
-    setBannerDismissed(false);
-    setRestoreRequested(false);
+    lastSavedPosition.current = null;
+    setBannerDismissedBookmarkId(null);
+    setRestoreRequestedBookmarkId(null);
   }, [bookmarkId]);
 
   useEffect(() => {
     if (readingProgressOffset === undefined) return;
 
-    setInitialProgress(
-      (current) =>
-        current ?? {
-          offset: readingProgressOffset ?? null,
-          anchor: readingProgressAnchor ?? null,
-          percent: readingProgressPercent ?? null,
-        },
+    setInitialProgress((current) =>
+      current?.bookmarkId === bookmarkId
+        ? current
+        : {
+            bookmarkId,
+            offset: readingProgressOffset ?? null,
+            anchor: readingProgressAnchor ?? null,
+            percent: readingProgressPercent ?? null,
+          },
     );
-  }, [readingProgressAnchor, readingProgressOffset, readingProgressPercent]);
+  }, [
+    bookmarkId,
+    readingProgressAnchor,
+    readingProgressOffset,
+    readingProgressPercent,
+  ]);
 
   useEffect(() => {
-    if (lastSavedOffset.current === null && initialProgress?.offset != null) {
-      lastSavedOffset.current = initialProgress.offset;
+    if (
+      initialProgress?.bookmarkId === bookmarkId &&
+      initialProgress.offset != null &&
+      lastSavedPosition.current?.bookmarkId !== bookmarkId
+    ) {
+      lastSavedPosition.current = {
+        bookmarkId,
+        offset: initialProgress.offset,
+      };
     }
-  }, [initialProgress]);
+  }, [bookmarkId, initialProgress]);
 
-  const initialOffset = initialProgress?.offset ?? null;
-  const initialAnchor = initialProgress?.anchor ?? null;
-  const initialPercent = initialProgress?.percent ?? null;
+  const activeInitialProgress =
+    initialProgress?.bookmarkId === bookmarkId ? initialProgress : null;
+  const initialOffset = activeInitialProgress?.offset ?? null;
+  const initialAnchor = activeInitialProgress?.anchor ?? null;
+  const initialPercent = activeInitialProgress?.percent ?? null;
+  const bannerDismissed = bannerDismissedBookmarkId === bookmarkId;
 
   const showBanner =
     !!initialOffset &&
@@ -97,8 +121,13 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
   const onSavePosition = useCallback(
     (position: ReadingPosition) => {
       if (showBanner) return;
-      if (lastSavedOffset.current === position.offset) return;
-      lastSavedOffset.current = position.offset;
+      if (
+        lastSavedPosition.current?.bookmarkId === bookmarkId &&
+        lastSavedPosition.current.offset === position.offset
+      ) {
+        return;
+      }
+      lastSavedPosition.current = { bookmarkId, offset: position.offset };
       updateProgress({
         bookmarkId,
         readingProgressOffset: position.offset,
@@ -112,20 +141,20 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
   const onScrollPositionChange = useCallback(
     (position: ReadingPosition) => {
       if (showBanner && position.percent > 15) {
-        setBannerDismissed(true);
+        setBannerDismissedBookmarkId(bookmarkId);
       }
     },
-    [showBanner],
+    [bookmarkId, showBanner],
   );
 
   const onContinue = useCallback(() => {
-    setRestoreRequested(true);
-    setBannerDismissed(true);
-  }, []);
+    setRestoreRequestedBookmarkId(bookmarkId);
+    setBannerDismissedBookmarkId(bookmarkId);
+  }, [bookmarkId]);
 
   const onDismiss = useCallback(() => {
-    setBannerDismissed(true);
-  }, []);
+    setBannerDismissedBookmarkId(bookmarkId);
+  }, [bookmarkId]);
 
   return {
     // Banner
@@ -134,7 +163,7 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
     onContinue,
     onDismiss,
     // ScrollProgressTracker props
-    restorePosition: restoreRequested,
+    restorePosition: restoreRequestedBookmarkId === bookmarkId,
     readingProgressOffset: initialOffset,
     readingProgressAnchor: initialAnchor,
     onSavePosition,
