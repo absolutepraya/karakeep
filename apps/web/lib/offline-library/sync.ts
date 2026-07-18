@@ -240,7 +240,7 @@ export class OfflineLibrarySyncCoordinator {
         if (!this.isCurrentGeneration(generation)) {
           return;
         }
-        await this.pullDeltas(cursor, generation);
+        await this.pullDeltas(cursor, generation, userId);
       }
 
       if (!this.isCurrentGeneration(generation)) {
@@ -301,33 +301,30 @@ export class OfflineLibrarySyncCoordinator {
   private async pullDeltas(
     initialCursor: string,
     generation: number,
+    userId: string,
   ): Promise<void> {
-    let cursor = initialCursor;
-    let completed = 0;
-    while (true) {
-      if (this.status.kind !== "online") {
-        this.setStatus({
-          kind: "syncing",
-          phase: "pulling",
-          completed,
-          total: completed + 1,
-          pendingWrites: await this.pendingWriteCount(),
-        });
-      }
-      const delta = await this.client.pull({ cursor });
-      if (!this.isCurrentGeneration(generation)) {
-        return;
-      }
-      await applyEvents(delta.events, delta.cursor);
-      if (!this.isCurrentGeneration(generation)) {
-        return;
-      }
-      completed += 1;
-      if (delta.events.length === 0) {
-        return;
-      }
-      cursor = delta.cursor;
+    if (this.status.kind !== "online") {
+      this.setStatus({
+        kind: "syncing",
+        phase: "pulling",
+        completed: 0,
+        total: 1,
+        pendingWrites: await this.pendingWriteCount(),
+      });
     }
+    const delta = await this.client.pull({ cursor: initialCursor });
+    if (!this.isCurrentGeneration(generation)) {
+      return;
+    }
+    if (delta.events.length > 0) {
+      const snapshot = await this.client.snapshot();
+      if (!this.isCurrentGeneration(generation)) {
+        return;
+      }
+      await replaceSnapshot(snapshot, userId);
+      return;
+    }
+    await applyEvents(delta.events, delta.cursor);
   }
 
   private async getSyncCursor(): Promise<string | null> {

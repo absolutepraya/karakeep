@@ -18,12 +18,25 @@ import {
 } from "@karakeep/shared/types/readers";
 
 const LOCAL_STORAGE_KEY = "karakeep-reader-settings:v1";
+const LEGACY_LOCAL_STORAGE_KEY = "karakeep-reader-settings";
 
 function getLocalOverridesFromStorage(): ReaderSettingsPartial {
   if (typeof window === "undefined") return {};
   try {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
+    if (stored !== null) {
+      return JSON.parse(stored);
+    }
+
+    const legacyStored = localStorage.getItem(LEGACY_LOCAL_STORAGE_KEY);
+    if (legacyStored === null) {
+      return {};
+    }
+
+    const overrides = JSON.parse(legacyStored) as ReaderSettingsPartial;
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(overrides));
+    localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
+    return overrides;
   } catch {
     return {};
   }

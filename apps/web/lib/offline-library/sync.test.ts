@@ -15,6 +15,7 @@ import {
   enqueueMutation,
   listPendingMutations,
   offlineLibraryDb,
+  queryBookmarks,
   replaceSnapshot,
 } from "./repository";
 import { OfflineLibrarySyncCoordinator } from "./sync";
@@ -217,6 +218,48 @@ test("keeps an online replica online during a background delta sync", async () =
   expect(client.pull).toHaveBeenCalledTimes(2);
   expect(statuses).not.toContain("syncing");
   expect(coordinator.getStatus()).toMatchObject({ kind: "online" });
+});
+
+test("refreshes the local replica from a snapshot after a remote delta", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  const client = makeClient();
+  const refreshedSnapshot: ZOfflineSyncSnapshot = {
+    ...snapshot,
+    bookmarks: [{ ...bookmark, title: "Updated on another device" }],
+    bookmarkFieldVersions: [
+      { bookmarkId: bookmark.id, field: "title", version: 1 },
+    ],
+    cursor: "13",
+  };
+  vi.mocked(client.snapshot).mockResolvedValue(refreshedSnapshot);
+  vi.mocked(client.pull)
+    .mockResolvedValueOnce({
+      events: [
+        {
+          sequence: 13,
+          userId: "user-1",
+          entityType: "bookmark",
+          entityId: bookmark.id,
+          operation: "update",
+          changedFields: ["title"],
+          fieldVersions: [
+            { bookmarkId: bookmark.id, field: "title", version: 1 },
+          ],
+          createdAt: new Date("2026-07-18T00:00:00Z"),
+        },
+      ],
+      cursor: "13",
+    })
+    .mockResolvedValueOnce({ events: [], cursor: "13" });
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    cursor: "13",
+    bookmarks: [{ title: "Updated on another device" }],
+  });
 });
 
 test("saves conflicts and prioritizes them over online status", async () => {
