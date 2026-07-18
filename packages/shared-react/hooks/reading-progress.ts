@@ -53,6 +53,12 @@ export function useReadingProgress({ bookmarkId }: UseReadingProgressOptions) {
   >(null);
 
   useEffect(() => {
+    lastSavedPosition.current = null;
+    setBannerDismissedBookmarkId(null);
+    setRestoreRequestedBookmarkId(null);
+  }, [bookmarkId]);
+
+  useEffect(() => {
     if (readingProgressOffset === undefined) return;
 
     setInitialProgress((current) =>
