@@ -3,11 +3,12 @@
 import "fake-indexeddb/auto";
 
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { offlineLibraryDb, replaceSnapshot } from "./repository";
 import {
+  FOREGROUND_SYNC_INTERVAL_MS,
   OfflineLibraryProvider,
   useCanReadOfflineReplica,
   useOfflineLibrary,
@@ -103,12 +104,18 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  cleanup();
   await offlineLibraryDb.delete();
   vi.clearAllMocks();
   Object.defineProperty(navigator, "onLine", {
     configurable: true,
     value: true,
   });
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: "visible",
+  });
+  vi.restoreAllMocks();
 });
 
 test("starts synchronization only for an authenticated session", async () => {
@@ -133,6 +140,67 @@ test("starts synchronization only for an authenticated session", async () => {
       value: "user-1",
     });
   });
+});
+
+test("periodically syncs only while the app is visible", async () => {
+  const setIntervalSpy = vi.spyOn(window, "setInterval");
+  render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <Status />
+    </OfflineLibraryProvider>,
+  );
+
+  await waitFor(() =>
+    expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce(),
+  );
+  await waitFor(() => expect(screen.getByText("online")).toBeTruthy());
+  const intervalCall = setIntervalSpy.mock.calls.find(
+    ([, delay]) => delay === FOREGROUND_SYNC_INTERVAL_MS,
+  );
+  expect(intervalCall).toBeDefined();
+  const onInterval = intervalCall?.[0] as () => void;
+
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: "hidden",
+  });
+  expect(document.visibilityState).toBe("hidden");
+  onInterval();
+  expect(trpc.offlineSync.pull.query).not.toHaveBeenCalled();
+
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: "visible",
+  });
+  expect(document.visibilityState).toBe("visible");
+  onInterval();
+  await waitFor(() =>
+    expect(trpc.offlineSync.pull.query).toHaveBeenCalledOnce(),
+  );
+});
+
+test("does not let the foreground interval bypass sync retry backoff", async () => {
+  const setIntervalSpy = vi.spyOn(window, "setInterval");
+  trpc.offlineSync.snapshot.query.mockRejectedValueOnce(
+    new Error("network unavailable"),
+  );
+  render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <Status />
+    </OfflineLibraryProvider>,
+  );
+
+  await waitFor(() => expect(screen.getByText("error")).toBeTruthy());
+  const intervalCall = setIntervalSpy.mock.calls.find(
+    ([, delay]) => delay === FOREGROUND_SYNC_INTERVAL_MS,
+  );
+  expect(intervalCall).toBeDefined();
+  const onInterval = intervalCall?.[0] as () => void;
+
+  onInterval();
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+  expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce();
 });
 
 test("does not start synchronization on a cold offline launch", async () => {

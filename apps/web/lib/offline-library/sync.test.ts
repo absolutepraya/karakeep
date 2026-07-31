@@ -17,6 +17,7 @@ import {
   offlineLibraryDb,
   queryBookmarks,
   replaceSnapshot,
+  saveLastSuccessfulSyncAt,
 } from "./repository";
 import { OfflineLibrarySyncCoordinator } from "./sync";
 import type { OfflineSyncClient } from "./sync";
@@ -196,6 +197,34 @@ test("takes an atomic snapshot before the first online state", async () => {
     kind: "online",
     pendingWrites: 0,
   });
+});
+
+test("restores the persisted last sync time for an offline launch", async () => {
+  const syncedAt = new Date("2026-07-31T10:00:00.000Z");
+  await replaceSnapshot(snapshot, "user-1");
+  await saveLastSuccessfulSyncAt(syncedAt);
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.hydrateLastSuccessfulSyncAt();
+  await coordinator.markOffline();
+
+  expect(coordinator.getStatus()).toEqual({
+    kind: "offline",
+    lastSyncedAt: syncedAt,
+    pendingWrites: 0,
+  });
+});
+
+test("persists the time of a successful synchronization", async () => {
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  await expect(
+    offlineLibraryDb.metadata.get("lastSuccessfulSyncAt"),
+  ).resolves.toMatchObject({ key: "lastSuccessfulSyncAt" });
 });
 
 test("keeps an online replica online during a background delta sync", async () => {

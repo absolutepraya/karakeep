@@ -15,6 +15,7 @@ import {
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
   getBookmarkFieldVersion,
+  getLastSuccessfulSyncAt,
   listPendingMutations,
   offlineLibraryDb,
   purgeOfflineLibrary,
@@ -22,6 +23,7 @@ import {
   recordThumbnailAccess,
   replaceSnapshot,
   searchBookmarks,
+  saveLastSuccessfulSyncAt,
 } from "./repository";
 
 const thumbnailCaches = new Map<string, Map<string, Response>>();
@@ -133,6 +135,17 @@ test("replaces a snapshot atomically and preserves its cursor", async () => {
   await expect(
     getBookmarkFieldVersion("bookmark-1", "note"),
   ).resolves.toBeUndefined();
+});
+
+test("persists the last successful sync time until the replica is purged", async () => {
+  const syncedAt = new Date("2026-07-31T10:00:00.000Z");
+  await saveLastSuccessfulSyncAt(syncedAt);
+  await replaceSnapshot(snapshot, "user-1");
+
+  await expect(getLastSuccessfulSyncAt()).resolves.toEqual(syncedAt);
+
+  await purgeOfflineLibrary();
+  await expect(getLastSuccessfulSyncAt()).resolves.toBeNull();
 });
 
 test("searches only replicated fields", async () => {

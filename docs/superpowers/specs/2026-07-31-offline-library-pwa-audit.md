@@ -25,10 +25,10 @@ account identifiers, URLs, credentials, or bookmark content.
 | --- | --- | --- | --- | --- |
 | PWA-001 | P0 | Implemented, pending device verification | Fresh SSR bookmarks were replaced by a ready or nonempty IndexedDB replica during `initializing`, `syncing`, and pre-refetch online states. | `UpdatableBookmarksGrid` selected local data from `isReady || bookmarkCount > 0`. The regression tests reproduce `saved-on-pc` changing to `stale-on-phone`. |
 | PWA-002 | P0 | Implemented, pending device verification | A local replica could be read before `OfflineLibraryProvider` validated that it belonged to the current authenticated user. A shared browser profile could briefly render a prior user's bookmarks. | Provider ownership verification and purge run asynchronously; grid reads were previously independent of that check. |
-| PWA-003 | P1 | Open | A visible mobile PWA does not periodically synchronize. Desktop changes can remain absent until startup, reconnect, visibility restore, or a manual retry. | The provider listens only to `online`, `offline`, and `visibilitychange`; it registers no foreground interval. |
-| PWA-004 | P1 | Open | The library activity indicator reports coordinator state but does not state whether the grid is showing server data or a local replica. Its 15-second query polls background processing, not bookmark-replica freshness. | `ProcessingStatusIndicator` combines `useOfflineLibraryStatus()` with `bookmarks.getProcessingStatus`. |
+| PWA-003 | P1 | Implemented, pending device verification | A visible mobile PWA did not periodically synchronize. Desktop changes could remain absent until startup, reconnect, visibility restore, or a manual retry. | The provider now requests a sync every 30 seconds only while visible, in addition to its existing lifecycle triggers. An error state retains bounded retry backoff instead of being retried by the interval. |
+| PWA-004 | P1 | Implemented, pending device verification | The library activity indicator did not state whether the grid was showing server data or a local replica. Its 15-second query polls background processing, not bookmark-replica freshness. | The indicator now explicitly labels the active source as server data or offline replica. |
 | PWA-005 | P1 | Accepted limitation | A cold offline launch cannot reliably open the downloaded library. Cached dashboard navigation is limited to five minutes and requires an in-memory session entry for the current service-worker client. | `sw.js` checks `documentCacheSessions.get(event.clientId)` before it can use cached navigation. |
-| PWA-006 | P1 | Open | The last successful sync time is memory-only. A cold offline session can have a valid replica but report no last sync time. | `OfflineLibrarySyncCoordinator.lastSyncedAt` initializes to `null` and is not persisted in IndexedDB. |
+| PWA-006 | P1 | Implemented, pending device verification | The last successful sync time was memory-only. A cold offline session could have a valid replica but report no last sync time. | Successful sync time now persists in IndexedDB metadata and hydrates before an offline state is displayed. |
 | PWA-007 | P1 | Open | The browser is never asked to persist storage. Safari or other browsers may evict IndexedDB and thumbnail caches under storage pressure. | The code reads `navigator.storage.estimate()` only for thumbnail eviction. |
 | PWA-008 | P2 | Deferred | Offline bookmark updates and tag changes enqueue mutations but do not optimistically update the local replica, so the visible state can stay old until a successful sync. | `useOfflineSafeBookmarkMutation` queues mutations without writing the changed fields to `offlineLibraryDb`. |
 | PWA-009 | P2 | Deferred | Offline writes are intentionally narrow: create, delete, upload, list, new-tag, and bulk destructive paths are network-only. | Only `bookmark.update` and `bookmark.tags` are accepted offline mutation kinds. |
@@ -81,15 +81,20 @@ mise exec -- pnpm --filter @karakeep/web test --run \
 
 Expected result after P0: all focused tests pass.
 
+### P1A regression tests
+
+- Provider schedules a 30-second sync while visible and skips interval work while hidden.
+- Successful sync metadata survives a replica replacement and is removed on purge.
+- A cold offline coordinator restores the persisted last-sync time.
+- The activity indicator states whether server data or the offline replica is
+  currently shown.
+
 ## Follow-up order
 
-1. P1A: add a 30-second foreground sync interval, persist last successful
-   sync metadata, and distinguish server versus replica data in the activity
-   indicator.
-2. P1B: correct offline copy to match the accepted cold-launch limitation and
+1. P1B: correct offline copy to match the accepted cold-launch limitation and
    make a nonfatal `navigator.storage.persist()` request after a successful
    sync.
-3. P2: design durable optimistic local writes and the required temporary-ID,
+2. P2: design durable optimistic local writes and the required temporary-ID,
    dependency, conflict, and queued-state behavior before expanding offline
    mutation coverage.
 

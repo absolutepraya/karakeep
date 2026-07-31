@@ -48,6 +48,7 @@ vi.mock("@karakeep/shared-react/trpc", () => ({
 vi.mock("@/lib/offline-library/provider", () => ({
   useOfflineLibrary: () => ({ syncNow: mocks.syncNow }),
   useOfflineLibraryStatus: () => mocks.status,
+  useCanReadOfflineReplica: () => true,
 }));
 
 vi.mock("@/components/ui/popover", () => {

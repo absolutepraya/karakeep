@@ -23,6 +23,8 @@ import type {
   OfflineSyncClient,
 } from "./sync";
 
+export const FOREGROUND_SYNC_INTERVAL_MS = 30_000;
+
 interface OfflineLibraryContextValue {
   status: OfflineLibraryStatus;
   canReadOfflineReplica: boolean;
@@ -100,6 +102,14 @@ export function OfflineLibraryProvider({
         sync();
       }
     };
+    const syncOnInterval = () => {
+      if (
+        document.visibilityState === "visible" &&
+        coordinator.getStatus().kind !== "error"
+      ) {
+        sync();
+      }
+    };
     const onOffline = () => {
       if (activeUserIdRef.current) {
         void coordinator.markOffline();
@@ -118,6 +128,10 @@ export function OfflineLibraryProvider({
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("online", sync);
     window.addEventListener("offline", onOffline);
+    const intervalId = window.setInterval(
+      syncOnInterval,
+      FOREGROUND_SYNC_INTERVAL_MS,
+    );
     if (hasServiceWorker) {
       serviceWorker.addEventListener("message", onWorkerMessage);
     }
@@ -125,6 +139,7 @@ export function OfflineLibraryProvider({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("online", sync);
       window.removeEventListener("offline", onOffline);
+      window.clearInterval(intervalId);
       if (hasServiceWorker) {
         serviceWorker.removeEventListener("message", onWorkerMessage);
       }
@@ -158,8 +173,12 @@ export function OfflineLibraryProvider({
       if (cancelled) {
         return;
       }
-      setVerifiedReplicaUserId(userId);
       coordinator.activate(userId);
+      await coordinator.hydrateLastSuccessfulSyncAt();
+      if (cancelled) {
+        return;
+      }
+      setVerifiedReplicaUserId(userId);
       activeUserIdRef.current = userId;
       if (navigator.onLine === false) {
         await coordinator.markOffline();

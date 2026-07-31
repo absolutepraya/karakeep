@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => ({
     pendingWrites: 0,
   } as OfflineLibraryStatus,
   syncNow: vi.fn(),
+  canReadOfflineReplica: true,
 }));
 
 function mockLibraryStatus(status: OfflineLibraryStatus) {
@@ -62,6 +63,7 @@ vi.mock("@/lib/offline-library/provider", () => ({
     syncNow: mocks.syncNow,
   }),
   useOfflineLibraryStatus: () => mocks.status,
+  useCanReadOfflineReplica: () => mocks.canReadOfflineReplica,
 }));
 
 vi.mock("@/lib/offline-library/repository", () => ({
@@ -123,6 +125,8 @@ describe("ProcessingStatusIndicator", () => {
     expect(
       screen.getByRole("button", { name: /library activity.*online/i }),
     ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
+    expect(screen.getByText("Showing server data")).toBeTruthy();
   });
 
   it("shows an offline state and pending writes", () => {
@@ -139,6 +143,7 @@ describe("ProcessingStatusIndicator", () => {
     expect(
       screen.getByRole("button", { name: /library activity.*offline.*2/i }),
     ).toBeTruthy();
+    expect(screen.getByText("Showing offline replica")).toBeTruthy();
     expect(screen.getByText("2 pending writes")).toBeTruthy();
   });
 

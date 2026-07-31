@@ -11,11 +11,13 @@ import {
   deleteAcknowledgedMutations,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
+  getLastSuccessfulSyncAt,
   getReplicaOwnerUserId,
   listPendingMutations,
   offlineLibraryDb,
   purgeOfflineLibrary,
   replaceSnapshot,
+  saveLastSuccessfulSyncAt,
   saveConflict,
 } from "./repository";
 
@@ -117,6 +119,10 @@ export class OfflineLibrarySyncCoordinator {
     this.generation += 1;
     this.isActive = true;
     this.userId = userId;
+  }
+
+  async hydrateLastSuccessfulSyncAt(): Promise<void> {
+    this.lastSyncedAt = await getLastSuccessfulSyncAt();
   }
 
   async deactivate(): Promise<void> {
@@ -248,6 +254,7 @@ export class OfflineLibrarySyncCoordinator {
       }
       this.retryAttempt = 0;
       this.lastSyncedAt = new Date();
+      await saveLastSuccessfulSyncAt(this.lastSyncedAt);
       await this.setSettledStatus();
     } catch (error) {
       if (!this.isCurrentGeneration(generation)) {

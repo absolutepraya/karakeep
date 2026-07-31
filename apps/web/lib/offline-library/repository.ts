@@ -15,6 +15,7 @@ import { offlineLibraryDb } from "./schema";
 const SYNC_CURSOR_KEY = "syncCursor";
 const REPLICA_STATE_KEY = "replicaState";
 const REPLICA_OWNER_USER_ID_KEY = "replicaOwnerUserId";
+const LAST_SUCCESSFUL_SYNC_AT_KEY = "lastSuccessfulSyncAt";
 const LEGACY_THUMBNAIL_CACHE_NAME = "karakeep-thumbnails";
 const THUMBNAIL_CACHE_PREFIX = `${LEGACY_THUMBNAIL_CACHE_NAME}:`;
 
@@ -561,6 +562,24 @@ export async function getReplicaOwnerUserId(): Promise<string | null> {
     (await offlineLibraryDb.metadata.get(REPLICA_OWNER_USER_ID_KEY))?.value ??
     null
   );
+}
+
+export async function getLastSuccessfulSyncAt(): Promise<Date | null> {
+  const value = (
+    await offlineLibraryDb.metadata.get(LAST_SUCCESSFUL_SYNC_AT_KEY)
+  )?.value;
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export async function saveLastSuccessfulSyncAt(date: Date): Promise<void> {
+  await offlineLibraryDb.metadata.put({
+    key: LAST_SUCCESSFUL_SYNC_AT_KEY,
+    value: date.toISOString(),
+  });
 }
 
 export async function isOfflineReplicaReady(): Promise<boolean> {

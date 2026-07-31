@@ -22,6 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  useCanReadOfflineReplica,
   useOfflineLibrary,
   useOfflineLibraryStatus,
 } from "@/lib/offline-library/provider";
@@ -275,6 +276,7 @@ async function chooseServerConflictValue(conflict: ZOfflineSyncConflict) {
 export default function ProcessingStatusIndicator() {
   const api = useTRPC();
   const status = useOfflineLibraryStatus();
+  const canReadOfflineReplica = useCanReadOfflineReplica();
   const { syncNow } = useOfflineLibrary();
   const [conflicts, setConflicts] = React.useState<ZOfflineSyncConflict[]>([]);
   const [selectedConflict, setSelectedConflict] =
@@ -322,6 +324,14 @@ export default function ProcessingStatusIndicator() {
   let isSyncing = false;
   let needsAttention = false;
   let pendingWrites = 0;
+  const usesOfflineReplica =
+    status.kind === "offline" ||
+    (typeof navigator !== "undefined" && navigator.onLine === false);
+  const dataSourceLabel = usesOfflineReplica
+    ? canReadOfflineReplica
+      ? "Showing offline replica"
+      : "Preparing offline library"
+    : "Showing server data";
 
   switch (status.kind) {
     case "online":
@@ -359,7 +369,7 @@ export default function ProcessingStatusIndicator() {
       break;
   }
 
-  const buttonLabel = `Library activity: ${libraryState}, ${libraryDetail}${pendingWrites > 0 ? `, ${pendingWritesLabel(pendingWrites)}` : ""}${serverProcessing.total > 0 ? `, ${serverProcessing.total} background task${serverProcessing.total === 1 ? "" : "s"} processing` : ""}`;
+  const buttonLabel = `Library activity: ${libraryState}, ${libraryDetail}, ${dataSourceLabel}${pendingWrites > 0 ? `, ${pendingWritesLabel(pendingWrites)}` : ""}${serverProcessing.total > 0 ? `, ${serverProcessing.total} background task${serverProcessing.total === 1 ? "" : "s"} processing` : ""}`;
 
   async function retrySync() {
     await syncNow();
@@ -432,6 +442,7 @@ export default function ProcessingStatusIndicator() {
             </div>
             <div className="space-y-2 px-2 py-2 text-sm text-muted-foreground">
               <p>{libraryDetail}</p>
+              <p>{dataSourceLabel}</p>
               {status.kind === "syncing" && (
                 <p>Current phase: {status.phase}</p>
               )}
