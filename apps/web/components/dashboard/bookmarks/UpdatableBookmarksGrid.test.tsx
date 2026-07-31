@@ -32,12 +32,14 @@ const mocks = vi.hoisted(() => ({
   queryBookmarks: vi.fn(),
   countBookmarks: vi.fn(),
   isOfflineReplicaReady: vi.fn(),
+  canReadOfflineReplica: true,
   getBookmarks: vi.fn(),
   useInfiniteQuery: vi.fn(),
 }));
 
 vi.mock("@/lib/offline-library/provider", () => ({
   useOfflineLibraryStatus: () => mocks.status,
+  useCanReadOfflineReplica: () => mocks.canReadOfflineReplica,
 }));
 
 vi.mock("@/lib/offline-library/repository", () => ({
@@ -72,6 +74,10 @@ vi.mock("@karakeep/shared-react/hooks/bookmark-grid-context", () => ({
 
 vi.mock("@/components/dashboard/UploadDropzone", () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock("./BookmarksGridSkeleton", () => ({
+  default: () => <div>Loading offline library</div>,
 }));
 
 vi.mock("./BookmarksGrid", () => ({
@@ -109,6 +115,7 @@ afterEach(() => {
   mocks.queryBookmarks.mockReset();
   mocks.countBookmarks.mockReset();
   mocks.isOfflineReplicaReady.mockReset();
+  mocks.canReadOfflineReplica = true;
   mocks.getBookmarks.mockReset();
   mocks.useInfiniteQuery.mockReset();
   Object.defineProperty(navigator, "onLine", {
@@ -291,5 +298,113 @@ describe("UpdatableBookmarksGrid", () => {
     );
 
     expect(await screen.findByText("server-bookmark")).toBeTruthy();
+  });
+
+  it("keeps fresh SSR bookmarks visible without reading a local replica during revalidation", async () => {
+    mocks.status = {
+      kind: "online",
+      lastSyncedAt: new Date(),
+      pendingWrites: 0,
+    };
+    mocks.queryBookmarks.mockResolvedValue({
+      bookmarks: [{ id: "stale-on-phone" }],
+      cursor: "1",
+      nextCursor: null,
+    });
+    mocks.countBookmarks.mockResolvedValue(1);
+    mocks.isOfflineReplicaReady.mockResolvedValue(true);
+    mocks.useInfiniteQuery.mockReturnValue({
+      data: {
+        pages: [
+          {
+            bookmarks: [{ id: "saved-on-pc" }],
+            nextCursor: null,
+          },
+        ],
+      },
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isFetchedAfterMount: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={serverPage}
+      />,
+    );
+
+    expect(screen.getByText("saved-on-pc")).toBeTruthy();
+
+    await waitFor(() => expect(mocks.queryBookmarks).not.toHaveBeenCalled());
+    await waitFor(() => {
+      expect(screen.getByText("saved-on-pc")).toBeTruthy();
+      expect(screen.queryByText("stale-on-phone")).toBeNull();
+    });
+  });
+
+  it("does not read an initializing replica over SSR bookmarks", async () => {
+    mocks.status = { kind: "initializing" };
+    mocks.queryBookmarks.mockResolvedValue({
+      bookmarks: [{ id: "stale-on-phone" }],
+      cursor: "1",
+      nextCursor: null,
+    });
+    mocks.countBookmarks.mockResolvedValue(1);
+    mocks.isOfflineReplicaReady.mockResolvedValue(true);
+    mocks.useInfiniteQuery.mockReturnValue({
+      data: {
+        pages: [
+          {
+            bookmarks: [{ id: "saved-on-pc" }],
+            nextCursor: null,
+          },
+        ],
+      },
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={
+          {
+            bookmarks: [{ id: "saved-on-pc" }],
+            nextCursor: null,
+          } as ZGetBookmarksResponse
+        }
+      />,
+    );
+
+    expect(screen.getByText("saved-on-pc")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("saved-on-pc")).toBeTruthy();
+      expect(screen.queryByText("stale-on-phone")).toBeNull();
+      expect(mocks.queryBookmarks).not.toHaveBeenCalled();
+    });
+  });
+
+  it("does not read an offline replica until its ownership is verified", async () => {
+    mocks.status = {
+      kind: "offline",
+      lastSyncedAt: new Date(),
+      pendingWrites: 0,
+    };
+    mocks.canReadOfflineReplica = false;
+
+    render(
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={serverPage}
+      />,
+    );
+
+    await waitFor(() => expect(mocks.queryBookmarks).not.toHaveBeenCalled());
+    expect(mocks.getBookmarks).not.toHaveBeenCalled();
   });
 });

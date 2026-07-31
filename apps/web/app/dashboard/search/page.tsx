@@ -7,7 +7,10 @@ import {
   useLocalBookmarkSearch,
   useServerBookmarkSearch,
 } from "@/lib/hooks/bookmark-search";
-import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
+import {
+  useCanReadOfflineReplica,
+  useOfflineLibraryStatus,
+} from "@/lib/offline-library/provider";
 import { useInSearchPageStore } from "@/lib/store/useInSearchPageStore";
 import { useSortOrderStore } from "@/lib/store/useSortOrderStore";
 
@@ -53,14 +56,21 @@ function OnlineSearchResults() {
 
 function SearchResults() {
   const status = useOfflineLibraryStatus();
+  const canReadOfflineReplica = useCanReadOfflineReplica();
   const browserIsOffline =
     typeof navigator !== "undefined" && navigator.onLine === false;
 
-  return status.kind === "online" && !browserIsOffline ? (
-    <OnlineSearchResults />
-  ) : (
-    <OfflineSearchResults />
-  );
+  if (status.kind === "offline" || browserIsOffline) {
+    return canReadOfflineReplica ? (
+      <OfflineSearchResults />
+    ) : (
+      <div className="flex flex-col gap-3">
+        <BookmarksGridSkeleton />
+      </div>
+    );
+  }
+
+  return <OnlineSearchResults />;
 }
 
 function SearchComp() {

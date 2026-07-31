@@ -25,6 +25,7 @@ import type {
 
 interface OfflineLibraryContextValue {
   status: OfflineLibraryStatus;
+  canReadOfflineReplica: boolean;
   syncNow: () => Promise<void>;
   queueBookmarkUpdate: (mutation: BookmarkUpdateMutation) => Promise<void>;
   queueBookmarkTags: (mutation: BookmarkTagsMutation) => Promise<void>;
@@ -74,6 +75,11 @@ export function OfflineLibraryProvider({
   const [status, setStatus] = useState<OfflineLibraryStatus>(
     coordinator.getStatus(),
   );
+  const [verifiedReplicaUserId, setVerifiedReplicaUserId] = useState<
+    string | null
+  >(null);
+  const canReadOfflineReplica =
+    userId !== null && verifiedReplicaUserId === userId;
 
   useEffect(() => {
     const unsubscribe = coordinator.subscribe(setStatus);
@@ -130,6 +136,7 @@ export function OfflineLibraryProvider({
     lifecycleRef.current = lifecycleRef.current.then(async () => {
       const previousUserId = activeUserIdRef.current;
       if (userId === null) {
+        setVerifiedReplicaUserId(null);
         await coordinator.deactivate();
         await purgeOfflineLibrary();
         await clearUserCaches();
@@ -141,6 +148,7 @@ export function OfflineLibraryProvider({
       const principalChanged =
         previousUserId !== null && previousUserId !== userId;
       if (principalChanged || persistedOwnerUserId !== userId) {
+        setVerifiedReplicaUserId(null);
         await coordinator.deactivate();
         await purgeOfflineLibrary();
         await clearUserCaches();
@@ -150,6 +158,7 @@ export function OfflineLibraryProvider({
       if (cancelled) {
         return;
       }
+      setVerifiedReplicaUserId(userId);
       coordinator.activate(userId);
       activeUserIdRef.current = userId;
       if (navigator.onLine === false) {
@@ -166,6 +175,7 @@ export function OfflineLibraryProvider({
   const value = useMemo<OfflineLibraryContextValue>(
     () => ({
       status,
+      canReadOfflineReplica,
       syncNow: async () => {
         if (userId === null || activeUserIdRef.current !== userId) {
           throw new Error("Offline sync requires an authenticated user");
@@ -185,7 +195,7 @@ export function OfflineLibraryProvider({
         await coordinator.queueBookmarkTags(mutation);
       },
     }),
-    [coordinator, status, userId],
+    [canReadOfflineReplica, coordinator, status, userId],
   );
 
   return (
@@ -211,4 +221,8 @@ export function useOfflineLibrary(): OfflineLibraryContextValue {
 
 export function useOfflineLibraryStatus(): OfflineLibraryStatus {
   return useOfflineLibraryContext().status;
+}
+
+export function useCanReadOfflineReplica(): boolean {
+  return useOfflineLibraryContext().canReadOfflineReplica;
 }

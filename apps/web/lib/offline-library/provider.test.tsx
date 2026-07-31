@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { offlineLibraryDb, replaceSnapshot } from "./repository";
 import {
   OfflineLibraryProvider,
+  useCanReadOfflineReplica,
   useOfflineLibrary,
   useOfflineLibraryStatus,
 } from "./provider";
@@ -43,6 +44,11 @@ const trpc = {
 function Status() {
   const status = useOfflineLibraryStatus();
   return <output>{status.kind}</output>;
+}
+
+function ReplicaAccess() {
+  const canReadOfflineReplica = useCanReadOfflineReplica();
+  return <output>{String(canReadOfflineReplica)}</output>;
 }
 
 function UnauthenticatedCaller({
@@ -144,6 +150,72 @@ test("does not start synchronization on a cold offline launch", async () => {
     expect(screen.getByText("offline")).toBeTruthy();
   });
   expect(trpc.offlineSync.snapshot.query).not.toHaveBeenCalled();
+});
+
+test("does not expose the replica until the authenticated owner is verified", async () => {
+  const snapshot = Promise.withResolvers<{
+    bookmarks: never[];
+    lists: never[];
+    bookmarkListMemberships: never[];
+    bookmarkRssFeedMemberships: never[];
+    bookmarkFieldVersions: never[];
+    cursor: string;
+  }>();
+  trpc.offlineSync.snapshot.query.mockReturnValue(snapshot.promise);
+
+  const screen = render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <ReplicaAccess />
+    </OfflineLibraryProvider>,
+  );
+
+  expect(screen.getByText("false")).toBeTruthy();
+  snapshot.resolve({
+    bookmarks: [],
+    lists: [],
+    bookmarkListMemberships: [],
+    bookmarkRssFeedMemberships: [],
+    bookmarkFieldVersions: [],
+    cursor: "1",
+  });
+
+  await waitFor(() => expect(screen.getByText("true")).toBeTruthy());
+});
+
+test("purges another user's replica before allowing offline reads", async () => {
+  await replaceSnapshot(
+    {
+      bookmarks: [],
+      lists: [],
+      bookmarkListMemberships: [],
+      bookmarkRssFeedMemberships: [],
+      bookmarkFieldVersions: [],
+      cursor: "1",
+    },
+    "user-1",
+  );
+  session.current = {
+    data: { user: { id: "user-2" } },
+    status: "authenticated",
+  };
+  Object.defineProperty(navigator, "onLine", {
+    configurable: true,
+    value: false,
+  });
+
+  const screen = render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <ReplicaAccess />
+    </OfflineLibraryProvider>,
+  );
+
+  expect(screen.getByText("false")).toBeTruthy();
+  await waitFor(async () => {
+    expect(screen.getByText("true")).toBeTruthy();
+    await expect(
+      offlineLibraryDb.metadata.get("replicaOwnerUserId"),
+    ).resolves.toBeUndefined();
+  });
 });
 
 test("purges the private replica and worker caches after logout", async () => {

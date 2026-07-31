@@ -1,7 +1,9 @@
 # Offline Library PWA Design
 
 **Date:** 2026-07-12  
-**Status:** Approved design, awaiting implementation planning
+**Status:** Implemented, with follow-up remediation in progress
+
+**Follow-up findings:** [Offline Library PWA Audit](2026-07-31-offline-library-pwa-audit.md)
 
 ## Goal
 
