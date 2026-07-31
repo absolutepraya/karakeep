@@ -1,8 +1,21 @@
 // @vitest-environment jsdom
 
+import React from "react";
+import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { revealFocusedTextEntry } from "./dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  revealFocusedTextEntry,
+} from "./dialog";
+
+class MockVisualViewport extends EventTarget {
+  height = 844;
+  offsetTop = 0;
+}
 
 function setDimensions(
   element: HTMLElement,
@@ -30,6 +43,8 @@ function setRect(element: Element, top: number, height: number) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
   document.body.replaceChildren();
   Object.defineProperty(window, "visualViewport", {
     configurable: true,
@@ -38,6 +53,69 @@ afterEach(() => {
 });
 
 describe("revealFocusedTextEntry", () => {
+  it("rechecks the focused field after the first keyboard viewport event is missed", () => {
+    vi.useFakeTimers();
+    const viewport = new MockVisualViewport();
+    const animationFrames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      animationFrames.push(callback);
+      return animationFrames.length;
+    });
+    vi.stubGlobal("cancelAnimationFrame", () => undefined);
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {
+          return undefined;
+        }
+        disconnect() {
+          return undefined;
+        }
+      },
+    );
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: viewport,
+    });
+
+    const view = render(
+      React.createElement(
+        Dialog,
+        { open: true },
+        React.createElement(
+          DialogContent,
+          null,
+          React.createElement(DialogTitle, null, "Add bookmark"),
+          React.createElement(
+            DialogDescription,
+            null,
+            "Choose where to save the bookmark.",
+          ),
+          React.createElement("input", { "aria-label": "Search lists" }),
+        ),
+      ),
+    );
+    const dialog = view.getByRole("dialog");
+    const input = view.getByRole("textbox", { name: "Search lists" });
+    dialog.style.overflowY = "auto";
+    setDimensions(dialog, { clientHeight: 400, scrollHeight: 1000 });
+    setRect(dialog, 0, 400);
+    setRect(input, 520, 32);
+
+    act(() => input.focus());
+    act(() => {
+      animationFrames.shift()?.(0);
+      animationFrames.shift()?.(0);
+    });
+
+    // iOS can report the keyboard resize before the dialog's viewport listener
+    // is subscribed. The initial focus frames therefore see the old viewport.
+    viewport.height = 500;
+    act(() => vi.advanceTimersByTime(350));
+
+    expect(dialog.scrollTop).toBe(64);
+  });
+
   it("scrolls a modal just enough to keep a focused field above the keyboard", () => {
     Object.defineProperty(window, "visualViewport", {
       configurable: true,

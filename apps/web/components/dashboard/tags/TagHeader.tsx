@@ -5,7 +5,7 @@ import { TagOptions } from "@/components/dashboard/tags/TagOptions";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/client";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, Hash, MoreHorizontal, User } from "lucide-react";
+import { Hash, MoreHorizontal } from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { ZGetTagResponse } from "@karakeep/shared/types/tags";
@@ -39,24 +39,18 @@ export default function TagHeader({
           <h1 className="truncate text-2xl font-semibold leading-tight">
             {tag.name}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <div className="mt-2 truncate whitespace-nowrap text-sm text-muted-foreground">
             <span>{t("tags.items_count", { count: tag.numBookmarks })}</span>
             {humanCount > 0 && (
               <>
-                <span aria-hidden>·</span>
-                <span className="flex items-center gap-1">
-                  <User className="size-3.5" />
-                  {t("tags.attached_by_you", { count: humanCount })}
-                </span>
+                {", "}
+                <span>{t("tags.attached_by_you", { count: humanCount })}</span>
               </>
             )}
             {aiCount > 0 && (
               <>
-                <span aria-hidden>·</span>
-                <span className="flex items-center gap-1">
-                  <Bot className="size-3.5" />
-                  {t("tags.attached_by_ai", { count: aiCount })}
-                </span>
+                {", "}
+                <span>{t("tags.attached_by_ai", { count: aiCount })}</span>
               </>
             )}
           </div>

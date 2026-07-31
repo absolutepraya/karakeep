@@ -5,6 +5,7 @@ import { ActionButton } from "@/components/ui/action-button";
 import ActionConfirmingDialog from "@/components/ui/action-confirming-dialog";
 import useBulkActionsStore from "@/lib/bulkActions";
 import { useBookmarkKeyboardNavigation } from "@/lib/hooks/useBookmarkKeyboardNavigation";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useTranslation } from "@/lib/i18n/client";
 import { useInBookmarkGridStore } from "@/lib/store/useInBookmarkGridStore";
 import usePendingBookmarkDeletionStore from "@/lib/store/usePendingBookmarkDeletionStore";
@@ -161,6 +162,8 @@ export default function BookmarksGrid({
   const layout = useBookmarkLayout();
   const gridColumns = useGridColumns();
   const serverIsMobile = useServerIsMobile();
+  const clientIsMobile = useIsMobile();
+  const isMobile = serverIsMobile || clientIsMobile;
   const activeGridColumns = useActiveGridColumns(gridColumns);
   const setVisibleBookmarks = useBulkActionsStore(
     (state) => state.setVisibleBookmarks,
@@ -251,10 +254,11 @@ export default function BookmarksGrid({
   }
 
   const children = [
-    showEditorCard && (
-      // The mobile nav has its own + button + capture modal, so the inline
-      // editor card is desktop-only.
-      <div key={"editor"} className="hidden sm:block">
+    showEditorCard && !isMobile && (
+      // The mobile nav has its own + button + capture modal. Do not pass a
+      // hidden editor card into Masonry on phones: it still consumes the
+      // first column slot and makes the first bookmark start on the right.
+      <div key={"editor"}>
         <StyledBookmarkCard>
           <EditorCard />
         </StyledBookmarkCard>

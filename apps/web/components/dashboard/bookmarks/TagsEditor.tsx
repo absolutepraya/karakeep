@@ -319,7 +319,7 @@ export function TagsEditor({
                   {optimisticTags.map((tag) => (
                     <div
                       key={tag.id}
-                      className="shadow-xs flex min-h-7 items-center gap-1.5 rounded-md border border-border/70 bg-muted px-2 py-1 text-xs font-medium text-foreground"
+                      className="flex min-h-6 items-center gap-1.5 rounded-md border border-border bg-background px-2 py-0.5 text-xs text-foreground"
                     >
                       {tag.attachedBy === "ai" && (
                         <Sparkles className="size-3 shrink-0 text-muted-foreground" />
@@ -328,7 +328,7 @@ export function TagsEditor({
                       {!isDisabled && (
                         <button
                           type="button"
-                          className="rounded-full text-muted-foreground outline-none ring-offset-background transition-colors hover:text-foreground focus:ring-1 focus:ring-ring focus:ring-offset-2"
+                          className="-mr-0.5 flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none ring-offset-background transition-colors hover:bg-muted hover:text-foreground focus:ring-1 focus:ring-ring focus:ring-offset-2"
                           onClick={(e) => {
                             e.stopPropagation();
                             void onChange({
