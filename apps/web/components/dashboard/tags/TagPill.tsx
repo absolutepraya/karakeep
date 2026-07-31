@@ -1,9 +1,9 @@
 import React, { useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
 import { useDragAndDrop } from "@/lib/drag-and-drop";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { X } from "lucide-react";
 import Draggable from "react-draggable";
 
@@ -23,6 +23,7 @@ export const TagPill = React.memo(function TagPill({
   onOpenDialog: (tag: { id: string; name: string }) => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const isMobile = useIsMobile();
   const draggableRef = useRef<HTMLDivElement>(null);
 
   const handleMouseOver = () => setIsHovered(true);
@@ -70,30 +71,35 @@ export const TagPill = React.memo(function TagPill({
 
   const pill = (
     <div
-      className="group relative flex"
-      onMouseOver={handleMouseOver}
+      className="group flex items-center rounded-md border border-border bg-background text-xs text-foreground transition-colors hover:bg-foreground hover:text-background"
+      onMouseEnter={handleMouseOver}
       onFocus={handleMouseOver}
-      onMouseOut={handleMouseOut}
-      onBlur={handleMouseOut}
+      onMouseLeave={handleMouseOut}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          handleMouseOut();
+        }
+      }}
       ref={draggableRef}
     >
       <Link
-        className={
-          "flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-0.5 text-xs text-foreground hover:bg-foreground hover:text-background"
-        }
+        className="flex min-w-0 items-center gap-1.5 px-2 py-0.5"
         href={`/dashboard/tags/${id}`}
         data-id={id}
         draggable={false}
         prefetch={false}
       >
-        {name} <Separator orientation="vertical" className="h-3" /> {count}
+        <span className="truncate">{name}</span>
+        <span aria-hidden="true" className="border-current/30 h-3 border-l" />
+        <span>{count}</span>
       </Link>
 
-      {isHovered && !isDraggable && (
+      {(isHovered || isMobile) && !isDraggable && (
         <Button
           size="none"
-          variant="secondary"
-          className="-translate-1/2 absolute -right-1 -top-1 hidden rounded-full group-hover:block"
+          variant="ghost"
+          className="mr-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm text-current hover:bg-background/20 hover:text-current"
+          aria-label={`Delete ${name}`}
           onClick={() => onOpenDialog({ id, name })}
         >
           <X className="size-3" />

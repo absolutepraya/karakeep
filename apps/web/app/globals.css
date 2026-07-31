@@ -356,12 +356,14 @@
 
 /* ============================================================
    Visual-viewport vars: kept in sync by <VisualViewportSync> so dialogs can
-   stay visible above the iOS on-screen keyboard. Fallbacks match the old
-   full-viewport layout for SSR, no-JS, and desktop.
+   stay visible above the iOS on-screen keyboard. `--vvb` is the portion of
+   the layout viewport covered below the visual viewport. Fallbacks match the
+   old full-viewport layout for SSR, no-JS, and desktop.
    ============================================================ */
 :root {
   --vvh: 100dvh;
   --vvo: 0px;
+  --vvb: 0px;
   --dialog-safe-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
 
@@ -377,7 +379,7 @@
   }
 
   .dialog-vv-bottom {
-    bottom: 0;
+    bottom: var(--vvb);
     max-height: calc(var(--vvh) - 0.75rem);
   }
 }

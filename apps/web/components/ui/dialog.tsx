@@ -16,6 +16,7 @@ const TEXT_ENTRY_INPUT_TYPES: Record<string, true> = {
 };
 
 const FOCUSED_FIELD_CLEARANCE = 12;
+const KEYBOARD_SETTLE_DELAY_MS = 350;
 
 function isTextEntryControl(
   element: EventTarget | null,
@@ -148,9 +149,10 @@ function useFocusedFieldReveal(dialog: HTMLElement | null) {
   );
   const firstFrame = React.useRef<number | null>(null);
   const secondFrame = React.useRef<number | null>(null);
+  const keyboardSettleTimer = React.useRef<number | null>(null);
 
   const scheduleReveal = React.useCallback(
-    (control: HTMLElement) => {
+    (control: HTMLElement, recheckAfterKeyboardSettles = false) => {
       if (!dialog) return;
 
       if (firstFrame.current !== null) {
@@ -166,6 +168,18 @@ function useFocusedFieldReveal(dialog: HTMLElement | null) {
           }
         });
       });
+
+      if (recheckAfterKeyboardSettles) {
+        if (keyboardSettleTimer.current !== null) {
+          window.clearTimeout(keyboardSettleTimer.current);
+        }
+        keyboardSettleTimer.current = window.setTimeout(() => {
+          keyboardSettleTimer.current = null;
+          if (document.activeElement === control) {
+            revealFocusedTextEntry(dialog, control);
+          }
+        }, KEYBOARD_SETTLE_DELAY_MS);
+      }
     },
     [dialog],
   );
@@ -176,7 +190,7 @@ function useFocusedFieldReveal(dialog: HTMLElement | null) {
     const control = document.activeElement;
     if (isTextEntryControl(control) && dialog.contains(control)) {
       setActiveControl(control);
-      scheduleReveal(control);
+      scheduleReveal(control, true);
     }
   }, [dialog, scheduleReveal]);
 
@@ -208,6 +222,9 @@ function useFocusedFieldReveal(dialog: HTMLElement | null) {
       if (secondFrame.current !== null) {
         window.cancelAnimationFrame(secondFrame.current);
       }
+      if (keyboardSettleTimer.current !== null) {
+        window.clearTimeout(keyboardSettleTimer.current);
+      }
     },
     [],
   );
@@ -216,7 +233,7 @@ function useFocusedFieldReveal(dialog: HTMLElement | null) {
     onFocusCapture(event: React.FocusEvent<HTMLElement>) {
       if (!isTextEntryControl(event.target)) return;
       setActiveControl(event.target);
-      scheduleReveal(event.target);
+      scheduleReveal(event.target, true);
     },
   };
 }
