@@ -90,6 +90,14 @@ const zOfflineSyncConflictSchema = z.object({
 });
 export type ZOfflineSyncConflict = z.infer<typeof zOfflineSyncConflictSchema>;
 
+export const zOfflineSyncRejectionSchema = z.object({
+  idempotencyKey: z.string().uuid(),
+  bookmarkId: z.string(),
+  code: z.enum(["BAD_REQUEST", "FORBIDDEN", "NOT_FOUND"]),
+  message: z.string(),
+});
+export type ZOfflineSyncRejection = z.infer<typeof zOfflineSyncRejectionSchema>;
+
 const zOfflineSyncBookmarkFieldVersionSchema = z.object({
   bookmarkId: z.string(),
   field: z.string(),
@@ -154,6 +162,7 @@ export type ZOfflineSyncPullResult = z.infer<
 export const zOfflineSyncPushResultSchema = z.object({
   acknowledged: z.array(z.string().uuid()),
   conflicts: z.array(zOfflineSyncConflictSchema),
+  rejections: z.array(zOfflineSyncRejectionSchema).default([]),
   cursor: zOfflineSyncCursorSchema,
 });
 export type ZOfflineSyncPushResult = z.infer<

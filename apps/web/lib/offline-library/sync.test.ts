@@ -85,6 +85,7 @@ const emptyDelta: ZOfflineSyncPullResult = { events: [], cursor: "12" };
 const acknowledgedPush: ZOfflineSyncPushResult = {
   acknowledged: [pendingMutation.idempotencyKey],
   conflicts: [],
+  rejections: [],
   cursor: "12",
 };
 
@@ -159,6 +160,7 @@ test("replays the final repeated offline edit without a version conflict", async
   vi.mocked(client.push).mockImplementation(async ({ mutations }) => ({
     acknowledged: mutations.map((mutation) => mutation.idempotencyKey),
     conflicts: [],
+    rejections: [],
     cursor: "12",
   }));
   const coordinator = new OfflineLibrarySyncCoordinator(client);
@@ -225,6 +227,46 @@ test("persists the time of a successful synchronization", async () => {
   await expect(
     offlineLibraryDb.metadata.get("lastSuccessfulSyncAt"),
   ).resolves.toMatchObject({ key: "lastSuccessfulSyncAt" });
+});
+
+test("requests persistent storage once after successful syncs", async () => {
+  const originalStorage = navigator.storage;
+  const persist = vi.fn().mockResolvedValue(true);
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: { persist },
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+  await coordinator.syncNow();
+
+  expect(persist).toHaveBeenCalledOnce();
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: originalStorage,
+  });
+});
+
+test("does not fail a successful sync when persistent storage is unavailable", async () => {
+  const originalStorage = navigator.storage;
+  const persist = vi.fn().mockRejectedValue(new Error("storage denied"));
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: { persist },
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  expect(coordinator.getStatus()).toMatchObject({ kind: "online" });
+  expect(persist).toHaveBeenCalledOnce();
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: originalStorage,
+  });
 });
 
 test("keeps an online replica online during a background delta sync", async () => {
@@ -318,6 +360,46 @@ test("saves conflicts and prioritizes them over online status", async () => {
     pendingWrites: 1,
     conflictCount: 1,
   });
+});
+
+test("records a rejected mutation without entering retry backoff", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
+  const client = makeClient();
+  vi.mocked(client.push).mockResolvedValueOnce({
+    acknowledged: [],
+    conflicts: [],
+    rejections: [
+      {
+        idempotencyKey: pendingMutation.idempotencyKey,
+        bookmarkId: pendingMutation.bookmarkId,
+        code: "FORBIDDEN",
+        message: "User is not allowed to modify this bookmark",
+      },
+    ],
+    cursor: "12",
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  expect(coordinator.getStatus()).toEqual({
+    kind: "rejected",
+    pendingWrites: 0,
+    rejectionCount: 1,
+  });
+  await expect(
+    offlineLibraryDb.rejections.get(pendingMutation.idempotencyKey),
+  ).resolves.toMatchObject({
+    message: "User is not allowed to modify this bookmark",
+  });
+
+  await coordinator.discardRejectedMutation(pendingMutation.idempotencyKey);
+
+  expect(coordinator.getStatus()).toMatchObject({ kind: "online" });
+  expect(client.snapshot).toHaveBeenCalledOnce();
+  await expect(offlineLibraryDb.rejections.count()).resolves.toBe(0);
 });
 
 test("keeps pending mutations bound to their authenticated principal", async () => {

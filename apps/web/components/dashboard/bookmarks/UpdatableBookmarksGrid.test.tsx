@@ -34,6 +34,10 @@ const mocks = vi.hoisted(() => ({
   isOfflineReplicaReady: vi.fn(),
   canReadOfflineReplica: true,
   getBookmarks: vi.fn(),
+  liveQuerySubscribers: [] as {
+    next: (value: unknown) => void;
+    error: (reason: unknown) => void;
+  }[],
   useInfiniteQuery: vi.fn(),
 }));
 
@@ -55,6 +59,26 @@ vi.mock("@/lib/store/useSortOrderStore", () => ({
 
 vi.mock("@tanstack/react-query", () => ({
   useInfiniteQuery: mocks.useInfiniteQuery,
+}));
+
+vi.mock("dexie", () => ({
+  liveQuery: (query: () => Promise<unknown>) => ({
+    subscribe: (subscriber: {
+      next: (value: unknown) => void;
+      error: (reason: unknown) => void;
+    }) => {
+      mocks.liveQuerySubscribers.push(subscriber);
+      void query().then(subscriber.next, subscriber.error);
+      return {
+        unsubscribe: () => {
+          const index = mocks.liveQuerySubscribers.indexOf(subscriber);
+          if (index >= 0) {
+            mocks.liveQuerySubscribers.splice(index, 1);
+          }
+        },
+      };
+    },
+  }),
 }));
 
 vi.mock("@karakeep/shared-react/trpc", () => ({
@@ -85,12 +109,12 @@ vi.mock("./BookmarksGrid", () => ({
     bookmarks,
     fetchNextPage,
   }: {
-    bookmarks: { id: string }[];
+    bookmarks: { id: string; title?: string | null }[];
     fetchNextPage: () => void;
   }) => (
     <div>
       {bookmarks.map((bookmark) => (
-        <span key={bookmark.id}>{bookmark.id}</span>
+        <span key={bookmark.id}>{bookmark.title ?? bookmark.id}</span>
       ))}
       <button type="button" onClick={fetchNextPage}>
         Load more
@@ -117,6 +141,7 @@ afterEach(() => {
   mocks.isOfflineReplicaReady.mockReset();
   mocks.canReadOfflineReplica = true;
   mocks.getBookmarks.mockReset();
+  mocks.liveQuerySubscribers.length = 0;
   mocks.useInfiniteQuery.mockReset();
   Object.defineProperty(navigator, "onLine", {
     configurable: true,
@@ -165,6 +190,37 @@ describe("UpdatableBookmarksGrid", () => {
     expect(mocks.queryBookmarks).toHaveBeenCalledWith(
       expect.objectContaining({ rssFeedId: "feed-1" }),
     );
+  });
+
+  it("refreshes the offline grid when an optimistic replica write completes", async () => {
+    mocks.queryBookmarks.mockResolvedValue({
+      bookmarks: [{ id: "bookmark-1", title: "Before edit" }],
+      cursor: "1",
+      nextCursor: null,
+    });
+    mocks.countBookmarks.mockResolvedValue(1);
+    mocks.isOfflineReplicaReady.mockResolvedValue(true);
+
+    render(
+      <UpdatableBookmarksGrid
+        query={{ archived: false }}
+        bookmarks={serverPage}
+      />,
+    );
+
+    expect(await screen.findByText("Before edit")).toBeTruthy();
+    mocks.liveQuerySubscribers[0]?.next([
+      {
+        bookmarks: [{ id: "bookmark-1", title: "Edited offline" }],
+        cursor: "1",
+        nextCursor: null,
+      },
+      1,
+      true,
+    ]);
+
+    expect(await screen.findByText("Edited offline")).toBeTruthy();
+    expect(screen.queryByText("Before edit")).toBeNull();
   });
 
   it("uses the local unavailable state for a cold offline launch before constructing a server query", async () => {

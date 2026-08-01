@@ -16,6 +16,7 @@ import {
 import type { OfflineBookmarkQuery } from "@/lib/offline-library/repository";
 import { useSortOrderStore } from "@/lib/store/useSortOrderStore";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { liveQuery } from "dexie";
 
 import type {
   ZGetBookmarksRequest,
@@ -110,21 +111,24 @@ function useLocalBookmarkPagination(
     setError(null);
     setIsFetchingNextPage(false);
 
-    void Promise.all([
-      queryBookmarks({
-        archived,
-        favourited,
-        tagId,
-        listId,
-        rssFeedId,
-        cursor,
-        limit,
-        sortOrder,
-      }),
-      offlineLibraryDb.bookmarks.count(),
-      isOfflineReplicaReady(),
-    ]).then(
-      ([page, count, ready]) => {
+    const subscription = liveQuery(
+      async () =>
+        await Promise.all([
+          queryBookmarks({
+            archived,
+            favourited,
+            tagId,
+            listId,
+            rssFeedId,
+            cursor,
+            limit,
+            sortOrder,
+          }),
+          offlineLibraryDb.bookmarks.count(),
+          isOfflineReplicaReady(),
+        ]),
+    ).subscribe({
+      next: ([page, count, ready]) => {
         if (generation !== generationRef.current) {
           return;
         }
@@ -134,7 +138,7 @@ function useLocalBookmarkPagination(
         setIsReady(ready);
         setIsLoaded(true);
       },
-      (reason: unknown) => {
+      error: (reason: unknown) => {
         if (generation !== generationRef.current) {
           return;
         }
@@ -145,7 +149,9 @@ function useLocalBookmarkPagination(
         );
         setIsLoaded(true);
       },
-    );
+    });
+
+    return () => subscription.unsubscribe();
   }, [
     archived,
     cursor,

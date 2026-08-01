@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import ActionConfirmingDialog from "@/components/ui/action-confirming-dialog";
 import {
   Popover,
   PopoverContent,
@@ -33,6 +34,7 @@ import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import type {
   ZOfflineSyncConflict,
   ZOfflineSyncMutation,
+  ZOfflineSyncRejection,
 } from "@karakeep/shared/types/offlineSync";
 
 import LibrarySyncConflictDialog from "./LibrarySyncConflictDialog";
@@ -277,8 +279,11 @@ export default function ProcessingStatusIndicator() {
   const api = useTRPC();
   const status = useOfflineLibraryStatus();
   const canReadOfflineReplica = useCanReadOfflineReplica();
-  const { syncNow } = useOfflineLibrary();
+  const { discardRejectedMutation, syncNow } = useOfflineLibrary();
   const [conflicts, setConflicts] = React.useState<ZOfflineSyncConflict[]>([]);
+  const [rejections, setRejections] = React.useState<ZOfflineSyncRejection[]>(
+    [],
+  );
   const [selectedConflict, setSelectedConflict] =
     React.useState<ZOfflineSyncConflict | null>(null);
   const lastSuccessfulSyncRef = React.useRef<Date | null>(null);
@@ -305,6 +310,22 @@ export default function ProcessingStatusIndicator() {
 
     void offlineLibraryDb.conflicts.toArray().then((records) => {
       if (!cancelled) setConflicts(records);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (status.kind !== "rejected") {
+      setRejections([]);
+      return;
+    }
+
+    void offlineLibraryDb.rejections.toArray().then((records) => {
+      if (!cancelled) setRejections(records);
     });
 
     return () => {
@@ -367,6 +388,13 @@ export default function ProcessingStatusIndicator() {
       Icon = TriangleAlert;
       needsAttention = true;
       break;
+    case "rejected":
+      libraryState = `${status.rejectionCount} rejected offline change${status.rejectionCount === 1 ? "" : "s"}`;
+      libraryDetail = "The server could not apply a queued offline change.";
+      pendingWrites = status.pendingWrites;
+      Icon = TriangleAlert;
+      needsAttention = true;
+      break;
   }
 
   const buttonLabel = `Library activity: ${libraryState}, ${libraryDetail}, ${dataSourceLabel}${pendingWrites > 0 ? `, ${pendingWritesLabel(pendingWrites)}` : ""}${serverProcessing.total > 0 ? `, ${serverProcessing.total} background task${serverProcessing.total === 1 ? "" : "s"} processing` : ""}`;
@@ -378,6 +406,16 @@ export default function ProcessingStatusIndicator() {
   async function openConflict() {
     const records = conflicts.length > 0 ? conflicts : await loadConflicts();
     setSelectedConflict(records[0] ?? null);
+  }
+
+  async function discardRejectedChanges() {
+    await Promise.all(
+      rejections.map(
+        async (rejection) =>
+          await discardRejectedMutation(rejection.idempotencyKey),
+      ),
+    );
+    await syncNow();
   }
 
   async function resolveWithLocalValue(conflict: ZOfflineSyncConflict) {
@@ -470,6 +508,30 @@ export default function ProcessingStatusIndicator() {
                   Resolve {status.conflictCount} conflict
                   {status.conflictCount === 1 ? "" : "s"}
                 </Button>
+              )}
+              {status.kind === "rejected" && (
+                <ActionConfirmingDialog
+                  title="Discard rejected offline changes?"
+                  description="This removes the queued changes the server rejected, then refreshes your library from the server."
+                  actionButton={(setOpen) => (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => {
+                        void discardRejectedChanges()
+                          .then(() => setOpen(false))
+                          .catch(() => undefined);
+                      }}
+                    >
+                      Discard and restore
+                    </Button>
+                  )}
+                >
+                  <Button type="button" size="sm">
+                    Resolve {status.rejectionCount} rejected change
+                    {status.rejectionCount === 1 ? "" : "s"}
+                  </Button>
+                </ActionConfirmingDialog>
               )}
             </div>
           </section>

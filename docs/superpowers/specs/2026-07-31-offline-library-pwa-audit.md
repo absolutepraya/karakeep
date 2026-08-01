@@ -1,7 +1,7 @@
 # Offline Library PWA Audit
 
 **Date:** 2026-07-31  
-**Status:** P0 implemented, pending device verification  
+**Status:** P0 through P2 implemented, pending device verification
 **Related design:** [Offline Library PWA Design](2026-07-12-offline-library-pwa-design.md)
 
 ## Purpose
@@ -27,11 +27,11 @@ account identifiers, URLs, credentials, or bookmark content.
 | PWA-002 | P0 | Implemented, pending device verification | A local replica could be read before `OfflineLibraryProvider` validated that it belonged to the current authenticated user. A shared browser profile could briefly render a prior user's bookmarks. | Provider ownership verification and purge run asynchronously; grid reads were previously independent of that check. |
 | PWA-003 | P1 | Implemented, pending device verification | A visible mobile PWA did not periodically synchronize. Desktop changes could remain absent until startup, reconnect, visibility restore, or a manual retry. | The provider now requests a sync every 30 seconds only while visible, in addition to its existing lifecycle triggers. An error state retains bounded retry backoff instead of being retried by the interval. |
 | PWA-004 | P1 | Implemented, pending device verification | The library activity indicator did not state whether the grid was showing server data or a local replica. Its 15-second query polls background processing, not bookmark-replica freshness. | The indicator now explicitly labels the active source as server data or offline replica. |
-| PWA-005 | P1 | Accepted limitation | A cold offline launch cannot reliably open the downloaded library. Cached dashboard navigation is limited to five minutes and requires an in-memory session entry for the current service-worker client. | `sw.js` checks `documentCacheSessions.get(event.clientId)` before it can use cached navigation. |
+| PWA-005 | P1 | Accepted limitation, copy corrected | A cold offline launch cannot reliably open the downloaded library. Cached dashboard navigation is limited to five minutes and requires an in-memory session entry for the current service-worker client. | `sw.js` checks `documentCacheSessions.get(event.clientId)` before it can use cached navigation; `offline.html` now asks the user to reconnect and reopen the app online instead of promising cold offline access. |
 | PWA-006 | P1 | Implemented, pending device verification | The last successful sync time was memory-only. A cold offline session could have a valid replica but report no last sync time. | Successful sync time now persists in IndexedDB metadata and hydrates before an offline state is displayed. |
-| PWA-007 | P1 | Open | The browser is never asked to persist storage. Safari or other browsers may evict IndexedDB and thumbnail caches under storage pressure. | The code reads `navigator.storage.estimate()` only for thumbnail eviction. |
-| PWA-008 | P2 | Deferred | Offline bookmark updates and tag changes enqueue mutations but do not optimistically update the local replica, so the visible state can stay old until a successful sync. | `useOfflineSafeBookmarkMutation` queues mutations without writing the changed fields to `offlineLibraryDb`. |
-| PWA-009 | P2 | Deferred | Offline writes are intentionally narrow: create, delete, upload, list, new-tag, and bulk destructive paths are network-only. | Only `bookmark.update` and `bookmark.tags` are accepted offline mutation kinds. |
+| PWA-007 | P1 | Implemented, pending device verification | The browser was never asked to persist storage. Safari or other browsers may evict IndexedDB and thumbnail caches under storage pressure. | After the first successful sync in a coordinator session, the app makes a best-effort `navigator.storage.persist()` request. A denial or unsupported browser does not affect synchronization. |
+| PWA-008 | P2 | Implemented, pending device verification | Offline bookmark updates and tag changes already update the local replica atomically, but offline grids and search read it only once, so the visible state could stay old until a route or query change. | `enqueueMutation` writes the replica and outbox in one transaction. Grid and search readers now subscribe with Dexie `liveQuery`, so those writes repaint the offline UI immediately. |
+| PWA-009 | P2 | P3 in progress | Offline writes remain intentionally narrow: create, delete, upload, list, new-tag, and bulk destructive paths are network-only. | Only `bookmark.update` and `bookmark.tags` are accepted today. Permanent rejection of those queued writes is now surfaced for explicit discard and replica refresh, which is the prerequisite for the first list-membership slice. The staged expansion is recorded in [Offline Mutation Expansion Design](2026-08-01-offline-mutation-expansion-design.md). |
 
 ## Ruled out for the online stale-bookmark flash
 
@@ -89,14 +89,25 @@ Expected result after P0: all focused tests pass.
 - The activity indicator states whether server data or the offline replica is
   currently shown.
 
+### P1B regression tests
+
+- The offline fallback does not promise that a cold offline launch can open the
+  downloaded library.
+- A successful sync requests persistent storage at most once per coordinator
+  session, and a denied request does not fail the sync.
+
+### P2 regression tests
+
+- An optimistic offline replica update repaints the visible offline grid without
+  a route change or successful synchronization.
+
 ## Follow-up order
 
-1. P1B: correct offline copy to match the accepted cold-launch limitation and
-   make a nonfatal `navigator.storage.persist()` request after a successful
-   sync.
-2. P2: design durable optimistic local writes and the required temporary-ID,
-   dependency, conflict, and queued-state behavior before expanding offline
-   mutation coverage.
+1. P3: add actionable rejected-outbox handling, then support adding and
+   removing a bookmark from an existing list as the first expanded offline
+   mutation slice.
+2. P4: design local delete tombstones and cancellation for the existing undo
+   window before enabling offline bookmark deletion.
 
 ## Resolution rules
 

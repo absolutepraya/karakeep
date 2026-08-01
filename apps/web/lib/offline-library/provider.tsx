@@ -29,6 +29,7 @@ interface OfflineLibraryContextValue {
   status: OfflineLibraryStatus;
   canReadOfflineReplica: boolean;
   syncNow: () => Promise<void>;
+  discardRejectedMutation: (idempotencyKey: string) => Promise<void>;
   queueBookmarkUpdate: (mutation: BookmarkUpdateMutation) => Promise<void>;
   queueBookmarkTags: (mutation: BookmarkTagsMutation) => Promise<void>;
 }
@@ -200,6 +201,12 @@ export function OfflineLibraryProvider({
           throw new Error("Offline sync requires an authenticated user");
         }
         await coordinator.syncNow();
+      },
+      discardRejectedMutation: async (idempotencyKey) => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline sync requires an authenticated user");
+        }
+        await coordinator.discardRejectedMutation(idempotencyKey);
       },
       queueBookmarkUpdate: async (mutation) => {
         if (userId === null || activeUserIdRef.current !== userId) {

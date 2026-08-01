@@ -7,6 +7,7 @@ import type {
   ZOfflineSyncCursor,
   ZOfflineSyncEvent,
   ZOfflineSyncMutation,
+  ZOfflineSyncRejection,
   ZOfflineSyncSnapshot,
 } from "@karakeep/shared/types/offlineSync";
 
@@ -514,6 +515,23 @@ export async function saveConflict(
   await offlineLibraryDb.conflicts.put(storedConflict);
 }
 
+export async function saveRejectedMutation(
+  rejection: ZOfflineSyncRejection,
+  ownerUserId: string,
+): Promise<void> {
+  await offlineLibraryDb.rejections.put({
+    ...rejection,
+    ownerUserId,
+    rejectedAt: Date.now(),
+  });
+}
+
+export async function deleteRejectedMutation(
+  idempotencyKey: string,
+): Promise<void> {
+  await offlineLibraryDb.rejections.delete(idempotencyKey);
+}
+
 export async function purgeOfflineLibrary(): Promise<void> {
   await offlineLibraryDb.transaction(
     "rw",
@@ -526,6 +544,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
       offlineLibraryDb.metadata,
       offlineLibraryDb.outbox,
       offlineLibraryDb.conflicts,
+      offlineLibraryDb.rejections,
       offlineLibraryDb.thumbnailAccess,
     ],
     async () => {
@@ -538,6 +557,7 @@ export async function purgeOfflineLibrary(): Promise<void> {
         offlineLibraryDb.metadata.clear(),
         offlineLibraryDb.outbox.clear(),
         offlineLibraryDb.conflicts.clear(),
+        offlineLibraryDb.rejections.clear(),
         offlineLibraryDb.thumbnailAccess.clear(),
       ]);
     },

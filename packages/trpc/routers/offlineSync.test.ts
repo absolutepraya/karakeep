@@ -128,6 +128,40 @@ describe("offline sync contracts", () => {
 });
 
 describe("Offline sync routes", () => {
+  test<CustomTestContext>("records a permanent authorization rejection as an idempotent result", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const other = apiCallers[1];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "owner only",
+    });
+    const mutation = {
+      idempotencyKey: "5c299d95-e67e-4a1a-af14-e3c275d2fbf8",
+      kind: "bookmark.update" as const,
+      bookmarkId: bookmark.id,
+      fields: { title: "Offline edit" },
+      baseVersions: { title: 0 },
+    };
+
+    const first = await other.offlineSync.push({ mutations: [mutation] });
+    const replay = await other.offlineSync.push({ mutations: [mutation] });
+
+    expect(first).toEqual(replay);
+    expect(first).toMatchObject({
+      acknowledged: [],
+      conflicts: [],
+      rejections: [
+        {
+          idempotencyKey: mutation.idempotencyKey,
+          bookmarkId: bookmark.id,
+          code: "FORBIDDEN",
+        },
+      ],
+    });
+  });
+
   test<CustomTestContext>("pull returns only the caller's events after its cursor", async ({
     apiCallers,
   }) => {

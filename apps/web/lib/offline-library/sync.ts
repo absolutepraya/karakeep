@@ -9,6 +9,7 @@ import type {
 import {
   applyEvents,
   deleteAcknowledgedMutations,
+  deleteRejectedMutation,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
   getLastSuccessfulSyncAt,
@@ -19,6 +20,7 @@ import {
   replaceSnapshot,
   saveLastSuccessfulSyncAt,
   saveConflict,
+  saveRejectedMutation,
 } from "./repository";
 
 const RETRY_DELAYS_MS = [2_000, 10_000, 30_000, 120_000] as const;
@@ -45,7 +47,8 @@ type OfflineLibraryStatus =
     }
   | { kind: "offline"; lastSyncedAt: Date | null; pendingWrites: number }
   | { kind: "error"; message: string; retryAt: Date; pendingWrites: number }
-  | { kind: "conflict"; pendingWrites: number; conflictCount: number };
+  | { kind: "conflict"; pendingWrites: number; conflictCount: number }
+  | { kind: "rejected"; pendingWrites: number; rejectionCount: number };
 
 interface OfflineSyncClient {
   snapshot: () => Promise<ZOfflineSyncSnapshot>;
@@ -70,6 +73,7 @@ export class OfflineLibrarySyncCoordinator {
   private retryTimer: RetryTimer | undefined;
   private generation = 0;
   private isActive = false;
+  private storagePersistenceRequested = false;
   private userId: string | null = null;
   private runningSync: Promise<void> | null = null;
   private runningGeneration: number | null = null;
@@ -162,14 +166,36 @@ export class OfflineLibrarySyncCoordinator {
     });
   }
 
+  async discardRejectedMutation(idempotencyKey: string): Promise<void> {
+    await this.serializeOutboxOperation(async () => {
+      if (!this.isActive || this.userId === null) {
+        throw new Error("Offline sync requires an authenticated user");
+      }
+      if ((await this.pendingWriteCount()) === 0) {
+        const snapshot = await this.client.snapshot();
+        await replaceSnapshot(snapshot, this.userId);
+        this.lastSyncedAt = new Date();
+        await saveLastSuccessfulSyncAt(this.lastSyncedAt);
+        this.requestPersistentStorage();
+      }
+      await deleteRejectedMutation(idempotencyKey);
+      await this.refreshDerivedStatus();
+    });
+  }
+
   async markOffline(): Promise<void> {
     this.clearRetry();
-    const [pendingWrites, conflictCount] = await Promise.all([
+    const [pendingWrites, conflictCount, rejectionCount] = await Promise.all([
       this.pendingWriteCount(),
       offlineLibraryDb.conflicts.count(),
+      offlineLibraryDb.rejections.count(),
     ]);
     if (conflictCount > 0) {
       this.setStatus({ kind: "conflict", pendingWrites, conflictCount });
+      return;
+    }
+    if (rejectionCount > 0) {
+      this.setStatus({ kind: "rejected", pendingWrites, rejectionCount });
       return;
     }
     this.setStatus({
@@ -255,6 +281,7 @@ export class OfflineLibrarySyncCoordinator {
       this.retryAttempt = 0;
       this.lastSyncedAt = new Date();
       await saveLastSuccessfulSyncAt(this.lastSyncedAt);
+      this.requestPersistentStorage();
       await this.setSettledStatus();
     } catch (error) {
       if (!this.isCurrentGeneration(generation)) {
@@ -297,7 +324,14 @@ export class OfflineLibrarySyncCoordinator {
       }
       await Promise.all([
         deleteAcknowledgedMutations(userId, result.acknowledged),
+        deleteAcknowledgedMutations(
+          userId,
+          result.rejections.map((rejection) => rejection.idempotencyKey),
+        ),
         ...result.conflicts.map((conflict) => saveConflict(conflict)),
+        ...result.rejections.map(
+          async (rejection) => await saveRejectedMutation(rejection, userId),
+        ),
       ]);
       if (!this.isCurrentGeneration(generation)) {
         return;
@@ -340,12 +374,17 @@ export class OfflineLibrarySyncCoordinator {
   }
 
   private async setSettledStatus(): Promise<void> {
-    const [pendingWrites, conflictCount] = await Promise.all([
+    const [pendingWrites, conflictCount, rejectionCount] = await Promise.all([
       this.pendingWriteCount(),
       offlineLibraryDb.conflicts.count(),
+      offlineLibraryDb.rejections.count(),
     ]);
     if (conflictCount > 0) {
       this.setStatus({ kind: "conflict", pendingWrites, conflictCount });
+      return;
+    }
+    if (rejectionCount > 0) {
+      this.setStatus({ kind: "rejected", pendingWrites, rejectionCount });
       return;
     }
     this.setStatus({
@@ -359,12 +398,17 @@ export class OfflineLibrarySyncCoordinator {
     if (this.status.kind === "initializing" || this.status.kind === "syncing") {
       return;
     }
-    const [pendingWrites, conflictCount] = await Promise.all([
+    const [pendingWrites, conflictCount, rejectionCount] = await Promise.all([
       this.pendingWriteCount(),
       offlineLibraryDb.conflicts.count(),
+      offlineLibraryDb.rejections.count(),
     ]);
     if (conflictCount > 0) {
       this.setStatus({ kind: "conflict", pendingWrites, conflictCount });
+      return;
+    }
+    if (rejectionCount > 0) {
+      this.setStatus({ kind: "rejected", pendingWrites, rejectionCount });
       return;
     }
     if (this.status.kind === "online") {
@@ -377,6 +421,17 @@ export class OfflineLibrarySyncCoordinator {
     }
     if (this.status.kind === "error") {
       this.setStatus({ ...this.status, pendingWrites });
+    }
+    if (this.status.kind === "rejected") {
+      this.setStatus(
+        rejectionCount > 0
+          ? { ...this.status, pendingWrites, rejectionCount }
+          : {
+              kind: "online",
+              lastSyncedAt: this.lastSyncedAt ?? new Date(),
+              pendingWrites,
+            },
+      );
     }
   }
 
@@ -395,6 +450,18 @@ export class OfflineLibrarySyncCoordinator {
     return this.userId === null
       ? 0
       : (await listPendingMutations(this.userId)).length;
+  }
+
+  private requestPersistentStorage(): void {
+    if (this.storagePersistenceRequested) {
+      return;
+    }
+    const storage = globalThis.navigator?.storage;
+    if (typeof storage?.persist !== "function") {
+      return;
+    }
+    this.storagePersistenceRequested = true;
+    void storage.persist().catch(() => undefined);
   }
 
   private nextRetryDelay(): number {

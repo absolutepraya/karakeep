@@ -3,6 +3,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { searchBookmarks } from "@/lib/offline-library/repository";
 import { useSortOrderStore } from "@/lib/store/useSortOrderStore";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { liveQuery } from "dexie";
 
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 import { useTRPC } from "@karakeep/shared-react/trpc";
@@ -82,13 +83,15 @@ export function useLocalBookmarkSearch() {
 
     setLocalBookmarks(null);
     setLocalError(null);
-    void searchBookmarks(searchQuery).then(
-      (bookmarks) => {
+    const subscription = liveQuery(
+      async () => await searchBookmarks(searchQuery),
+    ).subscribe({
+      next: (bookmarks) => {
         if (!cancelled) {
           setLocalBookmarks(bookmarks);
         }
       },
-      (reason: unknown) => {
+      error: (reason: unknown) => {
         if (!cancelled) {
           setLocalError(
             reason instanceof Error
@@ -97,10 +100,11 @@ export function useLocalBookmarkSearch() {
           );
         }
       },
-    );
+    });
 
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, [searchQuery]);
 
