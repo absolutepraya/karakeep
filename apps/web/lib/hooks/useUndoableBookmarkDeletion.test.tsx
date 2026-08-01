@@ -21,8 +21,22 @@ vi.mock("@/lib/i18n/client", () => ({
   }),
 }));
 
-vi.mock("@karakeep/shared-react/hooks/bookmarks", () => ({
-  useDeleteBookmark: () => ({ mutateAsync: mocks.deleteBookmark }),
+vi.mock("@/lib/hooks/useOfflineSafeBookmarkMutation", () => ({
+  isOfflineQueuedMutation: (result: unknown) =>
+    typeof result === "object" && result !== null && "kind" in result,
+  OFFLINE_ONLINE_REQUIRED_MESSAGE:
+    "This action requires an internet connection.",
+  useOfflineSafeBookmarkDeletion: () => ({
+    mutateAsync: mocks.deleteBookmark,
+  }),
+}));
+
+vi.mock("@/lib/offline-library/provider", () => ({
+  useOfflineLibraryStatus: () => ({
+    kind: "online",
+    lastSyncedAt: new Date(),
+    pendingWrites: 0,
+  }),
 }));
 
 vi.mock("sonner", () => ({ toast: mocks.toast }));
@@ -132,5 +146,30 @@ describe("useUndoableBookmarkDeletion", () => {
     expect(
       usePendingBookmarkDeletionStore.getState().pendingBookmarkIds,
     ).toEqual([]);
+  });
+
+  it("hands off a queued offline deletion to its tombstone after undo expires", async () => {
+    mocks.deleteBookmark.mockResolvedValueOnce({ kind: "queued" });
+    const { result } = renderHook(() => useUndoableBookmarkDeletion());
+
+    act(() => {
+      result.current.scheduleDelete("bookmark-1");
+    });
+
+    const toastOptions = mocks.toast.mock.calls[0]?.[1];
+    act(() => {
+      toastOptions?.onAutoClose?.();
+    });
+
+    await waitFor(() => {
+      expect(mocks.deleteBookmark).toHaveBeenCalledWith({
+        bookmarkId: "bookmark-1",
+      });
+    });
+    await waitFor(() => {
+      expect(
+        usePendingBookmarkDeletionStore.getState().pendingBookmarkIds,
+      ).toEqual([]);
+    });
   });
 });

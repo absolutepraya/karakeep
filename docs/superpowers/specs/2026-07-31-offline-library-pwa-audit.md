@@ -1,7 +1,7 @@
 # Offline Library PWA Audit
 
 **Date:** 2026-07-31  
-**Status:** P0 through P3 implemented, pending device verification
+**Status:** P0 through P4 implemented, pending device verification
 **Related design:** [Offline Library PWA Design](2026-07-12-offline-library-pwa-design.md)
 
 ## Purpose
@@ -16,8 +16,9 @@ account identifiers, URLs, credentials, or bookmark content.
 - P0 prevents incorrect and cross-account display before freshness work.
 - A cold PWA launch without a network remains unsupported for now. The app
   must first be opened while online.
-- Offline creation, deletion, uploads, new tag creation, and bulk destructive
-  actions remain out of scope. Existing manual-list membership is supported.
+- Offline creation, uploads, new tag creation, and bulk destructive actions
+  remain out of scope. Existing manual-list membership and single-bookmark
+  deletion are supported.
 
 ## Findings
 
@@ -31,7 +32,8 @@ account identifiers, URLs, credentials, or bookmark content.
 | PWA-006 | P1 | Implemented, pending device verification | The last successful sync time was memory-only. A cold offline session could have a valid replica but report no last sync time. | Successful sync time now persists in IndexedDB metadata and hydrates before an offline state is displayed. |
 | PWA-007 | P1 | Implemented, pending device verification | The browser was never asked to persist storage. Safari or other browsers may evict IndexedDB and thumbnail caches under storage pressure. | After the first successful sync in a coordinator session, the app makes a best-effort `navigator.storage.persist()` request. A denial or unsupported browser does not affect synchronization. |
 | PWA-008 | P2 | Implemented, pending device verification | Offline bookmark updates and tag changes already update the local replica atomically, but offline grids and search read it only once, so the visible state could stay old until a route or query change. | `enqueueMutation` writes the replica and outbox in one transaction. Grid and search readers now subscribe with Dexie `liveQuery`, so those writes repaint the offline UI immediately. |
-| PWA-009 | P3 | Implemented, pending device verification | Existing manual-list membership can now be added or removed offline. Creation, deletion, uploads, new tags, and bulk actions remain network-only. | `bookmark.listMembership` has explicit set semantics, atomic replica and outbox updates, server-side current access checks, idempotency receipts, and actionable rejection recovery. The staged expansion is recorded in [Offline Mutation Expansion Design](2026-08-01-offline-mutation-expansion-design.md). |
+| PWA-009 | P3 | Implemented, pending device verification | Existing manual-list membership can now be added or removed offline. Creation, uploads, new tags, and bulk actions remain network-only. | `bookmark.listMembership` has explicit set semantics, atomic replica and outbox updates, server-side current access checks, idempotency receipts, and actionable rejection recovery. The staged expansion is recorded in [Offline Mutation Expansion Design](2026-08-01-offline-mutation-expansion-design.md). |
+| PWA-010 | P4 | Implemented, pending device verification | A single owned bookmark can now be deleted offline without bypassing the five-second undo window. Bulk deletion remains network-only. | After undo expires, `bookmark.delete` atomically creates a local tombstone and outbox entry. Queries hide tombstones while the original record remains until an authoritative delete event or snapshot settles it. A rejection keeps the tombstone until explicit discard and server refresh. |
 
 ## Ruled out for the online stale-bookmark flash
 
@@ -108,10 +110,20 @@ Expected result after P0: all focused tests pass.
 - Server replay is idempotent and a viewer's revoked edit access becomes an
   actionable rejection.
 
+### P4 regression tests
+
+- A queued deletion hides the bookmark from local grid and search queries while
+  retaining the original record behind a tombstone.
+- Acknowledgement does not clear a tombstone before an authoritative delete
+  event or snapshot arrives.
+- Undo prevents outbox creation during the five-second window; a rejected
+  deletion is restored only through the explicit discard-and-refresh flow.
+
 ## Follow-up order
 
-1. P4: design local delete tombstones and cancellation for the existing undo
-   window before enabling offline bookmark deletion.
+1. P5: keep bookmark, tag, and list creation, uploads, and bulk destructive
+   actions online-only until client IDs, dependent mutation rewriting, and
+   durable blob transfer have dedicated designs.
 
 ## Resolution rules
 

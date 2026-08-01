@@ -89,6 +89,20 @@ describe("offline sync contracts", () => {
     ).toBe("bookmark.listMembership");
   });
 
+  test("accepts an idempotent bookmark deletion intent", () => {
+    expect(
+      zOfflineSyncPushInputSchema.parse({
+        mutations: [
+          {
+            idempotencyKey: "3846fd1e-7d76-4f60-b1f9-cdff16936710",
+            bookmarkId: "bookmark-1",
+            kind: "bookmark.delete",
+          },
+        ],
+      }).mutations[0].kind,
+    ).toBe("bookmark.delete");
+  });
+
   test("rejects an update without changed fields", () => {
     expect(() =>
       zOfflineSyncPushInputSchema.parse({
@@ -224,6 +238,31 @@ describe("Offline sync routes", () => {
       bookmarkId: bookmark.id,
       listId: list.id,
     });
+  });
+
+  test<CustomTestContext>("replays an offline bookmark deletion idempotently", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "delete offline",
+    });
+    const mutation = {
+      idempotencyKey: "645e5ca2-0c06-4af3-a3a3-eeb369fe5e9c",
+      kind: "bookmark.delete" as const,
+      bookmarkId: bookmark.id,
+    };
+
+    const first = await owner.offlineSync.push({ mutations: [mutation] });
+    const replay = await owner.offlineSync.push({ mutations: [mutation] });
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(first).toEqual(replay);
+    expect(first.acknowledged).toEqual([mutation.idempotencyKey]);
+    expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(
+      bookmark.id,
+    );
   });
 
   test<CustomTestContext>("rejects offline list membership after edit access is revoked", async ({

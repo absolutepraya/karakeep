@@ -225,6 +225,35 @@ async function applyBookmarkListMembership(
   };
 }
 
+async function applyBookmarkDelete(
+  ctx: AuthedContext,
+  tx: KarakeepDBTransaction,
+  mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.delete" }>,
+): Promise<void> {
+  await assertBookmarkOwner(tx, ctx.user.id, mutation.bookmarkId);
+  const transactionContext = asTransactionContext(ctx, tx);
+  const bookmark = await Bookmark.fromId(
+    transactionContext,
+    mutation.bookmarkId,
+    false,
+  );
+  await bookmark.delete(async (deleteTx) => {
+    await recordOfflineSyncEvents(
+      deleteTx,
+      ctx.user.id,
+      await getOfflineSyncBookmarkRecipientIds(
+        deleteTx,
+        ctx.user.id,
+        mutation.bookmarkId,
+      ),
+      "bookmark",
+      mutation.bookmarkId,
+      "delete",
+      [],
+    );
+  });
+}
+
 async function applyBookmarkUpdate(
   tx: KarakeepDBTransaction,
   mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.update" }>,
@@ -772,6 +801,23 @@ export async function applyOfflineSyncMutations(
                 ["bookmarks"],
               );
             }
+            const result = {
+              acknowledged: [mutation.idempotencyKey],
+              conflicts: [],
+              rejections: [],
+              cursor: await currentCursor(tx, ctx.user.id),
+            };
+            await tx.insert(offlineSyncMutationReceipts).values({
+              userId: ctx.user.id,
+              idempotencyKey: mutation.idempotencyKey,
+              result,
+              createdAt: new Date(),
+            });
+            return result;
+          }
+
+          if (mutation.kind === "bookmark.delete") {
+            await applyBookmarkDelete(ctx, tx, mutation);
             const result = {
               acknowledged: [mutation.idempotencyKey],
               conflicts: [],

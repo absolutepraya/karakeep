@@ -473,10 +473,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       title: t("actions.delete"),
       icon: <Trash2 className="mr-2 size-4" />,
       visible: isOwner,
-      disabled: demoMode || requiresOnline,
-      disabledMessage: requiresOnline
-        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
-        : undefined,
+      disabled: demoMode,
       className: "text-destructive",
       onClick: () => setDeleteBookmarkDialogOpen(true),
     },

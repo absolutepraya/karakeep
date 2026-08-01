@@ -10,6 +10,7 @@ import type { ZOfflineSyncMutation } from "@karakeep/shared/types/offlineSync";
 import {
   useUpdateBookmark,
   useUpdateBookmarkTags,
+  useDeleteBookmark,
 } from "@karakeep/shared-react/hooks/bookmarks";
 import {
   useAddBookmarkToList,
@@ -69,6 +70,10 @@ export interface OfflineSafeBookmarkListMembershipInput {
   bookmarkId: string;
   listId: string;
   action: "add" | "remove";
+}
+
+export interface OfflineSafeBookmarkDeletionInput {
+  bookmarkId: string;
 }
 
 export interface OfflineQueuedMutation {
@@ -425,5 +430,57 @@ export function useOfflineSafeBookmarkListMembership(): OfflineSafeBookmarkMutat
       ? ((onlineAddMutation.error ??
           onlineRemoveMutation.error) as Error | null)
       : offlineError,
+  );
+}
+
+export function useOfflineSafeBookmarkDeletion(): OfflineSafeBookmarkMutation<
+  OfflineSafeBookmarkDeletionInput,
+  unknown | OfflineQueuedMutation
+> {
+  const { status, queueBookmarkDelete } = useOfflineLibrary();
+  const onlineMutation = useDeleteBookmark();
+  const [isOfflinePending, setIsOfflinePending] = useState(false);
+  const [offlineError, setOfflineError] = useState<Error | null>(null);
+  const isOnline = status.kind === "online";
+
+  const mutateAsync = useCallback(
+    async (
+      input: OfflineSafeBookmarkDeletionInput,
+    ): Promise<unknown | OfflineQueuedMutation> => {
+      if (isOnline) {
+        return await onlineMutation.mutateAsync(input);
+      }
+
+      setIsOfflinePending(true);
+      setOfflineError(null);
+      try {
+        const bookmark = await offlineLibraryDb.bookmarks.get(input.bookmarkId);
+        if (!bookmark) {
+          throw new OfflineMutationOnlineRequiredError();
+        }
+        await queueBookmarkDelete({
+          idempotencyKey: queueMutationIdempotencyKey(),
+          kind: "bookmark.delete",
+          bookmarkId: input.bookmarkId,
+        });
+        return { kind: "queued" };
+      } catch (error) {
+        const mutationError =
+          error instanceof Error
+            ? error
+            : new Error("Unable to delete bookmark");
+        setOfflineError(mutationError);
+        throw mutationError;
+      } finally {
+        setIsOfflinePending(false);
+      }
+    },
+    [isOnline, onlineMutation, queueBookmarkDelete],
+  );
+
+  return useMutationState(
+    mutateAsync,
+    isOnline ? onlineMutation.isPending : isOfflinePending,
+    isOnline ? (onlineMutation.error as Error | null) : offlineError,
   );
 }

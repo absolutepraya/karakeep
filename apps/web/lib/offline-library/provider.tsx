@@ -19,6 +19,7 @@ import { OfflineLibrarySyncCoordinator } from "./sync";
 import type {
   BookmarkTagsMutation,
   BookmarkListMembershipMutation,
+  BookmarkDeleteMutation,
   BookmarkUpdateMutation,
   OfflineLibraryStatus,
   OfflineSyncClient,
@@ -36,6 +37,7 @@ interface OfflineLibraryContextValue {
   queueBookmarkListMembership: (
     mutation: BookmarkListMembershipMutation,
   ) => Promise<void>;
+  queueBookmarkDelete: (mutation: BookmarkDeleteMutation) => Promise<void>;
 }
 
 interface OfflineLibraryProviderProps {
@@ -229,6 +231,12 @@ export function OfflineLibraryProvider({
           throw new Error("Offline writes require an authenticated user");
         }
         await coordinator.queueBookmarkListMembership(mutation);
+      },
+      queueBookmarkDelete: async (mutation) => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline writes require an authenticated user");
+        }
+        await coordinator.queueBookmarkDelete(mutation);
       },
     }),
     [canReadOfflineReplica, coordinator, status, userId],

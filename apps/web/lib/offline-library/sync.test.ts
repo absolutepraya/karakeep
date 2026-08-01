@@ -402,6 +402,43 @@ test("records a rejected mutation without entering retry backoff", async () => {
   await expect(offlineLibraryDb.rejections.count()).resolves.toBe(0);
 });
 
+test("restores a rejected tombstoned deletion from a fresh snapshot", async () => {
+  const deleteMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "975f89c3-da53-45de-a217-1a26a8ab9d35",
+    kind: "bookmark.delete",
+    bookmarkId: bookmark.id,
+  };
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(deleteMutation, "user-1");
+  const client = makeClient();
+  vi.mocked(client.push).mockResolvedValueOnce({
+    acknowledged: [],
+    conflicts: [],
+    rejections: [
+      {
+        idempotencyKey: deleteMutation.idempotencyKey,
+        bookmarkId: bookmark.id,
+        code: "FORBIDDEN",
+        message: "User is not allowed to delete this bookmark",
+      },
+    ],
+    cursor: "12",
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+  await expect(queryBookmarks()).resolves.toMatchObject({ bookmarks: [] });
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(1);
+
+  await coordinator.discardRejectedMutation(deleteMutation.idempotencyKey);
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [{ id: bookmark.id }],
+  });
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(0);
+});
+
 test("keeps pending mutations bound to their authenticated principal", async () => {
   await replaceSnapshot(snapshot, "user-1");
   await enqueueMutation(pendingMutation, "user-1");

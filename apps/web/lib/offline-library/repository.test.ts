@@ -12,6 +12,7 @@ import type {
 
 import {
   applyEvents,
+  deleteAcknowledgedMutations,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
   getBookmarkFieldVersion,
@@ -263,6 +264,48 @@ test("queues list membership changes atomically and coalesces only the same list
       action: "add",
     }),
   ]);
+});
+
+test("tombstones an offline deletion while preserving the original replica record", async () => {
+  const deleteMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "d7767e92-e09e-4d89-9d98-0e77ac266674",
+    kind: "bookmark.delete",
+    bookmarkId: "bookmark-1",
+  };
+  await replaceSnapshot(snapshot, "user-1");
+
+  await enqueueMutation(deleteMutation, "user-1");
+
+  await expect(queryBookmarks()).resolves.toMatchObject({ bookmarks: [] });
+  await expect(searchBookmarks("offline article")).resolves.toEqual([]);
+  await expect(offlineLibraryDb.bookmarks.get("bookmark-1")).resolves.toEqual(
+    bookmark(),
+  );
+  await expect(offlineLibraryDb.tombstones.toArray()).resolves.toEqual([
+    expect.objectContaining({
+      idempotencyKey: deleteMutation.idempotencyKey,
+      bookmarkId: "bookmark-1",
+    }),
+  ]);
+
+  await deleteAcknowledgedMutations("user-1", [deleteMutation.idempotencyKey]);
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(1);
+  await applyEvents(
+    [
+      {
+        sequence: 13,
+        userId: "user-1",
+        entityType: "bookmark",
+        entityId: "bookmark-1",
+        operation: "delete",
+        changedFields: [],
+        fieldVersions: [],
+        createdAt: new Date("2026-07-13T00:00:00Z"),
+      },
+    ],
+    "13",
+  );
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(0);
 });
 
 test("filters an offline RSS feed page to bookmarks imported from that feed", async () => {
@@ -605,7 +648,7 @@ test("rejects unsupported mutations before changing the replica", async () => {
     enqueueMutation(
       {
         idempotencyKey: "d2436c5e-5a6e-4fb1-9eb0-c1d57fb5a47d",
-        kind: "bookmark.delete",
+        kind: "bookmark.create",
         bookmarkId: "bookmark-1",
       } as unknown as ZOfflineSyncMutation,
       "user-1",

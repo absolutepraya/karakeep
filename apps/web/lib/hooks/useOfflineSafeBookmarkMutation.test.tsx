@@ -6,6 +6,7 @@ import type { OfflineLibraryStatus } from "@/lib/offline-library/sync";
 
 import {
   useOfflineSafeBookmarkListMembership,
+  useOfflineSafeBookmarkDeletion,
   useOfflineSafeBookmarkTags,
   useOfflineSafeBookmarkUpdate,
 } from "./useOfflineSafeBookmarkMutation";
@@ -18,9 +19,11 @@ const mocks = vi.hoisted(() => ({
   onlineTagsMutateAsync: vi.fn(),
   queueBookmarkTags: vi.fn(),
   queueBookmarkListMembership: vi.fn(),
+  queueBookmarkDelete: vi.fn(),
   queueBookmarkUpdate: vi.fn(),
   onlineAddToListMutateAsync: vi.fn(),
   onlineRemoveFromListMutateAsync: vi.fn(),
+  onlineDeleteMutateAsync: vi.fn(),
   status: null as unknown as OfflineLibraryStatus,
 }));
 
@@ -30,6 +33,7 @@ vi.mock("@/lib/offline-library/provider", () => ({
     queueBookmarkUpdate: mocks.queueBookmarkUpdate,
     queueBookmarkTags: mocks.queueBookmarkTags,
     queueBookmarkListMembership: mocks.queueBookmarkListMembership,
+    queueBookmarkDelete: mocks.queueBookmarkDelete,
   }),
 }));
 
@@ -65,6 +69,11 @@ vi.mock("@karakeep/shared-react/hooks/bookmarks", () => ({
     isPending: false,
     error: null,
   }),
+  useDeleteBookmark: () => ({
+    mutateAsync: mocks.onlineDeleteMutateAsync,
+    isPending: false,
+    error: null,
+  }),
 }));
 
 function mockOfflineStatus() {
@@ -94,12 +103,15 @@ describe("useOfflineSafeBookmarkMutation", () => {
     mocks.queueBookmarkUpdate.mockReset();
     mocks.queueBookmarkTags.mockReset();
     mocks.queueBookmarkListMembership.mockReset();
+    mocks.queueBookmarkDelete.mockReset();
     mocks.onlineAddToListMutateAsync.mockReset();
     mocks.onlineRemoveFromListMutateAsync.mockReset();
+    mocks.onlineDeleteMutateAsync.mockReset();
     mocks.getBookmarkFieldVersion.mockResolvedValue(4);
     mocks.queueBookmarkUpdate.mockResolvedValue(undefined);
     mocks.queueBookmarkTags.mockResolvedValue(undefined);
     mocks.queueBookmarkListMembership.mockResolvedValue(undefined);
+    mocks.queueBookmarkDelete.mockResolvedValue(undefined);
     mocks.getList.mockResolvedValue({
       id: "list-1",
       type: "manual",
@@ -331,5 +343,36 @@ describe("useOfflineSafeBookmarkMutation", () => {
       listId: "list-1",
     });
     expect(mocks.queueBookmarkListMembership).not.toHaveBeenCalled();
+  });
+
+  it("queues a locally replicated owned bookmark deletion offline", async () => {
+    mocks.getBookmark.mockResolvedValue({ id: "b1", userId: "user-1" });
+    const { result } = renderHook(() => useOfflineSafeBookmarkDeletion());
+
+    await act(async () => {
+      await result.current.mutateAsync({ bookmarkId: "b1" });
+    });
+
+    expect(mocks.queueBookmarkDelete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bookmarkId: "b1",
+        kind: "bookmark.delete",
+      }),
+    );
+  });
+
+  it("uses the online bookmark delete mutation when connected", async () => {
+    mockOnlineStatus();
+    mocks.onlineDeleteMutateAsync.mockResolvedValue({});
+    const { result } = renderHook(() => useOfflineSafeBookmarkDeletion());
+
+    await act(async () => {
+      await result.current.mutateAsync({ bookmarkId: "b1" });
+    });
+
+    expect(mocks.onlineDeleteMutateAsync).toHaveBeenCalledWith({
+      bookmarkId: "b1",
+    });
+    expect(mocks.queueBookmarkDelete).not.toHaveBeenCalled();
   });
 });

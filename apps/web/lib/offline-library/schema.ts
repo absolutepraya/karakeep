@@ -20,6 +20,12 @@ type StoredOfflineSyncRejection = ZOfflineSyncRejection & {
   ownerUserId: string;
   rejectedAt: number;
 };
+interface StoredOfflineBookmarkTombstone {
+  idempotencyKey: string;
+  bookmarkId: string;
+  ownerUserId: string;
+  tombstonedAt: number;
+}
 
 export class OfflineLibraryDatabase extends Dexie {
   bookmarks!: Table<ZBookmark, string>;
@@ -36,6 +42,7 @@ export class OfflineLibraryDatabase extends Dexie {
   >;
   conflicts!: Table<ZOfflineSyncConflict, string>;
   rejections!: Table<StoredOfflineSyncRejection, string>;
+  tombstones!: Table<StoredOfflineBookmarkTombstone, string>;
   bookmarkFieldVersions!: Table<
     ZOfflineSyncBookmarkFieldVersion,
     [string, string]
@@ -81,6 +88,9 @@ export class OfflineLibraryDatabase extends Dexie {
     this.version(7).stores({
       outbox:
         "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, listId, kind, queuedAt",
+    });
+    this.version(8).stores({
+      tombstones: "idempotencyKey, bookmarkId, ownerUserId",
     });
   }
 }

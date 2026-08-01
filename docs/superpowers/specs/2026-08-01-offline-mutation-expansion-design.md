@@ -1,7 +1,7 @@
 # Offline Mutation Expansion Design
 
 **Date:** 2026-08-01
-**Status:** P3 existing-list membership implemented, later slices proposed
+**Status:** P3 list membership and P4 single-bookmark deletion implemented
 **Related audit:** [Offline Library PWA Audit](2026-07-31-offline-library-pwa-audit.md)
 
 ## Problem
@@ -88,14 +88,19 @@ This slice excludes new lists, shared-list collaborator changes, and bulk
 operations. It has no temporary IDs, binary data, or irreversible bookmark
 deletion.
 
-## Later delete design
+## Implemented P4: single-bookmark deletion
 
-Deleting a bookmark offline must create a local tombstone instead of only
-removing the row. The tombstone hides the bookmark from queries but preserves
-the original record and a cancellable outbox item through the existing
-five-second undo window. If replay is rejected, the app restores the record
-from the tombstone and explains why. A delete supersedes queued field, tag,
-and list-membership intents for the same bookmark.
+The existing five-second undo window remains before any offline mutation is
+created. After it expires, deletion atomically writes a `bookmark.delete`
+outbox item and a tombstone. Local grid and search queries hide tombstoned
+bookmarks while the replica row remains available for recovery. The delete
+supersedes queued field, tag, and list-membership intent for that bookmark.
+
+An acknowledgement alone does not clear a tombstone because the following
+pull can still fail. It is removed only when an authoritative delete event or
+snapshot settles the replica. If replay is rejected, the tombstone remains
+until the user chooses the existing discard-and-refresh action. Bulk deletion
+is still online-only.
 
 ## Explicitly out of this increment
 

@@ -9,6 +9,7 @@ import type {
 import {
   applyEvents,
   deleteAcknowledgedMutations,
+  discardBookmarkTombstone,
   deleteRejectedMutation,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
@@ -38,6 +39,10 @@ type BookmarkListMembershipMutation = Extract<
   ZOfflineSyncMutation,
   { kind: "bookmark.listMembership" }
 >;
+type BookmarkDeleteMutation = Extract<
+  ZOfflineSyncMutation,
+  { kind: "bookmark.delete" }
+>;
 
 type OfflineLibraryStatus =
   | { kind: "initializing" }
@@ -66,6 +71,7 @@ type RetryTimer = Parameters<typeof globalThis.clearTimeout>[0];
 export type {
   BookmarkTagsMutation,
   BookmarkListMembershipMutation,
+  BookmarkDeleteMutation,
   BookmarkUpdateMutation,
   OfflineLibraryStatus,
   OfflineSyncClient,
@@ -187,6 +193,20 @@ export class OfflineLibrarySyncCoordinator {
     });
   }
 
+  async queueBookmarkDelete(mutation: BookmarkDeleteMutation): Promise<void> {
+    if (!this.isActive || this.userId === null) {
+      throw new Error("Offline writes require an authenticated user");
+    }
+    const userId = this.userId;
+    if (mutation.kind !== "bookmark.delete") {
+      throw new TypeError("Unsupported offline mutation");
+    }
+    await this.serializeOutboxOperation(async () => {
+      await enqueueMutation(mutation, userId);
+      await this.refreshDerivedStatus();
+    });
+  }
+
   async discardRejectedMutation(idempotencyKey: string): Promise<void> {
     await this.serializeOutboxOperation(async () => {
       if (!this.isActive || this.userId === null) {
@@ -200,6 +220,7 @@ export class OfflineLibrarySyncCoordinator {
         this.requestPersistentStorage();
       }
       await deleteRejectedMutation(idempotencyKey);
+      await discardBookmarkTombstone(idempotencyKey);
       await this.refreshDerivedStatus();
     });
   }

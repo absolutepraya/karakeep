@@ -23,6 +23,7 @@ test("defines every offline-library table", async () => {
     "outbox",
     "rejections",
     "thumbnailAccess",
+    "tombstones",
   ]);
 });
 
