@@ -1595,6 +1595,7 @@ describe("Bookmark Routes", () => {
           kind: "bookmark.tags",
           bookmarkId: bookmark.id,
           tagIds: [triggerTag.id],
+          createdTags: [],
           baseVersions: { tags: 0 },
         },
       ],

@@ -221,6 +221,60 @@ describe("useOfflineSafeBookmarkMutation", () => {
     );
   });
 
+  it("creates and attaches a new tag offline with a client-generated ID", async () => {
+    mocks.getBookmark.mockResolvedValue({ id: "b1", tags: [] });
+    const { result } = renderHook(() => useOfflineSafeBookmarkTags());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        bookmarkId: "b1",
+        attach: [{ tagName: "Offline Tag" }],
+        detach: [],
+      });
+    });
+
+    expect(mocks.queueBookmarkTags).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bookmarkId: "b1",
+        kind: "bookmark.tags",
+        tagIds: [expect.any(String)],
+        createdTags: [
+          {
+            id: expect.any(String),
+            name: "Offline Tag",
+          },
+        ],
+      }),
+    );
+    const mutation = mocks.queueBookmarkTags.mock.calls[0]?.[0];
+    expect(mutation.tagIds).toEqual([mutation.createdTags[0].id]);
+  });
+
+  it("keeps created tag IDs aligned when an existing tag is attached too", async () => {
+    mocks.getBookmark.mockResolvedValue({ id: "b1", tags: [] });
+    const { result } = renderHook(() => useOfflineSafeBookmarkTags());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        bookmarkId: "b1",
+        attach: [
+          { tagId: "existing-tag", tagName: "Existing" },
+          { tagName: "Offline Tag" },
+        ],
+        detach: [],
+      });
+    });
+
+    const mutation = mocks.queueBookmarkTags.mock.calls[0]?.[0];
+    expect(mutation.tagIds).toEqual([
+      "existing-tag",
+      mutation.createdTags[0].id,
+    ]);
+    expect(mutation.createdTags).toEqual([
+      { id: mutation.createdTags[0].id, name: "Offline Tag" },
+    ]);
+  });
+
   it("serializes rapid offline tag attaches into one composed local and outbox tag set", async () => {
     let resolveFirstQueue!: () => void;
     const firstQueue = new Promise<void>((resolve) => {

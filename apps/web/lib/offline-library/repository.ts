@@ -424,10 +424,25 @@ export async function enqueueMutation(
         );
         const primaryMutation = pendingTags[0];
         if (primaryMutation) {
+          const finalTagIds = parsedMutation.data.tagIds;
+          const createdTagsById = new Map(
+            primaryMutation.createdTags.map((tag) => [tag.id, tag]),
+          );
+          for (const pendingTagMutation of pendingTags.slice(1)) {
+            for (const tag of pendingTagMutation.createdTags) {
+              createdTagsById.set(tag.id, tag);
+            }
+          }
+          for (const tag of parsedMutation.data.createdTags) {
+            createdTagsById.set(tag.id, tag);
+          }
           queuedMutation = {
             ...parsedMutation.data,
             idempotencyKey: primaryMutation.idempotencyKey,
             baseVersions: primaryMutation.baseVersions,
+            createdTags: [...createdTagsById.values()].filter((tag) =>
+              finalTagIds.includes(tag.id),
+            ),
           };
           supersededMutationKeys = pendingTags
             .slice(1)
@@ -528,15 +543,22 @@ export async function enqueueMutation(
           await offlineLibraryDb.bookmarks.put(updatedBookmark);
         } else if (parsedMutation.data.kind === "bookmark.tags") {
           const tagsById = new Map(bookmark.tags.map((tag) => [tag.id, tag]));
+          const createdTagsById = new Map(
+            parsedMutation.data.createdTags.map((tag) => [tag.id, tag]),
+          );
           await offlineLibraryDb.bookmarks.put({
             ...bookmark,
             tags: parsedMutation.data.tagIds.map(
               (tagId) =>
-                tagsById.get(tagId) ?? {
-                  id: tagId,
-                  name: "",
-                  attachedBy: "human",
-                },
+                tagsById.get(tagId) ??
+                (() => {
+                  const createdTag = createdTagsById.get(tagId);
+                  return {
+                    id: tagId,
+                    name: createdTag?.name ?? "",
+                    attachedBy: "human" as const,
+                  };
+                })(),
             ),
           });
         }

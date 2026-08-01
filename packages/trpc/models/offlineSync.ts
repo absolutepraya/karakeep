@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, asc, eq, gt, inArray, max } from "drizzle-orm";
 
+import { SqliteError } from "@karakeep/db";
 import type { KarakeepDBTransaction } from "@karakeep/db";
 import {
   bookmarkLinks,
@@ -17,6 +18,7 @@ import {
   tagsOnBookmarks,
 } from "@karakeep/db/schema";
 import { triggerSearchReindex } from "@karakeep/shared-server";
+import { zCreateTagRequestSchema } from "@karakeep/shared/types/tags";
 import type {
   ZOfflineSyncBookmarkFieldVersion,
   ZOfflineSyncConflict,
@@ -359,6 +361,62 @@ async function applyBookmarkTags(
   mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.tags" }>,
 ): Promise<BookmarkTagDelta> {
   const tagIds = [...new Set(mutation.tagIds)];
+  const createdTags = mutation.createdTags.map((tag) => {
+    const parsed = zCreateTagRequestSchema.safeParse({ name: tag.name });
+    if (!parsed.success) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Cannot create an invalid tag offline",
+      });
+    }
+    return { id: tag.id, name: parsed.data.name };
+  });
+  if (
+    new Set(createdTags.map((tag) => tag.id)).size !== createdTags.length ||
+    createdTags.some((tag) => !tagIds.includes(tag.id))
+  ) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Created tags must be included in the requested tag set",
+    });
+  }
+  if (createdTags.length > 0) {
+    const existingCreatedTags = await tx
+      .select({ id: bookmarkTags.id })
+      .from(bookmarkTags)
+      .where(
+        inArray(
+          bookmarkTags.id,
+          createdTags.map((tag) => tag.id),
+        ),
+      );
+    if (existingCreatedTags.length > 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "An offline-created tag ID already exists",
+      });
+    }
+    try {
+      await tx.insert(bookmarkTags).values(
+        createdTags.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          userId,
+        })),
+      );
+    } catch (error) {
+      if (
+        error instanceof SqliteError &&
+        error.code.startsWith("SQLITE_CONSTRAINT")
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tag name already exists for this user",
+        });
+      }
+      throw error;
+    }
+  }
   if (tagIds.length > 0) {
     const ownedTags = await tx
       .select({ id: bookmarkTags.id })
@@ -859,6 +917,10 @@ export async function applyOfflineSyncMutations(
                   mutation.kind === "bookmark.update"
                     ? mutation.fields[field as keyof typeof mutation.fields]
                     : mutation.tagIds,
+                createdTags:
+                  mutation.kind === "bookmark.tags"
+                    ? mutation.createdTags
+                    : undefined,
                 serverValue: await getBookmarkFieldValue(
                   tx,
                   mutation.bookmarkId,

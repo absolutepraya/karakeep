@@ -66,6 +66,7 @@ describe("offline sync contracts", () => {
             bookmarkId: "bookmark-1",
             kind: "bookmark.tags",
             tagIds: ["tag-1"],
+            createdTags: [],
             baseVersions: { tags: 3 },
           },
         ],
@@ -128,6 +129,7 @@ describe("offline sync contracts", () => {
             bookmarkId: "bookmark-1",
             kind: "bookmark.tags",
             tagIds: [],
+            createdTags: [],
             baseVersions: { tags: 0 },
           },
         ],
@@ -262,6 +264,46 @@ describe("Offline sync routes", () => {
     expect(first.acknowledged).toEqual([mutation.idempotencyKey]);
     expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(
       bookmark.id,
+    );
+  });
+
+  test<CustomTestContext>("creates and attaches an offline-created tag with its client ID", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "new offline tag",
+    });
+    const mutation = {
+      idempotencyKey: "f5b0f41a-b064-4faf-b528-b0e9cae41052",
+      kind: "bookmark.tags" as const,
+      bookmarkId: bookmark.id,
+      tagIds: ["f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7"],
+      createdTags: [
+        {
+          id: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+          name: "Offline tag",
+        },
+      ],
+      baseVersions: { tags: 0 },
+    };
+
+    const first = await owner.offlineSync.push({ mutations: [mutation] });
+    const replay = await owner.offlineSync.push({ mutations: [mutation] });
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(first).toEqual(replay);
+    expect(snapshot.bookmarks).toContainEqual(
+      expect.objectContaining({
+        id: bookmark.id,
+        tags: [
+          expect.objectContaining({
+            id: mutation.createdTags[0].id,
+            name: "Offline tag",
+          }),
+        ],
+      }),
     );
   });
 
@@ -573,6 +615,7 @@ describe("Offline sync routes", () => {
           kind: "bookmark.tags",
           bookmarkId: bookmark.id,
           tagIds: [tag.id],
+          createdTags: [],
           baseVersions: { tags: 0 },
         },
       ],
@@ -583,7 +626,13 @@ describe("Offline sync routes", () => {
           idempotencyKey: "133b4960-ed90-4825-a918-861f7420e93a",
           kind: "bookmark.tags",
           bookmarkId: bookmark.id,
-          tagIds: [],
+          tagIds: ["f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7"],
+          createdTags: [
+            {
+              id: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+              name: "Offline tag",
+            },
+          ],
           baseVersions: { tags: 0 },
         },
       ],
@@ -593,7 +642,13 @@ describe("Offline sync routes", () => {
       expect.objectContaining({
         bookmarkId: bookmark.id,
         field: "tags",
-        localValue: [],
+        localValue: ["f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7"],
+        createdTags: [
+          {
+            id: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+            name: "Offline tag",
+          },
+        ],
         serverVersion: 1,
       }),
     ]);

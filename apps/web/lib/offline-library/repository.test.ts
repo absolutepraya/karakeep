@@ -599,6 +599,7 @@ test("queues tag mutations with the optimistic local tag set", async () => {
     kind: "bookmark.tags",
     bookmarkId: "bookmark-1",
     tagIds: ["tag-2"],
+    createdTags: [],
     baseVersions: { tags: 0 },
   };
   await replaceSnapshot(snapshot, "user-1");
@@ -612,12 +613,41 @@ test("queues tag mutations with the optimistic local tag set", async () => {
   ]);
 });
 
+test("keeps the name of an offline-created tag in the optimistic replica", async () => {
+  const tagMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "bc97c924-e9f9-46b8-bc2e-6d2b718a727a",
+    kind: "bookmark.tags",
+    bookmarkId: "bookmark-1",
+    tagIds: ["1e2c8f3e-0b30-4f9c-a3e7-608474bc7ce2"],
+    createdTags: [
+      {
+        id: "1e2c8f3e-0b30-4f9c-a3e7-608474bc7ce2",
+        name: "Offline tag",
+      },
+    ],
+    baseVersions: { tags: 0 },
+  };
+  await replaceSnapshot(snapshot, "user-1");
+
+  await enqueueMutation(tagMutation, "user-1");
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [
+      { tags: [{ id: tagMutation.createdTags[0].id, name: "Offline tag" }] },
+    ],
+  });
+  await expect(searchBookmarks("offline tag")).resolves.toMatchObject([
+    { id: "bookmark-1" },
+  ]);
+});
+
 test("coalesces repeated offline tag replacements into the final tag set", async () => {
   const firstMutation: ZOfflineSyncMutation = {
     idempotencyKey: "8fbb9a9d-2c3f-4c1c-a76f-9297d2aa7e5f",
     kind: "bookmark.tags",
     bookmarkId: "bookmark-1",
     tagIds: ["tag-2"],
+    createdTags: [],
     baseVersions: { tags: 0 },
   };
   const secondMutation: ZOfflineSyncMutation = {
@@ -625,6 +655,7 @@ test("coalesces repeated offline tag replacements into the final tag set", async
     kind: "bookmark.tags",
     bookmarkId: "bookmark-1",
     tagIds: ["tag-1"],
+    createdTags: [],
     baseVersions: { tags: 0 },
   };
   await replaceSnapshot(snapshot, "user-1");

@@ -21,6 +21,11 @@ const zOfflineSyncOperationSchema = z.enum([
 ]);
 export type ZOfflineSyncOperation = z.infer<typeof zOfflineSyncOperationSchema>;
 
+const zOfflineSyncCreatedTagSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+});
+
 export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
   z
     .object({
@@ -71,6 +76,7 @@ export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
     kind: z.literal("bookmark.tags"),
     bookmarkId: z.string(),
     tagIds: z.array(z.string()),
+    createdTags: z.array(zOfflineSyncCreatedTagSchema).default([]),
     baseVersions: z.object({ tags: z.number().int().nonnegative() }).strict(),
   }),
   z.object({
@@ -97,6 +103,7 @@ const zOfflineSyncConflictSchema = z.object({
   bookmarkId: z.string(),
   field: z.string(),
   localValue: z.unknown(),
+  createdTags: z.array(zOfflineSyncCreatedTagSchema).optional(),
   serverValue: z.unknown(),
   serverVersion: z.number().int().nonnegative(),
 });

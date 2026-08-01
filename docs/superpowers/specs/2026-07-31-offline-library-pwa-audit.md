@@ -1,7 +1,7 @@
 # Offline Library PWA Audit
 
 **Date:** 2026-07-31  
-**Status:** P0 through P4 implemented, pending device verification
+**Status:** P0 through P5 implemented, pending device verification
 **Related design:** [Offline Library PWA Design](2026-07-12-offline-library-pwa-design.md)
 
 ## Purpose
@@ -34,6 +34,7 @@ account identifiers, URLs, credentials, or bookmark content.
 | PWA-008 | P2 | Implemented, pending device verification | Offline bookmark updates and tag changes already update the local replica atomically, but offline grids and search read it only once, so the visible state could stay old until a route or query change. | `enqueueMutation` writes the replica and outbox in one transaction. Grid and search readers now subscribe with Dexie `liveQuery`, so those writes repaint the offline UI immediately. |
 | PWA-009 | P3 | Implemented, pending device verification | Existing manual-list membership can now be added or removed offline. Creation, uploads, new tags, and bulk actions remain network-only. | `bookmark.listMembership` has explicit set semantics, atomic replica and outbox updates, server-side current access checks, idempotency receipts, and actionable rejection recovery. The staged expansion is recorded in [Offline Mutation Expansion Design](2026-08-01-offline-mutation-expansion-design.md). |
 | PWA-010 | P4 | Implemented, pending device verification | A single owned bookmark can now be deleted offline without bypassing the five-second undo window. Bulk deletion remains network-only. | After undo expires, `bookmark.delete` atomically creates a local tombstone and outbox entry. Queries hide tombstones while the original record remains until an authoritative delete event or snapshot settles it. A rejection keeps the tombstone until explicit discard and server refresh. |
+| PWA-011 | P5 | Implemented, pending device verification | A new tag can now be created inline from an existing bookmark while offline. Standalone Tags page management remains network-only. | The client assigns a UUID and queues it with the bookmark's full `bookmark.tags` intent. The replica renders the name immediately; replay validates and persists the same UUID atomically with attachment. A field conflict retains the created-tag metadata for local conflict resolution. |
 
 ## Ruled out for the online stale-bookmark flash
 
@@ -119,11 +120,20 @@ Expected result after P0: all focused tests pass.
 - Undo prevents outbox creation during the five-second window; a rejected
   deletion is restored only through the explicit discard-and-refresh flow.
 
+### P5 regression tests
+
+- An inline offline-created tag receives a client UUID, is rendered and found
+  by local search, then is persisted and attached idempotently on replay.
+- Coalescing keeps only created tags that remain in the final requested tag
+  set, including a mixed existing-tag and new-tag attachment.
+- A stale tag conflict retains created-tag metadata so choosing the local value
+  can replay the same creation intent.
+
 ## Follow-up order
 
-1. P5: keep bookmark, tag, and list creation, uploads, and bulk destructive
-   actions online-only until client IDs, dependent mutation rewriting, and
-   durable blob transfer have dedicated designs.
+1. P6: keep bookmark and list creation, uploads, standalone tag management,
+   and bulk destructive actions online-only until client IDs, dependent
+   mutation rewriting, and durable blob transfer have dedicated designs.
 
 ## Resolution rules
 

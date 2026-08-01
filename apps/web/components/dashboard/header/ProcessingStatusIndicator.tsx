@@ -219,6 +219,7 @@ async function chooseLocalConflictValue(conflict: ZOfflineSyncConflict) {
           kind: "bookmark.tags",
           bookmarkId: conflict.bookmarkId,
           tagIds: conflict.localValue,
+          createdTags: conflict.createdTags ?? [],
           baseVersions: { tags: conflict.serverVersion },
         };
       } else {

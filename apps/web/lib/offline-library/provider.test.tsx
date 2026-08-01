@@ -78,6 +78,7 @@ function UnauthenticatedCaller({
         kind: "bookmark.tags",
         bookmarkId: "bookmark-1",
         tagIds: ["tag-1"],
+        createdTags: [],
         baseVersions: { tags: 0 },
       }),
     ]).then(onSettled);

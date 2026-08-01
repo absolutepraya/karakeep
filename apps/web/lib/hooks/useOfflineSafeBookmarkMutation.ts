@@ -16,6 +16,7 @@ import {
   useAddBookmarkToList,
   useRemoveBookmarkFromList,
 } from "@karakeep/shared-react/hooks/lists";
+import { normalizeTagName } from "@karakeep/shared/utils/tag";
 
 import { useOfflineLibrary } from "@/lib/offline-library/provider";
 import {
@@ -293,14 +294,25 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
       setIsOfflinePending(true);
       setOfflineError(null);
       try {
-        if (input.attach.some((tag) => !tag.tagId)) {
-          throw new OfflineMutationOnlineRequiredError(
-            "Creating tags requires an internet connection.",
-          );
-        }
         if (input.detach.some((tag) => !tag.tagId)) {
           throw new OfflineMutationOnlineRequiredError();
         }
+        const createdTags: Extract<
+          ZOfflineSyncMutation,
+          { kind: "bookmark.tags" }
+        >["createdTags"] = [];
+        const attachedTagIds = input.attach.map((tag) => {
+          if (tag.tagId) {
+            return tag.tagId;
+          }
+          const name = normalizeTagName(tag.tagName ?? "").trim();
+          if (!name) {
+            throw new OfflineMutationOnlineRequiredError();
+          }
+          const id = queueMutationIdempotencyKey();
+          createdTags.push({ id, name });
+          return id;
+        });
 
         return await serializeOfflineTagIntent(input.bookmarkId, async () => {
           const bookmark = await offlineLibraryDb.bookmarks.get(
@@ -314,8 +326,8 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
           for (const tag of input.detach) {
             tagIds.delete(tag.tagId!);
           }
-          for (const tag of input.attach) {
-            tagIds.add(tag.tagId!);
+          for (const tagId of attachedTagIds) {
+            tagIds.add(tagId!);
           }
 
           const baseVersions = await getRequiredFieldVersions(
@@ -327,6 +339,7 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
             kind: "bookmark.tags",
             bookmarkId: input.bookmarkId,
             tagIds: [...tagIds],
+            createdTags,
             baseVersions: { tags: baseVersions.tags! },
           });
           return { kind: "queued" };

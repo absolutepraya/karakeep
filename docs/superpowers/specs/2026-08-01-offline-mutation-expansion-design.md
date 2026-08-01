@@ -1,18 +1,19 @@
 # Offline Mutation Expansion Design
 
 **Date:** 2026-08-01
-**Status:** P3 list membership and P4 single-bookmark deletion implemented
+**Status:** P3 list membership, P4 single-bookmark deletion, and P5 inline tag creation implemented
 **Related audit:** [Offline Library PWA Audit](2026-07-31-offline-library-pwa-audit.md)
 
 ## Problem
 
 The installed PWA currently supports offline edits to existing bookmark fields
-and tag membership only. The rest of the UI correctly requires a connection:
+and tag membership. It can also create a tag while attaching it to an existing
+bookmark. The rest of the UI correctly requires a connection:
 
 - bookmark creation and uploads;
-- bookmark deletion and bulk destructive actions;
+- bulk destructive actions;
 - adding or removing a bookmark from a list;
-- creating a tag; and
+- standalone tag management; and
 - creating, deleting, or collaborating on lists.
 
 The current offline-sync schema only accepts `bookmark.update` and
@@ -52,7 +53,8 @@ UI becomes available offline:
 | Add bookmark to an existing list | No | Access can be revoked, list may be deleted | Same protocol as removal, ship together |
 | Delete existing owned bookmark | No | Undo window, remote edit, and destructive replay | Second slice, use a local tombstone and cancellable outbox entry |
 | Create bookmark | Yes, client bookmark ID | Server deduplication may return a different existing bookmark | Requires client-to-server ID mapping and dependent mutation rewriting |
-| Create tag | Yes, client tag ID | Newly created ID is referenced by later tag mutations | Requires ID mapping and a replicated tag catalog |
+| Create tag inline with an existing bookmark | Client UUID | Remote tag name collision and stale tag field | Ship as a `bookmark.tags` extension; no ID remapping when the server persists the UUID |
+| Standalone tag creation | Client UUID | Replicated tag catalog and later reference resolution | Separate tag-catalog slice |
 | Upload or attach assets | Yes, local asset record | Blob durability, upload retries, quota, and multipart protocol | Separate asset-transfer project |
 | Bulk actions | No new identity | Partial success and undo semantics | Compose only after each primitive is proven |
 | Create or alter lists | Yes for new lists | Collaborator permissions and hierarchy cycles | Separate shared-list synchronization project |
@@ -102,8 +104,28 @@ snapshot settles the replica. If replay is rejected, the tombstone remains
 until the user chooses the existing discard-and-refresh action. Bulk deletion
 is still online-only.
 
+## Implemented P5: inline tag creation
+
+When a user creates a tag from an existing bookmark's tag editor while offline,
+the client creates a UUID and includes `{ id, name }` in the existing
+`bookmark.tags` mutation. The optimistic bookmark replica renders and searches
+that name immediately. The server validates the name, persists that exact UUID
+for the current user, then attaches it as part of the same transaction.
+
+The server rejects an ID collision, duplicate tag name, invalid name, or a tag
+set that refers to a created tag incorrectly. A stale tag-field conflict keeps
+the created-tag metadata so the existing "keep mine" resolution can replay the
+same creation intent. Repeated local tag edits coalesce their created tags and
+discard an unpushed created tag if the final tag set no longer includes it.
+
+This is deliberately not a general offline tag catalog. The Tags page remains
+online-only for creation, rename, deletion, and merge. A tag that already
+exists remotely but is absent from the local bookmark context can be rejected
+as a duplicate rather than guessed or silently remapped.
+
 ## Explicitly out of this increment
 
-No offline creation, new tags, uploads, list creation, collaborator changes,
-or bulk destructive controls are enabled by this design. Each needs temporary
-ID remapping, a new durable local entity, or a dedicated transfer protocol.
+No offline bookmark or list creation, uploads, standalone tag management,
+collaborator changes, or bulk destructive controls are enabled by this design.
+Each needs temporary ID remapping, a new durable local entity, or a dedicated
+transfer protocol.
