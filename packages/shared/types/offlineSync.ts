@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { MAX_BOOKMARK_TITLE_LENGTH, zBookmarkSchema } from "./bookmarks";
+import {
+  BookmarkTypes,
+  MAX_BOOKMARK_TITLE_LENGTH,
+  zBookmarkSchema,
+} from "./bookmarks";
 import { zBookmarkListSchema } from "./lists";
 
 const zOfflineSyncCursorSchema = z
@@ -24,6 +28,18 @@ export type ZOfflineSyncOperation = z.infer<typeof zOfflineSyncOperationSchema>;
 const zOfflineSyncCreatedTagSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
+});
+
+const zOfflineSyncTextBookmarkSchema = z.object({
+  type: z.literal(BookmarkTypes.TEXT),
+  text: z.string(),
+  sourceUrl: z.string().url().optional(),
+  title: z.string().max(MAX_BOOKMARK_TITLE_LENGTH).nullish(),
+  archived: z.boolean().optional(),
+  favourited: z.boolean().optional(),
+  note: z.string().optional(),
+  summary: z.string().optional(),
+  createdAt: z.coerce.date(),
 });
 
 export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
@@ -78,6 +94,12 @@ export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
     tagIds: z.array(z.string()),
     createdTags: z.array(zOfflineSyncCreatedTagSchema).default([]),
     baseVersions: z.object({ tags: z.number().int().nonnegative() }).strict(),
+  }),
+  z.object({
+    idempotencyKey: z.string().uuid(),
+    kind: z.literal("bookmark.create"),
+    bookmarkId: z.string().uuid(),
+    bookmark: zOfflineSyncTextBookmarkSchema,
   }),
   z.object({
     idempotencyKey: z.string().uuid(),

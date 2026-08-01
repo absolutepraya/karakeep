@@ -43,6 +43,10 @@ type BookmarkDeleteMutation = Extract<
   ZOfflineSyncMutation,
   { kind: "bookmark.delete" }
 >;
+type BookmarkCreateMutation = Extract<
+  ZOfflineSyncMutation,
+  { kind: "bookmark.create" }
+>;
 
 type OfflineLibraryStatus =
   | { kind: "initializing" }
@@ -72,6 +76,7 @@ export type {
   BookmarkTagsMutation,
   BookmarkListMembershipMutation,
   BookmarkDeleteMutation,
+  BookmarkCreateMutation,
   BookmarkUpdateMutation,
   OfflineLibraryStatus,
   OfflineSyncClient,
@@ -199,6 +204,20 @@ export class OfflineLibrarySyncCoordinator {
     }
     const userId = this.userId;
     if (mutation.kind !== "bookmark.delete") {
+      throw new TypeError("Unsupported offline mutation");
+    }
+    await this.serializeOutboxOperation(async () => {
+      await enqueueMutation(mutation, userId);
+      await this.refreshDerivedStatus();
+    });
+  }
+
+  async queueBookmarkCreate(mutation: BookmarkCreateMutation): Promise<void> {
+    if (!this.isActive || this.userId === null) {
+      throw new Error("Offline writes require an authenticated user");
+    }
+    const userId = this.userId;
+    if (mutation.kind !== "bookmark.create") {
       throw new TypeError("Unsupported offline mutation");
     }
     await this.serializeOutboxOperation(async () => {

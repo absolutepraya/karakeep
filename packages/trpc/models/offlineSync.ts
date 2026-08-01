@@ -17,7 +17,15 @@ import {
   offlineSyncMutationReceipts,
   tagsOnBookmarks,
 } from "@karakeep/db/schema";
-import { triggerSearchReindex } from "@karakeep/shared-server";
+import {
+  EmbeddingsQueue,
+  OpenAIQueue,
+  QueuePriority,
+  QuotaService,
+  triggerSearchReindex,
+} from "@karakeep/shared-server";
+import serverConfig from "@karakeep/shared/config";
+import type { EnqueueOptions } from "@karakeep/shared/queueing";
 import { zCreateTagRequestSchema } from "@karakeep/shared/types/tags";
 import type {
   ZOfflineSyncBookmarkFieldVersion,
@@ -472,6 +480,45 @@ async function applyBookmarkTags(
   return { attached, detached };
 }
 
+async function applyTextBookmarkCreate(
+  ctx: AuthedContext,
+  tx: KarakeepDBTransaction,
+  mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.create" }>,
+): Promise<number | null> {
+  const quotaResult = await QuotaService.canCreateBookmark(tx, ctx.user.id);
+  if (!quotaResult.result) {
+    throw new TRPCError({ code: "FORBIDDEN", message: quotaResult.error });
+  }
+  await tx.insert(bookmarks).values({
+    id: mutation.bookmarkId,
+    userId: ctx.user.id,
+    title: mutation.bookmark.title,
+    type: mutation.bookmark.type,
+    archived: mutation.bookmark.archived,
+    favourited: mutation.bookmark.favourited,
+    note: mutation.bookmark.note,
+    summary: mutation.bookmark.summary,
+    createdAt: mutation.bookmark.createdAt,
+    source: "web",
+    summarizationStatus: null,
+  });
+  await tx.insert(bookmarkTexts).values({
+    id: mutation.bookmarkId,
+    text: mutation.bookmark.text,
+    sourceUrl: mutation.bookmark.sourceUrl,
+  });
+  const [sequence] = await recordOfflineSyncEvents(
+    tx,
+    ctx.user.id,
+    [ctx.user.id],
+    "bookmark",
+    mutation.bookmarkId,
+    "create",
+    ["title", "archived", "favourited", "note", "summary", "text"],
+  );
+  return sequence;
+}
+
 async function triggerBookmarkUpdateEffects(
   ctx: AuthedContext,
   mutation: Extract<
@@ -521,6 +568,46 @@ async function triggerBookmarkUpdateEffects(
       "edited",
       bookmark.userId,
       { groupId: ctx.user.id },
+    ),
+  ]);
+}
+
+async function triggerTextBookmarkCreateEffects(
+  ctx: AuthedContext,
+  mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.create" }>,
+): Promise<void> {
+  const options: EnqueueOptions = {
+    priority: QueuePriority.Default,
+    groupId: ctx.user.id,
+  };
+  const backgroundWork = serverConfig.embedding.enableAutoIndexing
+    ? EmbeddingsQueue.enqueue(
+        {
+          bookmarkId: mutation.bookmarkId,
+          type: "embed",
+          runTaggingOnComplete: true,
+        },
+        options,
+      )
+    : OpenAIQueue.enqueue(
+        { bookmarkId: mutation.bookmarkId, type: "tag" },
+        options,
+      );
+  await Promise.all([
+    backgroundWork,
+    RuleEngine.triggerOnEvent(
+      ctx.user.id,
+      mutation.bookmarkId,
+      [{ type: "bookmarkAdded" }],
+      options,
+      ctx.db,
+    ),
+    triggerSearchReindex(mutation.bookmarkId, options),
+    new WebhooksService(ctx.db).triggerWebhook(
+      mutation.bookmarkId,
+      "created",
+      ctx.user.id,
+      options,
     ),
   ]);
 }
@@ -816,7 +903,7 @@ export async function applyOfflineSyncMutations(
   let appliedMutation:
     | Extract<
         ZOfflineSyncMutation,
-        { kind: "bookmark.update" | "bookmark.tags" }
+        { kind: "bookmark.update" | "bookmark.tags" | "bookmark.create" }
       >
     | undefined;
   let appliedTagDelta: BookmarkTagDelta | undefined;
@@ -888,6 +975,24 @@ export async function applyOfflineSyncMutations(
               result,
               createdAt: new Date(),
             });
+            return result;
+          }
+
+          if (mutation.kind === "bookmark.create") {
+            const sequence = await applyTextBookmarkCreate(ctx, tx, mutation);
+            const result = {
+              acknowledged: [mutation.idempotencyKey],
+              conflicts: [],
+              rejections: [],
+              cursor: cursorForSequence(sequence),
+            };
+            await tx.insert(offlineSyncMutationReceipts).values({
+              userId: ctx.user.id,
+              idempotencyKey: mutation.idempotencyKey,
+              result,
+              createdAt: new Date(),
+            });
+            appliedMutation = mutation;
             return result;
           }
 
@@ -1015,7 +1120,15 @@ export async function applyOfflineSyncMutations(
       { behavior: "immediate" },
     );
     if (appliedMutation) {
-      await triggerBookmarkUpdateEffects(ctx, appliedMutation, appliedTagDelta);
+      if (appliedMutation.kind === "bookmark.create") {
+        await triggerTextBookmarkCreateEffects(ctx, appliedMutation);
+      } else {
+        await triggerBookmarkUpdateEffects(
+          ctx,
+          appliedMutation,
+          appliedTagDelta,
+        );
+      }
     }
     return result;
   } catch (error) {

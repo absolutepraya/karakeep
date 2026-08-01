@@ -1,4 +1,7 @@
-import { DEFAULT_NUM_BOOKMARKS_PER_PAGE } from "@karakeep/shared/types/bookmarks";
+import {
+  BookmarkTypes,
+  DEFAULT_NUM_BOOKMARKS_PER_PAGE,
+} from "@karakeep/shared/types/bookmarks";
 import type { ZBookmark, ZSortOrder } from "@karakeep/shared/types/bookmarks";
 import type { ZCursor } from "@karakeep/shared/types/pagination";
 import { zOfflineSyncMutationSchema } from "@karakeep/shared/types/offlineSync";
@@ -351,17 +354,38 @@ export async function enqueueMutation(
 
   await offlineLibraryDb.transaction(
     "rw",
-    offlineLibraryDb.bookmarks,
-    offlineLibraryDb.lists,
-    offlineLibraryDb.bookmarkListMemberships,
-    offlineLibraryDb.tombstones,
-    offlineLibraryDb.outbox,
+    [
+      offlineLibraryDb.bookmarks,
+      offlineLibraryDb.lists,
+      offlineLibraryDb.bookmarkListMemberships,
+      offlineLibraryDb.bookmarkFieldVersions,
+      offlineLibraryDb.tombstones,
+      offlineLibraryDb.outbox,
+    ],
     async () => {
       const queuedAt = Date.now();
       const pendingMutations = await offlineLibraryDb.outbox
         .where("ownerUserId")
         .equals(ownerUserId)
         .sortBy("queuedAt");
+      if (parsedMutation.data.kind === "bookmark.delete") {
+        const pendingCreate = pendingMutations.find(
+          (pendingMutation) =>
+            pendingMutation.bookmarkId === parsedMutation.data.bookmarkId &&
+            pendingMutation.kind === "bookmark.create",
+        );
+        if (pendingCreate) {
+          await Promise.all([
+            offlineLibraryDb.bookmarks.delete(parsedMutation.data.bookmarkId),
+            offlineLibraryDb.bookmarkFieldVersions
+              .where("bookmarkId")
+              .equals(parsedMutation.data.bookmarkId)
+              .delete(),
+            offlineLibraryDb.outbox.delete(pendingCreate.idempotencyKey),
+          ]);
+          return;
+        }
+      }
       const matchingMutations = pendingMutations.filter(
         (pendingMutation) =>
           pendingMutation.bookmarkId === parsedMutation.data.bookmarkId &&
@@ -470,7 +494,7 @@ export async function enqueueMutation(
             .map((pendingMutation) => pendingMutation.idempotencyKey);
           preservedQueuedAt = primaryMutation.queuedAt;
         }
-      } else {
+      } else if (parsedMutation.data.kind === "bookmark.delete") {
         const pendingDeletes = matchingMutations.filter(
           (
             pendingMutation,
@@ -501,6 +525,51 @@ export async function enqueueMutation(
       const bookmark = await offlineLibraryDb.bookmarks.get(
         parsedMutation.data.bookmarkId,
       );
+      if (parsedMutation.data.kind === "bookmark.create") {
+        if (bookmark) {
+          throw new TypeError("Offline bookmark already exists");
+        }
+        const createdBookmark: ZBookmark = {
+          id: parsedMutation.data.bookmarkId,
+          createdAt: parsedMutation.data.bookmark.createdAt,
+          modifiedAt: null,
+          title: parsedMutation.data.bookmark.title ?? null,
+          archived: parsedMutation.data.bookmark.archived ?? false,
+          favourited: parsedMutation.data.bookmark.favourited ?? false,
+          taggingStatus: "pending",
+          summarizationStatus: null,
+          embeddingStatus: "pending",
+          note: parsedMutation.data.bookmark.note ?? null,
+          summary: parsedMutation.data.bookmark.summary ?? null,
+          source: "web",
+          userId: ownerUserId,
+          tags: [],
+          assets: [],
+          content: {
+            type: BookmarkTypes.TEXT,
+            text: parsedMutation.data.bookmark.text,
+            sourceUrl: parsedMutation.data.bookmark.sourceUrl ?? null,
+          },
+        };
+        await Promise.all([
+          offlineLibraryDb.bookmarks.put(createdBookmark),
+          offlineLibraryDb.bookmarkFieldVersions.bulkPut(
+            [
+              "title",
+              "archived",
+              "favourited",
+              "note",
+              "summary",
+              "text",
+              "tags",
+            ].map((field) => ({
+              bookmarkId: createdBookmark.id,
+              field,
+              version: 0,
+            })),
+          ),
+        ]);
+      }
       if (bookmark) {
         if (parsedMutation.data.kind === "bookmark.update") {
           const fields = parsedMutation.data.fields;

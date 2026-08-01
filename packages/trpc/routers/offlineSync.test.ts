@@ -74,6 +74,25 @@ describe("offline sync contracts", () => {
     ).toBe("bookmark.tags");
   });
 
+  test("accepts an offline text bookmark creation", () => {
+    expect(
+      zOfflineSyncPushInputSchema.parse({
+        mutations: [
+          {
+            idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+            kind: "bookmark.create",
+            bookmarkId: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+            bookmark: {
+              type: BookmarkTypes.TEXT,
+              text: "Offline note",
+              createdAt: "2026-08-02T00:00:00Z",
+            },
+          },
+        ],
+      }).mutations[0].kind,
+    ).toBe("bookmark.create");
+  });
+
   test("accepts explicit bookmark list membership intent", () => {
     expect(
       zOfflineSyncPushInputSchema.parse({
@@ -303,6 +322,39 @@ describe("Offline sync routes", () => {
             name: "Offline tag",
           }),
         ],
+      }),
+    );
+  });
+
+  test<CustomTestContext>("creates a text bookmark with its client ID while offline", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const mutation = {
+      idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+      kind: "bookmark.create" as const,
+      bookmarkId: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+      bookmark: {
+        type: BookmarkTypes.TEXT as BookmarkTypes.TEXT,
+        text: "Offline note",
+        title: "Saved offline",
+        createdAt: new Date("2026-08-02T00:00:00Z"),
+      },
+    };
+
+    const first = await owner.offlineSync.push({ mutations: [mutation] });
+    const replay = await owner.offlineSync.push({ mutations: [mutation] });
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(first).toEqual(replay);
+    expect(snapshot.bookmarks).toContainEqual(
+      expect.objectContaining({
+        id: mutation.bookmarkId,
+        title: "Saved offline",
+        content: expect.objectContaining({
+          type: BookmarkTypes.TEXT,
+          text: "Offline note",
+        }),
       }),
     );
   });

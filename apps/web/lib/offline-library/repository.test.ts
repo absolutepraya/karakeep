@@ -613,6 +613,76 @@ test("queues tag mutations with the optimistic local tag set", async () => {
   ]);
 });
 
+test("queues a text bookmark creation with an optimistic local record", async () => {
+  const mutation: ZOfflineSyncMutation = {
+    idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+    kind: "bookmark.create",
+    bookmarkId: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+    bookmark: {
+      type: BookmarkTypes.TEXT,
+      text: "Offline note",
+      title: "Saved offline",
+      createdAt: new Date("2026-08-02T00:00:00Z"),
+    },
+  };
+  await replaceSnapshot(snapshot, "user-1");
+
+  await enqueueMutation(mutation, "user-1");
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: expect.arrayContaining([
+      expect.objectContaining({
+        id: mutation.bookmarkId,
+        title: "Saved offline",
+        content: expect.objectContaining({
+          type: BookmarkTypes.TEXT,
+          text: "Offline note",
+        }),
+      }),
+    ]),
+  });
+  await expect(listPendingMutations("user-1")).resolves.toContainEqual(
+    expect.objectContaining({ idempotencyKey: mutation.idempotencyKey }),
+  );
+  await expect(
+    getBookmarkFieldVersion(mutation.bookmarkId, "text"),
+  ).resolves.toBe(0);
+});
+
+test("cancels an unpushed text bookmark when it is deleted", async () => {
+  const bookmarkId = "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7";
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(
+    {
+      idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+      kind: "bookmark.create",
+      bookmarkId,
+      bookmark: {
+        type: BookmarkTypes.TEXT,
+        text: "Offline note",
+        createdAt: new Date("2026-08-02T00:00:00Z"),
+      },
+    },
+    "user-1",
+  );
+
+  await enqueueMutation(
+    {
+      idempotencyKey: "ab4b95e2-e470-4b72-9b5c-6a34b1e46d56",
+      kind: "bookmark.delete",
+      bookmarkId,
+    },
+    "user-1",
+  );
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [expect.not.objectContaining({ id: bookmarkId })],
+  });
+  await expect(listPendingMutations("user-1")).resolves.not.toContainEqual(
+    expect.objectContaining({ bookmarkId }),
+  );
+});
+
 test("keeps the name of an offline-created tag in the optimistic replica", async () => {
   const tagMutation: ZOfflineSyncMutation = {
     idempotencyKey: "bc97c924-e9f9-46b8-bc2e-6d2b718a727a",
