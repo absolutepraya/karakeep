@@ -19,6 +19,7 @@ import BookmarkAlreadyExistsToast from "@/components/utils/BookmarkAlreadyExists
 import { useClientConfig } from "@/lib/clientConfig";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useTranslation } from "@/lib/i18n/client";
+import { useOfflineLibrary } from "@/lib/offline-library/provider";
 import {
   useBookmarkLayout,
   useBookmarkLayoutSwitch,
@@ -78,6 +79,8 @@ export default function EditorCard({
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const listContext = useBookmarkListContext();
+  const { status: offlineStatus, queueBookmarkCreate } = useOfflineLibrary();
+  const [isOfflineCreatePending, setIsOfflineCreatePending] = useState(false);
 
   const demoMode = !!useClientConfig().demoMode;
   const bookmarkLayout = useBookmarkLayout();
@@ -126,34 +129,70 @@ export default function EditorCard({
     },
   });
 
-  const { mutate, isPending } = useCreateBookmarkWithPostHook({
-    onSuccess: (resp) => {
-      if (resp.alreadyExists) {
-        toast({
-          description: <BookmarkAlreadyExistsToast bookmarkId={resp.id} />,
-          variant: "default",
-        });
-      }
-      // File the new bookmark into the chosen folder, if any.
-      if (selectedListIdRef.current) {
-        void addToList({
-          bookmarkId: resp.id,
-          listId: selectedListIdRef.current,
-        });
-      }
+  const { mutate, isPending: isOnlineCreatePending } =
+    useCreateBookmarkWithPostHook({
+      onSuccess: (resp) => {
+        if (resp.alreadyExists) {
+          toast({
+            description: <BookmarkAlreadyExistsToast bookmarkId={resp.id} />,
+            variant: "default",
+          });
+        }
+        // File the new bookmark into the chosen folder, if any.
+        if (selectedListIdRef.current) {
+          void addToList({
+            bookmarkId: resp.id,
+            listId: selectedListIdRef.current,
+          });
+        }
+        form.reset();
+        // if the list layout is used, we reset the size of the editor card to the original size after submitting
+        if (bookmarkLayout === "list" && inputRef?.current?.style) {
+          inputRef.current.style.height = "auto";
+        }
+        onCreated?.();
+      },
+      onError: (e) => {
+        toast({ description: e.message, variant: "destructive" });
+      },
+    });
+
+  const isPending = isOnlineCreatePending || isOfflineCreatePending;
+  const uploadAsset = useUploadAsset();
+
+  const createTextBookmark = async (text: string) => {
+    if (offlineStatus.kind !== "offline") {
+      mutate({ type: BookmarkTypes.TEXT, text });
+      return;
+    }
+    setIsOfflineCreatePending(true);
+    try {
+      await queueBookmarkCreate({
+        idempotencyKey: crypto.randomUUID(),
+        kind: "bookmark.create",
+        bookmarkId: crypto.randomUUID(),
+        bookmark: {
+          type: BookmarkTypes.TEXT,
+          text,
+          createdAt: new Date(),
+        },
+      });
       form.reset();
-      // if the list layout is used, we reset the size of the editor card to the original size after submitting
-      if (bookmarkLayout === "list" && inputRef?.current?.style) {
+      if (bookmarkLayout === "list" && inputRef.current?.style) {
         inputRef.current.style.height = "auto";
       }
+      toast({ description: "Saved offline, will sync when connected" });
       onCreated?.();
-    },
-    onError: (e) => {
-      toast({ description: e.message, variant: "destructive" });
-    },
-  });
-
-  const uploadAsset = useUploadAsset();
+    } catch (error) {
+      toast({
+        description:
+          error instanceof Error ? error.message : "Unable to save offline",
+        variant: "destructive",
+      });
+    } finally {
+      setIsOfflineCreatePending(false);
+    }
+  };
 
   const onInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     // Expand the textarea to a max of half the screen size in the list layout only
@@ -178,7 +217,7 @@ export default function EditorCard({
       // Every line is a URL --> import each as its own link bookmark, no prompt.
       urls.forEach((url) => mutate({ type: BookmarkTypes.LINK, url }));
     } else {
-      mutate({ type: BookmarkTypes.TEXT, text });
+      void createTextBookmark(text);
     }
   };
 
