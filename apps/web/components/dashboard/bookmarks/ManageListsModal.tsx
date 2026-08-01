@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,15 +12,20 @@ import {
 import { toast } from "@/components/ui/sonner";
 import LoadingSpinner from "@/components/ui/spinner";
 import { useTranslation } from "@/lib/i18n/client";
+import {
+  isOfflineQueuedMutation,
+  useOfflineSafeBookmarkListMembership,
+} from "@/lib/hooks/useOfflineSafeBookmarkMutation";
+import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
+import { offlineLibraryDb } from "@/lib/offline-library/repository";
 import { useQuery } from "@tanstack/react-query";
+import { liveQuery } from "dexie";
 import { Archive, X } from "lucide-react";
 
-import {
-  useAddBookmarkToList,
-  useBookmarkLists,
-  useRemoveBookmarkFromList,
-} from "@karakeep/shared-react/hooks/lists";
+import { useBookmarkLists } from "@karakeep/shared-react/hooks/lists";
+import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 import { useTRPC } from "@karakeep/shared-react/trpc";
+import { listsToTree } from "@karakeep/shared/utils/listUtils";
 
 import { BookmarkListSelector } from "../lists/BookmarkListSelector";
 import { truncateListPath } from "../lists/listPath";
@@ -37,10 +42,16 @@ export default function ManageListsModal({
 }) {
   const api = useTRPC();
   const { t } = useTranslation();
+  const offlineStatus = useOfflineLibraryStatus();
+  const isOnline = offlineStatus.kind === "online";
+  const [offlineLists, setOfflineLists] = useState<{
+    lists: ZBookmarkList[];
+    membershipListIds: string[];
+  }>();
 
   const { data: allLists, isPending: isAllListsPending } = useBookmarkLists(
     undefined,
-    { enabled: open },
+    { enabled: open && isOnline },
   );
 
   const { data: alreadyInList, isPending: isAlreadyInListPending } = useQuery(
@@ -48,55 +59,66 @@ export default function ManageListsModal({
       {
         bookmarkId,
       },
-      { enabled: open },
+      { enabled: open && isOnline },
     ),
   );
 
-  const isLoading = isAllListsPending || isAlreadyInListPending;
+  useEffect(() => {
+    if (!open || isOnline) {
+      setOfflineLists(undefined);
+      return;
+    }
+    const subscription = liveQuery(async () => {
+      const [lists, memberships] = await Promise.all([
+        offlineLibraryDb.lists.toArray(),
+        offlineLibraryDb.bookmarkListMemberships
+          .where("bookmarkId")
+          .equals(bookmarkId)
+          .toArray(),
+      ]);
+      return {
+        lists,
+        membershipListIds: memberships.map((membership) => membership.listId),
+      };
+    }).subscribe({ next: setOfflineLists });
+    return () => subscription.unsubscribe();
+  }, [bookmarkId, isOnline, open]);
 
-  const { mutate: addToList, isPending: isAddingToListPending } =
-    useAddBookmarkToList({
-      onSuccess: () => {
-        toast({
-          description: t("toasts.lists.updated"),
-        });
-      },
-      onError: (e) => {
-        if (e.data?.code == "BAD_REQUEST") {
-          toast({
-            variant: "destructive",
-            description: e.message,
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: t("common.something_went_wrong"),
-          });
-        }
-      },
-    });
+  const offlineListTree = useMemo(
+    () => (offlineLists ? listsToTree(offlineLists.lists) : undefined),
+    [offlineLists],
+  );
+  const currentLists = isOnline
+    ? alreadyInList?.lists
+    : offlineLists?.lists.filter((list) =>
+        offlineLists.membershipListIds.includes(list.id),
+      );
+  const listTree = isOnline ? allLists : offlineListTree;
+  const isLoading = isOnline
+    ? isAllListsPending || isAlreadyInListPending
+    : !offlineLists;
 
-  const { mutate: deleteFromList, isPending: isDeleteFromListPending } =
-    useRemoveBookmarkFromList({
-      onSuccess: () => {
+  const listMembershipMutation = useOfflineSafeBookmarkListMembership();
+  const updateMembership = (listId: string, action: "add" | "remove") => {
+    void listMembershipMutation
+      .mutateAsync({ bookmarkId, listId, action })
+      .then((result) => {
         toast({
-          description: t("toasts.lists.updated"),
+          description: isOfflineQueuedMutation(result)
+            ? "Saved offline, will sync when connected"
+            : t("toasts.lists.updated"),
         });
-      },
-      onError: (e) => {
-        if (e.data?.code == "BAD_REQUEST") {
-          toast({
-            variant: "destructive",
-            description: e.message,
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: t("common.something_went_wrong"),
-          });
-        }
-      },
-    });
+      })
+      .catch((error: unknown) => {
+        toast({
+          variant: "destructive",
+          description:
+            error instanceof Error
+              ? error.message
+              : t("common.something_went_wrong"),
+        });
+      });
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -121,13 +143,13 @@ export default function ManageListsModal({
               <div className="flex items-baseline justify-between px-1">
                 <h3 className="text-sm font-medium">Current lists</h3>
                 <span className="text-xs tabular-nums text-muted-foreground">
-                  {alreadyInList?.lists.length ?? 0}
+                  {currentLists?.length ?? 0}
                 </span>
               </div>
-              {alreadyInList?.lists.length ? (
+              {currentLists?.length ? (
                 <ul className="space-y-1.5">
-                  {alreadyInList.lists.map((list) => {
-                    const path = allLists?.getPathById(list.id);
+                  {currentLists.map((list) => {
+                    const path = listTree?.getPathById(list.id);
                     const fullPath = path
                       ?.map((item) => `${item.icon} ${item.name}`)
                       .join(" / ");
@@ -147,10 +169,8 @@ export default function ManageListsModal({
                           variant="ghost"
                           size="icon"
                           className="size-9 shrink-0 rounded-lg"
-                          loading={isDeleteFromListPending}
-                          onClick={() =>
-                            deleteFromList({ bookmarkId, listId: list.id })
-                          }
+                          loading={listMembershipMutation.isPending}
+                          onClick={() => updateMembership(list.id, "remove")}
                           aria-label={t("actions.remove_from_list")}
                         >
                           <X className="size-4" />
@@ -174,17 +194,11 @@ export default function ManageListsModal({
                 </p>
               </div>
               <BookmarkListSelector
-                hideBookmarkIds={alreadyInList?.lists.map((l) => l.id)}
-                onChange={(listId) => {
-                  if (!isAddingToListPending) {
-                    addToList({
-                      bookmarkId,
-                      listId,
-                    });
-                  }
-                }}
+                allPathsOverride={isOnline ? undefined : listTree?.allPaths}
+                hideBookmarkIds={currentLists?.map((list) => list.id)}
+                onChange={(listId) => updateMembership(listId, "add")}
                 listTypes={["manual"]}
-                disabled={isAddingToListPending}
+                disabled={listMembershipMutation.isPending}
                 className="h-10 sm:h-11"
               />
             </section>

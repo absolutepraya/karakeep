@@ -170,6 +170,61 @@ async function assertBookmarkOwner(
   }
 }
 
+async function assertBookmarkExists(
+  tx: KarakeepDBTransaction,
+  bookmarkId: string,
+): Promise<void> {
+  const [bookmark] = await tx
+    .select({ id: bookmarks.id })
+    .from(bookmarks)
+    .where(eq(bookmarks.id, bookmarkId));
+  if (!bookmark) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Bookmark not found" });
+  }
+}
+
+async function applyBookmarkListMembership(
+  ctx: AuthedContext,
+  tx: KarakeepDBTransaction,
+  mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.listMembership" }>,
+): Promise<{ changed: boolean; listId: string; listOwnerId: string }> {
+  const transactionContext = asTransactionContext(ctx, tx);
+  const list = await List.fromId(transactionContext, mutation.listId);
+  list.ensureCanEdit();
+
+  if (mutation.action === "add") {
+    await assertBookmarkOwner(tx, ctx.user.id, mutation.bookmarkId);
+  } else {
+    await assertBookmarkExists(tx, mutation.bookmarkId);
+  }
+
+  const [membership] = await tx
+    .select({ bookmarkId: bookmarksInLists.bookmarkId })
+    .from(bookmarksInLists)
+    .where(
+      and(
+        eq(bookmarksInLists.bookmarkId, mutation.bookmarkId),
+        eq(bookmarksInLists.listId, mutation.listId),
+      ),
+    );
+  const hasMembership = membership !== undefined;
+
+  if (mutation.action === "add" && !hasMembership) {
+    await list.addBookmark(mutation.bookmarkId);
+  }
+  if (mutation.action === "remove" && hasMembership) {
+    await list.removeBookmark(mutation.bookmarkId);
+  }
+
+  return {
+    changed:
+      (mutation.action === "add" && !hasMembership) ||
+      (mutation.action === "remove" && hasMembership),
+    listId: mutation.listId,
+    listOwnerId: list.asZBookmarkList().userId,
+  };
+}
+
 async function applyBookmarkUpdate(
   tx: KarakeepDBTransaction,
   mutation: Extract<ZOfflineSyncMutation, { kind: "bookmark.update" }>,
@@ -332,7 +387,10 @@ async function applyBookmarkTags(
 
 async function triggerBookmarkUpdateEffects(
   ctx: AuthedContext,
-  mutation: ZOfflineSyncMutation,
+  mutation: Extract<
+    ZOfflineSyncMutation,
+    { kind: "bookmark.update" | "bookmark.tags" }
+  >,
   tagDelta: BookmarkTagDelta | undefined,
 ): Promise<void> {
   const bookmark = (
@@ -668,7 +726,12 @@ export async function applyOfflineSyncMutations(
     });
   }
 
-  let appliedMutation: ZOfflineSyncMutation | undefined;
+  let appliedMutation:
+    | Extract<
+        ZOfflineSyncMutation,
+        { kind: "bookmark.update" | "bookmark.tags" }
+      >
+    | undefined;
   let appliedTagDelta: BookmarkTagDelta | undefined;
   try {
     const result = await ctx.db.transaction(
@@ -688,6 +751,42 @@ export async function applyOfflineSyncMutations(
           );
         if (receipt) return receipt.result as ZOfflineSyncPushResult;
         try {
+          if (mutation.kind === "bookmark.listMembership") {
+            const membership = await applyBookmarkListMembership(
+              ctx,
+              tx,
+              mutation,
+            );
+            if (membership.changed) {
+              const collaborators = await tx
+                .select({ userId: listCollaborators.userId })
+                .from(listCollaborators)
+                .where(eq(listCollaborators.listId, membership.listId));
+              await recordOfflineSyncEvents(
+                tx,
+                membership.listOwnerId,
+                collaborators.map((collaborator) => collaborator.userId),
+                "list",
+                membership.listId,
+                "update",
+                ["bookmarks"],
+              );
+            }
+            const result = {
+              acknowledged: [mutation.idempotencyKey],
+              conflicts: [],
+              rejections: [],
+              cursor: await currentCursor(tx, ctx.user.id),
+            };
+            await tx.insert(offlineSyncMutationReceipts).values({
+              userId: ctx.user.id,
+              idempotencyKey: mutation.idempotencyKey,
+              result,
+              createdAt: new Date(),
+            });
+            return result;
+          }
+
           await assertBookmarkOwner(tx, ctx.user.id, mutation.bookmarkId);
           const changedFields =
             mutation.kind === "bookmark.update"

@@ -1,7 +1,7 @@
 # Offline Mutation Expansion Design
 
 **Date:** 2026-08-01
-**Status:** Proposed, no protocol change implemented
+**Status:** P3 existing-list membership implemented, later slices proposed
 **Related audit:** [Offline Library PWA Audit](2026-07-31-offline-library-pwa-audit.md)
 
 ## Problem
@@ -57,9 +57,9 @@ UI becomes available offline:
 | Bulk actions | No new identity | Partial success and undo semantics | Compose only after each primitive is proven |
 | Create or alter lists | Yes for new lists | Collaborator permissions and hierarchy cycles | Separate shared-list synchronization project |
 
-## Recommended first implementation: existing-list membership
+## Implemented P3: existing-list membership
 
-Add one mutation variant with explicit set semantics:
+The implemented mutation variant has explicit set semantics:
 
 ```ts
 {
@@ -77,9 +77,16 @@ replay, the server checks that the bookmark and list still exist and that the
 current user has the required permission. A rejected action must become a
 visible outbox resolution item, not an indefinitely retried sync error.
 
-This slice deliberately excludes new lists, shared-list collaborator changes,
-and bulk operations. It has no temporary IDs, binary data, or irreversible
-bookmark deletion.
+The client changes the local membership and outbox record atomically, then
+replays through the server's current list-access checks. Add requires bookmark
+ownership, while removal retains the server's existing editor permission model.
+Repeated intent for the same bookmark and list coalesces, but separate lists
+remain independent. A permanent rejection is surfaced through the existing
+discard-and-refresh flow.
+
+This slice excludes new lists, shared-list collaborator changes, and bulk
+operations. It has no temporary IDs, binary data, or irreversible bookmark
+deletion.
 
 ## Later delete design
 

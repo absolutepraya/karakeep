@@ -73,6 +73,22 @@ describe("offline sync contracts", () => {
     ).toBe("bookmark.tags");
   });
 
+  test("accepts explicit bookmark list membership intent", () => {
+    expect(
+      zOfflineSyncPushInputSchema.parse({
+        mutations: [
+          {
+            idempotencyKey: "3a24cef3-06a8-4e17-a417-b08cc78ccb3a",
+            bookmarkId: "bookmark-1",
+            kind: "bookmark.listMembership",
+            listId: "list-1",
+            action: "add",
+          },
+        ],
+      }).mutations[0].kind,
+    ).toBe("bookmark.listMembership");
+  });
+
   test("rejects an update without changed fields", () => {
     expect(() =>
       zOfflineSyncPushInputSchema.parse({
@@ -160,6 +176,96 @@ describe("Offline sync routes", () => {
         },
       ],
     });
+  });
+
+  test<CustomTestContext>("replays existing-list membership intent idempotently", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "offline list member",
+    });
+    const list = await owner.lists.create({
+      name: "Offline list",
+      icon: "folder",
+      type: "manual",
+    });
+    const add = {
+      idempotencyKey: "c4d4d33e-05e8-4404-aaac-ad1eb0f6c4e4",
+      kind: "bookmark.listMembership" as const,
+      bookmarkId: bookmark.id,
+      listId: list.id,
+      action: "add" as const,
+    };
+
+    const firstAdd = await owner.offlineSync.push({ mutations: [add] });
+    const replayedAdd = await owner.offlineSync.push({ mutations: [add] });
+    const afterAdd = await owner.offlineSync.snapshot();
+
+    expect(firstAdd).toEqual(replayedAdd);
+    expect(firstAdd.acknowledged).toEqual([add.idempotencyKey]);
+    expect(afterAdd.bookmarkListMemberships).toContainEqual({
+      bookmarkId: bookmark.id,
+      listId: list.id,
+    });
+
+    const remove = {
+      idempotencyKey: "9836e1de-876b-46d3-8e78-05d251326318",
+      kind: "bookmark.listMembership" as const,
+      bookmarkId: bookmark.id,
+      listId: list.id,
+      action: "remove" as const,
+    };
+    await owner.offlineSync.push({ mutations: [remove] });
+    const afterRemove = await owner.offlineSync.snapshot();
+
+    expect(afterRemove.bookmarkListMemberships).not.toContainEqual({
+      bookmarkId: bookmark.id,
+      listId: list.id,
+    });
+  });
+
+  test<CustomTestContext>("rejects offline list membership after edit access is revoked", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const collaborator = apiCallers[1];
+    const list = await owner.lists.create({
+      name: "Shared offline list",
+      icon: "folder",
+      type: "manual",
+    });
+    const collaboratorUser = await collaborator.users.whoami();
+    const { invitationId } = await owner.lists.addCollaborator({
+      listId: list.id,
+      email: collaboratorUser.email!,
+      role: "viewer",
+    });
+    await collaborator.lists.acceptInvitation({ invitationId });
+    const bookmark = await collaborator.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "viewer bookmark",
+    });
+    const mutation = {
+      idempotencyKey: "bba7c3c6-e3b9-4e1a-a165-1ca76cc052a5",
+      kind: "bookmark.listMembership" as const,
+      bookmarkId: bookmark.id,
+      listId: list.id,
+      action: "add" as const,
+    };
+
+    const result = await collaborator.offlineSync.push({
+      mutations: [mutation],
+    });
+
+    expect(result.rejections).toEqual([
+      expect.objectContaining({
+        idempotencyKey: mutation.idempotencyKey,
+        bookmarkId: bookmark.id,
+        code: "FORBIDDEN",
+      }),
+    ]);
   });
 
   test<CustomTestContext>("pull returns only the caller's events after its cursor", async ({

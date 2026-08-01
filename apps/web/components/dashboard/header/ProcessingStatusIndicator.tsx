@@ -163,6 +163,9 @@ async function removePendingFieldMutations(conflict: ZOfflineSyncConflict) {
         }
         return;
       }
+      if (mutation.kind !== "bookmark.update") {
+        return;
+      }
       if (!(conflict.field in mutation.fields)) return;
 
       const fields = { ...mutation.fields } as Record<string, unknown>;
@@ -200,7 +203,10 @@ async function chooseLocalConflictValue(conflict: ZOfflineSyncConflict) {
         throw new Error("Offline library has no active owner");
       }
 
-      let mutation: ZOfflineSyncMutation;
+      let mutation: Extract<
+        ZOfflineSyncMutation,
+        { kind: "bookmark.update" | "bookmark.tags" }
+      >;
       if (conflict.field === "tags") {
         if (
           !Array.isArray(conflict.localValue) ||
@@ -225,7 +231,7 @@ async function chooseLocalConflictValue(conflict: ZOfflineSyncConflict) {
           bookmarkId: conflict.bookmarkId,
           fields: { [conflict.field]: conflict.localValue },
           baseVersions: { [conflict.field]: conflict.serverVersion },
-        } as ZOfflineSyncMutation;
+        };
       }
 
       await removePendingFieldMutations(conflict);

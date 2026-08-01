@@ -331,6 +331,8 @@ export async function enqueueMutation(
   await offlineLibraryDb.transaction(
     "rw",
     offlineLibraryDb.bookmarks,
+    offlineLibraryDb.lists,
+    offlineLibraryDb.bookmarkListMemberships,
     offlineLibraryDb.outbox,
     async () => {
       const queuedAt = Date.now();
@@ -341,7 +343,10 @@ export async function enqueueMutation(
       const matchingMutations = pendingMutations.filter(
         (pendingMutation) =>
           pendingMutation.bookmarkId === parsedMutation.data.bookmarkId &&
-          pendingMutation.kind === parsedMutation.data.kind,
+          pendingMutation.kind === parsedMutation.data.kind &&
+          (pendingMutation.kind !== "bookmark.listMembership" ||
+            (parsedMutation.data.kind === "bookmark.listMembership" &&
+              pendingMutation.listId === parsedMutation.data.listId)),
       );
       let queuedMutation: ZOfflineSyncMutation = parsedMutation.data;
       let supersededMutationKeys: string[] = [];
@@ -385,7 +390,7 @@ export async function enqueueMutation(
             .map((pendingMutation) => pendingMutation.idempotencyKey);
           preservedQueuedAt = primaryMutation.queuedAt;
         }
-      } else {
+      } else if (parsedMutation.data.kind === "bookmark.tags") {
         const pendingTags = matchingMutations.filter(
           (
             pendingMutation,
@@ -403,6 +408,27 @@ export async function enqueueMutation(
             baseVersions: primaryMutation.baseVersions,
           };
           supersededMutationKeys = pendingTags
+            .slice(1)
+            .map((pendingMutation) => pendingMutation.idempotencyKey);
+          preservedQueuedAt = primaryMutation.queuedAt;
+        }
+      } else {
+        const pendingMembershipMutations = matchingMutations.filter(
+          (
+            pendingMutation,
+          ): pendingMutation is Extract<
+            ZOfflineSyncMutation,
+            { kind: "bookmark.listMembership" }
+          > & { ownerUserId: string; queuedAt: number } =>
+            pendingMutation.kind === "bookmark.listMembership",
+        );
+        const primaryMutation = pendingMembershipMutations[0];
+        if (primaryMutation) {
+          queuedMutation = {
+            ...parsedMutation.data,
+            idempotencyKey: primaryMutation.idempotencyKey,
+          };
+          supersededMutationKeys = pendingMembershipMutations
             .slice(1)
             .map((pendingMutation) => pendingMutation.idempotencyKey);
           preservedQueuedAt = primaryMutation.queuedAt;
@@ -452,7 +478,7 @@ export async function enqueueMutation(
             };
           }
           await offlineLibraryDb.bookmarks.put(updatedBookmark);
-        } else {
+        } else if (parsedMutation.data.kind === "bookmark.tags") {
           const tagsById = new Map(bookmark.tags.map((tag) => [tag.id, tag]));
           await offlineLibraryDb.bookmarks.put({
             ...bookmark,
@@ -465,6 +491,30 @@ export async function enqueueMutation(
                 },
             ),
           });
+        }
+      }
+      if (parsedMutation.data.kind === "bookmark.listMembership") {
+        const list = await offlineLibraryDb.lists.get(
+          parsedMutation.data.listId,
+        );
+        if (
+          !bookmark ||
+          !list ||
+          list.type !== "manual" ||
+          list.userRole === "viewer"
+        ) {
+          throw new TypeError("Unsupported offline list membership");
+        }
+        if (parsedMutation.data.action === "add") {
+          await offlineLibraryDb.bookmarkListMemberships.put({
+            bookmarkId: parsedMutation.data.bookmarkId,
+            listId: parsedMutation.data.listId,
+          });
+        } else {
+          await offlineLibraryDb.bookmarkListMemberships.delete([
+            parsedMutation.data.bookmarkId,
+            parsedMutation.data.listId,
+          ]);
         }
       }
       if (supersededMutationKeys.length > 0) {

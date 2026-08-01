@@ -73,6 +73,13 @@ export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
     tagIds: z.array(z.string()),
     baseVersions: z.object({ tags: z.number().int().nonnegative() }).strict(),
   }),
+  z.object({
+    idempotencyKey: z.string().uuid(),
+    kind: z.literal("bookmark.listMembership"),
+    bookmarkId: z.string(),
+    listId: z.string(),
+    action: z.enum(["add", "remove"]),
+  }),
 ]);
 export type ZOfflineSyncMutation = z.infer<typeof zOfflineSyncMutationSchema>;
 

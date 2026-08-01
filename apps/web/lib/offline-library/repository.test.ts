@@ -189,6 +189,82 @@ test("filters by explicit membership and searches associated list names", async 
   ]);
 });
 
+test("queues list membership changes atomically and coalesces only the same list", async () => {
+  await replaceSnapshot(
+    {
+      ...snapshot,
+      lists: [
+        {
+          id: "list-1",
+          name: "Reading queue",
+          description: null,
+          icon: "folder",
+          parentId: null,
+          type: "manual",
+          query: null,
+          public: false,
+          hasCollaborators: false,
+          userRole: "owner",
+        },
+        {
+          id: "list-2",
+          name: "Work",
+          description: null,
+          icon: "folder",
+          parentId: null,
+          type: "manual",
+          query: null,
+          public: false,
+          hasCollaborators: false,
+          userRole: "owner",
+        },
+      ],
+    },
+    "user-1",
+  );
+  const addToFirstList: ZOfflineSyncMutation = {
+    idempotencyKey: "90e30e21-f060-4dda-9f1a-f4974dfb995a",
+    kind: "bookmark.listMembership",
+    bookmarkId: "bookmark-1",
+    listId: "list-1",
+    action: "add",
+  };
+  const addToSecondList: ZOfflineSyncMutation = {
+    idempotencyKey: "e94aa8d4-e28b-4ec4-afb2-30de766d9774",
+    kind: "bookmark.listMembership",
+    bookmarkId: "bookmark-1",
+    listId: "list-2",
+    action: "add",
+  };
+  const removeFromFirstList: ZOfflineSyncMutation = {
+    idempotencyKey: "4c8503eb-a3dd-4534-bcc2-8e8cfbbd13f5",
+    kind: "bookmark.listMembership",
+    bookmarkId: "bookmark-1",
+    listId: "list-1",
+    action: "remove",
+  };
+
+  await enqueueMutation(addToFirstList, "user-1");
+  await enqueueMutation(addToSecondList, "user-1");
+  await enqueueMutation(removeFromFirstList, "user-1");
+
+  await expect(
+    offlineLibraryDb.bookmarkListMemberships.toArray(),
+  ).resolves.toEqual([{ bookmarkId: "bookmark-1", listId: "list-2" }]);
+  await expect(listPendingMutations("user-1")).resolves.toEqual([
+    expect.objectContaining({
+      idempotencyKey: addToFirstList.idempotencyKey,
+      listId: "list-1",
+      action: "remove",
+    }),
+    expect.objectContaining({
+      idempotencyKey: addToSecondList.idempotencyKey,
+      listId: "list-2",
+      action: "add",
+    }),
+  ]);
+});
+
 test("filters an offline RSS feed page to bookmarks imported from that feed", async () => {
   await replaceSnapshot(
     {

@@ -78,6 +78,10 @@ export class OfflineLibraryDatabase extends Dexie {
     this.version(6).stores({
       rejections: "idempotencyKey, ownerUserId, [ownerUserId+rejectedAt]",
     });
+    this.version(7).stores({
+      outbox:
+        "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, listId, kind, queuedAt",
+    });
   }
 }
 
