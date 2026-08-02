@@ -46,6 +46,14 @@ vi.mock("@/lib/auth/client", () => ({
   useSession: () => ({ data: { user: { id: "user-1" } } }),
 }));
 
+vi.mock("@/lib/offline-library/provider", () => ({
+  useOfflineLibrary: () => ({
+    status: { kind: "online" },
+    queueBookmarkDelete: vi.fn(),
+  }),
+  useOfflineLibraryStatus: () => ({ kind: "online" }),
+}));
+
 vi.mock("../i18n/client", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));

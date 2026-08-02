@@ -58,20 +58,9 @@ import {
 
 import QueryExplainerTooltip from "../search/QueryExplainerTooltip";
 import { BookmarkListSelector } from "./BookmarkListSelector";
+import { resolveListParentId } from "./listParent";
 
-export function resolveListParentId(
-  list: Pick<ZBookmarkList, "parentId"> | undefined,
-  prefill: Partial<Pick<ZBookmarkList, "parentId">> | undefined,
-  pathname: string,
-) {
-  if (list) {
-    return list.parentId;
-  }
-  if (prefill?.parentId !== undefined) {
-    return prefill.parentId;
-  }
-  return pathname.match(/^\/dashboard\/lists\/([^/]+)$/)?.[1];
-}
+export { resolveListParentId } from "./listParent";
 
 export function EditListModal({
   open: userOpen,

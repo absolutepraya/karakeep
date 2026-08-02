@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ZBookmarkList } from "@karakeep/shared/types/lists";
 
-import { resolveListParentId } from "./EditListModal";
+import { resolveListParentId } from "./listParent";
 
 describe("resolveListParentId", () => {
   it("uses the current folder for a new list created from a list page", () => {
