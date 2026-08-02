@@ -1,7 +1,7 @@
 # Offline Library PWA Audit
 
 **Date:** 2026-07-31  
-**Status:** P0 through P5 implemented, pending device verification
+**Status:** P0 through P6 text-note creation implemented, pending device verification
 **Related design:** [Offline Library PWA Design](2026-07-12-offline-library-pwa-design.md)
 
 ## Purpose
@@ -16,9 +16,10 @@ account identifiers, URLs, credentials, or bookmark content.
 - P0 prevents incorrect and cross-account display before freshness work.
 - A cold PWA launch without a network remains unsupported for now. The app
   must first be opened while online.
-- Offline creation, uploads, new tag creation, and bulk destructive actions
-  remain out of scope. Existing manual-list membership and single-bookmark
-  deletion are supported.
+- Offline text-note creation, inline tag creation, existing manual-list
+  membership, and single-bookmark deletion are supported. Offline link
+  creation, uploads, standalone tag or list management, and bulk destructive
+  actions remain out of scope.
 
 ## Findings
 
@@ -35,6 +36,7 @@ account identifiers, URLs, credentials, or bookmark content.
 | PWA-009 | P3 | Implemented, pending device verification | Existing manual-list membership can now be added or removed offline. Creation, uploads, new tags, and bulk actions remain network-only. | `bookmark.listMembership` has explicit set semantics, atomic replica and outbox updates, server-side current access checks, idempotency receipts, and actionable rejection recovery. The staged expansion is recorded in [Offline Mutation Expansion Design](2026-08-01-offline-mutation-expansion-design.md). |
 | PWA-010 | P4 | Implemented, pending device verification | A single owned bookmark can now be deleted offline without bypassing the five-second undo window. Bulk deletion remains network-only. | After undo expires, `bookmark.delete` atomically creates a local tombstone and outbox entry. Queries hide tombstones while the original record remains until an authoritative delete event or snapshot settles it. A rejection keeps the tombstone until explicit discard and server refresh. |
 | PWA-011 | P5 | Implemented, pending device verification | A new tag can now be created inline from an existing bookmark while offline. Standalone Tags page management remains network-only. | The client assigns a UUID and queues it with the bookmark's full `bookmark.tags` intent. The replica renders the name immediately; replay validates and persists the same UUID atomically with attachment. A field conflict retains the created-tag metadata for local conflict resolution. |
+| PWA-012 | P6 | Implemented, pending device verification | A text note created through New Item can now save while offline. Link creation remains network-only pending URL-deduplication ID reconciliation. | The client assigns a UUID and writes the local note plus outbox mutation atomically. Replay checks quota, creates the same ID idempotently, and triggers the existing text-indexing, rules, search, and webhook effects. Deleting an unpushed note cancels its creation instead of queuing a server delete. |
 
 ## Ruled out for the online stale-bookmark flash
 
@@ -129,11 +131,20 @@ Expected result after P0: all focused tests pass.
 - A stale tag conflict retains created-tag metadata so choosing the local value
   can replay the same creation intent.
 
+### P6 regression tests
+
+- A text note created offline appears in the local replica immediately, has
+  zero-value field versions for later offline intent, and replays idempotently
+  with its client ID.
+- Deleting an unpushed local note removes it and cancels its create mutation,
+  rather than sending a delete for a record the server never received.
+
 ## Follow-up order
 
-1. P6: keep bookmark and list creation, uploads, standalone tag management,
-   and bulk destructive actions online-only until client IDs, dependent
-   mutation rewriting, and durable blob transfer have dedicated designs.
+1. P7: keep link bookmark and list creation, uploads, standalone tag
+   management, and bulk destructive actions online-only until canonical ID
+   reconciliation, dependent mutation rewriting, and durable blob transfer
+   have dedicated designs.
 
 ## Resolution rules
 

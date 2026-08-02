@@ -1,16 +1,17 @@
 # Offline Mutation Expansion Design
 
 **Date:** 2026-08-01
-**Status:** P3 list membership, P4 single-bookmark deletion, and P5 inline tag creation implemented
+**Status:** P3 list membership, P4 single-bookmark deletion, P5 inline tag creation, and P6 text-note creation implemented
 **Related audit:** [Offline Library PWA Audit](2026-07-31-offline-library-pwa-audit.md)
 
 ## Problem
 
 The installed PWA currently supports offline edits to existing bookmark fields
 and tag membership. It can also create a tag while attaching it to an existing
-bookmark. The rest of the UI correctly requires a connection:
+bookmark and save a text note. The rest of the UI correctly requires a
+connection:
 
-- bookmark creation and uploads;
+- link bookmark creation and uploads;
 - bulk destructive actions;
 - adding or removing a bookmark from a list;
 - standalone tag management; and
@@ -52,7 +53,8 @@ UI becomes available offline:
 | Remove bookmark from an existing list | No | Access can be revoked while offline | First candidate after actionable-rejection support |
 | Add bookmark to an existing list | No | Access can be revoked, list may be deleted | Same protocol as removal, ship together |
 | Delete existing owned bookmark | No | Undo window, remote edit, and destructive replay | Second slice, use a local tombstone and cancellable outbox entry |
-| Create bookmark | Yes, client bookmark ID | Server deduplication may return a different existing bookmark | Requires client-to-server ID mapping and dependent mutation rewriting |
+| Create text bookmark | Client UUID | Quota rejection and create-then-delete cancellation | Ship first with the server persisting the UUID |
+| Create link bookmark | Client UUID | URL deduplication may return a different existing bookmark | Requires client-to-server ID mapping and dependent mutation rewriting |
 | Create tag inline with an existing bookmark | Client UUID | Remote tag name collision and stale tag field | Ship as a `bookmark.tags` extension; no ID remapping when the server persists the UUID |
 | Standalone tag creation | Client UUID | Replicated tag catalog and later reference resolution | Separate tag-catalog slice |
 | Upload or attach assets | Yes, local asset record | Blob durability, upload retries, quota, and multipart protocol | Separate asset-transfer project |
@@ -123,9 +125,23 @@ online-only for creation, rename, deletion, and merge. A tag that already
 exists remotely but is absent from the local bookmark context can be rejected
 as a duplicate rather than guessed or silently remapped.
 
+## Implemented P6: text-note creation
+
+The New Item editor can create a text note while offline. The client generates
+a UUID, writes a complete local text bookmark and zero-value field versions in
+the same IndexedDB transaction as the outbox mutation, then shows the note
+immediately. The server rechecks quota, persists that UUID, records a create
+event, and runs the same indexing, rule, search, and webhook effects as online
+text creation.
+
+If a local-only text note is deleted before replay, its create mutation and
+optimistic record are removed together. It does not send a delete for a
+bookmark the server never received. Link creation remains network-only because
+the existing URL-deduplication behavior can return a different canonical ID.
+
 ## Explicitly out of this increment
 
-No offline bookmark or list creation, uploads, standalone tag management,
+No offline link bookmark or list creation, uploads, standalone tag management,
 collaborator changes, or bulk destructive controls are enabled by this design.
-Each needs temporary ID remapping, a new durable local entity, or a dedicated
+Each needs canonical ID remapping, a new durable local entity, or a dedicated
 transfer protocol.
