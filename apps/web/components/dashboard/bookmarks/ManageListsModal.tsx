@@ -46,7 +46,7 @@ export default function ManageListsModal({
   const isOnline = offlineStatus.kind === "online";
   const [offlineLists, setOfflineLists] = useState<{
     lists: ZBookmarkList[];
-    membershipListIds: string[];
+    membershipListIds: Set<string>;
   }>();
 
   const { data: allLists, isPending: isAllListsPending } = useBookmarkLists(
@@ -78,7 +78,9 @@ export default function ManageListsModal({
       ]);
       return {
         lists,
-        membershipListIds: memberships.map((membership) => membership.listId),
+        membershipListIds: new Set(
+          memberships.map((membership) => membership.listId),
+        ),
       };
     }).subscribe({ next: setOfflineLists });
     return () => subscription.unsubscribe();
@@ -91,7 +93,7 @@ export default function ManageListsModal({
   const currentLists = isOnline
     ? alreadyInList?.lists
     : offlineLists?.lists.filter((list) =>
-        offlineLists.membershipListIds.includes(list.id),
+        offlineLists.membershipListIds.has(list.id),
       );
   const listTree = isOnline ? allLists : offlineListTree;
   const isLoading = isOnline

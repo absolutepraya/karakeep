@@ -449,6 +449,7 @@ export async function enqueueMutation(
         const primaryMutation = pendingTags[0];
         if (primaryMutation) {
           const finalTagIds = parsedMutation.data.tagIds;
+          const finalTagIdSet = new Set(finalTagIds);
           const createdTagsById = new Map(
             primaryMutation.createdTags.map((tag) => [tag.id, tag]),
           );
@@ -465,7 +466,7 @@ export async function enqueueMutation(
             idempotencyKey: primaryMutation.idempotencyKey,
             baseVersions: primaryMutation.baseVersions,
             createdTags: [...createdTagsById.values()].filter((tag) =>
-              finalTagIds.includes(tag.id),
+              finalTagIdSet.has(tag.id),
             ),
           };
           supersededMutationKeys = pendingTags
