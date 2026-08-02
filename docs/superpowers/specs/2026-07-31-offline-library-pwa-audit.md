@@ -1,7 +1,7 @@
 # Offline Library PWA Audit
 
 **Date:** 2026-07-31  
-**Status:** P0 through P6 text-note creation implemented, pending device verification
+**Status:** P0 through P6 text-note creation implemented, automated verification complete, pending real iPhone acceptance
 **Related design:** [Offline Library PWA Design](2026-07-12-offline-library-pwa-design.md)
 
 ## Purpose
@@ -60,6 +60,13 @@ the client grid choosing stale local data before that refresh completed.
    enters its offline state.
 
 ## Verification ledger
+
+### 2026-08-02 automated verification
+
+- `mise exec -- env -u NO_COLOR pnpm --filter @karakeep/web test --run` passed all 145 web tests, including the replica, outbox, replay, conflict, deletion, tag, list-membership, and text-note paths.
+- `mise exec -- env -u NO_COLOR pnpm preflight` and `mise exec -- env -u NO_COLOR pnpm build` passed.
+- An authenticated local browser session verified service-worker registration, versioned shell and thumbnail caches, and the visible transition between online server data and an offline replica. The viewport check covered an iPhone-sized layout, but it is not a substitute for a real Safari-installed PWA acceptance run.
+- The root Docker e2e setup was attempted but its cold ARM image build stalled before test containers started. It is not counted as a completed e2e suite.
 
 ### P0 regression tests
 

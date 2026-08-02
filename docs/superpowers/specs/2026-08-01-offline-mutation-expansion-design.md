@@ -13,7 +13,6 @@ connection:
 
 - link bookmark creation and uploads;
 - bulk destructive actions;
-- adding or removing a bookmark from a list;
 - standalone tag management; and
 - creating, deleting, or collaborating on lists.
 
