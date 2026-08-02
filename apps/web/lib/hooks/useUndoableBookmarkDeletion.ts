@@ -1,15 +1,20 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
+import {
+  isOfflineQueuedMutation,
+  OFFLINE_ONLINE_REQUIRED_MESSAGE,
+  useOfflineSafeBookmarkDeletion,
+} from "@/lib/hooks/useOfflineSafeBookmarkMutation";
 import { useTranslation } from "@/lib/i18n/client";
+import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
 import usePendingBookmarkDeletionStore from "@/lib/store/usePendingBookmarkDeletionStore";
-
-import { useDeleteBookmark } from "@karakeep/shared-react/hooks/bookmarks";
 
 const UNDO_DELETE_DURATION = 5_000;
 
 export function useUndoableBookmarkDeletion() {
   const { t } = useTranslation();
-  const { mutateAsync: deleteBookmark } = useDeleteBookmark();
+  const deleteBookmark = useOfflineSafeBookmarkDeletion();
+  const offlineStatus = useOfflineLibraryStatus();
   const markPending = usePendingBookmarkDeletionStore(
     (state) => state.markPending,
   );
@@ -29,6 +34,10 @@ export function useUndoableBookmarkDeletion() {
       if (deletableBookmarkIds.length === 0) {
         return;
       }
+      if (offlineStatus.kind !== "online" && deletableBookmarkIds.length > 1) {
+        toast.error(OFFLINE_ONLINE_REQUIRED_MESSAGE);
+        return;
+      }
 
       deletableBookmarkIds.forEach(markPending);
       let resolved = false;
@@ -40,7 +49,7 @@ export function useUndoableBookmarkDeletion() {
         resolved = true;
         void Promise.allSettled(
           deletableBookmarkIds.map((bookmarkId) =>
-            deleteBookmark({ bookmarkId }),
+            deleteBookmark.mutateAsync({ bookmarkId }),
           ),
         ).then((results) => {
           // Only restore visibility for bookmarks that failed to delete.
@@ -49,6 +58,13 @@ export function useUndoableBookmarkDeletion() {
           // immediately would cause a brief reappearance between clearPending
           // and the debounced query refetch (~250ms later).
           results.forEach((result, index) => {
+            if (
+              result.status === "fulfilled" &&
+              isOfflineQueuedMutation(result.value)
+            ) {
+              clearPending(deletableBookmarkIds[index]);
+              return;
+            }
             if (result.status === "rejected") {
               clearPending(deletableBookmarkIds[index]);
             }
@@ -80,7 +96,14 @@ export function useUndoableBookmarkDeletion() {
         onDismiss: commitDelete,
       });
     },
-    [clearPending, deleteBookmark, markPending, pendingBookmarkIds, t],
+    [
+      clearPending,
+      deleteBookmark,
+      markPending,
+      offlineStatus.kind,
+      pendingBookmarkIds,
+      t,
+    ],
   );
 
   const scheduleDelete = useCallback(

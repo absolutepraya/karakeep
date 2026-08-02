@@ -17,6 +17,7 @@ import useUpload from "@/lib/hooks/upload-file";
 import {
   OFFLINE_ONLINE_REQUIRED_MESSAGE,
   isOfflineQueuedMutation,
+  useOfflineSafeBookmarkListMembership,
   useOfflineSafeBookmarkUpdate,
 } from "@/lib/hooks/useOfflineSafeBookmarkMutation";
 import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
@@ -50,7 +51,6 @@ import {
 import { useBookmarkGridContext } from "@karakeep/shared-react/hooks/bookmark-grid-context";
 import { useBookmarkListContext } from "@karakeep/shared-react/hooks/bookmark-list-context";
 import { useRecrawlBookmark } from "@karakeep/shared-react/hooks/bookmarks";
-import { useRemoveBookmarkFromList } from "@karakeep/shared-react/hooks/lists";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 
@@ -199,12 +199,23 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
     onError,
   });
 
-  const removeFromListMutator = useRemoveBookmarkFromList({
-    onSuccess: () => {
-      toast.success(t("toasts.bookmarks.delete_from_list"));
-    },
-    onError,
-  });
+  const removeFromListMutator = useOfflineSafeBookmarkListMembership();
+  const removeFromList = () => {
+    void removeFromListMutator
+      .mutateAsync({
+        listId: listId!,
+        bookmarkId: bookmark.id,
+        action: "remove",
+      })
+      .then((result) => {
+        toast.success(
+          isOfflineQueuedMutation(result)
+            ? "Saved offline, will sync when connected"
+            : t("toasts.bookmarks.delete_from_list"),
+        );
+      })
+      .catch(onError);
+  };
 
   const handleBannerFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -321,10 +332,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       title: t("actions.manage_lists"),
       icon: <List className="mr-2 size-4" />,
       visible: isOwner,
-      disabled: requiresOnline,
-      disabledMessage: requiresOnline
-        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
-        : undefined,
+      disabled: demoMode,
       onClick: () => setManageListsModalOpen(true),
     },
     {
@@ -340,15 +348,8 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
         !!withinListContext &&
         withinListContext.type === "manual",
       ),
-      disabled: demoMode || requiresOnline,
-      disabledMessage: requiresOnline
-        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
-        : undefined,
-      onClick: () =>
-        removeFromListMutator.mutate({
-          listId: listId!,
-          bookmarkId: bookmark.id,
-        }),
+      disabled: demoMode,
+      onClick: removeFromList,
     },
     {
       id: "offline-copies",
@@ -472,10 +473,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       title: t("actions.delete"),
       icon: <Trash2 className="mr-2 size-4" />,
       visible: isOwner,
-      disabled: demoMode || requiresOnline,
-      disabledMessage: requiresOnline
-        ? OFFLINE_ONLINE_REQUIRED_MESSAGE
-        : undefined,
+      disabled: demoMode,
       className: "text-destructive",
       onClick: () => setDeleteBookmarkDialogOpen(true),
     },

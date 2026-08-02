@@ -74,8 +74,9 @@ export const metadata: Metadata = {
     // apple-touch-icon is the only way to control the installed PWA icon.
     apple: [
       {
-        url: "/icons/logo-192.png",
-        sizes: "192x192",
+        url: "/icons/karakeep-ios-1024.png",
+        sizes: "1024x1024",
+        type: "image/png",
       },
     ],
   },

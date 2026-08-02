@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   } as OfflineLibraryStatus,
   useLocalBookmarkSearch: vi.fn(),
   useServerBookmarkSearch: vi.fn(),
+  canReadOfflineReplica: true,
 }));
 
 vi.mock("@/lib/hooks/bookmark-search", () => ({
@@ -23,6 +24,7 @@ vi.mock("@/lib/hooks/bookmark-search", () => ({
 
 vi.mock("@/lib/offline-library/provider", () => ({
   useOfflineLibraryStatus: () => mocks.status,
+  useCanReadOfflineReplica: () => mocks.canReadOfflineReplica,
 }));
 
 vi.mock("@/lib/store/useInSearchPageStore", () => ({
@@ -63,6 +65,7 @@ afterEach(() => {
   };
   mocks.useLocalBookmarkSearch.mockReset();
   mocks.useServerBookmarkSearch.mockReset();
+  mocks.canReadOfflineReplica = true;
   Object.defineProperty(navigator, "onLine", {
     configurable: true,
     value: true,
@@ -94,5 +97,38 @@ describe("SearchPage", () => {
     expect(screen.getByText("local-result")).toBeTruthy();
     expect(mocks.useServerBookmarkSearch).toHaveBeenCalledTimes(1);
     expect(mocks.useLocalBookmarkSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps using server search while the offline replica is initializing", () => {
+    mocks.status = { kind: "initializing" };
+    mocks.useServerBookmarkSearch.mockReturnValue({
+      ...emptySearch,
+      data: { pages: [{ bookmarks: [{ id: "server-result" }] }] },
+    });
+    mocks.useLocalBookmarkSearch.mockReturnValue({
+      ...emptySearch,
+      data: { pages: [{ bookmarks: [{ id: "stale-local-result" }] }] },
+    });
+
+    render(<SearchPage />);
+
+    expect(screen.getByText("server-result")).toBeTruthy();
+    expect(screen.queryByText("stale-local-result")).toBeNull();
+    expect(mocks.useServerBookmarkSearch).toHaveBeenCalledTimes(1);
+    expect(mocks.useLocalBookmarkSearch).not.toHaveBeenCalled();
+  });
+
+  it("does not query local search before replica ownership is verified", () => {
+    mocks.status = {
+      kind: "offline",
+      lastSyncedAt: new Date(),
+      pendingWrites: 0,
+    };
+    mocks.canReadOfflineReplica = false;
+
+    render(<SearchPage />);
+
+    expect(mocks.useLocalBookmarkSearch).not.toHaveBeenCalled();
+    expect(mocks.useServerBookmarkSearch).not.toHaveBeenCalled();
   });
 });

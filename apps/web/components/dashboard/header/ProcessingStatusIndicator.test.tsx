@@ -22,6 +22,13 @@ const mocks = vi.hoisted(() => ({
     serverValue: unknown;
     serverVersion: number;
   }[],
+  rejections: [] as {
+    idempotencyKey: string;
+    bookmarkId: string;
+    code: "BAD_REQUEST" | "FORBIDDEN" | "NOT_FOUND";
+    message: string;
+  }[],
+  discardRejectedMutation: vi.fn(),
   serverProcessing: {
     total: 0,
     tasks: [] as { kind: "crawling" | "tagging"; count: number }[],
@@ -32,6 +39,7 @@ const mocks = vi.hoisted(() => ({
     pendingWrites: 0,
   } as OfflineLibraryStatus,
   syncNow: vi.fn(),
+  canReadOfflineReplica: true,
 }));
 
 function mockLibraryStatus(status: OfflineLibraryStatus) {
@@ -60,14 +68,17 @@ vi.mock("@/lib/offline-library/provider", () => ({
   useOfflineLibrary: () => ({
     status: mocks.status,
     syncNow: mocks.syncNow,
+    discardRejectedMutation: mocks.discardRejectedMutation,
   }),
   useOfflineLibraryStatus: () => mocks.status,
+  useCanReadOfflineReplica: () => mocks.canReadOfflineReplica,
 }));
 
 vi.mock("@/lib/offline-library/repository", () => ({
   offlineLibraryDb: {
     bookmarks: { get: vi.fn() },
     conflicts: { toArray: () => Promise.resolve(mocks.conflicts) },
+    rejections: { toArray: () => Promise.resolve(mocks.rejections) },
   },
 }));
 
@@ -107,7 +118,11 @@ vi.mock("@/components/ui/popover", () => {
   };
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  mocks.rejections = [];
+  mocks.discardRejectedMutation.mockReset();
+});
 
 describe("ProcessingStatusIndicator", () => {
   it("shows online state while idle", () => {
@@ -123,6 +138,8 @@ describe("ProcessingStatusIndicator", () => {
     expect(
       screen.getByRole("button", { name: /library activity.*online/i }),
     ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
+    expect(screen.getByText("Showing server data")).toBeTruthy();
   });
 
   it("shows an offline state and pending writes", () => {
@@ -139,7 +156,37 @@ describe("ProcessingStatusIndicator", () => {
     expect(
       screen.getByRole("button", { name: /library activity.*offline.*2/i }),
     ).toBeTruthy();
+    expect(screen.getByText("Showing offline replica")).toBeTruthy();
     expect(screen.getByText("2 pending writes")).toBeTruthy();
+  });
+
+  it("shows an actionable rejected offline change state", async () => {
+    mockLibraryStatus({
+      kind: "rejected",
+      pendingWrites: 0,
+      rejectionCount: 1,
+    });
+    mocks.rejections = [
+      {
+        idempotencyKey: "e7da6e68-4b45-4f56-aa6f-bd0c0fbbc6b8",
+        bookmarkId: "bookmark-1",
+        code: "FORBIDDEN",
+        message: "User is not allowed to modify this bookmark",
+      },
+    ];
+    mockServerProcessing({ total: 0, tasks: [] });
+
+    render(<ProcessingStatusIndicator />);
+    fireEvent.click(screen.getByRole("button", { name: /library activity/i }));
+
+    expect(
+      await screen.findByText(
+        "The server could not apply a queued offline change.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Resolve 1 rejected change" }),
+    ).toBeTruthy();
   });
 
   it("shows the last successful sync and safely retries after an error", async () => {

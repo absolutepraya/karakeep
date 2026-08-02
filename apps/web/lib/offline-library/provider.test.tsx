@@ -3,12 +3,14 @@
 import "fake-indexeddb/auto";
 
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { offlineLibraryDb, replaceSnapshot } from "./repository";
 import {
+  FOREGROUND_SYNC_INTERVAL_MS,
   OfflineLibraryProvider,
+  useCanReadOfflineReplica,
   useOfflineLibrary,
   useOfflineLibraryStatus,
 } from "./provider";
@@ -45,6 +47,11 @@ function Status() {
   return <output>{status.kind}</output>;
 }
 
+function ReplicaAccess() {
+  const canReadOfflineReplica = useCanReadOfflineReplica();
+  return <output>{String(canReadOfflineReplica)}</output>;
+}
+
 function UnauthenticatedCaller({
   onSettled,
 }: {
@@ -71,6 +78,7 @@ function UnauthenticatedCaller({
         kind: "bookmark.tags",
         bookmarkId: "bookmark-1",
         tagIds: ["tag-1"],
+        createdTags: [],
         baseVersions: { tags: 0 },
       }),
     ]).then(onSettled);
@@ -97,12 +105,18 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  cleanup();
   await offlineLibraryDb.delete();
   vi.clearAllMocks();
   Object.defineProperty(navigator, "onLine", {
     configurable: true,
     value: true,
   });
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: "visible",
+  });
+  vi.restoreAllMocks();
 });
 
 test("starts synchronization only for an authenticated session", async () => {
@@ -129,6 +143,67 @@ test("starts synchronization only for an authenticated session", async () => {
   });
 });
 
+test("periodically syncs only while the app is visible", async () => {
+  const setIntervalSpy = vi.spyOn(window, "setInterval");
+  render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <Status />
+    </OfflineLibraryProvider>,
+  );
+
+  await waitFor(() =>
+    expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce(),
+  );
+  await waitFor(() => expect(screen.getByText("online")).toBeTruthy());
+  const intervalCall = setIntervalSpy.mock.calls.find(
+    ([, delay]) => delay === FOREGROUND_SYNC_INTERVAL_MS,
+  );
+  expect(intervalCall).toBeDefined();
+  const onInterval = intervalCall?.[0] as () => void;
+
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: "hidden",
+  });
+  expect(document.visibilityState).toBe("hidden");
+  onInterval();
+  expect(trpc.offlineSync.pull.query).not.toHaveBeenCalled();
+
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: "visible",
+  });
+  expect(document.visibilityState).toBe("visible");
+  onInterval();
+  await waitFor(() =>
+    expect(trpc.offlineSync.pull.query).toHaveBeenCalledOnce(),
+  );
+});
+
+test("does not let the foreground interval bypass sync retry backoff", async () => {
+  const setIntervalSpy = vi.spyOn(window, "setInterval");
+  trpc.offlineSync.snapshot.query.mockRejectedValueOnce(
+    new Error("network unavailable"),
+  );
+  render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <Status />
+    </OfflineLibraryProvider>,
+  );
+
+  await waitFor(() => expect(screen.getByText("error")).toBeTruthy());
+  const intervalCall = setIntervalSpy.mock.calls.find(
+    ([, delay]) => delay === FOREGROUND_SYNC_INTERVAL_MS,
+  );
+  expect(intervalCall).toBeDefined();
+  const onInterval = intervalCall?.[0] as () => void;
+
+  onInterval();
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+  expect(trpc.offlineSync.snapshot.query).toHaveBeenCalledOnce();
+});
+
 test("does not start synchronization on a cold offline launch", async () => {
   Object.defineProperty(navigator, "onLine", {
     configurable: true,
@@ -144,6 +219,72 @@ test("does not start synchronization on a cold offline launch", async () => {
     expect(screen.getByText("offline")).toBeTruthy();
   });
   expect(trpc.offlineSync.snapshot.query).not.toHaveBeenCalled();
+});
+
+test("does not expose the replica until the authenticated owner is verified", async () => {
+  const snapshot = Promise.withResolvers<{
+    bookmarks: never[];
+    lists: never[];
+    bookmarkListMemberships: never[];
+    bookmarkRssFeedMemberships: never[];
+    bookmarkFieldVersions: never[];
+    cursor: string;
+  }>();
+  trpc.offlineSync.snapshot.query.mockReturnValue(snapshot.promise);
+
+  const screen = render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <ReplicaAccess />
+    </OfflineLibraryProvider>,
+  );
+
+  expect(screen.getByText("false")).toBeTruthy();
+  snapshot.resolve({
+    bookmarks: [],
+    lists: [],
+    bookmarkListMemberships: [],
+    bookmarkRssFeedMemberships: [],
+    bookmarkFieldVersions: [],
+    cursor: "1",
+  });
+
+  await waitFor(() => expect(screen.getByText("true")).toBeTruthy());
+});
+
+test("purges another user's replica before allowing offline reads", async () => {
+  await replaceSnapshot(
+    {
+      bookmarks: [],
+      lists: [],
+      bookmarkListMemberships: [],
+      bookmarkRssFeedMemberships: [],
+      bookmarkFieldVersions: [],
+      cursor: "1",
+    },
+    "user-1",
+  );
+  session.current = {
+    data: { user: { id: "user-2" } },
+    status: "authenticated",
+  };
+  Object.defineProperty(navigator, "onLine", {
+    configurable: true,
+    value: false,
+  });
+
+  const screen = render(
+    <OfflineLibraryProvider trpcClient={trpc as never}>
+      <ReplicaAccess />
+    </OfflineLibraryProvider>,
+  );
+
+  expect(screen.getByText("false")).toBeTruthy();
+  await waitFor(async () => {
+    expect(screen.getByText("true")).toBeTruthy();
+    await expect(
+      offlineLibraryDb.metadata.get("replicaOwnerUserId"),
+    ).resolves.toBeUndefined();
+  });
 });
 
 test("purges the private replica and worker caches after logout", async () => {

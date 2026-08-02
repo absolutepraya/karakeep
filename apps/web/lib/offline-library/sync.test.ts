@@ -17,6 +17,7 @@ import {
   offlineLibraryDb,
   queryBookmarks,
   replaceSnapshot,
+  saveLastSuccessfulSyncAt,
 } from "./repository";
 import { OfflineLibrarySyncCoordinator } from "./sync";
 import type { OfflineSyncClient } from "./sync";
@@ -84,6 +85,7 @@ const emptyDelta: ZOfflineSyncPullResult = { events: [], cursor: "12" };
 const acknowledgedPush: ZOfflineSyncPushResult = {
   acknowledged: [pendingMutation.idempotencyKey],
   conflicts: [],
+  rejections: [],
   cursor: "12",
 };
 
@@ -158,6 +160,7 @@ test("replays the final repeated offline edit without a version conflict", async
   vi.mocked(client.push).mockImplementation(async ({ mutations }) => ({
     acknowledged: mutations.map((mutation) => mutation.idempotencyKey),
     conflicts: [],
+    rejections: [],
     cursor: "12",
   }));
   const coordinator = new OfflineLibrarySyncCoordinator(client);
@@ -195,6 +198,74 @@ test("takes an atomic snapshot before the first online state", async () => {
   expect(coordinator.getStatus()).toMatchObject({
     kind: "online",
     pendingWrites: 0,
+  });
+});
+
+test("restores the persisted last sync time for an offline launch", async () => {
+  const syncedAt = new Date("2026-07-31T10:00:00.000Z");
+  await replaceSnapshot(snapshot, "user-1");
+  await saveLastSuccessfulSyncAt(syncedAt);
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.hydrateLastSuccessfulSyncAt();
+  await coordinator.markOffline();
+
+  expect(coordinator.getStatus()).toEqual({
+    kind: "offline",
+    lastSyncedAt: syncedAt,
+    pendingWrites: 0,
+  });
+});
+
+test("persists the time of a successful synchronization", async () => {
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  await expect(
+    offlineLibraryDb.metadata.get("lastSuccessfulSyncAt"),
+  ).resolves.toMatchObject({ key: "lastSuccessfulSyncAt" });
+});
+
+test("requests persistent storage once after successful syncs", async () => {
+  const originalStorage = navigator.storage;
+  const persist = vi.fn().mockResolvedValue(true);
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: { persist },
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+  await coordinator.syncNow();
+
+  expect(persist).toHaveBeenCalledOnce();
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: originalStorage,
+  });
+});
+
+test("does not fail a successful sync when persistent storage is unavailable", async () => {
+  const originalStorage = navigator.storage;
+  const persist = vi.fn().mockRejectedValue(new Error("storage denied"));
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: { persist },
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(makeClient());
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  expect(coordinator.getStatus()).toMatchObject({ kind: "online" });
+  expect(persist).toHaveBeenCalledOnce();
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: originalStorage,
   });
 });
 
@@ -289,6 +360,83 @@ test("saves conflicts and prioritizes them over online status", async () => {
     pendingWrites: 1,
     conflictCount: 1,
   });
+});
+
+test("records a rejected mutation without entering retry backoff", async () => {
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(pendingMutation, "user-1");
+  const client = makeClient();
+  vi.mocked(client.push).mockResolvedValueOnce({
+    acknowledged: [],
+    conflicts: [],
+    rejections: [
+      {
+        idempotencyKey: pendingMutation.idempotencyKey,
+        bookmarkId: pendingMutation.bookmarkId,
+        code: "FORBIDDEN",
+        message: "User is not allowed to modify this bookmark",
+      },
+    ],
+    cursor: "12",
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+
+  expect(coordinator.getStatus()).toEqual({
+    kind: "rejected",
+    pendingWrites: 0,
+    rejectionCount: 1,
+  });
+  await expect(
+    offlineLibraryDb.rejections.get(pendingMutation.idempotencyKey),
+  ).resolves.toMatchObject({
+    message: "User is not allowed to modify this bookmark",
+  });
+
+  await coordinator.discardRejectedMutation(pendingMutation.idempotencyKey);
+
+  expect(coordinator.getStatus()).toMatchObject({ kind: "online" });
+  expect(client.snapshot).toHaveBeenCalledOnce();
+  await expect(offlineLibraryDb.rejections.count()).resolves.toBe(0);
+});
+
+test("restores a rejected tombstoned deletion from a fresh snapshot", async () => {
+  const deleteMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "975f89c3-da53-45de-a217-1a26a8ab9d35",
+    kind: "bookmark.delete",
+    bookmarkId: bookmark.id,
+  };
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(deleteMutation, "user-1");
+  const client = makeClient();
+  vi.mocked(client.push).mockResolvedValueOnce({
+    acknowledged: [],
+    conflicts: [],
+    rejections: [
+      {
+        idempotencyKey: deleteMutation.idempotencyKey,
+        bookmarkId: bookmark.id,
+        code: "FORBIDDEN",
+        message: "User is not allowed to delete this bookmark",
+      },
+    ],
+    cursor: "12",
+  });
+  const coordinator = new OfflineLibrarySyncCoordinator(client);
+  coordinator.activate("user-1");
+
+  await coordinator.syncNow();
+  await expect(queryBookmarks()).resolves.toMatchObject({ bookmarks: [] });
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(1);
+
+  await coordinator.discardRejectedMutation(deleteMutation.idempotencyKey);
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [{ id: bookmark.id }],
+  });
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(0);
 });
 
 test("keeps pending mutations bound to their authenticated principal", async () => {

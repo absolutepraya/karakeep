@@ -3,7 +3,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import UploadDropzone from "@/components/dashboard/UploadDropzone";
-import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
+import BookmarksGridSkeleton from "@/components/dashboard/bookmarks/BookmarksGridSkeleton";
+import {
+  useCanReadOfflineReplica,
+  useOfflineLibraryStatus,
+} from "@/lib/offline-library/provider";
 import {
   isOfflineReplicaReady,
   offlineLibraryDb,
@@ -12,6 +16,7 @@ import {
 import type { OfflineBookmarkQuery } from "@/lib/offline-library/repository";
 import { useSortOrderStore } from "@/lib/store/useSortOrderStore";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { liveQuery } from "dexie";
 
 import type {
   ZGetBookmarksRequest,
@@ -106,21 +111,24 @@ function useLocalBookmarkPagination(
     setError(null);
     setIsFetchingNextPage(false);
 
-    void Promise.all([
-      queryBookmarks({
-        archived,
-        favourited,
-        tagId,
-        listId,
-        rssFeedId,
-        cursor,
-        limit,
-        sortOrder,
-      }),
-      offlineLibraryDb.bookmarks.count(),
-      isOfflineReplicaReady(),
-    ]).then(
-      ([page, count, ready]) => {
+    const subscription = liveQuery(
+      async () =>
+        await Promise.all([
+          queryBookmarks({
+            archived,
+            favourited,
+            tagId,
+            listId,
+            rssFeedId,
+            cursor,
+            limit,
+            sortOrder,
+          }),
+          offlineLibraryDb.bookmarks.count(),
+          isOfflineReplicaReady(),
+        ]),
+    ).subscribe({
+      next: ([page, count, ready]) => {
         if (generation !== generationRef.current) {
           return;
         }
@@ -130,7 +138,7 @@ function useLocalBookmarkPagination(
         setIsReady(ready);
         setIsLoaded(true);
       },
-      (reason: unknown) => {
+      error: (reason: unknown) => {
         if (generation !== generationRef.current) {
           return;
         }
@@ -141,7 +149,9 @@ function useLocalBookmarkPagination(
         );
         setIsLoaded(true);
       },
-    );
+    });
+
+    return () => subscription.unsubscribe();
   }, [
     archived,
     cursor,
@@ -268,39 +278,7 @@ function OfflineBookmarksGrid({
   return <BookmarkGrid {...local} showEditorCard={showEditorCard} />;
 }
 
-function PendingBookmarksGrid({
-  query,
-  initialBookmarks,
-  showEditorCard,
-}: Pick<UpdatableBookmarksGridProps, "query"> & {
-  initialBookmarks: ZGetBookmarksResponse;
-  showEditorCard: boolean;
-}) {
-  let sortOrder = useSortOrderStore((state) => state.sortOrder);
-  if (sortOrder === "relevance") {
-    sortOrder = "desc";
-  }
-  const local = useLocalBookmarkPagination(
-    toOfflineQuery(query, sortOrder),
-    true,
-  );
-  const useLocalBookmarks =
-    local.isLoaded && (local.isReady || local.bookmarkCount > 0);
-
-  return (
-    <BookmarkGrid
-      bookmarks={
-        useLocalBookmarks ? local.bookmarks : initialBookmarks.bookmarks
-      }
-      hasNextPage={useLocalBookmarks ? local.hasNextPage : false}
-      fetchNextPage={useLocalBookmarks ? local.fetchNextPage : () => undefined}
-      isFetchingNextPage={useLocalBookmarks ? local.isFetchingNextPage : false}
-      showEditorCard={showEditorCard}
-    />
-  );
-}
-
-function OnlineBookmarksGrid({
+function ServerBookmarksGrid({
   query,
   initialBookmarks,
   showEditorCard,
@@ -316,54 +294,33 @@ function OnlineBookmarksGrid({
   }
 
   const finalQuery = { ...query, sortOrder, includeContent: false };
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isFetchedAfterMount,
-    refetch,
-  } = useInfiniteQuery(
-    api.bookmarks.getBookmarks.infiniteQueryOptions(
-      { ...finalQuery, useCursorV2: true },
-      {
-        initialData: () => ({
-          pages: [initialBookmarks],
-          pageParams: [query.cursor ?? null],
-        }),
-        initialCursor: null,
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
-        refetchOnMount: true,
-      },
-    ),
-  );
-  const local = useLocalBookmarkPagination(
-    toOfflineQuery(query, sortOrder),
-    true,
-  );
-
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
+    useInfiniteQuery(
+      api.bookmarks.getBookmarks.infiniteQueryOptions(
+        { ...finalQuery, useCursorV2: true },
+        {
+          initialData: () => ({
+            pages: [initialBookmarks],
+            pageParams: [query.cursor ?? null],
+          }),
+          initialCursor: null,
+          getNextPageParam: (lastPage) => lastPage.nextCursor,
+          refetchOnMount: true,
+        },
+      ),
+    );
   useEffect(() => {
     refetch();
   }, [sortOrder, refetch]);
 
   const serverBookmarks = data.pages.flatMap((page) => page.bookmarks);
-  const useLocalBookmarks =
-    local.isLoaded &&
-    (local.isReady || local.bookmarkCount > 0) &&
-    !isFetchedAfterMount;
 
   return (
     <BookmarkGrid
-      bookmarks={useLocalBookmarks ? local.bookmarks : serverBookmarks}
-      hasNextPage={
-        useLocalBookmarks ? local.hasNextPage : (hasNextPage ?? false)
-      }
-      fetchNextPage={useLocalBookmarks ? local.fetchNextPage : fetchNextPage}
-      isFetchingNextPage={
-        useLocalBookmarks
-          ? local.isFetchingNextPage
-          : (isFetchingNextPage ?? false)
-      }
+      bookmarks={serverBookmarks}
+      hasNextPage={hasNextPage ?? false}
+      fetchNextPage={fetchNextPage}
+      isFetchingNextPage={isFetchingNextPage ?? false}
       showEditorCard={showEditorCard}
     />
   );
@@ -375,29 +332,24 @@ export default function UpdatableBookmarksGrid({
   showEditorCard = false,
 }: UpdatableBookmarksGridProps) {
   const status = useOfflineLibraryStatus();
+  const canReadOfflineReplica = useCanReadOfflineReplica();
   const browserIsOffline =
     typeof navigator !== "undefined" && navigator.onLine === false;
   let content: ReactNode;
 
   if (status.kind === "offline" || browserIsOffline) {
-    content = (
+    content = canReadOfflineReplica ? (
       <OfflineBookmarksGrid
         query={query}
         showEditorCard={showEditorCard}
         lastSyncedAt={status.kind === "offline" ? status.lastSyncedAt : null}
       />
-    );
-  } else if (status.kind === "online") {
-    content = (
-      <OnlineBookmarksGrid
-        query={query}
-        initialBookmarks={initialBookmarks}
-        showEditorCard={showEditorCard}
-      />
+    ) : (
+      <BookmarksGridSkeleton />
     );
   } else {
     content = (
-      <PendingBookmarksGrid
+      <ServerBookmarksGrid
         query={query}
         initialBookmarks={initialBookmarks}
         showEditorCard={showEditorCard}

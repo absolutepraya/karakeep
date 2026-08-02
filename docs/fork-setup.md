@@ -67,13 +67,13 @@ Notes:
 
 1. Open Karakeep in Safari on an iPhone and use **Add to Home Screen**.
 2. Open the installed app, sign in, and wait until the library activity indicator shows **Online** with a successful sync time.
-3. Turn off Wi-Fi and cellular data, force-close the installed app, then reopen it. Confirm the bookmark grid, local-only search, and available thumbnails render without a network request.
-4. While offline, change a bookmark title, favorite state, or tags. Confirm the library activity indicator reports a pending write.
-5. Restore connectivity. Confirm the pending write disappears after one successful sync and the server state matches the local edit.
-6. Create a same-field edit from another signed-in device before reconnecting the offline phone. Confirm Karakeep presents a field-conflict choice instead of overwriting either value silently.
+3. Keep the installed app open, turn off Wi-Fi and cellular data, and confirm the bookmark grid, local-only search, and available thumbnails render without a network request. A cold launch after force-closing remains unsupported: reconnect and open the app once before attempting that launch.
+4. While offline, verify each supported write reports a pending item in the library activity indicator: edit an existing bookmark's title, favorite state, tags, or membership in an existing list; create a tag inline while editing an existing bookmark; save a text-only note; and delete one owned bookmark after its five-second undo window.
+5. Restore connectivity. Confirm each pending write disappears after one successful sync and the server state matches the local intent. For a locally created text note, also confirm its client-generated ID does not produce a duplicate after replay.
+6. Create a same-field edit from another signed-in device before reconnecting the offline phone. Confirm Karakeep presents a field-conflict choice instead of overwriting either value silently. For a rejected list or delete mutation, confirm the explicit discard-and-refresh flow restores the authoritative state.
 7. Log out on the phone, reopen the installed app offline, and confirm that no bookmarks, thumbnails, search results, pending writes, or conflict records remain.
 
-PDFs, archived reader pages, uploads, crawler/AI jobs, sharing, list mutations, bulk destructive actions, and unsupported edits require a connection.
+Link bookmark creation, uploads, PDFs and archived reader pages, crawler/AI jobs, sharing and collaborator changes, standalone tag or list management, list creation, and bulk destructive actions require a connection.
 
 ## Environment notes
 

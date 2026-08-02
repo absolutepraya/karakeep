@@ -1,7 +1,9 @@
 # Offline Library PWA Design
 
 **Date:** 2026-07-12  
-**Status:** Approved design, awaiting implementation planning
+**Status:** Implemented, with follow-up remediation in progress
+
+**Follow-up findings:** [Offline Library PWA Audit](2026-07-31-offline-library-pwa-audit.md)
 
 ## Goal
 
@@ -73,7 +75,7 @@ The service validates session and authorization for every request. Browser state
 
 ### Offline-safe write policy
 
-Supported offline-safe writes are bookmark metadata and tag changes only. Every queued write has an idempotency key and is visibly marked pending until server acknowledgement.
+Supported offline-safe writes are edits to existing bookmark metadata and tags, add or remove membership in an existing list, delete one owned bookmark after its undo window, create a tag inline while editing an existing bookmark, and create a text-only bookmark. Every queued write has an idempotency key and is visibly marked pending until server acknowledgement. Link creation, uploads, standalone tag or list management, list creation, collaborator changes, and bulk actions remain online-only.
 
 Different-field edits merge automatically. If two replicas edit the same field after their shared base version, Karakeep creates a field conflict. The user selects a value through the activity indicator's conflict flow.
 

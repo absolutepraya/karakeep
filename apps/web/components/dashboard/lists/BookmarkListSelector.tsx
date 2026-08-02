@@ -60,6 +60,7 @@ interface SelectionProps {
   hideBookmarkIds?: string[];
   listTypes?: ZBookmarkList["type"][];
   disabled?: boolean;
+  allPathsOverride?: ZBookmarkList[][];
 }
 
 type BookmarkListSelectorProps = SelectionProps &
@@ -319,14 +320,18 @@ function BookmarkListMultiSelector({
   );
 }
 export function BookmarkListSelector(props: BookmarkListSelectorProps) {
-  const { data, isPending } = useBookmarkLists();
+  const { data, isPending } = useBookmarkLists(undefined, {
+    enabled: props.allPathsOverride === undefined,
+  });
   const {
     hideSubtreeOf,
     hideBookmarkIds = [],
     listTypes = ["manual", "smart"],
+    allPathsOverride,
     ...selectorProps
   } = props;
   let { allPaths } = data ?? {};
+  allPaths = allPathsOverride ?? allPaths;
   const hiddenBookmarkIdSet = new Set(hideBookmarkIds);
   const listTypeSet = new Set(listTypes);
   allPaths = allPaths?.filter((path) => {
@@ -350,13 +355,13 @@ export function BookmarkListSelector(props: BookmarkListSelectorProps) {
   return selectorProps.multiSelect ? (
     <BookmarkListMultiSelector
       {...selectorProps}
-      isPending={isPending}
+      isPending={allPathsOverride === undefined && isPending}
       allPaths={allPaths}
     />
   ) : (
     <BookmarkListSingleSelector
       {...selectorProps}
-      isPending={isPending}
+      isPending={allPathsOverride === undefined && isPending}
       allPaths={allPaths}
     />
   );

@@ -10,7 +10,13 @@ import type { ZOfflineSyncMutation } from "@karakeep/shared/types/offlineSync";
 import {
   useUpdateBookmark,
   useUpdateBookmarkTags,
+  useDeleteBookmark,
 } from "@karakeep/shared-react/hooks/bookmarks";
+import {
+  useAddBookmarkToList,
+  useRemoveBookmarkFromList,
+} from "@karakeep/shared-react/hooks/lists";
+import { normalizeTagName } from "@karakeep/shared/utils/tag";
 
 import { useOfflineLibrary } from "@/lib/offline-library/provider";
 import {
@@ -61,6 +67,16 @@ export interface OfflineSafeBookmarkTagsInput {
   detach: BookmarkTagInput[];
 }
 
+export interface OfflineSafeBookmarkListMembershipInput {
+  bookmarkId: string;
+  listId: string;
+  action: "add" | "remove";
+}
+
+export interface OfflineSafeBookmarkDeletionInput {
+  bookmarkId: string;
+}
+
 export interface OfflineQueuedMutation {
   kind: "queued";
 }
@@ -101,6 +117,7 @@ function queueMutationIdempotencyKey(): string {
 }
 
 const offlineTagIntentQueues = new Map<string, Promise<void>>();
+const offlineListMembershipIntentQueues = new Map<string, Promise<void>>();
 
 function serializeOfflineTagIntent<T>(
   bookmarkId: string,
@@ -116,6 +133,28 @@ function serializeOfflineTagIntent<T>(
   void tail.finally(() => {
     if (offlineTagIntentQueues.get(bookmarkId) === tail) {
       offlineTagIntentQueues.delete(bookmarkId);
+    }
+  });
+  return result;
+}
+
+function serializeOfflineListMembershipIntent<T>(
+  bookmarkId: string,
+  listId: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const key = `${bookmarkId}:${listId}`;
+  const previous =
+    offlineListMembershipIntentQueues.get(key) ?? Promise.resolve();
+  const result = previous.catch(() => undefined).then(operation);
+  const tail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  offlineListMembershipIntentQueues.set(key, tail);
+  void tail.finally(() => {
+    if (offlineListMembershipIntentQueues.get(key) === tail) {
+      offlineListMembershipIntentQueues.delete(key);
     }
   });
   return result;
@@ -255,14 +294,25 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
       setIsOfflinePending(true);
       setOfflineError(null);
       try {
-        if (input.attach.some((tag) => !tag.tagId)) {
-          throw new OfflineMutationOnlineRequiredError(
-            "Creating tags requires an internet connection.",
-          );
-        }
         if (input.detach.some((tag) => !tag.tagId)) {
           throw new OfflineMutationOnlineRequiredError();
         }
+        const createdTags: Extract<
+          ZOfflineSyncMutation,
+          { kind: "bookmark.tags" }
+        >["createdTags"] = [];
+        const attachedTagIds = input.attach.map((tag) => {
+          if (tag.tagId) {
+            return tag.tagId;
+          }
+          const name = normalizeTagName(tag.tagName ?? "").trim();
+          if (!name) {
+            throw new OfflineMutationOnlineRequiredError();
+          }
+          const id = queueMutationIdempotencyKey();
+          createdTags.push({ id, name });
+          return id;
+        });
 
         return await serializeOfflineTagIntent(input.bookmarkId, async () => {
           const bookmark = await offlineLibraryDb.bookmarks.get(
@@ -276,8 +326,8 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
           for (const tag of input.detach) {
             tagIds.delete(tag.tagId!);
           }
-          for (const tag of input.attach) {
-            tagIds.add(tag.tagId!);
+          for (const tagId of attachedTagIds) {
+            tagIds.add(tagId!);
           }
 
           const baseVersions = await getRequiredFieldVersions(
@@ -289,6 +339,7 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
             kind: "bookmark.tags",
             bookmarkId: input.bookmarkId,
             tagIds: [...tagIds],
+            createdTags,
             baseVersions: { tags: baseVersions.tags! },
           });
           return { kind: "queued" };
@@ -303,6 +354,141 @@ export function useOfflineSafeBookmarkTags(): OfflineSafeBookmarkMutation<
       }
     },
     [isOnline, onlineMutation, queueBookmarkTags],
+  );
+
+  return useMutationState(
+    mutateAsync,
+    isOnline ? onlineMutation.isPending : isOfflinePending,
+    isOnline ? (onlineMutation.error as Error | null) : offlineError,
+  );
+}
+
+export function useOfflineSafeBookmarkListMembership(): OfflineSafeBookmarkMutation<
+  OfflineSafeBookmarkListMembershipInput,
+  unknown | OfflineQueuedMutation
+> {
+  const { status, queueBookmarkListMembership } = useOfflineLibrary();
+  const onlineAddMutation = useAddBookmarkToList();
+  const onlineRemoveMutation = useRemoveBookmarkFromList();
+  const [isOfflinePending, setIsOfflinePending] = useState(false);
+  const [offlineError, setOfflineError] = useState<Error | null>(null);
+  const isOnline = status.kind === "online";
+
+  const mutateAsync = useCallback(
+    async (
+      input: OfflineSafeBookmarkListMembershipInput,
+    ): Promise<unknown | OfflineQueuedMutation> => {
+      if (isOnline) {
+        const onlineInput = {
+          bookmarkId: input.bookmarkId,
+          listId: input.listId,
+        };
+        return input.action === "add"
+          ? await onlineAddMutation.mutateAsync(onlineInput)
+          : await onlineRemoveMutation.mutateAsync(onlineInput);
+      }
+
+      setIsOfflinePending(true);
+      setOfflineError(null);
+      try {
+        return await serializeOfflineListMembershipIntent(
+          input.bookmarkId,
+          input.listId,
+          async () => {
+            const [bookmark, list] = await Promise.all([
+              offlineLibraryDb.bookmarks.get(input.bookmarkId),
+              offlineLibraryDb.lists.get(input.listId),
+            ]);
+            if (
+              !bookmark ||
+              !list ||
+              list.type !== "manual" ||
+              list.userRole === "viewer"
+            ) {
+              throw new OfflineMutationOnlineRequiredError();
+            }
+            await queueBookmarkListMembership({
+              idempotencyKey: queueMutationIdempotencyKey(),
+              kind: "bookmark.listMembership",
+              ...input,
+            });
+            return { kind: "queued" };
+          },
+        );
+      } catch (error) {
+        const mutationError =
+          error instanceof Error
+            ? error
+            : new Error("Unable to update bookmark lists");
+        setOfflineError(mutationError);
+        throw mutationError;
+      } finally {
+        setIsOfflinePending(false);
+      }
+    },
+    [
+      isOnline,
+      onlineAddMutation,
+      onlineRemoveMutation,
+      queueBookmarkListMembership,
+    ],
+  );
+
+  return useMutationState(
+    mutateAsync,
+    isOnline
+      ? onlineAddMutation.isPending || onlineRemoveMutation.isPending
+      : isOfflinePending,
+    isOnline
+      ? ((onlineAddMutation.error ??
+          onlineRemoveMutation.error) as Error | null)
+      : offlineError,
+  );
+}
+
+export function useOfflineSafeBookmarkDeletion(): OfflineSafeBookmarkMutation<
+  OfflineSafeBookmarkDeletionInput,
+  unknown | OfflineQueuedMutation
+> {
+  const { status, queueBookmarkDelete } = useOfflineLibrary();
+  const onlineMutation = useDeleteBookmark();
+  const [isOfflinePending, setIsOfflinePending] = useState(false);
+  const [offlineError, setOfflineError] = useState<Error | null>(null);
+  const isOnline = status.kind === "online";
+
+  const mutateAsync = useCallback(
+    async (
+      input: OfflineSafeBookmarkDeletionInput,
+    ): Promise<unknown | OfflineQueuedMutation> => {
+      if (isOnline) {
+        return await onlineMutation.mutateAsync(input);
+      }
+
+      setIsOfflinePending(true);
+      setOfflineError(null);
+      try {
+        const bookmark = await offlineLibraryDb.bookmarks.get(input.bookmarkId);
+        if (!bookmark) {
+          throw new OfflineMutationOnlineRequiredError();
+        }
+        await queueBookmarkDelete({
+          idempotencyKey: queueMutationIdempotencyKey(),
+          kind: "bookmark.delete",
+          bookmarkId: input.bookmarkId,
+        });
+        return { kind: "queued" };
+      } catch (error) {
+        const mutationError =
+          error instanceof Error
+            ? error
+            : new Error("Unable to delete bookmark");
+        setOfflineError(mutationError);
+        throw mutationError;
+      } finally {
+        setIsOfflinePending(false);
+      }
+    },
+    [isOnline, onlineMutation, queueBookmarkDelete],
   );
 
   return useMutationState(

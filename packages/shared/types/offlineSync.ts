@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { MAX_BOOKMARK_TITLE_LENGTH, zBookmarkSchema } from "./bookmarks";
+import {
+  BookmarkTypes,
+  MAX_BOOKMARK_TITLE_LENGTH,
+  zBookmarkSchema,
+} from "./bookmarks";
 import { zBookmarkListSchema } from "./lists";
 
 const zOfflineSyncCursorSchema = z
@@ -20,6 +24,23 @@ const zOfflineSyncOperationSchema = z.enum([
   "revoke",
 ]);
 export type ZOfflineSyncOperation = z.infer<typeof zOfflineSyncOperationSchema>;
+
+const zOfflineSyncCreatedTagSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+const zOfflineSyncTextBookmarkSchema = z.object({
+  type: z.literal(BookmarkTypes.TEXT),
+  text: z.string(),
+  sourceUrl: z.string().url().optional(),
+  title: z.string().max(MAX_BOOKMARK_TITLE_LENGTH).nullish(),
+  archived: z.boolean().optional(),
+  favourited: z.boolean().optional(),
+  note: z.string().optional(),
+  summary: z.string().optional(),
+  createdAt: z.coerce.date(),
+});
 
 export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
   z
@@ -71,7 +92,26 @@ export const zOfflineSyncMutationSchema = z.discriminatedUnion("kind", [
     kind: z.literal("bookmark.tags"),
     bookmarkId: z.string(),
     tagIds: z.array(z.string()),
+    createdTags: z.array(zOfflineSyncCreatedTagSchema).default([]),
     baseVersions: z.object({ tags: z.number().int().nonnegative() }).strict(),
+  }),
+  z.object({
+    idempotencyKey: z.string().uuid(),
+    kind: z.literal("bookmark.create"),
+    bookmarkId: z.string().uuid(),
+    bookmark: zOfflineSyncTextBookmarkSchema,
+  }),
+  z.object({
+    idempotencyKey: z.string().uuid(),
+    kind: z.literal("bookmark.listMembership"),
+    bookmarkId: z.string(),
+    listId: z.string(),
+    action: z.enum(["add", "remove"]),
+  }),
+  z.object({
+    idempotencyKey: z.string().uuid(),
+    kind: z.literal("bookmark.delete"),
+    bookmarkId: z.string(),
   }),
 ]);
 export type ZOfflineSyncMutation = z.infer<typeof zOfflineSyncMutationSchema>;
@@ -85,10 +125,19 @@ const zOfflineSyncConflictSchema = z.object({
   bookmarkId: z.string(),
   field: z.string(),
   localValue: z.unknown(),
+  createdTags: z.array(zOfflineSyncCreatedTagSchema).optional(),
   serverValue: z.unknown(),
   serverVersion: z.number().int().nonnegative(),
 });
 export type ZOfflineSyncConflict = z.infer<typeof zOfflineSyncConflictSchema>;
+
+export const zOfflineSyncRejectionSchema = z.object({
+  idempotencyKey: z.string().uuid(),
+  bookmarkId: z.string(),
+  code: z.enum(["BAD_REQUEST", "FORBIDDEN", "NOT_FOUND"]),
+  message: z.string(),
+});
+export type ZOfflineSyncRejection = z.infer<typeof zOfflineSyncRejectionSchema>;
 
 const zOfflineSyncBookmarkFieldVersionSchema = z.object({
   bookmarkId: z.string(),
@@ -154,6 +203,7 @@ export type ZOfflineSyncPullResult = z.infer<
 export const zOfflineSyncPushResultSchema = z.object({
   acknowledged: z.array(z.string().uuid()),
   conflicts: z.array(zOfflineSyncConflictSchema),
+  rejections: z.array(zOfflineSyncRejectionSchema).default([]),
   cursor: zOfflineSyncCursorSchema,
 });
 export type ZOfflineSyncPushResult = z.infer<

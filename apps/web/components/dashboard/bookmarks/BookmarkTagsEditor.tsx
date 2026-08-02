@@ -1,9 +1,10 @@
+import React from "react";
+
 import { toast } from "@/components/ui/sonner";
 import {
   isOfflineQueuedMutation,
   useOfflineSafeBookmarkTags,
 } from "@/lib/hooks/useOfflineSafeBookmarkMutation";
-import { useOfflineLibraryStatus } from "@/lib/offline-library/provider";
 
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
 
@@ -16,8 +17,6 @@ export function BookmarkTagsEditor({
   bookmark: ZBookmark;
   disabled?: boolean;
 }) {
-  const offlineStatus = useOfflineLibraryStatus();
-  const requiresOnline = offlineStatus.kind !== "online";
   const updateTags = useOfflineSafeBookmarkTags();
 
   const notifyTagSave = (result: unknown) => {
@@ -41,15 +40,10 @@ export function BookmarkTagsEditor({
 
   return (
     <div>
-      {requiresOnline && (
-        <p className="text-sm text-muted-foreground" role="status">
-          Creating tags requires an internet connection.
-        </p>
-      )}
       <TagsEditor
         tags={bookmark.tags}
         disabled={disabled}
-        allowCreation={!requiresOnline}
+        allowCreation
         onAttach={async ({ tagName, tagId }) => {
           try {
             const result = await updateTags.mutateAsync({

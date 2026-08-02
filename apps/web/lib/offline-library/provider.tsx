@@ -18,16 +18,28 @@ import { getReplicaOwnerUserId, purgeOfflineLibrary } from "./repository";
 import { OfflineLibrarySyncCoordinator } from "./sync";
 import type {
   BookmarkTagsMutation,
+  BookmarkListMembershipMutation,
+  BookmarkDeleteMutation,
+  BookmarkCreateMutation,
   BookmarkUpdateMutation,
   OfflineLibraryStatus,
   OfflineSyncClient,
 } from "./sync";
 
+export const FOREGROUND_SYNC_INTERVAL_MS = 30_000;
+
 interface OfflineLibraryContextValue {
   status: OfflineLibraryStatus;
+  canReadOfflineReplica: boolean;
   syncNow: () => Promise<void>;
+  discardRejectedMutation: (idempotencyKey: string) => Promise<void>;
   queueBookmarkUpdate: (mutation: BookmarkUpdateMutation) => Promise<void>;
   queueBookmarkTags: (mutation: BookmarkTagsMutation) => Promise<void>;
+  queueBookmarkListMembership: (
+    mutation: BookmarkListMembershipMutation,
+  ) => Promise<void>;
+  queueBookmarkDelete: (mutation: BookmarkDeleteMutation) => Promise<void>;
+  queueBookmarkCreate: (mutation: BookmarkCreateMutation) => Promise<void>;
 }
 
 interface OfflineLibraryProviderProps {
@@ -74,6 +86,11 @@ export function OfflineLibraryProvider({
   const [status, setStatus] = useState<OfflineLibraryStatus>(
     coordinator.getStatus(),
   );
+  const [verifiedReplicaUserId, setVerifiedReplicaUserId] = useState<
+    string | null
+  >(null);
+  const canReadOfflineReplica =
+    userId !== null && verifiedReplicaUserId === userId;
 
   useEffect(() => {
     const unsubscribe = coordinator.subscribe(setStatus);
@@ -91,6 +108,14 @@ export function OfflineLibraryProvider({
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
+        sync();
+      }
+    };
+    const syncOnInterval = () => {
+      if (
+        document.visibilityState === "visible" &&
+        coordinator.getStatus().kind !== "error"
+      ) {
         sync();
       }
     };
@@ -112,6 +137,10 @@ export function OfflineLibraryProvider({
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("online", sync);
     window.addEventListener("offline", onOffline);
+    const intervalId = window.setInterval(
+      syncOnInterval,
+      FOREGROUND_SYNC_INTERVAL_MS,
+    );
     if (hasServiceWorker) {
       serviceWorker.addEventListener("message", onWorkerMessage);
     }
@@ -119,6 +148,7 @@ export function OfflineLibraryProvider({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("online", sync);
       window.removeEventListener("offline", onOffline);
+      window.clearInterval(intervalId);
       if (hasServiceWorker) {
         serviceWorker.removeEventListener("message", onWorkerMessage);
       }
@@ -130,6 +160,7 @@ export function OfflineLibraryProvider({
     lifecycleRef.current = lifecycleRef.current.then(async () => {
       const previousUserId = activeUserIdRef.current;
       if (userId === null) {
+        setVerifiedReplicaUserId(null);
         await coordinator.deactivate();
         await purgeOfflineLibrary();
         await clearUserCaches();
@@ -141,6 +172,7 @@ export function OfflineLibraryProvider({
       const principalChanged =
         previousUserId !== null && previousUserId !== userId;
       if (principalChanged || persistedOwnerUserId !== userId) {
+        setVerifiedReplicaUserId(null);
         await coordinator.deactivate();
         await purgeOfflineLibrary();
         await clearUserCaches();
@@ -151,6 +183,11 @@ export function OfflineLibraryProvider({
         return;
       }
       coordinator.activate(userId);
+      await coordinator.hydrateLastSuccessfulSyncAt();
+      if (cancelled) {
+        return;
+      }
+      setVerifiedReplicaUserId(userId);
       activeUserIdRef.current = userId;
       if (navigator.onLine === false) {
         await coordinator.markOffline();
@@ -166,11 +203,18 @@ export function OfflineLibraryProvider({
   const value = useMemo<OfflineLibraryContextValue>(
     () => ({
       status,
+      canReadOfflineReplica,
       syncNow: async () => {
         if (userId === null || activeUserIdRef.current !== userId) {
           throw new Error("Offline sync requires an authenticated user");
         }
         await coordinator.syncNow();
+      },
+      discardRejectedMutation: async (idempotencyKey) => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline sync requires an authenticated user");
+        }
+        await coordinator.discardRejectedMutation(idempotencyKey);
       },
       queueBookmarkUpdate: async (mutation) => {
         if (userId === null || activeUserIdRef.current !== userId) {
@@ -184,8 +228,26 @@ export function OfflineLibraryProvider({
         }
         await coordinator.queueBookmarkTags(mutation);
       },
+      queueBookmarkListMembership: async (mutation) => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline writes require an authenticated user");
+        }
+        await coordinator.queueBookmarkListMembership(mutation);
+      },
+      queueBookmarkDelete: async (mutation) => {
+        if (userId === null || activeUserIdRef.current !== userId) {
+          throw new Error("Offline writes require an authenticated user");
+        }
+        await coordinator.queueBookmarkDelete(mutation);
+      },
+      queueBookmarkCreate: async (mutation) => {
+        if (!canReadOfflineReplica) {
+          throw new Error("Offline library is not ready");
+        }
+        await coordinator.queueBookmarkCreate(mutation);
+      },
     }),
-    [coordinator, status, userId],
+    [canReadOfflineReplica, coordinator, status, userId],
   );
 
   return (
@@ -211,4 +273,8 @@ export function useOfflineLibrary(): OfflineLibraryContextValue {
 
 export function useOfflineLibraryStatus(): OfflineLibraryStatus {
   return useOfflineLibraryContext().status;
+}
+
+export function useCanReadOfflineReplica(): boolean {
+  return useOfflineLibraryContext().canReadOfflineReplica;
 }

@@ -12,9 +12,11 @@ import type {
 
 import {
   applyEvents,
+  deleteAcknowledgedMutations,
   enqueueMutation,
   evictLeastRecentlyUsedThumbnails,
   getBookmarkFieldVersion,
+  getLastSuccessfulSyncAt,
   listPendingMutations,
   offlineLibraryDb,
   purgeOfflineLibrary,
@@ -22,6 +24,7 @@ import {
   recordThumbnailAccess,
   replaceSnapshot,
   searchBookmarks,
+  saveLastSuccessfulSyncAt,
 } from "./repository";
 
 const thumbnailCaches = new Map<string, Map<string, Response>>();
@@ -135,6 +138,17 @@ test("replaces a snapshot atomically and preserves its cursor", async () => {
   ).resolves.toBeUndefined();
 });
 
+test("persists the last successful sync time until the replica is purged", async () => {
+  const syncedAt = new Date("2026-07-31T10:00:00.000Z");
+  await saveLastSuccessfulSyncAt(syncedAt);
+  await replaceSnapshot(snapshot, "user-1");
+
+  await expect(getLastSuccessfulSyncAt()).resolves.toEqual(syncedAt);
+
+  await purgeOfflineLibrary();
+  await expect(getLastSuccessfulSyncAt()).resolves.toBeNull();
+});
+
 test("searches only replicated fields", async () => {
   await replaceSnapshot(
     snapshotWith({ title: "Offline article", note: "airplane" }),
@@ -174,6 +188,124 @@ test("filters by explicit membership and searches associated list names", async 
   await expect(searchBookmarks("reading queue")).resolves.toMatchObject([
     { id: "bookmark-1" },
   ]);
+});
+
+test("queues list membership changes atomically and coalesces only the same list", async () => {
+  await replaceSnapshot(
+    {
+      ...snapshot,
+      lists: [
+        {
+          id: "list-1",
+          name: "Reading queue",
+          description: null,
+          icon: "folder",
+          parentId: null,
+          type: "manual",
+          query: null,
+          public: false,
+          hasCollaborators: false,
+          userRole: "owner",
+        },
+        {
+          id: "list-2",
+          name: "Work",
+          description: null,
+          icon: "folder",
+          parentId: null,
+          type: "manual",
+          query: null,
+          public: false,
+          hasCollaborators: false,
+          userRole: "owner",
+        },
+      ],
+    },
+    "user-1",
+  );
+  const addToFirstList: ZOfflineSyncMutation = {
+    idempotencyKey: "90e30e21-f060-4dda-9f1a-f4974dfb995a",
+    kind: "bookmark.listMembership",
+    bookmarkId: "bookmark-1",
+    listId: "list-1",
+    action: "add",
+  };
+  const addToSecondList: ZOfflineSyncMutation = {
+    idempotencyKey: "e94aa8d4-e28b-4ec4-afb2-30de766d9774",
+    kind: "bookmark.listMembership",
+    bookmarkId: "bookmark-1",
+    listId: "list-2",
+    action: "add",
+  };
+  const removeFromFirstList: ZOfflineSyncMutation = {
+    idempotencyKey: "4c8503eb-a3dd-4534-bcc2-8e8cfbbd13f5",
+    kind: "bookmark.listMembership",
+    bookmarkId: "bookmark-1",
+    listId: "list-1",
+    action: "remove",
+  };
+
+  await enqueueMutation(addToFirstList, "user-1");
+  await enqueueMutation(addToSecondList, "user-1");
+  await enqueueMutation(removeFromFirstList, "user-1");
+
+  await expect(
+    offlineLibraryDb.bookmarkListMemberships.toArray(),
+  ).resolves.toEqual([{ bookmarkId: "bookmark-1", listId: "list-2" }]);
+  await expect(listPendingMutations("user-1")).resolves.toEqual([
+    expect.objectContaining({
+      idempotencyKey: addToFirstList.idempotencyKey,
+      listId: "list-1",
+      action: "remove",
+    }),
+    expect.objectContaining({
+      idempotencyKey: addToSecondList.idempotencyKey,
+      listId: "list-2",
+      action: "add",
+    }),
+  ]);
+});
+
+test("tombstones an offline deletion while preserving the original replica record", async () => {
+  const deleteMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "d7767e92-e09e-4d89-9d98-0e77ac266674",
+    kind: "bookmark.delete",
+    bookmarkId: "bookmark-1",
+  };
+  await replaceSnapshot(snapshot, "user-1");
+
+  await enqueueMutation(deleteMutation, "user-1");
+
+  await expect(queryBookmarks()).resolves.toMatchObject({ bookmarks: [] });
+  await expect(searchBookmarks("offline article")).resolves.toEqual([]);
+  await expect(offlineLibraryDb.bookmarks.get("bookmark-1")).resolves.toEqual(
+    bookmark(),
+  );
+  await expect(offlineLibraryDb.tombstones.toArray()).resolves.toEqual([
+    expect.objectContaining({
+      idempotencyKey: deleteMutation.idempotencyKey,
+      bookmarkId: "bookmark-1",
+    }),
+  ]);
+
+  await deleteAcknowledgedMutations("user-1", [deleteMutation.idempotencyKey]);
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(1);
+  await applyEvents(
+    [
+      {
+        sequence: 13,
+        userId: "user-1",
+        entityType: "bookmark",
+        entityId: "bookmark-1",
+        operation: "delete",
+        changedFields: [],
+        fieldVersions: [],
+        createdAt: new Date("2026-07-13T00:00:00Z"),
+      },
+    ],
+    "13",
+  );
+  await expect(offlineLibraryDb.tombstones.count()).resolves.toBe(0);
 });
 
 test("filters an offline RSS feed page to bookmarks imported from that feed", async () => {
@@ -467,6 +599,7 @@ test("queues tag mutations with the optimistic local tag set", async () => {
     kind: "bookmark.tags",
     bookmarkId: "bookmark-1",
     tagIds: ["tag-2"],
+    createdTags: [],
     baseVersions: { tags: 0 },
   };
   await replaceSnapshot(snapshot, "user-1");
@@ -480,12 +613,111 @@ test("queues tag mutations with the optimistic local tag set", async () => {
   ]);
 });
 
+test("queues a text bookmark creation with an optimistic local record", async () => {
+  const mutation: ZOfflineSyncMutation = {
+    idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+    kind: "bookmark.create",
+    bookmarkId: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+    bookmark: {
+      type: BookmarkTypes.TEXT,
+      text: "Offline note",
+      title: "Saved offline",
+      createdAt: new Date("2026-08-02T00:00:00Z"),
+    },
+  };
+  await replaceSnapshot(snapshot, "user-1");
+
+  await enqueueMutation(mutation, "user-1");
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: expect.arrayContaining([
+      expect.objectContaining({
+        id: mutation.bookmarkId,
+        title: "Saved offline",
+        content: expect.objectContaining({
+          type: BookmarkTypes.TEXT,
+          text: "Offline note",
+        }),
+      }),
+    ]),
+  });
+  await expect(listPendingMutations("user-1")).resolves.toContainEqual(
+    expect.objectContaining({ idempotencyKey: mutation.idempotencyKey }),
+  );
+  await expect(
+    getBookmarkFieldVersion(mutation.bookmarkId, "text"),
+  ).resolves.toBe(0);
+});
+
+test("cancels an unpushed text bookmark when it is deleted", async () => {
+  const bookmarkId = "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7";
+  await replaceSnapshot(snapshot, "user-1");
+  await enqueueMutation(
+    {
+      idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+      kind: "bookmark.create",
+      bookmarkId,
+      bookmark: {
+        type: BookmarkTypes.TEXT,
+        text: "Offline note",
+        createdAt: new Date("2026-08-02T00:00:00Z"),
+      },
+    },
+    "user-1",
+  );
+
+  await enqueueMutation(
+    {
+      idempotencyKey: "ab4b95e2-e470-4b72-9b5c-6a34b1e46d56",
+      kind: "bookmark.delete",
+      bookmarkId,
+    },
+    "user-1",
+  );
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [expect.not.objectContaining({ id: bookmarkId })],
+  });
+  await expect(listPendingMutations("user-1")).resolves.not.toContainEqual(
+    expect.objectContaining({ bookmarkId }),
+  );
+});
+
+test("keeps the name of an offline-created tag in the optimistic replica", async () => {
+  const tagMutation: ZOfflineSyncMutation = {
+    idempotencyKey: "bc97c924-e9f9-46b8-bc2e-6d2b718a727a",
+    kind: "bookmark.tags",
+    bookmarkId: "bookmark-1",
+    tagIds: ["1e2c8f3e-0b30-4f9c-a3e7-608474bc7ce2"],
+    createdTags: [
+      {
+        id: "1e2c8f3e-0b30-4f9c-a3e7-608474bc7ce2",
+        name: "Offline tag",
+      },
+    ],
+    baseVersions: { tags: 0 },
+  };
+  await replaceSnapshot(snapshot, "user-1");
+
+  await enqueueMutation(tagMutation, "user-1");
+
+  await expect(queryBookmarks()).resolves.toMatchObject({
+    bookmarks: [
+      { tags: [{ id: tagMutation.createdTags[0].id, name: "Offline tag" }] },
+    ],
+  });
+  await expect(searchBookmarks("offline tag")).resolves.toMatchObject([
+    { id: "bookmark-1" },
+  ]);
+});
+
 test("coalesces repeated offline tag replacements into the final tag set", async () => {
   const firstMutation: ZOfflineSyncMutation = {
     idempotencyKey: "8fbb9a9d-2c3f-4c1c-a76f-9297d2aa7e5f",
     kind: "bookmark.tags",
     bookmarkId: "bookmark-1",
     tagIds: ["tag-2"],
+    createdTags: [],
     baseVersions: { tags: 0 },
   };
   const secondMutation: ZOfflineSyncMutation = {
@@ -493,6 +725,7 @@ test("coalesces repeated offline tag replacements into the final tag set", async
     kind: "bookmark.tags",
     bookmarkId: "bookmark-1",
     tagIds: ["tag-1"],
+    createdTags: [],
     baseVersions: { tags: 0 },
   };
   await replaceSnapshot(snapshot, "user-1");
@@ -516,7 +749,7 @@ test("rejects unsupported mutations before changing the replica", async () => {
     enqueueMutation(
       {
         idempotencyKey: "d2436c5e-5a6e-4fb1-9eb0-c1d57fb5a47d",
-        kind: "bookmark.delete",
+        kind: "bookmark.create",
         bookmarkId: "bookmark-1",
       } as unknown as ZOfflineSyncMutation,
       "user-1",

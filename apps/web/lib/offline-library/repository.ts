@@ -1,4 +1,7 @@
-import { DEFAULT_NUM_BOOKMARKS_PER_PAGE } from "@karakeep/shared/types/bookmarks";
+import {
+  BookmarkTypes,
+  DEFAULT_NUM_BOOKMARKS_PER_PAGE,
+} from "@karakeep/shared/types/bookmarks";
 import type { ZBookmark, ZSortOrder } from "@karakeep/shared/types/bookmarks";
 import type { ZCursor } from "@karakeep/shared/types/pagination";
 import { zOfflineSyncMutationSchema } from "@karakeep/shared/types/offlineSync";
@@ -7,6 +10,7 @@ import type {
   ZOfflineSyncCursor,
   ZOfflineSyncEvent,
   ZOfflineSyncMutation,
+  ZOfflineSyncRejection,
   ZOfflineSyncSnapshot,
 } from "@karakeep/shared/types/offlineSync";
 
@@ -15,6 +19,7 @@ import { offlineLibraryDb } from "./schema";
 const SYNC_CURSOR_KEY = "syncCursor";
 const REPLICA_STATE_KEY = "replicaState";
 const REPLICA_OWNER_USER_ID_KEY = "replicaOwnerUserId";
+const LAST_SUCCESSFUL_SYNC_AT_KEY = "lastSuccessfulSyncAt";
 const LEGACY_THUMBNAIL_CACHE_NAME = "karakeep-thumbnails";
 const THUMBNAIL_CACHE_PREFIX = `${LEGACY_THUMBNAIL_CACHE_NAME}:`;
 
@@ -52,6 +57,7 @@ export async function replaceSnapshot(
       offlineLibraryDb.bookmarkListMemberships,
       offlineLibraryDb.bookmarkRssFeedMemberships,
       offlineLibraryDb.bookmarkFieldVersions,
+      offlineLibraryDb.tombstones,
       offlineLibraryDb.metadata,
     ],
     async () => {
@@ -61,6 +67,7 @@ export async function replaceSnapshot(
         offlineLibraryDb.bookmarkListMemberships.clear(),
         offlineLibraryDb.bookmarkRssFeedMemberships.clear(),
         offlineLibraryDb.bookmarkFieldVersions.clear(),
+        offlineLibraryDb.tombstones.clear(),
       ]);
       await Promise.all([
         offlineLibraryDb.bookmarks.bulkPut(snapshot.bookmarks),
@@ -105,6 +112,7 @@ export async function applyEvents(
       offlineLibraryDb.bookmarkListMemberships,
       offlineLibraryDb.bookmarkRssFeedMemberships,
       offlineLibraryDb.bookmarkFieldVersions,
+      offlineLibraryDb.tombstones,
       offlineLibraryDb.metadata,
     ],
     async () => {
@@ -128,6 +136,10 @@ export async function applyEvents(
                 .equals(event.entityId)
                 .delete(),
               offlineLibraryDb.bookmarkFieldVersions
+                .where("bookmarkId")
+                .equals(event.entityId)
+                .delete(),
+              offlineLibraryDb.tombstones
                 .where("bookmarkId")
                 .equals(event.entityId)
                 .delete(),
@@ -177,13 +189,17 @@ export async function getBookmarkFieldVersion(
 export async function queryBookmarks(
   query: OfflineBookmarkQuery = {},
 ): Promise<OfflineBookmarkPage> {
-  const [bookmarks, listMemberships, rssFeedMemberships, cursor] =
+  const [bookmarks, listMemberships, rssFeedMemberships, tombstones, cursor] =
     await Promise.all([
       offlineLibraryDb.bookmarks.toArray(),
       offlineLibraryDb.bookmarkListMemberships.toArray(),
       offlineLibraryDb.bookmarkRssFeedMemberships.toArray(),
+      offlineLibraryDb.tombstones.toArray(),
       offlineLibraryDb.metadata.get(SYNC_CURSOR_KEY),
     ]);
+  const tombstonedBookmarkIds = new Set(
+    tombstones.map((tombstone) => tombstone.bookmarkId),
+  );
   const sortOrder = query.sortOrder ?? "desc";
   const limit = Math.max(1, query.limit ?? DEFAULT_NUM_BOOKMARKS_PER_PAGE);
   const bookmarkIdsInList =
@@ -204,6 +220,9 @@ export async function queryBookmarks(
         );
   const filtered = bookmarks
     .filter((bookmark) => {
+      if (tombstonedBookmarkIds.has(bookmark.id)) {
+        return false;
+      }
       if (
         query.archived !== undefined &&
         bookmark.archived !== query.archived
@@ -273,11 +292,15 @@ export async function searchBookmarks(query: string): Promise<ZBookmark[]> {
     return [];
   }
 
-  const [bookmarks, lists, memberships] = await Promise.all([
+  const [bookmarks, lists, memberships, tombstones] = await Promise.all([
     offlineLibraryDb.bookmarks.toArray(),
     offlineLibraryDb.lists.toArray(),
     offlineLibraryDb.bookmarkListMemberships.toArray(),
+    offlineLibraryDb.tombstones.toArray(),
   ]);
+  const tombstonedBookmarkIds = new Set(
+    tombstones.map((tombstone) => tombstone.bookmarkId),
+  );
   const listNameById = new Map(lists.map((list) => [list.id, list.name]));
   const listIdsByBookmarkId = new Map<string, string[]>();
   for (const membership of memberships) {
@@ -287,6 +310,9 @@ export async function searchBookmarks(query: string): Promise<ZBookmark[]> {
   }
 
   return bookmarks.filter((bookmark) => {
+    if (tombstonedBookmarkIds.has(bookmark.id)) {
+      return false;
+    }
     const content = bookmark.content;
     const replicatedContent =
       content.type === "link"
@@ -328,18 +354,45 @@ export async function enqueueMutation(
 
   await offlineLibraryDb.transaction(
     "rw",
-    offlineLibraryDb.bookmarks,
-    offlineLibraryDb.outbox,
+    [
+      offlineLibraryDb.bookmarks,
+      offlineLibraryDb.lists,
+      offlineLibraryDb.bookmarkListMemberships,
+      offlineLibraryDb.bookmarkFieldVersions,
+      offlineLibraryDb.tombstones,
+      offlineLibraryDb.outbox,
+    ],
     async () => {
       const queuedAt = Date.now();
       const pendingMutations = await offlineLibraryDb.outbox
         .where("ownerUserId")
         .equals(ownerUserId)
         .sortBy("queuedAt");
+      if (parsedMutation.data.kind === "bookmark.delete") {
+        const pendingCreate = pendingMutations.find(
+          (pendingMutation) =>
+            pendingMutation.bookmarkId === parsedMutation.data.bookmarkId &&
+            pendingMutation.kind === "bookmark.create",
+        );
+        if (pendingCreate) {
+          await Promise.all([
+            offlineLibraryDb.bookmarks.delete(parsedMutation.data.bookmarkId),
+            offlineLibraryDb.bookmarkFieldVersions
+              .where("bookmarkId")
+              .equals(parsedMutation.data.bookmarkId)
+              .delete(),
+            offlineLibraryDb.outbox.delete(pendingCreate.idempotencyKey),
+          ]);
+          return;
+        }
+      }
       const matchingMutations = pendingMutations.filter(
         (pendingMutation) =>
           pendingMutation.bookmarkId === parsedMutation.data.bookmarkId &&
-          pendingMutation.kind === parsedMutation.data.kind,
+          pendingMutation.kind === parsedMutation.data.kind &&
+          (pendingMutation.kind !== "bookmark.listMembership" ||
+            (parsedMutation.data.kind === "bookmark.listMembership" &&
+              pendingMutation.listId === parsedMutation.data.listId)),
       );
       let queuedMutation: ZOfflineSyncMutation = parsedMutation.data;
       let supersededMutationKeys: string[] = [];
@@ -383,7 +436,7 @@ export async function enqueueMutation(
             .map((pendingMutation) => pendingMutation.idempotencyKey);
           preservedQueuedAt = primaryMutation.queuedAt;
         }
-      } else {
+      } else if (parsedMutation.data.kind === "bookmark.tags") {
         const pendingTags = matchingMutations.filter(
           (
             pendingMutation,
@@ -395,21 +448,129 @@ export async function enqueueMutation(
         );
         const primaryMutation = pendingTags[0];
         if (primaryMutation) {
+          const finalTagIds = parsedMutation.data.tagIds;
+          const finalTagIdSet = new Set(finalTagIds);
+          const createdTagsById = new Map(
+            primaryMutation.createdTags.map((tag) => [tag.id, tag]),
+          );
+          for (const pendingTagMutation of pendingTags.slice(1)) {
+            for (const tag of pendingTagMutation.createdTags) {
+              createdTagsById.set(tag.id, tag);
+            }
+          }
+          for (const tag of parsedMutation.data.createdTags) {
+            createdTagsById.set(tag.id, tag);
+          }
           queuedMutation = {
             ...parsedMutation.data,
             idempotencyKey: primaryMutation.idempotencyKey,
             baseVersions: primaryMutation.baseVersions,
+            createdTags: [...createdTagsById.values()].filter((tag) =>
+              finalTagIdSet.has(tag.id),
+            ),
           };
           supersededMutationKeys = pendingTags
             .slice(1)
             .map((pendingMutation) => pendingMutation.idempotencyKey);
           preservedQueuedAt = primaryMutation.queuedAt;
         }
+      } else if (parsedMutation.data.kind === "bookmark.listMembership") {
+        const pendingMembershipMutations = matchingMutations.filter(
+          (
+            pendingMutation,
+          ): pendingMutation is Extract<
+            ZOfflineSyncMutation,
+            { kind: "bookmark.listMembership" }
+          > & { ownerUserId: string; queuedAt: number } =>
+            pendingMutation.kind === "bookmark.listMembership",
+        );
+        const primaryMutation = pendingMembershipMutations[0];
+        if (primaryMutation) {
+          queuedMutation = {
+            ...parsedMutation.data,
+            idempotencyKey: primaryMutation.idempotencyKey,
+          };
+          supersededMutationKeys = pendingMembershipMutations
+            .slice(1)
+            .map((pendingMutation) => pendingMutation.idempotencyKey);
+          preservedQueuedAt = primaryMutation.queuedAt;
+        }
+      } else if (parsedMutation.data.kind === "bookmark.delete") {
+        const pendingDeletes = matchingMutations.filter(
+          (
+            pendingMutation,
+          ): pendingMutation is Extract<
+            ZOfflineSyncMutation,
+            { kind: "bookmark.delete" }
+          > & { ownerUserId: string; queuedAt: number } =>
+            pendingMutation.kind === "bookmark.delete",
+        );
+        const primaryMutation = pendingDeletes[0];
+        if (primaryMutation) {
+          queuedMutation = {
+            ...parsedMutation.data,
+            idempotencyKey: primaryMutation.idempotencyKey,
+          };
+          preservedQueuedAt = primaryMutation.queuedAt;
+        }
+        supersededMutationKeys = [
+          ...pendingDeletes.slice(1),
+          ...pendingMutations.filter(
+            (pendingMutation) =>
+              pendingMutation.bookmarkId === parsedMutation.data.bookmarkId &&
+              pendingMutation.kind !== "bookmark.delete",
+          ),
+        ].map((pendingMutation) => pendingMutation.idempotencyKey);
       }
 
       const bookmark = await offlineLibraryDb.bookmarks.get(
         parsedMutation.data.bookmarkId,
       );
+      if (parsedMutation.data.kind === "bookmark.create") {
+        if (bookmark) {
+          throw new TypeError("Offline bookmark already exists");
+        }
+        const createdBookmark: ZBookmark = {
+          id: parsedMutation.data.bookmarkId,
+          createdAt: parsedMutation.data.bookmark.createdAt,
+          modifiedAt: null,
+          title: parsedMutation.data.bookmark.title ?? null,
+          archived: parsedMutation.data.bookmark.archived ?? false,
+          favourited: parsedMutation.data.bookmark.favourited ?? false,
+          taggingStatus: "pending",
+          summarizationStatus: null,
+          embeddingStatus: "pending",
+          note: parsedMutation.data.bookmark.note ?? null,
+          summary: parsedMutation.data.bookmark.summary ?? null,
+          source: "web",
+          userId: ownerUserId,
+          tags: [],
+          assets: [],
+          content: {
+            type: BookmarkTypes.TEXT,
+            text: parsedMutation.data.bookmark.text,
+            sourceUrl: parsedMutation.data.bookmark.sourceUrl ?? null,
+          },
+        };
+        await Promise.all([
+          offlineLibraryDb.bookmarks.put(createdBookmark),
+          offlineLibraryDb.bookmarkFieldVersions.bulkPut(
+            [
+              "title",
+              "archived",
+              "favourited",
+              "note",
+              "summary",
+              "text",
+              "tags",
+            ].map((field) => ({
+              bookmarkId: createdBookmark.id,
+              field,
+              version: 0,
+            })),
+          ),
+        ]);
+      }
       if (bookmark) {
         if (parsedMutation.data.kind === "bookmark.update") {
           const fields = parsedMutation.data.fields;
@@ -450,20 +611,62 @@ export async function enqueueMutation(
             };
           }
           await offlineLibraryDb.bookmarks.put(updatedBookmark);
-        } else {
+        } else if (parsedMutation.data.kind === "bookmark.tags") {
           const tagsById = new Map(bookmark.tags.map((tag) => [tag.id, tag]));
+          const createdTagsById = new Map(
+            parsedMutation.data.createdTags.map((tag) => [tag.id, tag]),
+          );
           await offlineLibraryDb.bookmarks.put({
             ...bookmark,
             tags: parsedMutation.data.tagIds.map(
               (tagId) =>
-                tagsById.get(tagId) ?? {
-                  id: tagId,
-                  name: "",
-                  attachedBy: "human",
-                },
+                tagsById.get(tagId) ??
+                (() => {
+                  const createdTag = createdTagsById.get(tagId);
+                  return {
+                    id: tagId,
+                    name: createdTag?.name ?? "",
+                    attachedBy: "human" as const,
+                  };
+                })(),
             ),
           });
         }
+      }
+      if (parsedMutation.data.kind === "bookmark.listMembership") {
+        const list = await offlineLibraryDb.lists.get(
+          parsedMutation.data.listId,
+        );
+        if (
+          !bookmark ||
+          !list ||
+          list.type !== "manual" ||
+          list.userRole === "viewer"
+        ) {
+          throw new TypeError("Unsupported offline list membership");
+        }
+        if (parsedMutation.data.action === "add") {
+          await offlineLibraryDb.bookmarkListMemberships.put({
+            bookmarkId: parsedMutation.data.bookmarkId,
+            listId: parsedMutation.data.listId,
+          });
+        } else {
+          await offlineLibraryDb.bookmarkListMemberships.delete([
+            parsedMutation.data.bookmarkId,
+            parsedMutation.data.listId,
+          ]);
+        }
+      }
+      if (parsedMutation.data.kind === "bookmark.delete") {
+        if (!bookmark || bookmark.userId !== ownerUserId) {
+          throw new TypeError("Unsupported offline bookmark deletion");
+        }
+        await offlineLibraryDb.tombstones.put({
+          idempotencyKey: queuedMutation.idempotencyKey,
+          bookmarkId: parsedMutation.data.bookmarkId,
+          ownerUserId,
+          tombstonedAt: queuedAt,
+        });
       }
       if (supersededMutationKeys.length > 0) {
         await offlineLibraryDb.outbox.bulkDelete(supersededMutationKeys);
@@ -496,11 +699,10 @@ export async function deleteAcknowledgedMutations(
     .where("ownerUserId")
     .equals(ownerUserId)
     .toArray();
-  await offlineLibraryDb.outbox.bulkDelete(
-    mutations
-      .filter((mutation) => acknowledged.has(mutation.idempotencyKey))
-      .map((mutation) => mutation.idempotencyKey),
-  );
+  const acknowledgedMutationKeys = mutations
+    .filter((mutation) => acknowledged.has(mutation.idempotencyKey))
+    .map((mutation) => mutation.idempotencyKey);
+  await offlineLibraryDb.outbox.bulkDelete(acknowledgedMutationKeys);
 }
 
 export async function saveConflict(
@@ -511,6 +713,29 @@ export async function saveConflict(
     id: `${conflict.bookmarkId}:${conflict.field}`,
   };
   await offlineLibraryDb.conflicts.put(storedConflict);
+}
+
+export async function saveRejectedMutation(
+  rejection: ZOfflineSyncRejection,
+  ownerUserId: string,
+): Promise<void> {
+  await offlineLibraryDb.rejections.put({
+    ...rejection,
+    ownerUserId,
+    rejectedAt: Date.now(),
+  });
+}
+
+export async function deleteRejectedMutation(
+  idempotencyKey: string,
+): Promise<void> {
+  await offlineLibraryDb.rejections.delete(idempotencyKey);
+}
+
+export async function discardBookmarkTombstone(
+  idempotencyKey: string,
+): Promise<void> {
+  await offlineLibraryDb.tombstones.delete(idempotencyKey);
 }
 
 export async function purgeOfflineLibrary(): Promise<void> {
@@ -525,6 +750,8 @@ export async function purgeOfflineLibrary(): Promise<void> {
       offlineLibraryDb.metadata,
       offlineLibraryDb.outbox,
       offlineLibraryDb.conflicts,
+      offlineLibraryDb.rejections,
+      offlineLibraryDb.tombstones,
       offlineLibraryDb.thumbnailAccess,
     ],
     async () => {
@@ -537,6 +764,8 @@ export async function purgeOfflineLibrary(): Promise<void> {
         offlineLibraryDb.metadata.clear(),
         offlineLibraryDb.outbox.clear(),
         offlineLibraryDb.conflicts.clear(),
+        offlineLibraryDb.rejections.clear(),
+        offlineLibraryDb.tombstones.clear(),
         offlineLibraryDb.thumbnailAccess.clear(),
       ]);
     },
@@ -561,6 +790,24 @@ export async function getReplicaOwnerUserId(): Promise<string | null> {
     (await offlineLibraryDb.metadata.get(REPLICA_OWNER_USER_ID_KEY))?.value ??
     null
   );
+}
+
+export async function getLastSuccessfulSyncAt(): Promise<Date | null> {
+  const value = (
+    await offlineLibraryDb.metadata.get(LAST_SUCCESSFUL_SYNC_AT_KEY)
+  )?.value;
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export async function saveLastSuccessfulSyncAt(date: Date): Promise<void> {
+  await offlineLibraryDb.metadata.put({
+    key: LAST_SUCCESSFUL_SYNC_AT_KEY,
+    value: date.toISOString(),
+  });
 }
 
 export async function isOfflineReplicaReady(): Promise<boolean> {

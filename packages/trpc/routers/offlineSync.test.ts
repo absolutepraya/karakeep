@@ -66,11 +66,61 @@ describe("offline sync contracts", () => {
             bookmarkId: "bookmark-1",
             kind: "bookmark.tags",
             tagIds: ["tag-1"],
+            createdTags: [],
             baseVersions: { tags: 3 },
           },
         ],
       }).mutations[0].kind,
     ).toBe("bookmark.tags");
+  });
+
+  test("accepts an offline text bookmark creation", () => {
+    expect(
+      zOfflineSyncPushInputSchema.parse({
+        mutations: [
+          {
+            idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+            kind: "bookmark.create",
+            bookmarkId: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+            bookmark: {
+              type: BookmarkTypes.TEXT,
+              text: "Offline note",
+              createdAt: "2026-08-02T00:00:00Z",
+            },
+          },
+        ],
+      }).mutations[0].kind,
+    ).toBe("bookmark.create");
+  });
+
+  test("accepts explicit bookmark list membership intent", () => {
+    expect(
+      zOfflineSyncPushInputSchema.parse({
+        mutations: [
+          {
+            idempotencyKey: "3a24cef3-06a8-4e17-a417-b08cc78ccb3a",
+            bookmarkId: "bookmark-1",
+            kind: "bookmark.listMembership",
+            listId: "list-1",
+            action: "add",
+          },
+        ],
+      }).mutations[0].kind,
+    ).toBe("bookmark.listMembership");
+  });
+
+  test("accepts an idempotent bookmark deletion intent", () => {
+    expect(
+      zOfflineSyncPushInputSchema.parse({
+        mutations: [
+          {
+            idempotencyKey: "3846fd1e-7d76-4f60-b1f9-cdff16936710",
+            bookmarkId: "bookmark-1",
+            kind: "bookmark.delete",
+          },
+        ],
+      }).mutations[0].kind,
+    ).toBe("bookmark.delete");
   });
 
   test("rejects an update without changed fields", () => {
@@ -98,6 +148,7 @@ describe("offline sync contracts", () => {
             bookmarkId: "bookmark-1",
             kind: "bookmark.tags",
             tagIds: [],
+            createdTags: [],
             baseVersions: { tags: 0 },
           },
         ],
@@ -128,6 +179,228 @@ describe("offline sync contracts", () => {
 });
 
 describe("Offline sync routes", () => {
+  test<CustomTestContext>("records a permanent authorization rejection as an idempotent result", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const other = apiCallers[1];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "owner only",
+    });
+    const mutation = {
+      idempotencyKey: "5c299d95-e67e-4a1a-af14-e3c275d2fbf8",
+      kind: "bookmark.update" as const,
+      bookmarkId: bookmark.id,
+      fields: { title: "Offline edit" },
+      baseVersions: { title: 0 },
+    };
+
+    const first = await other.offlineSync.push({ mutations: [mutation] });
+    const replay = await other.offlineSync.push({ mutations: [mutation] });
+
+    expect(first).toEqual(replay);
+    expect(first).toMatchObject({
+      acknowledged: [],
+      conflicts: [],
+      rejections: [
+        {
+          idempotencyKey: mutation.idempotencyKey,
+          bookmarkId: bookmark.id,
+          code: "FORBIDDEN",
+        },
+      ],
+    });
+  });
+
+  test<CustomTestContext>("replays existing-list membership intent idempotently", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "offline list member",
+    });
+    const list = await owner.lists.create({
+      name: "Offline list",
+      icon: "folder",
+      type: "manual",
+    });
+    const add = {
+      idempotencyKey: "c4d4d33e-05e8-4404-aaac-ad1eb0f6c4e4",
+      kind: "bookmark.listMembership" as const,
+      bookmarkId: bookmark.id,
+      listId: list.id,
+      action: "add" as const,
+    };
+
+    const firstAdd = await owner.offlineSync.push({ mutations: [add] });
+    const replayedAdd = await owner.offlineSync.push({ mutations: [add] });
+    const afterAdd = await owner.offlineSync.snapshot();
+
+    expect(firstAdd).toEqual(replayedAdd);
+    expect(firstAdd.acknowledged).toEqual([add.idempotencyKey]);
+    expect(afterAdd.bookmarkListMemberships).toContainEqual({
+      bookmarkId: bookmark.id,
+      listId: list.id,
+    });
+
+    const remove = {
+      idempotencyKey: "9836e1de-876b-46d3-8e78-05d251326318",
+      kind: "bookmark.listMembership" as const,
+      bookmarkId: bookmark.id,
+      listId: list.id,
+      action: "remove" as const,
+    };
+    await owner.offlineSync.push({ mutations: [remove] });
+    const afterRemove = await owner.offlineSync.snapshot();
+
+    expect(afterRemove.bookmarkListMemberships).not.toContainEqual({
+      bookmarkId: bookmark.id,
+      listId: list.id,
+    });
+  });
+
+  test<CustomTestContext>("replays an offline bookmark deletion idempotently", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "delete offline",
+    });
+    const mutation = {
+      idempotencyKey: "645e5ca2-0c06-4af3-a3a3-eeb369fe5e9c",
+      kind: "bookmark.delete" as const,
+      bookmarkId: bookmark.id,
+    };
+
+    const first = await owner.offlineSync.push({ mutations: [mutation] });
+    const replay = await owner.offlineSync.push({ mutations: [mutation] });
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(first).toEqual(replay);
+    expect(first.acknowledged).toEqual([mutation.idempotencyKey]);
+    expect(snapshot.bookmarks.map((item) => item.id)).not.toContain(
+      bookmark.id,
+    );
+  });
+
+  test<CustomTestContext>("creates and attaches an offline-created tag with its client ID", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const bookmark = await owner.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "new offline tag",
+    });
+    const mutation = {
+      idempotencyKey: "f5b0f41a-b064-4faf-b528-b0e9cae41052",
+      kind: "bookmark.tags" as const,
+      bookmarkId: bookmark.id,
+      tagIds: ["f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7"],
+      createdTags: [
+        {
+          id: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+          name: "Offline tag",
+        },
+      ],
+      baseVersions: { tags: 0 },
+    };
+
+    const first = await owner.offlineSync.push({ mutations: [mutation] });
+    const replay = await owner.offlineSync.push({ mutations: [mutation] });
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(first).toEqual(replay);
+    expect(snapshot.bookmarks).toContainEqual(
+      expect.objectContaining({
+        id: bookmark.id,
+        tags: [
+          expect.objectContaining({
+            id: mutation.createdTags[0].id,
+            name: "Offline tag",
+          }),
+        ],
+      }),
+    );
+  });
+
+  test<CustomTestContext>("creates a text bookmark with its client ID while offline", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const mutation = {
+      idempotencyKey: "a212978b-b60a-4e3c-bb64-dbe16d811285",
+      kind: "bookmark.create" as const,
+      bookmarkId: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+      bookmark: {
+        type: BookmarkTypes.TEXT as BookmarkTypes.TEXT,
+        text: "Offline note",
+        title: "Saved offline",
+        createdAt: new Date("2026-08-02T00:00:00Z"),
+      },
+    };
+
+    const first = await owner.offlineSync.push({ mutations: [mutation] });
+    const replay = await owner.offlineSync.push({ mutations: [mutation] });
+    const snapshot = await owner.offlineSync.snapshot();
+
+    expect(first).toEqual(replay);
+    expect(snapshot.bookmarks).toContainEqual(
+      expect.objectContaining({
+        id: mutation.bookmarkId,
+        title: "Saved offline",
+        content: expect.objectContaining({
+          type: BookmarkTypes.TEXT,
+          text: "Offline note",
+        }),
+      }),
+    );
+  });
+
+  test<CustomTestContext>("rejects offline list membership after edit access is revoked", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const collaborator = apiCallers[1];
+    const list = await owner.lists.create({
+      name: "Shared offline list",
+      icon: "folder",
+      type: "manual",
+    });
+    const collaboratorUser = await collaborator.users.whoami();
+    const { invitationId } = await owner.lists.addCollaborator({
+      listId: list.id,
+      email: collaboratorUser.email!,
+      role: "viewer",
+    });
+    await collaborator.lists.acceptInvitation({ invitationId });
+    const bookmark = await collaborator.bookmarks.createBookmark({
+      type: BookmarkTypes.TEXT,
+      text: "viewer bookmark",
+    });
+    const mutation = {
+      idempotencyKey: "bba7c3c6-e3b9-4e1a-a165-1ca76cc052a5",
+      kind: "bookmark.listMembership" as const,
+      bookmarkId: bookmark.id,
+      listId: list.id,
+      action: "add" as const,
+    };
+
+    const result = await collaborator.offlineSync.push({
+      mutations: [mutation],
+    });
+
+    expect(result.rejections).toEqual([
+      expect.objectContaining({
+        idempotencyKey: mutation.idempotencyKey,
+        bookmarkId: bookmark.id,
+        code: "FORBIDDEN",
+      }),
+    ]);
+  });
+
   test<CustomTestContext>("pull returns only the caller's events after its cursor", async ({
     apiCallers,
   }) => {
@@ -394,6 +667,7 @@ describe("Offline sync routes", () => {
           kind: "bookmark.tags",
           bookmarkId: bookmark.id,
           tagIds: [tag.id],
+          createdTags: [],
           baseVersions: { tags: 0 },
         },
       ],
@@ -404,7 +678,13 @@ describe("Offline sync routes", () => {
           idempotencyKey: "133b4960-ed90-4825-a918-861f7420e93a",
           kind: "bookmark.tags",
           bookmarkId: bookmark.id,
-          tagIds: [],
+          tagIds: ["f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7"],
+          createdTags: [
+            {
+              id: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+              name: "Offline tag",
+            },
+          ],
           baseVersions: { tags: 0 },
         },
       ],
@@ -414,7 +694,13 @@ describe("Offline sync routes", () => {
       expect.objectContaining({
         bookmarkId: bookmark.id,
         field: "tags",
-        localValue: [],
+        localValue: ["f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7"],
+        createdTags: [
+          {
+            id: "f7661fd2-3b55-4c7b-9ef8-f9ca90bc8fb7",
+            name: "Offline tag",
+          },
+        ],
         serverVersion: 1,
       }),
     ]);

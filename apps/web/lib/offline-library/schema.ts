@@ -9,12 +9,23 @@ import type {
   ZOfflineSyncBookmarkRssFeedMembership,
   ZOfflineSyncConflict,
   ZOfflineSyncMutation,
+  ZOfflineSyncRejection,
 } from "@karakeep/shared/types/offlineSync";
 
 type StoredOfflineSyncMutation = ZOfflineSyncMutation & {
   ownerUserId: string;
   queuedAt: number;
 };
+type StoredOfflineSyncRejection = ZOfflineSyncRejection & {
+  ownerUserId: string;
+  rejectedAt: number;
+};
+interface StoredOfflineBookmarkTombstone {
+  idempotencyKey: string;
+  bookmarkId: string;
+  ownerUserId: string;
+  tombstonedAt: number;
+}
 
 export class OfflineLibraryDatabase extends Dexie {
   bookmarks!: Table<ZBookmark, string>;
@@ -30,6 +41,8 @@ export class OfflineLibraryDatabase extends Dexie {
     [string, string]
   >;
   conflicts!: Table<ZOfflineSyncConflict, string>;
+  rejections!: Table<StoredOfflineSyncRejection, string>;
+  tombstones!: Table<StoredOfflineBookmarkTombstone, string>;
   bookmarkFieldVersions!: Table<
     ZOfflineSyncBookmarkFieldVersion,
     [string, string]
@@ -68,6 +81,16 @@ export class OfflineLibraryDatabase extends Dexie {
     this.version(5).stores({
       bookmarkRssFeedMemberships:
         "[bookmarkId+rssFeedId], bookmarkId, rssFeedId",
+    });
+    this.version(6).stores({
+      rejections: "idempotencyKey, ownerUserId, [ownerUserId+rejectedAt]",
+    });
+    this.version(7).stores({
+      outbox:
+        "idempotencyKey, ownerUserId, [ownerUserId+queuedAt], bookmarkId, listId, kind, queuedAt",
+    });
+    this.version(8).stores({
+      tombstones: "idempotencyKey, bookmarkId, ownerUserId",
     });
   }
 }
