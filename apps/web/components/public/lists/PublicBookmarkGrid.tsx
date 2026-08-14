@@ -200,6 +200,7 @@ export default function PublicBookmarkGrid({
     icon: string;
     numItems: number;
     ownerName: string;
+    ownerImage: string | null;
   };
   bookmarks: ZPublicBookmark[];
   nextCursor: ZCursor | null;
