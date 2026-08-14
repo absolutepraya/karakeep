@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import ProfileOptions from "@/components/dashboard/header/ProfileOptions";
 import ProcessingStatusIndicator from "@/components/dashboard/header/ProcessingStatusIndicator";
 import { SearchInput } from "@/components/dashboard/search/SearchInput";
-import KarakeepLogo from "@/components/KarakeepIcon";
+import MarkaLogo from "@/components/MarkaLogo";
 import { getServerAuthSession } from "@/server/auth";
 
 export default async function Header() {
@@ -20,7 +20,7 @@ export default async function Header() {
             href={"/dashboard/bookmarks"}
             className="flex w-56 items-center"
           >
-            <KarakeepLogo height={38} />
+            <MarkaLogo height={38} />
           </Link>
         </div>
         <div className="min-w-0 flex-1">

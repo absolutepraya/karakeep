@@ -1,5 +1,5 @@
 import { redirect } from "next/dist/client/components/navigation";
-import KarakeepLogo from "@/components/KarakeepIcon";
+import MarkaLogo from "@/components/MarkaLogo";
 import SignUpForm from "@/components/signup/SignUpForm";
 import { getServerAuthSession } from "@/server/auth";
 
@@ -32,7 +32,7 @@ export default async function SignUpPage({
       />
       <div className="relative w-full max-w-md space-y-6">
         <div className="flex items-center justify-center">
-          <KarakeepLogo height={72} />
+          <MarkaLogo height={72} />
         </div>
         <SignUpForm redirectUrl={redirectUrl} />
       </div>

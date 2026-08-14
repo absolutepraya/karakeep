@@ -1,5 +1,5 @@
 import Link from "next/link";
-import KarakeepLogo from "@/components/KarakeepIcon";
+import MarkaLogo from "@/components/MarkaLogo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BookmarkIcon, RssIcon } from "lucide-react";
@@ -22,7 +22,7 @@ export default function PublicListHeader({
     <div className="shadow-xs rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/[0.04] p-6 sm:p-7">
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <KarakeepLogo height={36} />
+          <MarkaLogo height={36} />
           <div className="flex flex-wrap items-center gap-2">
             <div className="shadow-xs rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
               Public list
