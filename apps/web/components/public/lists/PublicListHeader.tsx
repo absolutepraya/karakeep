@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MarkaLogo from "@/components/MarkaLogo";
 import { buttonVariants } from "@/components/ui/button";
+import { MARKA } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { BookmarkIcon, RssIcon } from "lucide-react";
 
@@ -69,7 +70,7 @@ export default function PublicListHeader({
               <div>
                 <p className="font-medium text-foreground">{list.ownerName}</p>
                 <p className="text-sm text-muted-foreground">
-                  Shared from Karakeep
+                  Shared from {MARKA.name}
                 </p>
               </div>
             </div>

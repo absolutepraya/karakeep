@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Dein {{year}} Jahresrückblick",
-    "subtitle": "Ein Jahr in Karakeep",
+    "subtitle": "Ein Jahr in Marka",
     "banner": {
       "title": "Dein Jahresrückblick 2025 ist fertig!",
       "description": "Dein Jahr in Lesezeichen ansehen",
@@ -1161,7 +1161,7 @@
         "assets": "Assets"
       }
     },
-    "footer": "Gemacht mit Karakeep",
+    "footer": "Gemacht mit Marka",
     "share": "Teilen",
     "download": "Herunterladen",
     "close": "Schließen",

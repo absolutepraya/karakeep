@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "{{year}} Özetin",
-    "subtitle": "Karakeep'te Bir Yıl",
+    "subtitle": "Marka'te Bir Yıl",
     "banner": {
       "title": "2025 Özetin hazır!",
       "description": "Yılını yer işaretlerinde gör",
@@ -1161,7 +1161,7 @@
         "assets": "Varlıklar"
       }
     },
-    "footer": "Karakeep ile yapıldı",
+    "footer": "Marka ile yapıldı",
     "share": "Paylaş",
     "download": "İndir",
     "close": "Kapat",

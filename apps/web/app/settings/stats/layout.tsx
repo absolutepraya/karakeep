@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { MARKA } from "@/lib/brand";
 import { useTranslation } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   // oxlint-disable-next-line rules-of-hooks
   const { t } = await useTranslation();
   return {
-    title: `${t("settings.stats.usage_statistics")} | Karakeep`,
+    title: `${t("settings.stats.usage_statistics")} | ${MARKA.name}`,
   };
 }
 

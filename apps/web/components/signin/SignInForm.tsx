@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { MARKA } from "@/lib/brand";
 import { authOptions } from "@/server/auth";
 import { Info } from "lucide-react";
 
@@ -36,7 +37,9 @@ export default async function SignInForm() {
           <CardTitle className="text-2xl font-semibold tracking-tight">
             Welcome back
           </CardTitle>
-          <CardDescription>Sign in to continue to Karakeep.</CardDescription>
+          <CardDescription>
+            Sign in to continue to {MARKA.name}.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 px-5 pb-6 sm:px-7 sm:pb-7">
           {serverConfig.demoMode && (

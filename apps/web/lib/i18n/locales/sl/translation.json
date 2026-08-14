@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Tvoj zavitek {{year}}",
-    "subtitle": "Leto v Karakeepu",
+    "subtitle": "Leto v Marka",
     "banner": {
       "title": "Tvoj zavitek 2025 je pripravljen!",
       "description": "Oglej si svoje leto v zaznamkih",
@@ -1161,7 +1161,7 @@
         "assets": "Sredstva"
       }
     },
-    "footer": "Izdelano s programom Karakeep",
+    "footer": "Izdelano s programom Marka",
     "share": "Deli",
     "download": "Prenesi",
     "close": "Zapri",

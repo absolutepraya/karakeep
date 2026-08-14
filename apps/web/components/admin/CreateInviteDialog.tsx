@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
+import { MARKA } from "@/lib/brand";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
@@ -79,7 +80,7 @@ export default function CreateInviteDialog({
         <DialogHeader>
           <DialogTitle>Send User Invitation</DialogTitle>
           <DialogDescription>
-            Send an invitation to a new user to join Karakeep. They&apos;ll
+            Send an invitation to a new user to join {MARKA.name}. They&apos;ll
             receive an email with instructions to create their account and will
             be assigned the &quot;user&quot; role.
           </DialogDescription>

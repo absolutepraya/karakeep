@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import BackgroundJobs from "@/components/admin/BackgroundJobs";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { MARKA } from "@/lib/brand";
 import { useTranslation } from "@/lib/i18n/server";
 import { Activity } from "lucide-react";
 
@@ -8,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // oxlint-disable-next-line rules-of-hooks
   const { t } = await useTranslation();
   return {
-    title: `${t("admin.background_jobs.background_jobs")} | Karakeep`,
+    title: `${t("admin.background_jobs.background_jobs")} | ${MARKA.name}`,
   };
 }
 
