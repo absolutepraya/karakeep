@@ -7,12 +7,19 @@ import { describe, expect, it } from "vitest";
 import { UrlDisplay } from "./UrlDisplay";
 
 describe("UrlDisplay", () => {
-  it("renders URL text without textbox semantics", () => {
-    const value = "https://example.com/public/lists/list-id";
+  it.each([
+    {
+      label: "Share Link",
+      value: "https://example.com/public/lists/list-id",
+    },
+    {
+      label: "RSS Feed URL",
+      value: "https://api.example.com/v1/rss/lists/list-id?token=rss-token",
+    },
+  ])("renders $label without textbox semantics", ({ label, value }) => {
+    render(<UrlDisplay value={value} label={label} />);
 
-    render(<UrlDisplay value={value} label="Public list URL" />);
-
-    const display = screen.getByLabelText("Public list URL");
+    const display = screen.getByRole("group", { name: `${label}: ${value}` });
     expect(display.tagName).toBe("DIV");
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(display.getAttribute("contenteditable")).toBeNull();

@@ -9,13 +9,6 @@ export default defineConfig({
   test: {
     setupFiles: ["./vitest.setup.ts"],
     pool: "threads",
-    poolOptions: {
-      threads: {
-        // better-sqlite3 supports worker threads. Keeping the TRPC suite in one
-        // worker avoids Node 24 child-process teardown racing native cleanup.
-        singleThread: true,
-      },
-    },
     alias: {
       "@/*": "./*",
     },

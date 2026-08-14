@@ -84,10 +84,10 @@ export interface CustomTestContext {
 
 export async function buildTestContext(
   seedDB: boolean,
-  context?: Pick<TestContext, "onTestFinished">,
+  context: Pick<TestContext, "onTestFinished">,
 ): Promise<CustomTestContext> {
   const db = getTestDB();
-  context?.onTestFinished(() => {
+  context.onTestFinished(() => {
     db.$client.close();
   });
   let users: Awaited<ReturnType<typeof seedUsers>> = [];
