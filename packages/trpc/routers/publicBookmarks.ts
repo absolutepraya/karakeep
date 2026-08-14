@@ -19,6 +19,9 @@ import { zCursorV2 } from "@karakeep/shared/types/pagination";
 import { publicProcedure, router } from "../index";
 import { List } from "../models/lists";
 
+/**
+ * Builds an expiring public asset URL with a URL-encoded signed token.
+ */
 function getPublicSignedAssetUrl(
   assetId: string,
   assetOwnerId: string,
@@ -36,6 +39,9 @@ function getPublicSignedAssetUrl(
   return `${serverConfig.publicApiUrl}/public/assets/${assetId}?token=${encodeURIComponent(signedToken)}`;
 }
 
+/**
+ * Resolves an owner's public image URL, signing locally stored assets as needed.
+ */
 function getPublicOwnerImageUrl(image: string | null, userId: string) {
   if (!image) {
     return null;
