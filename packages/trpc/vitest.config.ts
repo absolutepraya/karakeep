@@ -11,8 +11,9 @@ export default defineConfig({
     pool: "threads",
     poolOptions: {
       threads: {
-        minThreads: 1,
-        maxThreads: 1,
+        // better-sqlite3's native cleanup hook crashes when a Vitest worker
+        // exits under Node 24. File isolation remains enabled by default.
+        singleThread: true,
       },
     },
     alias: {
