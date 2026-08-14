@@ -13,7 +13,7 @@ COMPOSE_PROJECT_NAME="karakeep"
 WEB_IMAGE="ghcr.io/absolutepraya/karakeep:web-main"
 WORKERS_IMAGE="ghcr.io/absolutepraya/karakeep:workers-main"
 MEILI_IMAGE="getmeili/meilisearch:v1.41.0"
-CHROME_IMAGE="zenika/alpine-chrome:124"
+CHROME_IMAGE="ghcr.io/karakeep-app/karakeep-chrome:release"
 
 COMMAND="install"
 INSTALL_DIR=""
@@ -588,13 +588,13 @@ write_generated_files() {
       say "  chrome:"
       say "    image: $CHROME_IMAGE"
       say "    restart: unless-stopped"
+      say "    init: true"
       say "    command:"
-      say "      - --no-sandbox"
       say "      - --disable-gpu"
       say "      - --disable-dev-shm-usage"
-      say "      - --remote-debugging-address=0.0.0.0"
-      say "      - --remote-debugging-port=9222"
       say "      - --hide-scrollbars"
+      say "      - --disable-blink-features=AutomationControlled"
+      say "      - --window-size=1440,900"
     fi
 
     if [[ "$SEARCH_MODE" == "managed" ]]; then
