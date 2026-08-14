@@ -102,4 +102,3 @@ Fork-owned landing publishing belongs to #25. Fork-owned documentation hosting a
 4. Update repository presentation and Phase 1 documentation ownership and wording.
 5. Update applicable local landing and docs source assets without publishing or changing domains.
 6. Run the verification sequence and summarize deferred work under #25, #26, and #27.
-
