@@ -1,3 +1,4 @@
+import type { TestContext } from "vitest";
 import { vi } from "vitest";
 
 import { getInMemoryDB } from "@karakeep/db/drizzle";
@@ -83,8 +84,12 @@ export interface CustomTestContext {
 
 export async function buildTestContext(
   seedDB: boolean,
+  context?: Pick<TestContext, "onTestFinished">,
 ): Promise<CustomTestContext> {
   const db = getTestDB();
+  context?.onTestFinished(() => {
+    db.$client.close();
+  });
   let users: Awaited<ReturnType<typeof seedUsers>> = [];
   if (seedDB) {
     users = await seedUsers(db);
@@ -99,7 +104,7 @@ export async function buildTestContext(
 }
 
 export function defaultBeforeEach(seedDB = true) {
-  return async (context: object) => {
+  return async (context: TestContext) => {
     vi.mock("@karakeep/shared-server", async (original) => {
       const mod =
         (await original()) as typeof import("@karakeep/shared-server");
@@ -123,6 +128,6 @@ export function defaultBeforeEach(seedDB = true) {
         triggerSearchReindex: vi.fn(),
       };
     });
-    Object.assign(context, await buildTestContext(seedDB));
+    Object.assign(context, await buildTestContext(seedDB, context));
   };
 }

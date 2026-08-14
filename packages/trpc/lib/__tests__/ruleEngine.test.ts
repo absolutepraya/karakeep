@@ -85,9 +85,12 @@ describe("RuleEngine", () => {
     return insertedRule.id;
   };
 
-  beforeEach(async () => {
+  beforeEach(async (context) => {
     vi.resetAllMocks();
     db = getInMemoryDB(/* runMigrations */ true);
+    context.onTestFinished(() => {
+      db.$client.close();
+    });
 
     // Seed User
     [userId] = (

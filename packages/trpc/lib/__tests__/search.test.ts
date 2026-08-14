@@ -23,8 +23,11 @@ import { getBookmarkIdsFromMatcher } from "../search";
 let mockCtx: AuthedContext;
 let testUserId: string;
 
-beforeEach(async () => {
+beforeEach(async (context) => {
   const db = getInMemoryDB(true);
+  context.onTestFinished(() => {
+    db.$client.close();
+  });
   testUserId = "test-user";
 
   await db.insert(users).values([
