@@ -12,7 +12,7 @@ import {
 } from "../testUtils";
 
 beforeEach<CustomTestContext>(async (context) => {
-  const testContext = await buildTestContext(true, context);
+  const testContext = await buildTestContext(true);
   Object.assign(context, testContext);
 });
 
