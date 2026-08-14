@@ -104,6 +104,14 @@ A good PR for this repo should include:
 
 ## Review expectations
 
-This is a personal fork, so review cadence is best-effort rather than community-SLA driven.
+Pull requests targeting `main` may receive an automated CodeRabbit review in addition to the repository's GitHub Actions checks.
+
+During the initial rollout, CodeRabbit is advisory:
+- GitHub Actions remains the source of truth for deterministic lint, format, typecheck, test, generated-artifact, Knip, and React Doctor validation.
+- CodeRabbit adds contextual review, summaries, repository-specific guidance, and check context; it does not replace CI.
+- CodeRabbit does not automatically request changes or act as a required merge gate during this calibration period.
+- Contributors can reply to CodeRabbit comments or mention `@coderabbitai` in a PR discussion for follow-up context. A review can be requested explicitly with `@coderabbitai review` when needed.
+
+This is a personal fork, so human review cadence is best-effort rather than community-SLA driven.
 
 If you need a guaranteed path to merge for a generally useful change, the upstream Karakeep project is usually the better place to propose it.

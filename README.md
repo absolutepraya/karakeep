@@ -70,6 +70,35 @@ Marka can:
 
 ## Quick start for this fork
 
+### Guided self-hosted install
+
+For a Linux `amd64` host that already has Docker Engine, Docker Compose v2, and OpenSSL, run:
+
+```bash
+curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/karakeep/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
+```
+
+The command downloads the script to a file before executing it. The guided flow asks for the install/data directories, public URL, search mode, browser-rendering mode, AI setup, and whether an existing compatible data directory should be reused. It generates a Docker Compose stack using the fork's paired `web-main` and `workers-main` images, writes secrets to restricted env files, validates the Compose config, and then starts the deployment.
+
+The default listener is `127.0.0.1:3000`, so an Internet-facing deployment should normally put a reverse proxy with TLS in front of it. The script deliberately does not install Docker, alter firewall rules, configure DNS, or provision certificates.
+
+For a reproducible setup, replace `main` with an immutable release tag or commit SHA after reviewing that revision:
+
+```bash
+REF=<tag-or-commit-sha>; curl -fsSLo /tmp/karakeep-setup.sh "https://raw.githubusercontent.com/absolutepraya/karakeep/${REF}/scripts/install.sh" && bash /tmp/karakeep-setup.sh
+```
+
+After setup, the copied helper supports safe operations without deleting persistent data:
+
+```bash
+~/karakeep/install.sh status
+~/karakeep/install.sh backup
+~/karakeep/install.sh update
+~/karakeep/install.sh uninstall
+```
+
+For all installer choices, non-interactive usage, rollback guidance, and safety behavior, see [`docs/docs/02-installation/11-guided-docker-setup.md`](docs/docs/02-installation/11-guided-docker-setup.md).
+
 ### Preferred local development
 
 From the repository root:
@@ -139,6 +168,7 @@ For the complete local-dev and deploy workflow, read:
 ## Documentation map
 
 ### For this fork
+- Guided Docker self-hosting: [`docs/docs/02-installation/11-guided-docker-setup.md`](docs/docs/02-installation/11-guided-docker-setup.md)
 - Fork/local dev/deploy guide: [`docs/fork-setup.md`](docs/fork-setup.md)
 - Docs-site development guide: [`docs/README.md`](docs/README.md)
 - Contribution guidance for this repo: [`CONTRIBUTING.md`](CONTRIBUTING.md)
