@@ -9,6 +9,12 @@ export default defineConfig({
   test: {
     setupFiles: ["./vitest.setup.ts"],
     pool: "threads",
+    poolOptions: {
+      threads: {
+        minThreads: 1,
+        maxThreads: 1,
+      },
+    },
     alias: {
       "@/*": "./*",
     },
