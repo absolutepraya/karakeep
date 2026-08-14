@@ -35,15 +35,15 @@ vi.mock("@/server/auth", () => ({
 import Header from "./Header";
 
 describe("Header", () => {
-  it("uses a compact left-aligned Marka wordmark without a fixed logo slot", async () => {
+  it("uses a left-aligned Marka wordmark in the original reserved logo slot", async () => {
     render(await Header());
 
     const link = screen.getByRole("link", { name: "Marka" });
     expect(link.getAttribute("href")).toBe("/dashboard/bookmarks");
     expect(link.classList.contains("justify-start")).toBe(true);
-    expect(link.classList.contains("w-56")).toBe(false);
-    expect(link.classList.contains("[&_img]:h-7")).toBe(true);
+    expect(link.classList.contains("w-56")).toBe(true);
+    expect(link.classList.contains("[&_img]:h-[38px]")).toBe(true);
     expect(link.classList.contains("[&_img]:w-auto")).toBe(true);
-    expect(screen.getByAltText("Marka").getAttribute("height")).toBe("28");
+    expect(screen.getByAltText("Marka").getAttribute("height")).toBe("38");
   });
 });
