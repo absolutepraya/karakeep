@@ -8,6 +8,7 @@ export default function MarkaLogo({ height }: { height: number }) {
         src={MARKA.wordmark.navy}
         alt={MARKA.name}
         height={height}
+        style={{ height, width: "auto" }}
         className="dark:hidden"
       />
       <img
@@ -15,6 +16,7 @@ export default function MarkaLogo({ height }: { height: number }) {
         alt=""
         aria-hidden="true"
         height={height}
+        style={{ height, width: "auto" }}
         className="hidden dark:block"
       />
     </span>

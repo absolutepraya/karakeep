@@ -15,9 +15,11 @@ describe("MarkaLogo", () => {
       "/brand/marka/marka-wordmark-navy.png",
     );
     expect(visibleLogo.getAttribute("height")).toBe("38");
+    expect(visibleLogo.style.height).toBe("38px");
+    expect(visibleLogo.style.width).toBe("auto");
     expect(visibleLogo.classList.contains("dark:hidden")).toBe(true);
 
-    const darkLogo = document.querySelector(
+    const darkLogo = document.querySelector<HTMLImageElement>(
       'img[src="/brand/marka/marka-wordmark-white.png"]',
     );
     expect(darkLogo).not.toBeNull();
@@ -28,6 +30,8 @@ describe("MarkaLogo", () => {
     expect(darkLogo.getAttribute("alt")).toBe("");
     expect(darkLogo.getAttribute("aria-hidden")).toBe("true");
     expect(darkLogo.getAttribute("height")).toBe("38");
+    expect(darkLogo.style.height).toBe("38px");
+    expect(darkLogo.style.width).toBe("auto");
     expect(darkLogo.classList.contains("hidden")).toBe(true);
     expect(darkLogo.classList.contains("dark:block")).toBe(true);
   });

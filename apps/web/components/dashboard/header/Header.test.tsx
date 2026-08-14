@@ -42,8 +42,6 @@ describe("Header", () => {
     expect(link.getAttribute("href")).toBe("/dashboard/bookmarks");
     expect(link.classList.contains("justify-start")).toBe(true);
     expect(link.classList.contains("w-56")).toBe(true);
-    expect(link.classList.contains("[&_img]:h-[38px]")).toBe(true);
-    expect(link.classList.contains("[&_img]:w-auto")).toBe(true);
-    expect(screen.getByAltText("Marka").getAttribute("height")).toBe("38");
+    expect(screen.getByAltText("Marka").getAttribute("height")).toBe("32");
   });
 });
