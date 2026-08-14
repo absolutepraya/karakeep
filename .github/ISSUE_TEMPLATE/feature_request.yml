@@ -1,20 +1,20 @@
-name: Feature Request
-description: Request a new feature or idea to be added to Karakeep
+name: Marka Feature Request
+description: Request a new feature or idea for Marka
 labels: ["feature request", "status/untriaged"]
 body:
   - type: textarea
     id: description
     attributes:
       label: Describe the feature you'd like
-      description: Provide a clear description of the feature you'd like implemented in Karakeep
+      description: Provide a clear description of the feature you'd like implemented in Marka.
     validations:
       required: true
   - type: textarea
     id: benefits
     attributes:
-      label: Describe the benefits this would bring to existing Karakeep users
+      label: Describe the benefits this would bring to existing Marka users
       description: |
-        Explain the measurable benefits this feature would achieve for existing Karakeep users.
+        Explain the measurable benefits this feature would achieve for existing Marka users.
         These benefits should details outcomes in terms of what this request solves/achieves, and should not be specific to implementation.
         This helps us understand the core desired goal so that a variety of potential implementations could be explored.
         This field is important. Lack of input here may lead to early issue closure.
@@ -33,7 +33,7 @@ body:
     attributes:
       label: Have you searched for an existing open/closed issue?
       description: |
-        To help us keep these issues under control, please ensure you have first [searched our issue list](https://github.com/karakeep-app/karakeep/issues?q=is%3Aissue) for any existing issues that cover the fundamental benefit/goal of your request.
+        To help us keep these issues under control, please search this repository's issues first. You can also search the [upstream issue list](https://github.com/karakeep-app/karakeep/issues?q=is%3Aissue) for related work.
       options:
         - label: I have searched for existing issues and none cover my fundamental request
           required: true
