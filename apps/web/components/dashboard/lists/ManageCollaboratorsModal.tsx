@@ -210,8 +210,8 @@ export function ManageCollaboratorsModal({
           {!readOnly && (
             <div className="space-y-3">
               <Label>{t("lists.collaborators.add")}</Label>
-              <div className="flex gap-2">
-                <div className="flex-1">
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
+                <div className="min-w-0">
                   <Input
                     type="email"
                     placeholder={t("lists.collaborators.enter_email")}
@@ -224,34 +224,41 @@ export function ManageCollaboratorsModal({
                     }}
                   />
                 </div>
-                <Select
-                  value={newCollaboratorRole}
-                  onValueChange={(value) =>
-                    setNewCollaboratorRole(value as "viewer" | "editor")
-                  }
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">
-                      {t("lists.collaborators.viewer")}
-                    </SelectItem>
-                    <SelectItem value="editor">
-                      {t("lists.collaborators.editor")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={handleAddCollaborator}
-                  disabled={addCollaborator.isPending}
-                >
-                  {addCollaborator.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <UserPlus className="h-4 w-4" />
-                  )}
-                </Button>
+                <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <Select
+                    value={newCollaboratorRole}
+                    onValueChange={(value) =>
+                      setNewCollaboratorRole(value as "viewer" | "editor")
+                    }
+                  >
+                    <SelectTrigger className="h-10 w-full sm:w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">
+                        {t("lists.collaborators.viewer")}
+                      </SelectItem>
+                      <SelectItem value="editor">
+                        {t("lists.collaborators.editor")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    className="h-10 w-full gap-2 sm:w-auto"
+                    onClick={handleAddCollaborator}
+                    disabled={addCollaborator.isPending}
+                    aria-label={t("lists.collaborators.add")}
+                  >
+                    {addCollaborator.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-4 w-4" />
+                    )}
+                    <span className="sm:hidden">
+                      {t("lists.collaborators.add")}
+                    </span>
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 <strong>{t("lists.collaborators.viewer")}:</strong>{" "}
