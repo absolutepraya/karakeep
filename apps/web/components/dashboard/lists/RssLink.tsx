@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CopyBtnV2 } from "@/components/ui/copy-button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useClientConfig } from "@/lib/clientConfig";
@@ -12,6 +11,8 @@ import { Loader2, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
+
+import { UrlDisplay } from "./UrlDisplay";
 
 export default function RssLink({ listId }: { listId: string }) {
   const api = useTRPC();
@@ -46,7 +47,7 @@ export default function RssLink({ listId }: { listId: string }) {
       return null;
     }
     return `${clientConfig.publicApiUrl}/v1/rss/lists/${listId}?token=${rssToken.token}`;
-  }, [rssToken]);
+  }, [clientConfig.publicApiUrl, listId, rssToken]);
 
   const rssEnabled = rssUrl !== null;
 
@@ -82,8 +83,8 @@ export default function RssLink({ listId }: { listId: string }) {
           <Label className="text-sm font-medium">
             {t("lists.rss.feed_url")}
           </Label>
-          <div className="flex items-center space-x-2">
-            <Input value={rssUrl} readOnly className="flex-1 text-sm" />
+          <div className="flex min-w-0 items-center space-x-2">
+            <UrlDisplay value={rssUrl} label={t("lists.rss.feed_url")} />
             <CopyBtnV2 getStringToCopy={() => rssUrl} />
             <Button
               variant="outline"

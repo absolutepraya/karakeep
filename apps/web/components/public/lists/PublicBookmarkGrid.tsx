@@ -8,7 +8,7 @@ import FooterLinkURL from "@/components/dashboard/bookmarks/FooterLinkURL";
 import { ActionButton } from "@/components/ui/action-button";
 import { badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SCREENS } from "@/lib/breakpoints";
 import { cn } from "@/lib/utils";
@@ -31,10 +31,37 @@ function TagPill({ tag }: { tag: string }) {
         badgeVariants({ variant: "secondary" }),
         "ease-(--ease-out) border border-border/70 bg-muted/40 font-medium text-muted-foreground transition-[background-color,color,border-color] duration-150 hover:bg-accent hover:text-foreground",
       )}
-      key={tag}
     >
       {tag}
     </div>
+  );
+}
+
+function BookmarkDetails({ bookmark }: { bookmark: ZPublicBookmark }) {
+  const isLink = bookmark.content.type === BookmarkTypes.LINK;
+
+  return (
+    <>
+      {bookmark.tags.length > 0 && (
+        <div className="hidden flex-wrap gap-1.5 sm:flex">
+          {bookmark.tags.map((tag) => (
+            <TagPill key={tag} tag={tag} />
+          ))}
+        </div>
+      )}
+
+      <div className="flex w-full shrink-0 flex-col gap-1.5 border-t border-border/60 pt-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-2 sm:pt-2.5 sm:text-sm">
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+          {isLink && <FooterLinkURL url={bookmark.content.url} />}
+          {isLink && (
+            <span aria-hidden className="hidden sm:inline">
+              •
+            </span>
+          )}
+          <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -43,10 +70,14 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
     switch (bookmark.content.type) {
       case BookmarkTypes.LINK:
         return (
-          <div className="space-y-3">
+          <>
             {bookmark.bannerImageUrl && (
-              <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
-                <Link href={bookmark.content.url} target="_blank">
+              <div className="h-40 w-full shrink-0 overflow-hidden border-b border-border/60 bg-muted/20 sm:h-56">
+                <Link
+                  href={bookmark.content.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   {/* oxlint-disable-next-line no-img-element */}
                   <img
                     src={bookmark.bannerImageUrl}
@@ -56,45 +87,46 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
                 </Link>
               </div>
             )}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2 p-3 sm:gap-2.5 sm:p-3.5">
               <Link
                 href={bookmark.content.url}
                 target="_blank"
-                className="line-clamp-2 text-ellipsis text-lg font-semibold leading-snug tracking-tight text-foreground"
+                rel="noreferrer"
+                className="ease-(--ease-out) line-clamp-2 overflow-hidden text-ellipsis break-words text-base font-semibold leading-snug tracking-tight transition-colors duration-150 hover:text-primary sm:text-lg"
               >
                 {bookmark.title || "Untitled"}
               </Link>
+              <BookmarkDetails bookmark={bookmark} />
             </div>
-          </div>
+          </>
         );
 
       case BookmarkTypes.TEXT:
         return (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-2 p-3 sm:gap-2.5 sm:p-3.5">
             {bookmark.title && (
-              <h3 className="line-clamp-2 text-ellipsis text-lg font-semibold leading-snug tracking-tight text-foreground">
+              <h3 className="line-clamp-2 overflow-hidden text-ellipsis break-words text-base font-semibold leading-snug tracking-tight sm:text-lg">
                 {bookmark.title}
               </h3>
             )}
-            <div className="group relative rounded-xl border border-border/70 bg-background/70 p-3">
-              <div className="max-h-64 overflow-hidden">
-                <BookmarkMarkdownComponent readOnly={true}>
-                  {{
-                    id: bookmark.id,
-                    content: {
-                      text: bookmark.content.text,
-                    },
-                  }}
-                </BookmarkMarkdownComponent>
-              </div>
+            <div className="group relative max-h-40 overflow-hidden text-sm leading-6 text-foreground/90 sm:max-h-52 sm:text-base">
+              <BookmarkMarkdownComponent readOnly={true}>
+                {{
+                  id: bookmark.id,
+                  content: {
+                    text: bookmark.content.text,
+                  },
+                }}
+              </BookmarkMarkdownComponent>
               <Dialog>
                 <DialogTrigger asChild>
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="shadow-xs absolute bottom-3 right-3 size-8 rounded-full border border-border/70 bg-background/90 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                    className="shadow-xs absolute bottom-2 right-2 size-8 rounded-full border border-border/70 bg-background/90 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100"
+                    aria-label="Expand bookmark"
                   >
-                    <Expand className="h-4 w-4" />
+                    <Expand className="size-4" />
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-h-[80vh] max-w-3xl overflow-auto">
@@ -109,15 +141,20 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
                 </DialogContent>
               </Dialog>
             </div>
+            <BookmarkDetails bookmark={bookmark} />
           </div>
         );
 
       case BookmarkTypes.ASSET:
         return (
-          <div className="space-y-3">
+          <>
             {bookmark.bannerImageUrl ? (
-              <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
-                <Link href={bookmark.content.assetUrl} target="_blank">
+              <div className="h-40 w-full shrink-0 overflow-hidden border-b border-border/60 bg-muted/20 sm:h-56">
+                <Link
+                  href={bookmark.content.assetUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   {/* oxlint-disable-next-line no-img-element */}
                   <img
                     src={bookmark.bannerImageUrl}
@@ -127,53 +164,33 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
                 </Link>
               </div>
             ) : (
-              <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted/30 text-muted-foreground">
+              <div className="flex h-40 w-full shrink-0 items-center justify-center border-b border-border/60 bg-muted/20 text-muted-foreground sm:h-56">
                 {bookmark.content.assetType === "image" ? (
-                  <ImageIcon className="h-8 w-8" />
+                  <ImageIcon className="size-8" />
                 ) : (
-                  <FileIcon className="h-8 w-8" />
+                  <FileIcon className="size-8" />
                 )}
               </div>
             )}
-            <div className="space-y-1">
+            <div className="flex flex-col gap-2 p-3 sm:gap-2.5 sm:p-3.5">
               <Link
                 href={bookmark.content.assetUrl}
                 target="_blank"
-                className="line-clamp-2 text-ellipsis text-lg font-semibold leading-snug tracking-tight text-foreground"
+                rel="noreferrer"
+                className="ease-(--ease-out) line-clamp-2 overflow-hidden text-ellipsis break-words text-base font-semibold leading-snug tracking-tight transition-colors duration-150 hover:text-primary sm:text-lg"
               >
                 {bookmark.title || "Untitled"}
               </Link>
+              <BookmarkDetails bookmark={bookmark} />
             </div>
-          </div>
+          </>
         );
     }
   };
 
   return (
-    <Card className="ease-(--ease-out) shadow-xs mb-4 rounded-2xl border border-border/70 bg-card/95 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-lg">
-      <CardContent className="space-y-3 p-3.5">
-        {renderContent()}
-
-        {bookmark.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {bookmark.tags.map((tag, index) => (
-              <TagPill key={index} tag={tag} />
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {bookmark.content.type === BookmarkTypes.LINK && (
-              <>
-                <FooterLinkURL url={bookmark.content.url} />
-                <span className="text-border">•</span>
-              </>
-            )}
-            <BookmarkFormattedCreatedAt createdAt={bookmark.createdAt} />
-          </div>
-        </div>
-      </CardContent>
+    <Card className="shadow-xs ease-(--ease-out) mb-2 overflow-hidden rounded-2xl border border-border/80 bg-card transition-[border-color,box-shadow,background-color] duration-200 hover:border-border hover:shadow-md sm:mb-4">
+      {renderContent()}
     </Card>
   );
 }
@@ -183,8 +200,8 @@ function getBreakpointConfig() {
     default: 3,
   };
   breakpointColumnsObj[SCREENS.lg] = 2;
-  breakpointColumnsObj[SCREENS.md] = 1;
-  breakpointColumnsObj[SCREENS.sm] = 1;
+  breakpointColumnsObj[SCREENS.md] = 2;
+  breakpointColumnsObj[SCREENS.sm] = 2;
   return breakpointColumnsObj;
 }
 
@@ -200,6 +217,7 @@ export default function PublicBookmarkGrid({
     icon: string;
     numItems: number;
     ownerName: string;
+    ownerImage: string | null;
   };
   bookmarks: ZPublicBookmark[];
   nextCursor: ZCursor | null;
@@ -237,8 +255,8 @@ export default function PublicBookmarkGrid({
   return (
     <>
       <Masonry
-        className="-ml-4 flex w-auto"
-        columnClassName="pl-4"
+        className="-ml-2 flex w-auto sm:-ml-4"
+        columnClassName="pl-2 sm:pl-4"
         breakpointCols={breakpointConfig}
       >
         {bookmarks.map((bookmark) => (
@@ -246,7 +264,7 @@ export default function PublicBookmarkGrid({
         ))}
       </Masonry>
       {hasNextPage && (
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center">
           <ActionButton
             ref={loadMoreRef}
             ignoreDemoMode={true}

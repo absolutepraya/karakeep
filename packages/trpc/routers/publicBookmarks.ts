@@ -25,14 +25,28 @@ export const publicBookmarks = router({
           description: true,
           icon: true,
         })
-        .extend({ ownerName: z.string() }),
+        .extend({
+          ownerName: z.string(),
+          ownerImage: z.string().nullable(),
+        }),
     )
     .query(async ({ input, ctx }) => {
-      return await List.getPublicListMetadata(
+      const metadata = await List.getPublicListMetadata(
         ctx,
         input.listId,
         /* token */ null,
       );
+      const owner = await ctx.db.query.users.findFirst({
+        columns: {
+          image: true,
+        },
+        where: (users, { eq }) => eq(users.id, metadata.userId),
+      });
+
+      return {
+        ...metadata,
+        ownerImage: owner?.image ?? null,
+      };
     }),
   getPublicBookmarksInList: publicProcedure
     .input(
@@ -51,13 +65,17 @@ export const publicBookmarks = router({
             description: true,
             icon: true,
           })
-          .extend({ numItems: z.number(), ownerName: z.string() }),
+          .extend({
+            numItems: z.number(),
+            ownerName: z.string(),
+            ownerImage: z.string().nullable(),
+          }),
         bookmarks: z.array(zPublicBookmarkSchema),
         nextCursor: zCursorV2.nullable(),
       }),
     )
     .query(async ({ input, ctx }) => {
-      return await List.getPublicListContents(
+      const contents = await List.getPublicListContents(
         ctx,
         input.listId,
         /* token */ null,
@@ -67,5 +85,24 @@ export const publicBookmarks = router({
           cursor: input.cursor,
         },
       );
+      const metadata = await List.getPublicListMetadata(
+        ctx,
+        input.listId,
+        /* token */ null,
+      );
+      const owner = await ctx.db.query.users.findFirst({
+        columns: {
+          image: true,
+        },
+        where: (users, { eq }) => eq(users.id, metadata.userId),
+      });
+
+      return {
+        ...contents,
+        list: {
+          ...contents.list,
+          ownerImage: owner?.image ?? null,
+        },
+      };
     }),
 });
