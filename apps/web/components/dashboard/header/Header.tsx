@@ -19,7 +19,7 @@ export default async function Header() {
         <div className="hidden shrink-0 items-center sm:flex">
           <Link
             href={"/dashboard/bookmarks"}
-            className="flex w-56 items-center justify-center"
+            className="flex w-56 items-center justify-start"
           >
             <MarkaLogo height={45} />
           </Link>

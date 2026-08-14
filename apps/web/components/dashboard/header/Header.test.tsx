@@ -40,7 +40,7 @@ describe("Header", () => {
 
     const link = screen.getByRole("link", { name: "Marka" });
     expect(link.getAttribute("href")).toBe("/dashboard/bookmarks");
-    expect(link.classList.contains("justify-center")).toBe(true);
+    expect(link.classList.contains("justify-start")).toBe(true);
     expect(link.classList.contains("w-56")).toBe(true);
     expect(screen.getByAltText("Marka").getAttribute("height")).toBe("45");
   });
