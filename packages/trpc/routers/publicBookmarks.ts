@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { users } from "@karakeep/db/schema";
 import {
   MAX_NUM_BOOKMARKS_PER_PAGE,
   zPublicBookmarkSchema,
@@ -40,7 +42,7 @@ export const publicBookmarks = router({
         columns: {
           image: true,
         },
-        where: (users, { eq }) => eq(users.id, metadata.userId),
+        where: eq(users.id, metadata.userId),
       });
 
       return {
@@ -94,7 +96,7 @@ export const publicBookmarks = router({
         columns: {
           image: true,
         },
-        where: (users, { eq }) => eq(users.id, metadata.userId),
+        where: eq(users.id, metadata.userId),
       });
 
       return {
