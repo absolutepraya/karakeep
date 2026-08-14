@@ -12,9 +12,8 @@ export function UrlDisplay({
   return (
     <div
       aria-label={label}
-      tabIndex={0}
       className={cn(
-        "flex h-10 min-w-0 flex-1 items-center rounded-md border border-input bg-background px-4 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0",
+        "flex h-10 min-w-0 flex-1 items-center rounded-md border border-input bg-background px-4 py-2 text-sm",
         className,
       )}
     >
