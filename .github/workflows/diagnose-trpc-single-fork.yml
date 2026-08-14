@@ -1,0 +1,47 @@
+name: Diagnose TRPC single fork
+
+on:
+  push:
+    branches:
+      - fix/public-list-experience
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: Apply single-fork candidate
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path("packages/trpc/vitest.config.ts")
+          text = path.read_text()
+          text = text.replace(
+              '  test: {\n    alias:',
+              '  test: {\n    poolOptions: {\n      forks: {\n        singleFork: true,\n      },\n    },\n    alias:',
+          )
+          path.write_text(text)
+          PY
+          pnpm exec oxfmt packages/trpc/vitest.config.ts
+          git diff --check
+          cat packages/trpc/vitest.config.ts
+
+      - name: Run TRPC suite first pass
+        working-directory: packages/trpc
+        run: pnpm test
+
+      - name: Run TRPC suite second pass
+        working-directory: packages/trpc
+        run: pnpm test
+
+      - name: Typecheck TRPC
+        working-directory: packages/trpc
+        run: pnpm typecheck
