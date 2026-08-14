@@ -14,16 +14,16 @@ export default function PublicListPageNotFound() {
           <SearchX className="size-7" strokeWidth={1.75} />
         </div>
         <h1 className="mt-5 text-2xl font-semibold tracking-tight">
-          List not found
+          This list isn’t available
         </h1>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground sm:text-base">
-          The list you’re looking for doesn’t exist, is no longer public, or
-          may have been removed.
+          This list may have been made private, deleted, or the link may be
+          incorrect.
         </p>
         <Button asChild className="mt-6">
           <Link href="/">
             <Home className="size-4" />
-            Return home
+            Go to Karakeep
           </Link>
         </Button>
       </div>
