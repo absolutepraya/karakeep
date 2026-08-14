@@ -3,7 +3,7 @@ import KarakeepLogo from "@/components/KarakeepIcon";
 import { buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import { BookmarkIcon, Globe2, RssIcon } from "lucide-react";
+import { RssIcon } from "lucide-react";
 
 export default function PublicListHeader({
   list,
@@ -45,22 +45,16 @@ export default function PublicListHeader({
             {list.icon}
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="break-words text-2xl font-semibold leading-tight">
+            <h1 className="truncate text-2xl font-semibold leading-tight">
               {list.name}
             </h1>
             {list.description && (
               <p className="mt-1 text-muted-foreground">{list.description}</p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <BookmarkIcon className="size-3.5" />
-                {list.numItems} bookmarks
-              </span>
+              <span>{list.numItems} bookmarks</span>
               <span aria-hidden>·</span>
-              <span className="flex items-center gap-1">
-                <Globe2 className="size-3.5" />
-                Public list
-              </span>
+              <span>Public list</span>
               <span aria-hidden>·</span>
               <span className="flex min-w-0 items-center gap-1.5">
                 <UserAvatar
@@ -69,7 +63,7 @@ export default function PublicListHeader({
                   className="size-5 shrink-0"
                   fallbackClassName="uppercase"
                 />
-                <span className="truncate">by {list.ownerName}</span>
+                <span className="truncate">{list.ownerName}</span>
               </span>
             </div>
           </div>
