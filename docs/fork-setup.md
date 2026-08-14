@@ -16,7 +16,7 @@ Use it for:
 ## Local development
 
 ### Runtime
-- Node 24 (`.nvmrc`)
+- Node 24.18.1 (`.nvmrc`; temporary pin while the Node 24.19 native-addon cleanup regression is unresolved)
 - `pnpm@11.2.1` via corepack
 
 ### First-time setup
@@ -121,6 +121,7 @@ It runs:
 Fork-specific notes:
 - this fork does **not** use Turbo remote cache
 - some CI jobs reclaim disk space before heavy steps because typecheck/tests can otherwise exhaust hosted-runner storage
+- CI reads the exact Node runtime from `.nvmrc`; keep the temporary 24.18.1 pin until the Node v24 cleanup-hook fix tracked in [nodejs/node#65042](https://github.com/nodejs/node/pull/65042) ships in a usable Node 24 release
 - `knip` and `react-doctor` run as **non-blocking** report jobs
 
 ## Extra quality tooling

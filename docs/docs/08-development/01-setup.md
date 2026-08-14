@@ -3,7 +3,7 @@
 This page explains how to run Karakeep locally from this repository.
 
 It reflects the workflow used in this fork:
-- Node 24
+- Node 24.18.1 (temporary pin; see `.nvmrc`)
 - `pnpm` via corepack
 - a root `.env` file symlinked into the apps that read it
 - `web` + `workers` running locally
@@ -42,15 +42,16 @@ If you want the full operator-oriented notes for this fork’s local dev and dep
 
 ### Node and pnpm
 
-This repo uses Node 24 and `pnpm@11.2.1` via corepack.
+This repo currently pins Node 24.18.1 in `.nvmrc` and uses `pnpm@11.2.1` via corepack. The exact Node patch is temporary: Node 24.19.0 has a native-addon cleanup regression tracked in [nodejs/node#65042](https://github.com/nodejs/node/pull/65042).
 
 ```bash
-nvm install 24
+nvm install
+nvm use
 corepack enable
 pnpm install
 ```
 
-You can also use any other Node version manager as long as it gives you Node 24.
+If you use another Node version manager, have it honor the exact version in `.nvmrc` instead of selecting a floating Node 24 release.
 
 ## Environment setup
 

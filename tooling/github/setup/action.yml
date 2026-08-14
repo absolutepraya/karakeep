@@ -7,7 +7,9 @@ runs:
     - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
-        node-version: 24
+        # Keep CI aligned with .nvmrc while the Node 24.19 native-addon cleanup
+        # regression is unresolved: https://github.com/nodejs/node/pull/65042
+        node-version-file: ".nvmrc"
         cache: "pnpm"
         registry-url: https://registry.npmjs.org
 

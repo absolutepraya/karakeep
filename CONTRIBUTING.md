@@ -29,7 +29,7 @@ Start here:
 ## Local setup
 
 This fork uses:
-- Node 24 (`.nvmrc`)
+- Node 24.18.1 (`.nvmrc`; temporarily pinned to avoid the Node 24.19 native-addon cleanup regression)
 - `pnpm@11.2.1` via corepack
 - root `.env` symlinked into `apps/web`, `apps/workers`, and `packages/db`
 
