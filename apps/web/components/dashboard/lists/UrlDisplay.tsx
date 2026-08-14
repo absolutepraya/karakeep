@@ -1,10 +1,4 @@
-export function UrlDisplay({
-  value,
-  label,
-}: {
-  value: string;
-  label: string;
-}) {
+export function UrlDisplay({ value, label }: { value: string; label: string }) {
   return (
     <div
       aria-label={label}
