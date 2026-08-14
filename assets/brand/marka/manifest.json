@@ -24,16 +24,18 @@
       "foreground": "#03132F",
       "background": "#FFFFFF",
       "padding": 0,
+      "outputs": []
+    },
+    {
+      "source": "assets/brand/marka/source/marka-ios-app-icon-dark.png",
+      "preserveArtwork": true,
       "outputs": [
-        { "path": "apps/web/public/brand/marka/marka-icon-16.png", "width": 16, "height": 16, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "apps/web/public/brand/marka/marka-icon-48.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "apps/web/public/brand/marka/marka-icon-128.png", "width": 128, "height": 128, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "apps/web/public/brand/marka/marka-icon-192.png", "width": 192, "height": 192, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "apps/web/public/brand/marka/marka-icon-512.png", "width": 512, "height": 512, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "apps/web/public/brand/marka/marka-apple-touch-icon.png", "width": 1024, "height": 1024, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "apps/landing/public/brand/marka/marka-icon.png", "width": 512, "height": 512, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "apps/landing/public/brand/marka/marka-apple-touch-icon.png", "width": 1024, "height": 1024, "source": "assets/brand/marka/source/marka-navy-app-icon.png" },
-        { "path": "docs/static/img/brand/marka/marka-icon.png", "width": 512, "height": 512, "source": "assets/brand/marka/source/marka-navy-app-icon.png" }
+        { "path": "apps/web/public/brand/marka/marka-icon-16.png", "width": 16, "height": 16, "source": "assets/brand/marka/source/marka-ios-app-icon-dark.png", "preserveArtwork": true },
+        { "path": "apps/web/public/brand/marka/marka-icon-48.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-ios-app-icon-dark.png", "preserveArtwork": true },
+        { "path": "apps/web/public/brand/marka/marka-icon-128.png", "width": 128, "height": 128, "source": "assets/brand/marka/source/marka-ios-app-icon-dark.png", "preserveArtwork": true },
+        { "path": "apps/web/public/brand/marka/marka-icon-192.png", "width": 192, "height": 192, "source": "assets/brand/marka/source/marka-ios-app-icon-dark.png", "preserveArtwork": true },
+        { "path": "apps/web/public/brand/marka/marka-icon-512.png", "width": 512, "height": 512, "source": "assets/brand/marka/source/marka-ios-app-icon-dark.png", "preserveArtwork": true },
+        { "path": "apps/web/public/brand/marka/marka-apple-touch-icon.png", "width": 1024, "height": 1024, "source": "assets/brand/marka/source/marka-ios-app-icon-dark.png", "preserveArtwork": true, "copySource": true }
       ]
     },
     {

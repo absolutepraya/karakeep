@@ -9,7 +9,10 @@ import { generateAssets, manifest } from "./generate-marka-assets.mjs";
 
 const BRAND_NAVY = [3, 19, 47];
 const BRAND_WHITE = [255, 255, 255];
+const COMPOSER_SOURCE = "assets/brand/marka/source/marka-ios-app-icon-dark.png";
 const SOURCE_HASHES = {
+  [COMPOSER_SOURCE]:
+    "23144032b5366b56a9ae0cc502b058f10c08ddcb61872025f1f5fbc542258357",
   "assets/brand/marka/source/marka-navy-app-icon.png":
     "9e7ebfe3ada9756fdc3eda2757c73b4da13b439d9ae06e147dbe5a8692c881f3",
   "assets/brand/marka/source/marka-navy-mark.png":
@@ -62,15 +65,47 @@ test("preserves the supplied Marka source PNG bytes", async () => {
   }
 });
 
+test("uses the preserved Composer artwork for the 1024px installed-app icon", async () => {
+  const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
+  await generateAssets({ outputRoot, writeIco: false });
+  const expected = createHash("sha256")
+    .update(await readFile(COMPOSER_SOURCE))
+    .digest("hex");
+  const actual = createHash("sha256")
+    .update(
+      await readFile(
+        join(
+          outputRoot,
+          "apps/web/public/brand/marka/marka-apple-touch-icon.png",
+        ),
+      ),
+    )
+    .digest("hex");
+
+  assert.equal(actual, expected);
+});
+
 test("generates every declared Marka PNG at its manifest dimensions", async () => {
   const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
   await generateAssets({ outputRoot, writeIco: false });
-  for (const output of manifest.outputs) {
+  for (const output of manifest.outputs.filter(
+    (output) => !output.preserveArtwork,
+  )) {
     const metadata = await sharp(join(outputRoot, output.path)).metadata();
     assert.equal(metadata.format, "png");
     assert.equal(metadata.width, output.width);
     assert.equal(metadata.height, output.height);
   }
+});
+
+test("retains Composer artwork color detail in resized PWA icons", async () => {
+  const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
+  await generateAssets({ outputRoot, writeIco: false });
+  const colors = await colorsIn(
+    join(outputRoot, "apps/web/public/brand/marka/marka-icon-512.png"),
+  );
+
+  assert.ok(colors.size > 2);
 });
 
 test("regenerates Marka assets deterministically", async () => {
@@ -97,7 +132,9 @@ test("generates only exact navy and white nontransparent Marka pixels", async ()
     BRAND_WHITE.map((part) => part.toString(16).padStart(2, "0")).join(""),
   ]);
 
-  for (const output of manifest.outputs) {
+  for (const output of manifest.outputs.filter(
+    (output) => !output.preserveArtwork,
+  )) {
     const colors = await colorsIn(join(outputRoot, output.path));
     assert.ok(colors.size > 0, output.path);
     assert.ok(

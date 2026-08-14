@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
@@ -163,6 +163,27 @@ export async function generateAssets({
 
     const sourcePath = join(repoRoot, source.source);
     const destination = join(outputRoot, output.path);
+
+    await mkdir(dirname(destination), { recursive: true });
+
+    if (source.preserveArtwork) {
+      if (output.copySource) {
+        await copyFile(sourcePath, destination);
+        continue;
+      }
+
+      await sharp(sourcePath)
+        .resize({
+          width: output.width,
+          height: output.height,
+          fit: "contain",
+        })
+        .keepIccProfile()
+        .png({ bitdepth: 16, compressionLevel: 9, palette: false })
+        .toFile(destination);
+      continue;
+    }
+
     const { crop, padding } = source;
     const foreground = output.foreground ?? source.foreground;
     const background = output.background ?? source.background;
@@ -173,8 +194,6 @@ export async function generateAssets({
     };
     const padX = Math.round(crop.width * padding);
     const padY = Math.round(crop.height * padding);
-
-    await mkdir(dirname(destination), { recursive: true });
 
     const image = sharp(sourcePath).extract(crop).extend({
       top: padY,
