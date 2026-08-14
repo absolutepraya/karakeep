@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
@@ -151,6 +151,22 @@ async function applyRoundedSquareCorners(data, info, radius) {
   return { data: rounded, info: { ...info, channels: 4 } };
 }
 
+async function trimWithImageMagick(destination) {
+  const temporaryDirectory = await mkdtemp(
+    join(dirname(destination), ".marka-trim-"),
+  );
+  const temporaryOutput = join(temporaryDirectory, "trimmed.png");
+
+  try {
+    await execa("magick", [destination, "-trim", "-strip", temporaryOutput]);
+    await sharp(temporaryOutput)
+      .png({ compressionLevel: 9, palette: false })
+      .toFile(destination);
+  } finally {
+    await rm(temporaryDirectory, { force: true, recursive: true });
+  }
+}
+
 export async function generateAssets({
   outputRoot = repoRoot,
   writeIco = true,
@@ -259,6 +275,10 @@ export async function generateAssets({
     })
       .png({ compressionLevel: 9, palette: false })
       .toFile(destination);
+
+    if (output.trim) {
+      await trimWithImageMagick(destination);
+    }
   }
 
   if (!writeIco) {

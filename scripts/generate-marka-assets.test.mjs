@@ -89,7 +89,7 @@ test("generates every declared Marka PNG at its manifest dimensions", async () =
   const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
   await generateAssets({ outputRoot, writeIco: false });
   for (const output of manifest.outputs.filter(
-    (output) => !output.preserveArtwork,
+    (output) => !output.preserveArtwork && !output.trim,
   )) {
     const metadata = await sharp(join(outputRoot, output.path)).metadata();
     assert.equal(metadata.format, "png");
@@ -160,6 +160,8 @@ test("generates transparent header wordmarks from one shared alpha geometry", as
 
   assert.deepEqual(navy.info, white.info);
   assert.equal(navy.info.channels, 4);
+  assert.equal(navy.info.width, 510);
+  assert.equal(navy.info.height, 135);
 
   for (let index = 0; index < navy.data.length; index += 4) {
     assert.equal(navy.data[index + 3], white.data[index + 3]);
@@ -172,16 +174,35 @@ test("generates transparent header wordmarks from one shared alpha geometry", as
   }
 });
 
+test("declares and applies ImageMagick trimming to transparent wordmark outputs", async () => {
+  const expectedPaths = [
+    "apps/web/public/brand/marka/marka-wordmark-navy.png",
+    "apps/web/public/brand/marka/marka-wordmark-white.png",
+    "screenshots/marka-logo.png",
+    "apps/landing/public/brand/marka/marka-wordmark-navy.png",
+    "apps/landing/public/brand/marka/marka-wordmark-white.png",
+    "docs/static/img/brand/marka/marka-wordmark-navy.png",
+    "docs/static/img/brand/marka/marka-wordmark-white.png",
+  ];
+
+  for (const path of expectedPaths) {
+    const output = manifest.outputs.find((output) => output.path === path);
+    assert.equal(output?.trim, true, path);
+  }
+});
+
 test("generates rounded-square favicon tiles with transparent outer corners", async () => {
   const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
   await generateAssets({ outputRoot, writeIco: false });
 
-  for (const output of manifest.outputs.filter((output) =>
-    output.path.endsWith("marka-favicon-light.png") ||
-    output.path.endsWith("marka-favicon-dark.png"),
+  for (const output of manifest.outputs.filter(
+    (output) =>
+      output.path.endsWith("marka-favicon-light.png") ||
+      output.path.endsWith("marka-favicon-dark.png"),
   )) {
     assert.equal(
-      manifest.sources.find((source) => source.source === output.source)?.padding,
+      manifest.sources.find((source) => source.source === output.source)
+        ?.padding,
       0.16,
       output.path,
     );
