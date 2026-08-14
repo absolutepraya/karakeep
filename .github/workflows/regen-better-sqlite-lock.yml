@@ -1,0 +1,52 @@
+name: Regenerate better-sqlite3 lockfile
+
+on:
+  push:
+    branches:
+      - fix/public-list-experience
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: Upgrade better-sqlite3 for Node 24
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          for (const file of [
+            "apps/web/package.json",
+            "apps/workers/package.json",
+            "packages/db/package.json",
+          ]) {
+            const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
+            pkg.dependencies["better-sqlite3"] = "^12.10.0";
+            fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+          }
+          NODE
+
+          pnpm install --no-frozen-lockfile
+          git diff --check
+
+      - name: Verify TRPC tests on Node 24
+        working-directory: packages/trpc
+        run: pnpm test
+
+      - name: Commit regenerated lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/regen-better-sqlite-lock.yml
+          git add apps/web/package.json apps/workers/package.json packages/db/package.json pnpm-lock.yaml
+          git commit -m "fix: support better-sqlite3 on Node 24"
+          git push origin HEAD:fix/public-list-experience
