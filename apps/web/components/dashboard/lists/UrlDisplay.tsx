@@ -11,8 +11,6 @@ export function UrlDisplay({
 }) {
   return (
     <div
-      role="textbox"
-      aria-readonly="true"
       aria-label={label}
       tabIndex={0}
       className={cn(
