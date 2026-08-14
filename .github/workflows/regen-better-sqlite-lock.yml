@@ -23,12 +23,12 @@ jobs:
           import { expect, test } from "vitest";
 
           import type { TestDB } from "./testUtils";
-          import { getTestDB } from "./testUtils";
+          import { buildTestContext } from "./testUtils";
 
           let previousDb: TestDB;
 
-          test("opens an in-memory test database", (context) => {
-            previousDb = getTestDB(context);
+          test("opens an in-memory test database", async (context) => {
+            previousDb = (await buildTestContext(false, context)).db;
             expect(previousDb.$client.open).toBe(true);
           });
 
@@ -57,12 +57,8 @@ jobs:
               'import type { TestContext } from "vitest";\nimport { vi } from "vitest";',
           )
           text = text.replace(
-              'export function getTestDB() {\n  return getInMemoryDB(true);\n}',
-              '''export function getTestDB(\n  context: Pick<TestContext, "onTestFinished">,\n) {\n  const db = getInMemoryDB(true);\n  context.onTestFinished(() => {\n    db.$client.close();\n  });\n  return db;\n}''',
-          )
-          text = text.replace(
               'export async function buildTestContext(\n  seedDB: boolean,\n): Promise<CustomTestContext> {\n  const db = getTestDB();',
-              'export async function buildTestContext(\n  seedDB: boolean,\n  context: Pick<TestContext, "onTestFinished">,\n): Promise<CustomTestContext> {\n  const db = getTestDB(context);',
+              'export async function buildTestContext(\n  seedDB: boolean,\n  context?: Pick<TestContext, "onTestFinished">,\n): Promise<CustomTestContext> {\n  const db = getTestDB();\n  context?.onTestFinished(() => {\n    db.$client.close();\n  });',
           )
           text = text.replace(
               'return async (context: object) => {',
@@ -74,35 +70,24 @@ jobs:
           )
           path.write_text(text)
 
+          path = Path("packages/trpc/routers/admin.test.ts")
+          text = path.read_text().replace(
+              'const testContext = await buildTestContext(true);',
+              'const testContext = await buildTestContext(true, context);',
+          )
+          path.write_text(text)
+
           path = Path("packages/trpc/lib/__tests__/search.test.ts")
-          text = path.read_text()
-          text = text.replace(
-              'import { getInMemoryDB } from "@karakeep/db/drizzle";\n',
-              '',
-          )
-          text = text.replace(
-              'import { AuthedContext } from "../..";\n',
-              'import { AuthedContext } from "../..";\nimport { getTestDB } from "../../testUtils";\n',
-          )
-          text = text.replace(
+          text = path.read_text().replace(
               'beforeEach(async () => {\n  const db = getInMemoryDB(true);',
-              'beforeEach(async (context) => {\n  const db = getTestDB(context);',
+              'beforeEach(async (context) => {\n  const db = getInMemoryDB(true);\n  context.onTestFinished(() => {\n    db.$client.close();\n  });',
           )
           path.write_text(text)
 
           path = Path("packages/trpc/lib/__tests__/ruleEngine.test.ts")
-          text = path.read_text()
-          text = text.replace(
-              'import { getInMemoryDB } from "@karakeep/db/drizzle";\n',
-              '',
-          )
-          text = text.replace(
-              'import { TestDB } from "../../testUtils";',
-              'import { getTestDB, TestDB } from "../../testUtils";',
-          )
-          text = text.replace(
+          text = path.read_text().replace(
               'beforeEach(async () => {\n    vi.resetAllMocks();\n    db = getInMemoryDB(/* runMigrations */ true);',
-              'beforeEach(async (context) => {\n    vi.resetAllMocks();\n    db = getTestDB(context);',
+              'beforeEach(async (context) => {\n    vi.resetAllMocks();\n    db = getInMemoryDB(/* runMigrations */ true);\n    context.onTestFinished(() => {\n      db.$client.close();\n    });',
           )
           path.write_text(text)
           PY
