@@ -1,4 +1,4 @@
-name: Diagnose TRPC SQLite cleanup
+name: Finalize TRPC SQLite cleanup
 
 on:
   push:
@@ -6,46 +6,20 @@ on:
       - fix/public-list-experience
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  diagnose:
+  finalize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
 
       - name: Setup
         uses: ./tooling/github/setup
 
-      - name: Add cleanup regression test
-        run: |
-          cat > packages/trpc/testUtils.cleanup.test.ts <<'EOF'
-          import { expect, test } from "vitest";
-
-          import type { TestDB } from "./testUtils";
-          import { buildTestContext } from "./testUtils";
-
-          let previousDb: TestDB;
-
-          test("opens an in-memory test database", async (context) => {
-            previousDb = (await buildTestContext(false, context)).db;
-            expect(previousDb.$client.open).toBe(true);
-          });
-
-          test("closes the database when the previous test finishes", () => {
-            expect(previousDb.$client.open).toBe(false);
-          });
-          EOF
-
-      - name: Verify regression test fails before fix
-        working-directory: packages/trpc
-        run: |
-          if pnpm exec vitest run testUtils.cleanup.test.ts; then
-            echo "Expected the cleanup regression test to fail before the fix"
-            exit 1
-          fi
-
-      - name: Apply candidate per-test cleanup
+      - name: Apply verified per-test cleanup
         run: |
           python3 <<'PY'
           from pathlib import Path
@@ -92,11 +66,35 @@ jobs:
           path.write_text(text)
           PY
 
+          pnpm exec oxfmt \
+            packages/trpc/testUtils.ts \
+            packages/trpc/routers/admin.test.ts \
+            packages/trpc/lib/__tests__/search.test.ts \
+            packages/trpc/lib/__tests__/ruleEngine.test.ts
           git diff --check
 
-      - name: Verify cleanup regression test passes
-        working-directory: packages/trpc
-        run: pnpm exec vitest run testUtils.cleanup.test.ts
+      - name: Verify cleanup behavior
+        run: |
+          cat > packages/trpc/testUtils.cleanup.test.ts <<'EOF'
+          import { expect, test } from "vitest";
+
+          import type { TestDB } from "./testUtils";
+          import { buildTestContext } from "./testUtils";
+
+          let previousDb: TestDB;
+
+          test("opens an in-memory test database", async (context) => {
+            previousDb = (await buildTestContext(false, context)).db;
+            expect(previousDb.$client.open).toBe(true);
+          });
+
+          test("closes the database when the previous test finishes", () => {
+            expect(previousDb.$client.open).toBe(false);
+          });
+          EOF
+          cd packages/trpc
+          pnpm exec vitest run testUtils.cleanup.test.ts
+          rm testUtils.cleanup.test.ts
 
       - name: Verify full TRPC suite
         working-directory: packages/trpc
@@ -105,3 +103,16 @@ jobs:
       - name: Verify TRPC typecheck
         working-directory: packages/trpc
         run: pnpm typecheck
+
+      - name: Commit verified cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/regen-better-sqlite-lock.yml
+          git add \
+            packages/trpc/testUtils.ts \
+            packages/trpc/routers/admin.test.ts \
+            packages/trpc/lib/__tests__/search.test.ts \
+            packages/trpc/lib/__tests__/ruleEngine.test.ts
+          git commit -m "fix: close TRPC test databases"
+          git push origin HEAD:fix/public-list-experience
