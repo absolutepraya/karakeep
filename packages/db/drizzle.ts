@@ -30,9 +30,16 @@ export type DB = typeof db;
 
 export function getInMemoryDB(runMigrations: boolean) {
   const mem = new Database(":memory:");
-  const db = drizzle(mem, { schema, logger: false });
-  if (runMigrations) {
-    migrate(db, { migrationsFolder: path.resolve(__dirname, "./drizzle") });
+  try {
+    const db = drizzle(mem, { schema, logger: false });
+    if (runMigrations) {
+      migrate(db, { migrationsFolder: path.resolve(__dirname, "./drizzle") });
+    }
+    return db;
+  } catch (error) {
+    if (mem.open) {
+      mem.close();
+    }
+    throw error;
   }
-  return db;
 }
