@@ -35,7 +35,10 @@ make_fake_docker() {
 set -euo pipefail
 if [[ -n "${FAKE_DOCKER_LOG:-}" ]]; then printf '%q ' "$@" >>"$FAKE_DOCKER_LOG"; printf '\n' >>"$FAKE_DOCKER_LOG"; fi
 if [[ "${1:-}" == "compose" && "${2:-}" == "version" ]]; then exit 0; fi
-if [[ "${1:-}" == "info" ]]; then exit 0; fi
+if [[ "${1:-}" == "info" ]]; then
+  [[ "${FAKE_DOCKER_INFO_FAIL:-0}" == "1" ]] && exit 1
+  exit 0
+fi
 if [[ "${1:-}" == "compose" ]]; then
   if [[ " $* " == *" ps --status running -q "* ]]; then exit 0; fi
   exit 0
@@ -43,6 +46,20 @@ fi
 exit 0
 EOF_DOCKER
   chmod +x "$dir/docker"
+}
+
+make_fake_uname_only() {
+  local dir="$1"
+  mkdir -p "$dir"
+  cat >"$dir/uname" <<'EOF_UNAME'
+#!/usr/bin/env bash
+case "${1:-}" in
+  -s) printf 'Linux\n' ;;
+  -m) printf 'x86_64\n' ;;
+  *) printf 'Linux\n' ;;
+esac
+EOF_UNAME
+  chmod +x "$dir/uname"
 }
 
 bash -n "$INSTALLER"
@@ -57,6 +74,43 @@ fake_bin="$root/bin"
 make_fake_docker "$fake_bin"
 export PATH="$fake_bin:$PATH"
 export FAKE_DOCKER_LOG="$root/docker.log"
+
+# A guided install must run and display host prerequisite checks before configuration.
+preflight_dir="$root/preflight"
+preflight_output="$(bash "$INSTALLER" \
+  --non-interactive --dry-run --yes \
+  --install-dir "$preflight_dir/install" --data-dir "$preflight_dir/data" \
+  --public-url https://keep.example.com --data-mode fresh \
+  --search managed --renderer managed --ai deferred 2>&1)"
+assert_contains "$preflight_output" "Checking host prerequisites"
+assert_contains "$preflight_output" "[ok] Linux"
+assert_contains "$preflight_output" "[ok] amd64 architecture"
+assert_contains "$preflight_output" "[ok] Docker CLI"
+assert_contains "$preflight_output" "[ok] Docker Compose v2"
+assert_contains "$preflight_output" "[ok] Docker daemon access"
+assert_contains "$preflight_output" "[ok] OpenSSL"
+assert_not_contains "$preflight_output" "Node.js is required"
+
+# Missing Docker must fail during preflight, even for a dry run, before configuration is written.
+missing_docker_bin="$root/missing-docker-bin"
+make_fake_uname_only "$missing_docker_bin"
+if PATH="$missing_docker_bin" /bin/bash "$INSTALLER" \
+  --non-interactive --dry-run --yes \
+  --install-dir "$root/missing-docker/install" --data-dir "$root/missing-docker/data" \
+  --public-url https://keep.example.com --data-mode fresh \
+  --search managed --renderer managed --ai deferred >"$root/missing-docker.out" 2>&1; then
+  fail "Installer unexpectedly passed preflight without Docker"
+fi
+assert_contains "$root/missing-docker.out" "Required command 'docker' was not found. Install it first and rerun this installer."
+[[ ! -e "$root/missing-docker/install" ]] || fail "Failed preflight wrote installation files"
+
+# Interactive setup explains defaults and offers the recommended configuration shortcut.
+recommended_home="$root/recommended-home"
+mkdir -p "$recommended_home"
+recommended_output="$(printf '\n%.0s' {1..12} | HOME="$recommended_home" bash "$INSTALLER" --no-start 2>&1)"
+assert_contains "$recommended_output" "Press Enter to accept the recommended value shown in [brackets]."
+assert_contains "$recommended_output" "Use the recommended Karakeep setup?"
+assert_contains "$recommended_home/karakeep/docker-compose.yml" "ghcr.io/karakeep-app/karakeep-chrome:release"
 
 # Dry run must not write configuration or disclose secrets.
 dry_dir="$root/dry"
