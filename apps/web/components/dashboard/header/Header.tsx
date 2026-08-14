@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import ProfileOptions from "@/components/dashboard/header/ProfileOptions";
@@ -18,9 +19,9 @@ export default async function Header() {
         <div className="hidden shrink-0 items-center sm:flex">
           <Link
             href={"/dashboard/bookmarks"}
-            className="flex w-56 items-center"
+            className="flex items-center justify-start [&_img]:h-7 [&_img]:w-auto"
           >
-            <MarkaLogo height={38} />
+            <MarkaLogo height={28} />
           </Link>
         </div>
         <div className="min-w-0 flex-1">

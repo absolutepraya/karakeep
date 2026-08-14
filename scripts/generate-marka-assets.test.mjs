@@ -176,6 +176,17 @@ test("generates rounded-square favicon tiles with transparent outer corners", as
   const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
   await generateAssets({ outputRoot, writeIco: false });
 
+  for (const output of manifest.outputs.filter((output) =>
+    output.path.endsWith("marka-favicon-light.png") ||
+    output.path.endsWith("marka-favicon-dark.png"),
+  )) {
+    assert.equal(
+      manifest.sources.find((source) => source.source === output.source)?.padding,
+      0.16,
+      output.path,
+    );
+  }
+
   for (const name of ["marka-favicon-light.png", "marka-favicon-dark.png"]) {
     const { data, info } = await pixelsIn(
       join(outputRoot, "apps/web/public/brand/marka", name),

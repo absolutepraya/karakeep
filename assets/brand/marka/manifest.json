@@ -5,7 +5,7 @@
       "crop": { "left": 285, "top": 178, "width": 715, "height": 882 },
       "foreground": "#03132F",
       "background": "#FFFFFF",
-      "padding": 0.08,
+      "padding": 0.16,
       "outputs": [
         { "path": "apps/web/public/brand/marka/marka-favicon-light.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-navy-mark.png", "cornerRadius": 9 }
       ]
@@ -43,7 +43,7 @@
       "crop": { "left": 339, "top": 252, "width": 629, "height": 750 },
       "foreground": "#FFFFFF",
       "background": "#03132F",
-      "padding": 0.08,
+      "padding": 0.16,
       "outputs": [
         { "path": "apps/web/public/brand/marka/marka-favicon-dark.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-white-mark.png", "cornerRadius": 9 }
       ]
