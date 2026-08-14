@@ -231,7 +231,10 @@ export function ManageCollaboratorsModal({
                       setNewCollaboratorRole(value as "viewer" | "editor")
                     }
                   >
-                    <SelectTrigger className="h-10 w-full sm:w-32">
+                    <SelectTrigger
+                      className="h-10 w-full sm:w-32"
+                      aria-label={`${t("lists.collaborators.add")} ${t("common.role")}`}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

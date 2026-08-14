@@ -10,5 +10,6 @@ export default defineConfig({
     alias: {
       "@/*": "./*",
     },
+    setupFiles: ["./vitest.setup.ts"],
   },
 });
