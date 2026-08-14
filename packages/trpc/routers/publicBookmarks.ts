@@ -44,34 +44,14 @@ export const publicBookmarks = router({
           description: true,
           icon: true,
         })
-        .extend({
-          ownerName: z.string(),
-          ownerImage: z.string().nullable(),
-        }),
+        .extend({ ownerName: z.string() }),
     )
     .query(async ({ input, ctx }) => {
-      const metadata = await List.getPublicListMetadata(
+      return await List.getPublicListMetadata(
         ctx,
         input.listId,
         /* token */ null,
       );
-      const owner = await ctx.db.query.users.findFirst({
-        columns: {
-          image: true,
-        },
-        where: eq(users.id, metadata.userId),
-      });
-
-      return {
-        name: metadata.name,
-        description: metadata.description,
-        icon: metadata.icon,
-        ownerName: metadata.ownerName,
-        ownerImage: getPublicOwnerImageUrl(
-          owner?.image ?? null,
-          metadata.userId,
-        ),
-      };
     }),
   getPublicBookmarksInList: publicProcedure
     .input(
