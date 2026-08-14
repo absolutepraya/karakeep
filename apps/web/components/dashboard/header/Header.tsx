@@ -14,14 +14,14 @@ export default async function Header() {
   }
 
   return (
-    <header className="bg-sidebar/95 supports-[backdrop-filter]:bg-sidebar/85 sticky left-0 right-0 top-0 z-50 backdrop-blur">
+    <header className="bg-sidebar/95 sticky left-0 right-0 top-0 z-50">
       <div className="flex h-16 items-center gap-3 overflow-x-auto overflow-y-hidden px-3 sm:px-4">
         <div className="hidden shrink-0 items-center sm:flex">
           <Link
             href={"/dashboard/bookmarks"}
-            className="flex w-56 items-center justify-start"
+            className="flex w-56 items-center justify-start pl-2"
           >
-            <MarkaLogo height={45} />
+            <MarkaLogo height={30} />
           </Link>
         </div>
         <div className="min-w-0 flex-1">
