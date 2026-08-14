@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "O teu {{year}} resumido",
-    "subtitle": "Un ano en Karakeep",
+    "subtitle": "Un ano en Marka",
     "banner": {
       "title": "Xa está listo o teu resumo de 2025!",
       "description": "Consulta o teu ano en marcadores",
@@ -1161,7 +1161,7 @@
         "assets": "Activos"
       }
     },
-    "footer": "Feito con Karakeep",
+    "footer": "Feito con Marka",
     "share": "Compartir",
     "download": "Descargar",
     "close": "Pechar",

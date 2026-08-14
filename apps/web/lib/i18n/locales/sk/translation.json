@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Tvoj {{year}} Wrapped",
-    "subtitle": "Rok v Karakeep",
+    "subtitle": "Rok v Marka",
     "banner": {
       "title": "Tvoj 2025 Wrapped je pripravený!",
       "description": "Pozri si svoj rok v záložkách",
@@ -1161,7 +1161,7 @@
         "assets": "Aktíva"
       }
     },
-    "footer": "Vyrobené pomocou Karakeep",
+    "footer": "Vyrobené pomocou Marka",
     "share": "Zdieľať",
     "download": "Stiahnuť",
     "close": "Zavrieť",

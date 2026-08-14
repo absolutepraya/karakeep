@@ -129,19 +129,19 @@ export default function SidebarProfileOptions() {
         <DropdownMenuItem asChild>
           <a href="https://karakeep.app/apps" target="_blank" rel="noreferrer">
             <Puzzle className="mr-2 size-4" />
-            {t("options.apps_extensions")}
+            Upstream Karakeep apps and extensions
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <a href="https://docs.karakeep.app" target="_blank" rel="noreferrer">
             <BookOpen className="mr-2 size-4" />
-            {t("options.documentation")}
+            Upstream Karakeep documentation
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <a href="https://x.com/karakeep_app" target="_blank" rel="noreferrer">
             <Twitter className="mr-2 size-4" />
-            {t("options.follow_us_on_x")}
+            Follow upstream Karakeep on X
           </a>
         </DropdownMenuItem>
         <Separator className="my-2" />

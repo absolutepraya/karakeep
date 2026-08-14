@@ -1,5 +1,5 @@
-name: Bug Report
-description: Create a report to help us fix bugs & issues in existing supported functionality
+name: Marka Bug Report
+description: Create a report to help us fix bugs in supported Marka functionality
 labels: ["bug", "status/untriaged"]
 body:
   - type: markdown
@@ -47,15 +47,15 @@ body:
     attributes:
       label: Device Details
       description: |
-        If this is an issue that occurs when using the Karakeep interface, please provide details of the device/browser used which presents the reported issue.
+        If this is an issue that occurs when using the Marka interface, please provide details of the device or browser used which presents the reported issue.
       placeholder: (eg. Firefox 97 (64-bit) on Windows 11)
     validations:
       required: false
   - type: input
     id: bsversion
     attributes:
-      label: Exact Karakeep Version
-      description: This can be found in the bottom left of the page (e.g. Karakeep v0.18.0)
+      label: Exact Marka Version
+      description: This can be found in the bottom left of the page (for example, Marka v0.18.0)
       placeholder: (eg. v0.18.0)
     validations:
       required: true
@@ -65,7 +65,7 @@ body:
     attributes:
       label: Environment Details
       description: |
-        Tell us where Karakeep is running, and reverse proxy (e.g. Docker, Bare linux, Proxmox, Unraid, K8s, Cloud).
+        Tell us where Marka is running and which reverse proxy is used (for example, Docker, bare Linux, Proxmox, Unraid, K8s, or Cloud).
       placeholder: (eg. Docker on Ubuntu 22.04 behind Caddy, or Proxmox LXC)
     validations:
       required: false
@@ -85,7 +85,7 @@ body:
     attributes:
       label: Have you checked the troubleshooting guide?
       description: |
-        We have a troubleshooting guide that you can find [here](https://docs.karakeep.app/administration/troubleshooting). Please check it out as you might find a solution to your problem.
+        Check the [upstream troubleshooting guide](https://docs.karakeep.app/administration/troubleshooting), which may contain a solution to your problem.
       options:
         - label: I have checked the troubleshooting guide and I haven't found a solution to my problem
           required: true

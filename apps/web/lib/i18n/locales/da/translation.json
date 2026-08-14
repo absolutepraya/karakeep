@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Din {{year}}-opsummering",
-    "subtitle": "Et år i Karakeep",
+    "subtitle": "Et år i Marka",
     "banner": {
       "title": "Din opsummering for 2025 er klar!",
       "description": "Se dit år i bogmærker",
@@ -1161,7 +1161,7 @@
         "assets": "Aktiver"
       }
     },
-    "footer": "Lavet med Karakeep",
+    "footer": "Lavet med Marka",
     "share": "Del",
     "download": "Hent",
     "close": "Luk",

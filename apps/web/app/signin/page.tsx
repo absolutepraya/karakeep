@@ -1,5 +1,5 @@
 import { redirect } from "next/dist/client/components/navigation";
-import KarakeepLogo from "@/components/KarakeepIcon";
+import MarkaLogo from "@/components/MarkaLogo";
 import SignInForm from "@/components/signin/SignInForm";
 import { getServerAuthSession } from "@/server/auth";
 
@@ -17,7 +17,7 @@ export default async function SignInPage() {
       />
       <div className="relative w-full max-w-md space-y-6">
         <div className="flex items-center justify-center">
-          <KarakeepLogo height={72} />
+          <MarkaLogo height={72} />
         </div>
         <SignInForm />
       </div>
