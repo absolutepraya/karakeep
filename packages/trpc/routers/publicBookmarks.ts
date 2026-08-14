@@ -33,7 +33,7 @@ function getPublicSignedAssetUrl(
     serverConfig.signingSecret(),
     expireAt,
   );
-  return `${serverConfig.publicApiUrl}/public/assets/${assetId}?token=${signedToken}`;
+  return `${serverConfig.publicApiUrl}/public/assets/${assetId}?token=${encodeURIComponent(signedToken)}`;
 }
 
 function getPublicOwnerImageUrl(image: string | null, userId: string) {
