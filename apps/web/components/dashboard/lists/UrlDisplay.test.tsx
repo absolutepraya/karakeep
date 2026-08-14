@@ -18,5 +18,12 @@ describe("UrlDisplay", () => {
     expect(display.getAttribute("contenteditable")).toBeNull();
     expect(display.getAttribute("tabindex")).toBeNull();
     expect(display.textContent).toBe(value);
+    expect(display.classList.contains("min-w-0")).toBe(true);
+    expect(display.classList.contains("flex-1")).toBe(true);
+    expect(display.firstElementChild?.classList.contains("min-w-0")).toBe(true);
+    expect(display.firstElementChild?.classList.contains("flex-1")).toBe(true);
+    expect(display.firstElementChild?.classList.contains("truncate")).toBe(
+      true,
+    );
   });
 });

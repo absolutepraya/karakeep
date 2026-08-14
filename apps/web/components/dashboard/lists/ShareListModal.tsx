@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -56,7 +56,7 @@ export function ShareListModal({
             {t("lists.public_list.description")} {t("lists.rss.description")}
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-4 space-y-6">
+        <div className="mt-4 min-w-0 space-y-6">
           <PublicListLink list={list} />
           <RssLink listId={list.id} />
         </div>
