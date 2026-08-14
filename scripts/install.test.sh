@@ -109,7 +109,9 @@ recommended_home="$root/recommended-home"
 mkdir -p "$recommended_home"
 recommended_output="$(printf '\n%.0s' {1..12} | HOME="$recommended_home" bash "$INSTALLER" --no-start 2>&1)"
 assert_contains "$recommended_output" "Press Enter to accept the recommended value shown in [brackets]."
-assert_contains "$recommended_output" "Use the recommended Karakeep setup?"
+# Bash read -p only emits its prompt for terminal input, so verify the prompt itself in the script
+# and the resulting configuration behavior separately when stdin is piped for this automated test.
+assert_contains "$INSTALLER" "Use the recommended Karakeep setup?"
 assert_contains "$recommended_home/karakeep/docker-compose.yml" "ghcr.io/karakeep-app/karakeep-chrome:release"
 
 # Dry run must not write configuration or disclose secrets.
