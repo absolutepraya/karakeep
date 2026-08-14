@@ -7,11 +7,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [tsconfigPaths({ skip: (dir) => dir === ".claude" })],
   test: {
+    pool: "threads",
     poolOptions: {
-      forks: {
-        // The TRPC suite uses native better-sqlite3 databases. Reusing one fork
-        // lets test cleanup run before Node 24 tears down the worker environment.
-        singleFork: true,
+      threads: {
+        // better-sqlite3 supports worker threads. Keeping the TRPC suite in one
+        // worker avoids Node 24 child-process teardown racing native cleanup.
+        singleThread: true,
       },
     },
     alias: {
