@@ -1,7 +1,8 @@
 import Link from "next/link";
-import KarakeepLogo from "@/components/KarakeepIcon";
+import MarkaLogo from "@/components/MarkaLogo";
 import { buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { MARKA } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { RssIcon } from "lucide-react";
 
@@ -23,8 +24,12 @@ export default function PublicListHeader({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/" aria-label="Karakeep home" className="inline-flex">
-          <KarakeepLogo height={30} />
+        <Link
+          href="/"
+          aria-label={`${MARKA.name} home`}
+          className="inline-flex"
+        >
+          <MarkaLogo height={30} />
         </Link>
         <Link
           href={rssLink}

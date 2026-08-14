@@ -1,6 +1,6 @@
 # Docs site
 
-This directory contains the Docusaurus docs site for Karakeep as maintained in this fork.
+This directory contains the Docusaurus docs site for Marka as maintained in this fork.
 
 ## What lives here
 
@@ -15,17 +15,18 @@ This directory contains the Docusaurus docs site for Karakeep as maintained in t
 
 This repository keeps two related but distinct documentation layers:
 
-1. **Repo / fork docs**
-   - `README.md`
-   - `CONTRIBUTING.md`
-   - `docs/fork-setup.md`
-   - `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`
+1. **Repository documentation map**
+   - `README.md` is the public fork framing.
+   - `CONTRIBUTING.md` contains contribution rules.
+   - `docs/fork-setup.md` contains fork operation.
+   - `docs/README.md` contains docs-site development.
+   - `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` provide concise assistant operations context.
 
 2. **Docs site content**
    - end-user and developer docs under `docs/docs/**`
    - generated API docs under `docs/api/**`
 
-The docs site should stay broadly **upstream-first in product framing**, while still reflecting this fork’s real development and operator workflow where relevant.
+The docs-site configuration and hosted presentation remain owned by deferred docs work. Keep its current upstream product context intact while documenting fork-specific development and operator workflow where relevant.
 
 ## Install
 

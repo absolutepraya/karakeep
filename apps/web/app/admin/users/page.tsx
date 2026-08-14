@@ -5,6 +5,7 @@ import InvitesListSkeleton from "@/components/admin/InvitesListSkeleton";
 import UserList from "@/components/admin/UserList";
 import UserListSkeleton from "@/components/admin/UserListSkeleton";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { MARKA } from "@/lib/brand";
 import { useTranslation } from "@/lib/i18n/server";
 import { getQueryClient, serverTrpc } from "@/server/api/trpc";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // oxlint-disable-next-line rules-of-hooks
   const { t } = await useTranslation();
   return {
-    title: `${t("admin.users_list.users_list")} | Karakeep`,
+    title: `${t("admin.users_list.users_list")} | ${MARKA.name}`,
   };
 }
 

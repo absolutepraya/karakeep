@@ -1,12 +1,12 @@
 # Contributing
 
-Thanks for taking the time to improve Karakeep.
+Thanks for taking the time to improve Marka.
 
-This repository is an **opinionated personal fork** of upstream Karakeep, so contribution flow here is a little different from the main project.
+This repository is the **Marka fork** of the upstream project, so contribution flow here is a little different from the main project.
 
 ## Which repo should you contribute to?
 
-### Contribute to upstream Karakeep if...
+### Contribute upstream if...
 - your change is generally useful to the main project
 - it is not specific to this fork’s UX/QoL direction
 - it affects the broader community-facing product, install flow, or platform support
@@ -36,6 +36,9 @@ This fork uses:
 Quick start:
 
 ```bash
+nvm install
+nvm use
+corepack enable
 pnpm install
 
 ln -sf ../../.env apps/web/.env
@@ -85,14 +88,13 @@ Notes:
 - Mention if a change would make upstream sync harder.
 
 ### Documentation changes
-If you touch fork/dev/deploy facts, keep the relevant docs aligned:
-- `README.md`
-- `CONTRIBUTING.md`
-- `AGENTS.md`
-- `CLAUDE.md`
-- `GEMINI.md`
-- `docs/fork-setup.md`
-- relevant docs-site pages under `docs/docs/**`
+If you touch fork, development, or deployment facts, follow the authoritative documentation map:
+- `README.md` provides public fork framing.
+- `CONTRIBUTING.md` provides contribution rules.
+- `docs/fork-setup.md` provides fork operation.
+- `docs/README.md` provides docs-site development.
+- `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` provide concise assistant operations context.
+- Relevant docs-site pages under `docs/docs/**` must stay aligned when their content changes.
 
 ## PR guidance
 
@@ -105,6 +107,14 @@ A good PR for this repo should include:
 
 ## Review expectations
 
-This is a personal fork, so review cadence is best-effort rather than community-SLA driven.
+Pull requests targeting `main` may receive an automated CodeRabbit review in addition to the repository's GitHub Actions checks.
 
-If you need a guaranteed path to merge for a generally useful change, upstream Karakeep is usually the better place to propose it.
+During the initial rollout, CodeRabbit is advisory:
+- GitHub Actions remains the source of truth for deterministic lint, format, typecheck, test, generated-artifact, Knip, and React Doctor validation.
+- CodeRabbit adds contextual review, summaries, repository-specific guidance, and check context; it does not replace CI.
+- CodeRabbit does not automatically request changes or act as a required merge gate during this calibration period.
+- Contributors can reply to CodeRabbit comments or mention `@coderabbitai` in a PR discussion for follow-up context. A review can be requested explicitly with `@coderabbitai review` when needed.
+
+This is a personal fork, so human review cadence is best-effort rather than community-SLA driven.
+
+If you need a guaranteed path to merge for a generally useful change, the upstream Karakeep project is usually the better place to propose it.

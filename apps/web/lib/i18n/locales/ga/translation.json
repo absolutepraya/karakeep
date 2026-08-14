@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "{{year}} Fillte agat",
-    "subtitle": "Bliain i gKarakeep",
+    "subtitle": "Bliain i Marka",
     "banner": {
       "title": "Tá do Fillte 2025 réidh!",
       "description": "Féach ar do bhliain i leabharmharcanna",
@@ -1161,7 +1161,7 @@
         "assets": "Sócmhainní"
       }
     },
-    "footer": "Déanta le Karakeep",
+    "footer": "Déanta le Marka",
     "share": "Comhroinn",
     "download": "Íoslódáil",
     "close": "Dún",

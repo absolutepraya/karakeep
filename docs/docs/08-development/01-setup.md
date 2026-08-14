@@ -14,6 +14,9 @@ It reflects the workflow used in this fork:
 For most contributors to this fork, the fastest path is:
 
 ```bash
+nvm install
+nvm use
+corepack enable
 pnpm install
 
 ln -sf ../../.env apps/web/.env

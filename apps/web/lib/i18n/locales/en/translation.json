@@ -1104,7 +1104,7 @@
   },
   "wrapped": {
     "title": "Your {{year}} Wrapped",
-    "subtitle": "A Year in Karakeep",
+    "subtitle": "A Year in Marka",
     "banner": {
       "title": "Your 2025 Wrapped is ready!",
       "description": "See your year in bookmarks",
@@ -1145,7 +1145,7 @@
         "assets": "Assets"
       }
     },
-    "footer": "Made with Karakeep",
+    "footer": "Made with Marka",
     "share": "Share",
     "download": "Download",
     "close": "Close",

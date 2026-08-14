@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth/client";
+import { MARKA } from "@/lib/brand";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
@@ -170,7 +171,7 @@ export default function InviteAcceptForm({ token }: InviteAcceptFormProps) {
           Accept Your Invitation
         </CardTitle>
         <CardDescription>
-          Complete your account setup to join Karakeep
+          Complete your account setup to join {MARKA.name}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

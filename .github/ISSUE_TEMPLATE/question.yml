@@ -1,8 +1,8 @@
-name: Question / Support Request
-description: Get help with anything related to Karakeep
+name: Marka Question / Support Request
+description: Get help with anything related to Marka
 labels: ["question"]
 body:
   - type: markdown
     attributes:
       value: |
-        We use Github discussions for anything that's not a bug report or a feature request. Please ask your question in the [Q&A section](https://github.com/karakeep-app/karakeep/discussions/categories/q-a) and someone will answer it soon!
+        Use GitHub Discussions for anything that is not a bug report or feature request. For upstream product questions, ask in the [upstream Q&A section](https://github.com/karakeep-app/karakeep/discussions/categories/q-a).

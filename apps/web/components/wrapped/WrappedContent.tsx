@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { MARKA } from "@/lib/brand";
 import {
   BookOpen,
   Calendar,
@@ -115,7 +116,7 @@ export const WrappedContent = forwardRef<HTMLDivElement, WrappedContentProps>(
                 Your {stats.year} Wrapped
               </h1>
               <p className="mt-1 text-xs text-slate-300 md:text-sm">
-                A Year in Karakeep
+                A Year in {MARKA.name}
               </p>
               {userName && (
                 <p className="mt-2 text-sm text-slate-400">{userName}</p>
@@ -381,7 +382,7 @@ export const WrappedContent = forwardRef<HTMLDivElement, WrappedContentProps>(
 
           {/* Footer */}
           <div className="pb-4 pt-1 text-center text-[10px] text-slate-500">
-            Made with Karakeep
+            Made with {MARKA.name}
           </div>
         </div>
       </div>

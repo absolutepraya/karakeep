@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Il tuo riepilogo {{year}}",
-    "subtitle": "Un anno su Karakeep",
+    "subtitle": "Un anno su Marka",
     "banner": {
       "title": "Il tuo riepilogo 2025 è pronto!",
       "description": "Guarda il tuo anno in segnalibri",
@@ -1161,7 +1161,7 @@
         "assets": "Risorse"
       }
     },
-    "footer": "Realizzato con Karakeep",
+    "footer": "Realizzato con Marka",
     "share": "Condividi",
     "download": "Scarica",
     "close": "Chiudi",

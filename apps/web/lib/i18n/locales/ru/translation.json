@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Ваш {{year}} Wrapped",
-    "subtitle": "Год в Karakeep",
+    "subtitle": "Год в Marka",
     "banner": {
       "title": "Ваш 2025 Wrapped готов!",
       "description": "Посмотрите свой год в закладках",
@@ -1161,7 +1161,7 @@
         "assets": "Ресурсы"
       }
     },
-    "footer": "Сделано с помощью Karakeep",
+    "footer": "Сделано с помощью Marka",
     "share": "Поделиться",
     "download": "Скачать",
     "close": "Закрыть",

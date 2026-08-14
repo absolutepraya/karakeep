@@ -2,6 +2,7 @@
 
 import { RefObject, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { MARKA } from "@/lib/brand";
 import { Download, Loader2, Share2 } from "lucide-react";
 import { domToPng } from "modern-screenshot";
 
@@ -12,7 +13,7 @@ interface ShareButtonProps {
 
 export function ShareButton({
   contentRef,
-  fileName = "karakeep-wrapped-2025.png",
+  fileName = "marka-wrapped-2025.png",
 }: ShareButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -46,8 +47,8 @@ export function ShareButton({
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: "My 2025 Karakeep Wrapped",
-            text: "Check out my 2025 Karakeep Wrapped!",
+            title: `My 2025 ${MARKA.name} Wrapped`,
+            text: `Check out my 2025 ${MARKA.name} Wrapped!`,
           });
           return;
         }
