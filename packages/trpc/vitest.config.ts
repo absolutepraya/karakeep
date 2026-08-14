@@ -7,6 +7,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [tsconfigPaths({ skip: (dir) => dir === ".claude" })],
   test: {
+    setupFiles: ["./vitest.setup.ts"],
     pool: "threads",
     poolOptions: {
       threads: {
