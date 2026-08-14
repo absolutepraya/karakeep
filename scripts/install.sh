@@ -13,7 +13,7 @@ COMPOSE_PROJECT_NAME="karakeep"
 WEB_IMAGE="ghcr.io/absolutepraya/karakeep:web-main"
 WORKERS_IMAGE="ghcr.io/absolutepraya/karakeep:workers-main"
 MEILI_IMAGE="getmeili/meilisearch:v1.41.0"
-CHROME_IMAGE="gcr.io/zenika-hub/alpine-chrome:124"
+CHROME_IMAGE="zenika/alpine-chrome:124"
 
 COMMAND="install"
 INSTALL_DIR=""
