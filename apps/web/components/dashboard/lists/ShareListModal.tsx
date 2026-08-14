@@ -52,11 +52,14 @@ export function ShareListModal({
       <ResponsiveDialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("lists.share_list")}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {t("lists.public_list.description")} {t("lists.rss.description")}
+          </DialogDescription>
         </DialogHeader>
-        <DialogDescription className="mt-4 space-y-6">
+        <div className="mt-4 space-y-6">
           <PublicListLink list={list} />
           <RssLink listId={list.id} />
-        </DialogDescription>
+        </div>
         <DialogFooter className="sm:justify-end">
           <DialogClose asChild>
             <Button type="button" variant="secondary">
