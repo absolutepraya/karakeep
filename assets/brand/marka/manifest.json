@@ -3,27 +3,25 @@
     {
       "source": "assets/brand/marka/source/marka-navy-mark.png",
       "crop": { "left": 285, "top": 178, "width": 715, "height": 882 },
+      "foreground": "#03132F",
       "background": "#FFFFFF",
       "padding": 0.08,
       "outputs": [
-        { "path": "apps/web/public/brand/marka/marka-favicon-light.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-navy-mark.png" }
+        { "path": "apps/web/public/brand/marka/marka-favicon-light.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-navy-mark.png", "cornerRadius": 9 }
       ]
     },
     {
       "source": "assets/brand/marka/source/marka-navy-wordmark.png",
       "crop": { "left": 96, "top": 462, "width": 1066, "height": 321 },
+      "foreground": "#03132F",
       "background": "#FFFFFF",
       "padding": 0.08,
-      "outputs": [
-        { "path": "apps/web/public/brand/marka/marka-wordmark-navy.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-navy-wordmark.png" },
-        { "path": "screenshots/marka-logo.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-navy-wordmark.png" },
-        { "path": "apps/landing/public/brand/marka/marka-wordmark-navy.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-navy-wordmark.png" },
-        { "path": "docs/static/img/brand/marka/marka-wordmark-navy.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-navy-wordmark.png" }
-      ]
+      "outputs": []
     },
     {
       "source": "assets/brand/marka/source/marka-navy-app-icon.png",
       "crop": { "left": 183, "top": 168, "width": 888, "height": 912 },
+      "foreground": "#03132F",
       "background": "#FFFFFF",
       "padding": 0,
       "outputs": [
@@ -41,29 +39,36 @@
     {
       "source": "assets/brand/marka/source/marka-white-mark.png",
       "crop": { "left": 339, "top": 252, "width": 629, "height": 750 },
+      "foreground": "#FFFFFF",
       "background": "#03132F",
       "padding": 0.08,
       "outputs": [
-        { "path": "apps/web/public/brand/marka/marka-favicon-dark.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-white-mark.png" }
+        { "path": "apps/web/public/brand/marka/marka-favicon-dark.png", "width": 48, "height": 48, "source": "assets/brand/marka/source/marka-white-mark.png", "cornerRadius": 9 }
       ]
     },
     {
       "source": "assets/brand/marka/source/marka-white-wordmark.png",
       "crop": { "left": 150, "top": 489, "width": 983, "height": 266 },
+      "foreground": "#FFFFFF",
       "background": "#03132F",
       "padding": 0.08,
       "outputs": [
-        { "path": "apps/web/public/brand/marka/marka-wordmark-white.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png" },
+        { "path": "apps/web/public/brand/marka/marka-wordmark-navy.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png", "foreground": "#03132F", "background": "transparent" },
+        { "path": "screenshots/marka-logo.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png", "foreground": "#03132F", "background": "transparent" },
+        { "path": "apps/landing/public/brand/marka/marka-wordmark-navy.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png", "foreground": "#03132F", "background": "transparent" },
+        { "path": "docs/static/img/brand/marka/marka-wordmark-navy.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png", "foreground": "#03132F", "background": "transparent" },
+        { "path": "apps/web/public/brand/marka/marka-wordmark-white.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png", "background": "transparent" },
         { "path": "screenshots/marka-social.png", "width": 1200, "height": 630, "source": "assets/brand/marka/source/marka-white-wordmark.png" },
-        { "path": "apps/landing/public/brand/marka/marka-wordmark-white.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png" },
+        { "path": "apps/landing/public/brand/marka/marka-wordmark-white.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png", "background": "transparent" },
         { "path": "apps/landing/public/brand/marka/marka-social.png", "width": 1200, "height": 630, "source": "assets/brand/marka/source/marka-white-wordmark.png" },
-        { "path": "docs/static/img/brand/marka/marka-wordmark-white.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png" },
+        { "path": "docs/static/img/brand/marka/marka-wordmark-white.png", "width": 598, "height": 166, "source": "assets/brand/marka/source/marka-white-wordmark.png", "background": "transparent" },
         { "path": "docs/static/img/brand/marka/marka-social.png", "width": 1200, "height": 630, "source": "assets/brand/marka/source/marka-white-wordmark.png" }
       ]
     },
     {
       "source": "assets/brand/marka/source/marka-white-app-icon.png",
       "crop": { "left": 258, "top": 251, "width": 739, "height": 751 },
+      "foreground": "#FFFFFF",
       "background": "#03132F",
       "padding": 0,
       "outputs": []
