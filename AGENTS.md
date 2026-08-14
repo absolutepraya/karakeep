@@ -12,10 +12,11 @@ When facts conflict, use these as the source of truth:
 
 - **Public repo framing:** `README.md`
 - **Contribution expectations:** `CONTRIBUTING.md`
-- **Fork-specific local dev / deploy / operator workflow:** `docs/fork-setup.md`
+- **Guided Docker self-hosting:** `docs/docs/02-installation/11-guided-docker-setup.md`
+- **Fork-specific local dev / personal VPS deploy / operator workflow:** `docs/fork-setup.md`
 - **Docs-site workflow:** `docs/README.md`
 
-Keep this file aligned with `AGENTS.md` and `CLAUDE.md`.
+Keep this file aligned with `CLAUDE.md` and `GEMINI.md`.
 
 ## Project overview
 
@@ -31,21 +32,54 @@ Main stack:
 ## Repo structure
 
 ### Apps
-- `apps/web` — main web application
-- `apps/workers` — background workers
-- `apps/browser-extension` — browser extension
-- `apps/mobile` — Expo mobile app
-- `apps/landing` — marketing / landing site
-- `apps/mcp` — MCP server
+- `apps/web` - main web application
+- `apps/workers` - background workers
+- `apps/browser-extension` - browser extension
+- `apps/mobile` - Expo mobile app
+- `apps/landing` - marketing / landing site
+- `apps/mcp` - MCP server
 
 ### Packages
-- `packages/trpc` — core business logic and routers
-- `packages/db` — schema and migrations
-- `packages/shared` — shared code and types
-- `packages/shared-react` — shared React helpers/components
-- `packages/shared-server` — shared server-only logic
-- `packages/open-api` — OpenAPI artifacts
-- `packages/sdk` — TypeScript SDK
+- `packages/trpc` - core business logic and routers
+- `packages/db` - schema and migrations
+- `packages/shared` - shared code and types
+- `packages/shared-react` - shared React helpers/components
+- `packages/shared-server` - shared server-only logic
+- `packages/open-api` - OpenAPI artifacts
+- `packages/sdk` - TypeScript SDK
+
+## Guided self-host deployment
+
+The preferred portable setup for a new self-hosted instance is `scripts/install.sh`. The public one-line entry point is:
+
+```bash
+curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/karakeep/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
+```
+
+Important installer facts:
+
+- supported host scope is Linux `amd64` with Docker Engine, Docker Compose v2, and OpenSSL already installed
+- the script never installs Docker, changes firewall rules, configures DNS, or provisions TLS/reverse-proxy infrastructure
+- default configuration directory is `~/karakeep`; default persistent data directory is `~/karakeep/data`
+- generated Compose project name is `karakeep`
+- generated app images are the paired `ghcr.io/absolutepraya/karakeep:web-main` and `ghcr.io/absolutepraya/karakeep:workers-main` tags
+- the default web listener is `127.0.0.1:3000`, intended to sit behind an operator-managed reverse proxy for Internet-facing installs
+- search choices are managed Meilisearch, external Meilisearch, or disabled search
+- renderer choices are managed private Chrome, external token-protected Browserless, or disabled browser rendering
+- AI choices are disabled, OpenAI-compatible, or deferred
+- non-interactive installs require explicit deployment choices and accept secrets only through environment variables, never command-line flags
+- generated `app.env`, `workers.env`, and `.data-dir` files use restrictive permissions and secrets must never be printed or committed
+- a normal rerun refuses to overwrite generated config; `--reconfigure` first creates a timestamped config backup
+- `uninstall` removes containers/network only and deliberately preserves configuration and persistent data
+- the generated helper supports `status`, `backup`, `update`, `start`, `stop`, and `uninstall`
+
+Use an immutable release tag or commit SHA instead of `main` in the raw URL when reproducibility is required. The full installer contract and non-interactive examples are in `docs/docs/02-installation/11-guided-docker-setup.md`.
+
+Validate installer changes with:
+
+```bash
+bash scripts/install.test.sh
+```
 
 ## Local development for this fork
 
@@ -72,9 +106,9 @@ pnpm dev:start
 ```
 
 Useful variants:
-- `pnpm dev:start` — foreground
-- `pnpm dev:start -d` — detached
-- `pnpm dev:stop` — stop detached services
+- `pnpm dev:start` - foreground
+- `pnpm dev:start -d` - detached
+- `pnpm dev:stop` - stop detached services
 
 What it does:
 - runs `web` + `workers` natively
@@ -109,17 +143,18 @@ Every pull restores the full `/data` volume because SQLite rows can reference st
 
 ## Deploy model for this fork
 
-This fork uses a **pull-based** deploy flow.
+This fork uses a **pull-based** personal VPS deploy flow that is separate from the portable guided installer.
 
 High-level flow:
 - CI passes on `main`
-- `.github/workflows/docker.yml` builds and pushes `ghcr.io/<owner>/karakeep:main`
-- a Watchtower container on the VPS polls GHCR and redeploys automatically
+- `.github/workflows/docker.yml` builds and pushes matching `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main` images from the same successful commit
+- a Watchtower container on the VPS polls the paired GHCR tags and redeploys automatically
 
 Important notes:
 - no inbound SSH push-deploy from CI
-- canonical production compose: `deploy/docker-compose.prod.yml`
-- details live in `docs/fork-setup.md`
+- canonical personal VPS compose: `deploy/docker-compose.prod.yml`
+- the guided installer generates its own portable Compose file and does not add Watchtower automatically
+- details for the existing personal VPS live in `docs/fork-setup.md`
 
 ## Quality / maintenance tooling
 
@@ -130,9 +165,10 @@ Standard commands:
 - `pnpm test`
 
 Additional tooling used in this fork:
-- `pnpm knip` — unused files / deps / exports
-- `pnpm doctor` — React health scan via react.doctor
-- `pnpm doctor:staged` — staged-file React scan
+- `pnpm knip` - unused files / deps / exports
+- `pnpm doctor` - React health scan via react.doctor
+- `pnpm doctor:staged` - staged-file React scan
+- `bash scripts/install.test.sh` - guided installer shell-level validation
 
 Notes:
 - `react.doctor` is advisory in pre-commit and can emit noisy temp-package errors.
@@ -141,10 +177,11 @@ Notes:
 
 ## Documentation guidance
 
-This repo’s docs are intentionally split into audiences:
-- **public/repo-facing** docs explain Karakeep plus this fork’s repo identity
+This repo's docs are intentionally split into audiences:
+- **public/repo-facing** docs explain Karakeep plus this fork's repo identity
 - **assistant docs** summarize the same fork facts for tooling
-- **operator docs** capture the real deploy/dev workflow of this fork
+- **guided self-host docs** define the portable Docker installer contract
+- **operator docs** capture the existing personal VPS deploy/dev workflow of this fork
 
 If you edit fork/dev/deploy facts, keep these aligned:
 - `README.md`
@@ -153,6 +190,7 @@ If you edit fork/dev/deploy facts, keep these aligned:
 - `CLAUDE.md`
 - `GEMINI.md`
 - `docs/fork-setup.md`
+- `docs/docs/02-installation/11-guided-docker-setup.md`
 - relevant pages under `docs/docs/**`
 
 ## Common commands
@@ -164,6 +202,7 @@ pnpm typecheck
 pnpm test
 pnpm knip
 pnpm doctor
+bash scripts/install.test.sh
 pnpm db:generate --name <description>
 pnpm db:migrate
 pnpm web
@@ -173,6 +212,7 @@ pnpm workers
 ## Working style for assistants
 
 - Prefer repo-specific facts over generic upstream assumptions.
-- Use `docs/fork-setup.md` for local-dev/deploy/operator answers.
-- Treat upstream docs as product context, not as authoritative for this fork’s operational workflow.
-- When changing documentation, avoid leaving “see upstream below” splits; rewrite for coherence.
+- Use the guided Docker setup doc for portable fresh-host installation answers.
+- Use `docs/fork-setup.md` for this fork's local-dev and existing personal VPS deployment answers.
+- Treat upstream docs as product context, not as authoritative for this fork's operational workflow.
+- When changing documentation, avoid leaving split or contradictory setup instructions; rewrite for coherence.

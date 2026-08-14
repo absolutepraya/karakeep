@@ -1,0 +1,29 @@
+name: Installer Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/install.sh"
+      - "scripts/install.test.sh"
+      - ".github/workflows/installer-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/install.sh"
+      - "scripts/install.test.sh"
+      - ".github/workflows/installer-tests.yml"
+
+jobs:
+  installer-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check Bash syntax
+        run: bash -n scripts/install.sh
+
+      - name: Run installer tests
+        run: bash scripts/install.test.sh
