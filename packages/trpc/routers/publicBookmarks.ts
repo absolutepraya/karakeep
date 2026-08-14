@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { users } from "@karakeep/db/schema";
+import { getAlignedExpiry } from "@karakeep/shared/signedTokens";
 import {
   MAX_NUM_BOOKMARKS_PER_PAGE,
   zPublicBookmarkSchema,
@@ -11,7 +12,23 @@ import { zBookmarkListSchema } from "@karakeep/shared/types/lists";
 import { zCursorV2 } from "@karakeep/shared/types/pagination";
 
 import { publicProcedure, router } from "../index";
+import { Asset } from "../models/assets";
 import { List } from "../models/lists";
+
+function getPublicOwnerImageUrl(image: string | null, userId: string) {
+  if (!image) {
+    return null;
+  }
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  return Asset.getPublicSignedAssetUrl(
+    image,
+    userId,
+    getAlignedExpiry(3600, 900),
+  );
+}
 
 export const publicBookmarks = router({
   getPublicListMetadata: publicProcedure
@@ -46,8 +63,14 @@ export const publicBookmarks = router({
       });
 
       return {
-        ...metadata,
-        ownerImage: owner?.image ?? null,
+        name: metadata.name,
+        description: metadata.description,
+        icon: metadata.icon,
+        ownerName: metadata.ownerName,
+        ownerImage: getPublicOwnerImageUrl(
+          owner?.image ?? null,
+          metadata.userId,
+        ),
       };
     }),
   getPublicBookmarksInList: publicProcedure
@@ -103,7 +126,10 @@ export const publicBookmarks = router({
         ...contents,
         list: {
           ...contents.list,
-          ownerImage: owner?.image ?? null,
+          ownerImage: getPublicOwnerImageUrl(
+            owner?.image ?? null,
+            metadata.userId,
+          ),
         },
       };
     }),
