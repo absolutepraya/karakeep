@@ -78,7 +78,11 @@ bash "$INSTALLER" --non-interactive --no-start --yes \
 assert_contains "$managed/install/docker-compose.yml" "ghcr.io/absolutepraya/karakeep:web-main"
 assert_contains "$managed/install/docker-compose.yml" "ghcr.io/absolutepraya/karakeep:workers-main"
 assert_contains "$managed/install/docker-compose.yml" "getmeili/meilisearch:v1.41.0"
-assert_contains "$managed/install/docker-compose.yml" "zenika/alpine-chrome:124"
+assert_contains "$managed/install/docker-compose.yml" "ghcr.io/karakeep-app/karakeep-chrome:release"
+assert_contains "$managed/install/docker-compose.yml" "init: true"
+assert_contains "$managed/install/docker-compose.yml" "--disable-blink-features=AutomationControlled"
+assert_contains "$managed/install/docker-compose.yml" "--window-size=1440,900"
+assert_not_contains "$managed/install/docker-compose.yml" "--remote-debugging-port=9222"
 assert_contains "$managed/install/docker-compose.yml" "127.0.0.1:3000:3000"
 assert_contains "$managed/install/app.env" 'DISABLE_SIGNUPS="false"'
 assert_contains "$managed/install/workers.env" 'BROWSER_WEB_URL="http://chrome:9222"'
