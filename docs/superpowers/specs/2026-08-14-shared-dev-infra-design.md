@@ -65,10 +65,10 @@ shared dev infra
 └── Meilisearch :7700
     ├── main_bookmarks
     ├── main_bookmarks_vectors
-    ├── issue-123_bookmarks
-    ├── issue-123_bookmarks_vectors
-    ├── feature-x_bookmarks
-    └── feature-x_bookmarks_vectors
+    ├── issue-123-1_bookmarks
+    ├── issue-123-1_bookmarks_vectors
+    ├── feature-x-2_bookmarks
+    └── feature-x-2_bookmarks_vectors
 
 worktree main
 ├── web :3000
@@ -98,11 +98,11 @@ bookmarks
 bookmarks_vectors
 ```
 
-When set to `issue-123_`, the plugins use:
+When set to `issue-123-1_`, the plugins use:
 
 ```text
-issue-123_bookmarks
-issue-123_bookmarks_vectors
+issue-123-1_bookmarks
+issue-123-1_bookmarks_vectors
 ```
 
 Both the search Meilisearch plugin and vector-store Meilisearch plugin must consume the same prefix source.
@@ -111,23 +111,27 @@ The prefix is an index namespace only. It does not change `MEILI_ADDR`, credenti
 
 ### Worktree prefix generation
 
-`scripts/setup-worktree.sh` derives a stable safe slug for the worktree and writes it to `.env` as `MEILI_INDEX_PREFIX=<slug>_`.
+`scripts/setup-worktree.sh` derives a stable safe slug from the worktree identity and combines it with `WT_PORT_BASE`, which is already unique per configured worktree. It writes:
 
-The slug should use the existing worktree identity when available and normalize unsupported characters to `-`. It must not contain secrets or absolute paths.
+```text
+MEILI_INDEX_PREFIX=<workspace-slug>-<port-base>_
+```
 
-The main workspace uses a stable `main_` prefix so it cannot collide with worktrees while sharing the same server.
+Using both values prevents collisions when two workspace names normalize to the same slug. Unsupported characters are normalized to `-`; secrets and absolute paths are never included.
+
+The main workspace uses a stable `main_` prefix so it cannot collide with worktrees while sharing the same server. `start-dev.sh` supplies `main_` only when `MEILI_INDEX_PREFIX` is otherwise unset, so an explicit developer override remains possible.
 
 ## Shared infrastructure lifecycle
 
-Add a dedicated machine-level helper, `scripts/dev-infra.sh`, with commands:
+Add a dedicated machine-level helper, `scripts/dev-infra.sh`, and expose it through package scripts:
 
 ```bash
-scripts/dev-infra.sh up
-scripts/dev-infra.sh status
-scripts/dev-infra.sh down
+pnpm dev:infra:up
+pnpm dev:infra:status
+pnpm dev:infra:down
 ```
 
-The helper owns stable container names, for example:
+The helper owns stable container names:
 
 ```text
 karakeep-dev-meilisearch
@@ -143,7 +147,7 @@ Chrome must use the maintained Karakeep image/configuration rather than the reti
 
 The shared Meilisearch container keeps one machine-level Docker volume so index state survives restarts. Individual worktree indexes remain logically isolated within it.
 
-`down` is an explicit machine-level action. Individual worktree stop commands must never call it automatically.
+`dev:infra:down` is an explicit machine-level action. Individual worktree stop commands must never call it automatically.
 
 ## `start-dev.sh` behavior
 
@@ -153,13 +157,14 @@ Before starting web/workers, it should:
 
 1. verify Docker and pnpm prerequisites as today
 2. ensure shared dev infrastructure is running, starting it through `scripts/dev-infra.sh up` when needed
-3. use the worktree's `MEILI_ADDR`, `BROWSER_WEB_URL`, and `MEILI_INDEX_PREFIX`
-4. run migrations against that worktree's isolated data directory
-5. start only that worktree's web and workers processes
+3. use the workspace's `MEILI_ADDR`, `BROWSER_WEB_URL`, and `MEILI_INDEX_PREFIX`
+4. for the main workspace only, default an unset `MEILI_INDEX_PREFIX` to `main_`
+5. run migrations against that workspace's isolated data directory
+6. start only that workspace's web and workers processes
 
 It must not create worktree-specific Chrome or Meilisearch containers.
 
-For the main workspace, defaults should resolve to the shared endpoints and the `main_` Meilisearch prefix even when no generated worktree `.env` is involved.
+The shared endpoints default to `localhost:7700` and `localhost:9222`. Explicit `.env` overrides remain possible, but when the default shared endpoints are used they must be owned by the shared-infra helper rather than an unrelated process.
 
 ## `stop-dev.sh` behavior
 
@@ -167,7 +172,11 @@ For the main workspace, defaults should resolve to the shared endpoints and the 
 
 It must not stop or remove shared Chrome or Meilisearch.
 
-The output should tell the developer that shared infrastructure remains running and can be stopped explicitly with the machine-level infra command.
+The output should tell the developer that shared infrastructure remains running and can be stopped explicitly with:
+
+```bash
+pnpm dev:infra:down
+```
 
 ## Worktree setup behavior
 
@@ -183,7 +192,7 @@ It no longer allocates per-worktree Meilisearch or Chrome ports. Every generated
 ```text
 MEILI_ADDR=http://localhost:7700
 BROWSER_WEB_URL=http://localhost:9222
-MEILI_INDEX_PREFIX=<workspace-slug>_
+MEILI_INDEX_PREFIX=<workspace-slug>-<port-base>_
 ```
 
 Production-state pulls remain per-worktree because the SQLite/assets directory remains isolated. A pulled production snapshot does not imply sharing local Meilisearch indexes; the worktree's own index can be rebuilt from its local application state.
@@ -210,7 +219,7 @@ Add focused regression coverage for:
 2. search plugin applies `MEILI_INDEX_PREFIX`
 3. vector plugin defaults to `bookmarks_vectors`
 4. vector plugin applies the same prefix
-5. worktree setup produces one shared Meili/Chrome endpoint and a unique index prefix while retaining isolated web/data values
+5. worktree setup produces shared Meili/Chrome endpoints and a unique index prefix while retaining isolated web/data values
 6. `start-dev.sh` delegates shared infra startup instead of creating per-worktree infra containers
 7. `stop-dev.sh` does not stop/remove shared infrastructure
 8. shared infra helper is idempotent for its own containers and rejects foreign port conflicts
@@ -230,7 +239,7 @@ Document:
 - two shared infra containers per machine regardless of worktree count
 - per-worktree SQLite/assets and Meilisearch index namespaces
 - `pnpm dev:start` / `pnpm dev:stop` lifecycle
-- explicit shared infra stop/status commands
+- `pnpm dev:infra:up`, `pnpm dev:infra:status`, and `pnpm dev:infra:down`
 - `MEILI_INDEX_PREFIX` and its backward-compatible default
 
 Update `CLAUDE.md` / `GEMINI.md` only if they are independent copies rather than references to `AGENTS.md`.
