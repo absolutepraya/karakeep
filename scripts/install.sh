@@ -66,10 +66,10 @@ Install options:
   --bind-address IP              Host bind address (default: 127.0.0.1)
   --data-mode fresh|existing     Create fresh data or use an existing compatible data directory
   --search managed|external|disabled
-                                 Managed Meilisearch, external Meilisearch, or no full-text search
+                                 Dedicated managed Meilisearch, external dedicated Meilisearch, or no full-text search
   --meili-url URL                Required when --search external
   --renderer managed|external|disabled
-                                 Managed private Chrome, external Browserless, or no browser rendering
+                                 Dedicated managed Chrome, external Browserless, or no browser rendering
   --renderer-url URL             Required when --renderer external
   --ai disabled|openai|deferred  Disable AI, configure OpenAI-compatible inference, or defer configuration
   --disable-signups              Set DISABLE_SIGNUPS=true (best for an existing installation)
@@ -170,6 +170,37 @@ check_docker() {
   require_command docker
   docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required. Install the Docker Compose plugin and rerun."
   docker info >/dev/null 2>&1 || die "Docker is installed but the current user cannot reach the Docker daemon. Start Docker or grant this user access, then rerun."
+}
+
+preflight_install() {
+  say "Karakeep Guided Setup"
+  say ""
+  say "Checking host prerequisites..."
+
+  require_command docker
+  say "  [ok] Docker CLI"
+
+  docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required. Install the Docker Compose plugin and rerun."
+  say "  [ok] Docker Compose v2"
+
+  docker info >/dev/null 2>&1 || die "Docker is installed but the current user cannot reach the Docker daemon. Start Docker or grant this user access, then rerun."
+  say "  [ok] Docker daemon access"
+
+  [[ "$(uname -s)" == "Linux" ]] || die "This guided installer currently supports Linux hosts only."
+  say "  [ok] Linux"
+
+  case "$(uname -m)" in
+    x86_64|amd64) say "  [ok] amd64 architecture" ;;
+    *) die "This fork currently publishes linux/amd64 images only; unsupported architecture: $(uname -m)" ;;
+  esac
+
+  require_command openssl
+  say "  [ok] OpenSSL"
+
+  say ""
+  say "All required host prerequisites are available."
+  say "Node.js is not required on the host; it runs inside the Karakeep containers."
+  say ""
 }
 
 generate_secret() {
@@ -291,11 +322,28 @@ apply_defaults() {
 }
 
 interactive_configure() {
+  local recommended=0
+
+  say "Press Enter to accept the recommended value shown in [brackets]."
+  say "Choose the recommended setup for a dedicated Karakeep deployment, or advanced setup for external/disabled services."
+  say ""
+
+  if prompt_yes_no "Use the recommended Karakeep setup?" "yes"; then
+    recommended=1
+  else
+    say ""
+    say "Advanced configuration selected."
+    say "External Meilisearch should be dedicated to this Karakeep instance; sharing one Meilisearch index across multiple Karakeep deployments is not supported by this installer."
+    say ""
+  fi
+
   INSTALL_DIR="$(expand_path "$(prompt_text "Install directory" "${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}")")"
   DATA_DIR="$(expand_path "$(prompt_text "Persistent data directory" "${DATA_DIR:-$INSTALL_DIR/data}")")"
 
   if [[ -d "$DATA_DIR" && -n "$(find "$DATA_DIR" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null || true)" ]]; then
     DATA_MODE="$(prompt_choice "The data directory is not empty. Treat it as an existing compatible Karakeep data directory?" "existing fresh" "existing")"
+  elif ((recommended)); then
+    DATA_MODE="fresh"
   else
     DATA_MODE="$(prompt_choice "Data mode" "fresh existing" "fresh")"
   fi
@@ -304,34 +352,54 @@ interactive_configure() {
   PUBLIC_URL="$(prompt_text "Public application URL" "${PUBLIC_URL:-$DEFAULT_PUBLIC_URL}")"
   PUBLIC_URL="${PUBLIC_URL%/}"
   PUBLIC_URL_SET=1
-  PORT="$(prompt_text "Host port" "${PORT:-$DEFAULT_PORT}")"
-  BIND_ADDRESS="$(prompt_text "Host bind address" "${BIND_ADDRESS:-$DEFAULT_BIND_ADDRESS}")"
 
-  SEARCH_MODE="$(prompt_choice "Full-text search" "managed external disabled" "${SEARCH_MODE:-$DEFAULT_SEARCH_MODE}")"
-  SEARCH_MODE_SET=1
-  if [[ "$SEARCH_MODE" == "external" ]]; then
-    MEILI_URL="$(prompt_text "External Meilisearch URL" "$MEILI_URL")"
-    if [[ -z "${KARAKEEP_MEILI_MASTER_KEY:-}" ]]; then
-      KARAKEEP_MEILI_MASTER_KEY="$(prompt_secret "External Meilisearch master key")"
-      export KARAKEEP_MEILI_MASTER_KEY
+  if ((recommended)); then
+    PORT="$DEFAULT_PORT"
+    BIND_ADDRESS="$DEFAULT_BIND_ADDRESS"
+    SEARCH_MODE="$DEFAULT_SEARCH_MODE"
+    RENDERER_MODE="$DEFAULT_RENDERER_MODE"
+    AI_MODE="$DEFAULT_AI_MODE"
+    SEARCH_MODE_SET=1
+    RENDERER_MODE_SET=1
+    AI_MODE_SET=1
+
+    say ""
+    say "Using recommended service configuration:"
+    say "  Host bind:  $BIND_ADDRESS:$PORT"
+    say "  Search:     dedicated managed Meilisearch"
+    say "  Renderer:   dedicated managed Chrome"
+    say "  AI:         deferred"
+  else
+    PORT="$(prompt_text "Host port" "${PORT:-$DEFAULT_PORT}")"
+    BIND_ADDRESS="$(prompt_text "Host bind address" "${BIND_ADDRESS:-$DEFAULT_BIND_ADDRESS}")"
+
+    SEARCH_MODE="$(prompt_choice "Full-text search" "managed external disabled" "${SEARCH_MODE:-$DEFAULT_SEARCH_MODE}")"
+    SEARCH_MODE_SET=1
+    if [[ "$SEARCH_MODE" == "external" ]]; then
+      warn "Use a Meilisearch service dedicated to this Karakeep deployment; sharing the fixed bookmarks index with another Karakeep deployment is unsupported."
+      MEILI_URL="$(prompt_text "External dedicated Meilisearch URL" "$MEILI_URL")"
+      if [[ -z "${KARAKEEP_MEILI_MASTER_KEY:-}" ]]; then
+        KARAKEEP_MEILI_MASTER_KEY="$(prompt_secret "External Meilisearch master key")"
+        export KARAKEEP_MEILI_MASTER_KEY
+      fi
     fi
-  fi
 
-  RENDERER_MODE="$(prompt_choice "Browser rendering" "managed external disabled" "${RENDERER_MODE:-$DEFAULT_RENDERER_MODE}")"
-  RENDERER_MODE_SET=1
-  if [[ "$RENDERER_MODE" == "external" ]]; then
-    RENDERER_URL="$(prompt_text "Private Browserless URL" "$RENDERER_URL")"
-    if [[ -z "${KARAKEEP_BROWSERLESS_TOKEN:-}" ]]; then
-      KARAKEEP_BROWSERLESS_TOKEN="$(prompt_secret "Browserless token")"
-      export KARAKEEP_BROWSERLESS_TOKEN
+    RENDERER_MODE="$(prompt_choice "Browser rendering" "managed external disabled" "${RENDERER_MODE:-$DEFAULT_RENDERER_MODE}")"
+    RENDERER_MODE_SET=1
+    if [[ "$RENDERER_MODE" == "external" ]]; then
+      RENDERER_URL="$(prompt_text "Private Browserless URL" "$RENDERER_URL")"
+      if [[ -z "${KARAKEEP_BROWSERLESS_TOKEN:-}" ]]; then
+        KARAKEEP_BROWSERLESS_TOKEN="$(prompt_secret "Browserless token")"
+        export KARAKEEP_BROWSERLESS_TOKEN
+      fi
     fi
-  fi
 
-  AI_MODE="$(prompt_choice "AI tagging/summarization" "disabled openai deferred" "${AI_MODE:-$DEFAULT_AI_MODE}")"
-  AI_MODE_SET=1
-  if [[ "$AI_MODE" == "openai" && -z "${KARAKEEP_OPENAI_API_KEY:-}" ]]; then
-    KARAKEEP_OPENAI_API_KEY="$(prompt_secret "OpenAI-compatible API key")"
-    export KARAKEEP_OPENAI_API_KEY
+    AI_MODE="$(prompt_choice "AI tagging/summarization" "disabled openai deferred" "${AI_MODE:-$DEFAULT_AI_MODE}")"
+    AI_MODE_SET=1
+    if [[ "$AI_MODE" == "openai" && -z "${KARAKEEP_OPENAI_API_KEY:-}" ]]; then
+      KARAKEEP_OPENAI_API_KEY="$(prompt_secret "OpenAI-compatible API key")"
+      export KARAKEEP_OPENAI_API_KEY
+    fi
   fi
 
   if [[ "$DATA_MODE" == "existing" ]]; then
@@ -420,7 +488,7 @@ EOF_PLAN
 
   case "$SEARCH_MODE" in
     managed) say "Managed Meilisearch will run privately in the same Compose project." ;;
-    external) say "The installer will connect Karakeep to the supplied external Meilisearch URL." ;;
+    external) say "The installer will connect Karakeep to the supplied external dedicated Meilisearch URL." ;;
     disabled) say "Full-text search will be disabled." ;;
   esac
 
@@ -620,7 +688,7 @@ copy_self() {
 }
 
 install_command() {
-  check_platform
+  preflight_install
 
   if ((NON_INTERACTIVE == 0)); then
     interactive_configure
@@ -635,9 +703,6 @@ install_command() {
     info "Dry run complete. No files were written and no containers were changed."
     return 0
   fi
-
-  check_docker
-  require_command openssl
 
   if [[ -e "$INSTALL_DIR/docker-compose.yml" || -e "$INSTALL_DIR/app.env" || -e "$INSTALL_DIR/workers.env" ]]; then
     if ((RECONFIGURE == 0 && NON_INTERACTIVE == 0)); then
