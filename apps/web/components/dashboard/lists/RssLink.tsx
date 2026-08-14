@@ -85,7 +85,7 @@ export default function RssLink({ listId }: { listId: string }) {
           </Label>
           <div className="flex min-w-0 items-center space-x-2">
             <UrlDisplay value={rssUrl} label={t("lists.rss.feed_url")} />
-            <CopyBtnV2 getStringToCopy={() => rssUrl} />
+            <CopyBtnV2 className="h-10" getStringToCopy={() => rssUrl} />
             <Button
               variant="outline"
               size="sm"

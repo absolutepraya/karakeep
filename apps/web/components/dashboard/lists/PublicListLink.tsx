@@ -56,7 +56,7 @@ export default function PublicListLink({ list }: { list: ZBookmarkList }) {
               value={publicListUrl}
               label={t("lists.public_list.share_link")}
             />
-            <CopyBtnV2 getStringToCopy={() => publicListUrl} />
+            <CopyBtnV2 className="h-10" getStringToCopy={() => publicListUrl} />
           </div>
         </div>
       )}
