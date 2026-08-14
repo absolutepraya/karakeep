@@ -11,8 +11,8 @@ describe("MarkaLogo", () => {
     render(<MarkaLogo height={38} />);
 
     const visibleLogo = screen.getByAltText("Marka");
-    expect(visibleLogo.getAttribute("src")).toBe(
-      "/brand/marka/marka-wordmark-navy.png",
+    expect(visibleLogo.getAttribute("src")).toContain(
+      encodeURIComponent("/brand/marka/marka-wordmark-navy.png"),
     );
     expect(visibleLogo.getAttribute("height")).toBe("38");
     expect(visibleLogo.style.height).toBe("38px");
@@ -20,7 +20,7 @@ describe("MarkaLogo", () => {
     expect(visibleLogo.classList.contains("dark:hidden")).toBe(true);
 
     const darkLogo = document.querySelector<HTMLImageElement>(
-      'img[src="/brand/marka/marka-wordmark-white.png"]',
+      `img[src*="${encodeURIComponent("/brand/marka/marka-wordmark-white.png")}"]`,
     );
     expect(darkLogo).not.toBeNull();
     if (!darkLogo) {
