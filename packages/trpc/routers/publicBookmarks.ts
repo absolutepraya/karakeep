@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { users } from "@karakeep/db/schema";
-import { getAlignedExpiry } from "@karakeep/shared/signedTokens";
+import serverConfig from "@karakeep/shared/config";
+import {
+  createSignedToken,
+  getAlignedExpiry,
+} from "@karakeep/shared/signedTokens";
+import { zAssetSignedTokenSchema } from "@karakeep/shared/types/assets";
 import {
   MAX_NUM_BOOKMARKS_PER_PAGE,
   zPublicBookmarkSchema,
@@ -12,8 +17,24 @@ import { zBookmarkListSchema } from "@karakeep/shared/types/lists";
 import { zCursorV2 } from "@karakeep/shared/types/pagination";
 
 import { publicProcedure, router } from "../index";
-import { Asset } from "../models/assets";
 import { List } from "../models/lists";
+
+function getPublicSignedAssetUrl(
+  assetId: string,
+  assetOwnerId: string,
+  expireAt: number,
+) {
+  const payload: z.infer<typeof zAssetSignedTokenSchema> = {
+    assetId,
+    userId: assetOwnerId,
+  };
+  const signedToken = createSignedToken(
+    payload,
+    serverConfig.signingSecret(),
+    expireAt,
+  );
+  return `${serverConfig.publicApiUrl}/public/assets/${assetId}?token=${signedToken}`;
+}
 
 function getPublicOwnerImageUrl(image: string | null, userId: string) {
   if (!image) {
@@ -23,11 +44,7 @@ function getPublicOwnerImageUrl(image: string | null, userId: string) {
     return image;
   }
 
-  return Asset.getPublicSignedAssetUrl(
-    image,
-    userId,
-    getAlignedExpiry(3600, 900),
-  );
+  return getPublicSignedAssetUrl(image, userId, getAlignedExpiry(3600, 900));
 }
 
 export const publicBookmarks = router({
