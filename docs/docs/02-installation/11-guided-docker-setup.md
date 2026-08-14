@@ -22,18 +22,46 @@ For a reproducible setup, pin the download to an immutable release tag or commit
 REF=<tag-or-commit-sha>; curl -fsSLo /tmp/karakeep-setup.sh "https://raw.githubusercontent.com/absolutepraya/karakeep/${REF}/scripts/install.sh" && bash /tmp/karakeep-setup.sh
 ```
 
-## What the guided flow asks
+## Preflight checks
 
-The interactive flow asks for:
+Before asking configuration questions, the installer checks that the host can actually run the deployment. It verifies:
 
-- the configuration directory
-- the persistent Karakeep data directory
-- whether the data directory is fresh or an existing compatible Karakeep data directory
-- the public application URL, host port, and bind address
-- managed, external, or disabled Meilisearch
-- managed private Chrome, external token-protected Browserless, or disabled browser rendering
-- disabled, OpenAI-compatible, or deferred AI tagging/summarization
-- the signup policy for an existing deployment
+- Linux
+- `amd64` / `x86_64` architecture
+- the Docker CLI is available in `PATH`
+- Docker Compose v2 is available through `docker compose`
+- the current user can reach the Docker daemon
+- OpenSSL is available for secret generation
+
+If a required prerequisite is missing or unusable, setup stops immediately with an actionable error and does not write installation files. The installer deliberately does not install Docker or other host packages for you.
+
+Node.js is **not** a host prerequisite. The Karakeep web application and workers run Node.js inside their Docker images.
+
+`curl` is only needed to use the one-line download command. `tar` is checked later when the `backup` command is actually used.
+
+## Recommended interactive setup
+
+The interactive installer tells you that values shown in square brackets are defaults. Press **Enter** to accept a recommended value.
+
+It then starts with:
+
+```text
+Use the recommended Karakeep setup? [Y/n]:
+```
+
+Pressing Enter selects the simple, dedicated deployment path. The installer asks only for the configuration directory, persistent data directory, and public application URL, while using these defaults:
+
+- fresh data when the selected data directory is empty
+- host port `3000`
+- bind address `127.0.0.1`
+- dedicated managed Meilisearch
+- dedicated managed Chrome
+- AI configuration deferred
+- signups enabled for a fresh deployment so the first administrator can be created
+
+If the chosen data directory is already non-empty, the installer does not silently treat it as fresh data. It asks whether it is an existing compatible Karakeep data directory.
+
+Choose **No** at the recommended-setup prompt to enter advanced configuration. Advanced mode exposes the host port and bind address plus managed, external, or disabled search and browser-rendering choices, AI configuration, and the signup policy for an existing deployment.
 
 Fresh deployments always start with signups enabled so the first administrator account can be created. After that account exists, set `DISABLE_SIGNUPS="true"` in `app.env` and run the generated helper with `start`.
 
@@ -43,6 +71,15 @@ The script uses the stable Compose project name `karakeep` and the paired fork i
 
 - `ghcr.io/absolutepraya/karakeep:web-main`
 - `ghcr.io/absolutepraya/karakeep:workers-main`
+
+A default fully featured installation runs four containers:
+
+- `web` for the web application and API
+- `workers` for crawling, screenshots, indexing, inference jobs, and other background work
+- `meilisearch` for full-text search
+- `chrome` for browser rendering and screenshots
+
+SQLite is not a separate service. The database and local assets live in the persistent Karakeep data directory shared by `web` and `workers`.
 
 The generated files are stored in the selected configuration directory:
 
@@ -58,17 +95,19 @@ The default bind address is `127.0.0.1`. For an Internet-facing deployment, keep
 
 ## Search choices
 
-`managed` starts the repository's currently supported Meilisearch image inside the Compose project. The service is not published to the host network.
+`managed` is the recommended mode. It starts a dedicated Meilisearch container inside this Karakeep Compose project. The service is not published to the host network.
 
-`external` connects to an existing Meilisearch URL. In non-interactive mode, provide its key through `KARAKEEP_MEILI_MASTER_KEY`.
+`external` is an advanced option for connecting to an externally managed Meilisearch service dedicated to this Karakeep deployment. In non-interactive mode, provide its key through `KARAKEEP_MEILI_MASTER_KEY`.
+
+Do not point multiple independent Karakeep deployments at the same Meilisearch index. Karakeep uses a fixed `bookmarks` index name, so the guided installer does not support a shared Meilisearch index between Karakeep instances.
 
 `disabled` omits Meilisearch entirely. Full-text search will not be available.
 
 ## Browser-rendering choices
 
-`managed` starts a private Chrome container and connects the workers through the internal Compose network. The Chrome debugging port is not published to the host.
+`managed` is the recommended mode. It starts Karakeep's maintained Chrome image as a private container and connects the workers through the internal Compose network. The Chrome debugging port is not published to the host.
 
-`external` connects workers on demand to an existing Browserless endpoint. In non-interactive mode, provide the token through `KARAKEEP_BROWSERLESS_TOKEN`. Keep the endpoint private or protect it with TLS and network controls.
+`external` is an advanced option that connects workers on demand to an existing Browserless endpoint. In non-interactive mode, provide the token through `KARAKEEP_BROWSERLESS_TOKEN`. Keep the endpoint private or protect it with TLS, authentication, and suitable capacity limits.
 
 `disabled` turns off rendered screenshots and JavaScript browser crawling. Basic non-browser crawling can still work.
 
@@ -78,7 +117,7 @@ The default bind address is `127.0.0.1`. For an Internet-facing deployment, keep
 
 `disabled` explicitly disables automatic tagging and summarization.
 
-`deferred` also leaves AI disabled, but records that the operator intends to configure the provider later in `workers.env`.
+`deferred` is the recommended initial setting. It leaves AI disabled for now so the operator can configure a provider later in `workers.env`.
 
 ## Non-interactive example
 
@@ -94,7 +133,7 @@ KARAKEEP_OPENAI_API_KEY='...' bash /tmp/karakeep-setup.sh \
   --ai openai
 ```
 
-Use `--dry-run` to validate the plan without writing files or changing containers. Use `--no-start` to generate and validate the configuration without pulling or starting images.
+The same prerequisite preflight runs in non-interactive and dry-run modes. Use `--dry-run` to validate the deployment plan without writing files or changing containers. Use `--no-start` to generate and validate the configuration without pulling or starting images.
 
 ## Reruns and reconfiguration
 
@@ -115,7 +154,7 @@ The script copy in the configuration directory also acts as the management helpe
 ~/karakeep/install.sh uninstall
 ```
 
-`backup` briefly stops the web and worker services, archives the authoritative SQLite/assets data directory, then restores them if they were running. Meilisearch is not included because it is a derived search index.
+`backup` briefly stops the web and worker services, archives the authoritative SQLite/assets data directory, then restores them if they were running. Meilisearch is not included because it is a derived search index. The backup command checks for `tar` when it is invoked.
 
 `update` pulls the current `web-main` and `workers-main` images and recreates changed services. For rollback, pin both images to matching immutable `web-sha-<sha>` and `workers-sha-<sha>` tags from the same known-good commit.
 
@@ -123,7 +162,7 @@ The script copy in the configuration directory also acts as the management helpe
 
 ## Validation
 
-The repository includes shell-level tests covering dry-run behavior, generated managed/external/disabled configurations, secret redaction, rerun protection, config backups, signup lockout prevention, backups, and non-destructive uninstall:
+The repository includes shell-level tests covering prerequisite preflight behavior, the recommended setup path, dry-run behavior, generated managed/external/disabled configurations, secret redaction, rerun protection, config backups, signup lockout prevention, backups, and non-destructive uninstall:
 
 ```bash
 bash scripts/install.test.sh
