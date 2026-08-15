@@ -46,11 +46,7 @@ export function isBookmarkStillSummarizing(bookmark: ZBookmark) {
 }
 
 export function isBookmarkStillLoading(bookmark: ZBookmark) {
-  return (
-    isBookmarkStillTagging(bookmark) ||
-    isBookmarkStillCrawling(bookmark) ||
-    isBookmarkStillSummarizing(bookmark)
-  );
+  return isBookmarkStillCrawling(bookmark);
 }
 
 export function getBookmarkRefreshInterval(
