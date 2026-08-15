@@ -28,11 +28,22 @@ instrumentDatabase(sqlite);
 export const db = drizzle(sqlite, { schema });
 export type DB = typeof db;
 
+/**
+ * Creates an in-memory SQLite database for tests and optionally runs migrations.
+ * The native handle is closed before rethrowing if initialization fails.
+ */
 export function getInMemoryDB(runMigrations: boolean) {
   const mem = new Database(":memory:");
-  const db = drizzle(mem, { schema, logger: false });
-  if (runMigrations) {
-    migrate(db, { migrationsFolder: path.resolve(__dirname, "./drizzle") });
+  try {
+    const db = drizzle(mem, { schema, logger: false });
+    if (runMigrations) {
+      migrate(db, { migrationsFolder: path.resolve(__dirname, "./drizzle") });
+    }
+    return db;
+  } catch (error) {
+    if (mem.open) {
+      mem.close();
+    }
+    throw error;
   }
-  return db;
 }

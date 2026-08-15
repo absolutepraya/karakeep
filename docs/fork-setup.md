@@ -16,12 +16,14 @@ Use it for:
 ## Local development
 
 ### Runtime
-- Node 24 (`.nvmrc`)
+- Node 24.18.1 (`.nvmrc`; temporarily pinned to avoid the Node 24.19 native-addon cleanup regression)
 - `pnpm@11.2.1` via corepack
 
 ### First-time setup
 
 ```bash
+nvm install
+nvm use
 corepack enable
 pnpm install
 
@@ -34,6 +36,8 @@ ln -sf ../../.env packages/db/.env
 mkdir -p "$(grep '^DATA_DIR=' .env | cut -d= -f2)"
 pnpm db:migrate
 ```
+
+The exact Node patch is temporary. Node 24.19.0 has a native-addon cleanup regression tracked in [nodejs/node#65042](https://github.com/nodejs/node/pull/65042); use the version in `.nvmrc` until a fixed Node 24 release is available.
 
 ### Preferred start flow
 
@@ -121,6 +125,7 @@ It runs:
 Fork-specific notes:
 - this fork does **not** use Turbo remote cache
 - some CI jobs reclaim disk space before heavy steps because typecheck/tests can otherwise exhaust hosted-runner storage
+- CI reads the exact Node runtime from `.nvmrc`; keep the temporary 24.18.1 pin until the Node v24 cleanup-hook fix tracked in [nodejs/node#65042](https://github.com/nodejs/node/pull/65042) ships in a usable Node 24 release
 - `knip` and `react-doctor` run as **non-blocking** report jobs
 
 ## Extra quality tooling
