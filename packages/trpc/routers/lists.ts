@@ -1,4 +1,4 @@
-import { experimental_trpcMiddleware } from "@trpc/server";
+import { experimental_trpcMiddleware, TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { eq } from "drizzle-orm";
@@ -26,6 +26,7 @@ import {
   getEffectiveCollaboratorGrant,
   getEffectiveCollaboratorGrantsForOwner,
   getEffectiveCollaboratorsForList,
+  getEffectiveListAccessUserIds,
 } from "../models/listCollaborationAccess";
 import { ListInvitation } from "../models/listInvitations";
 import { List } from "../models/lists";
@@ -98,11 +99,7 @@ async function listAccessSnapshot(
   listIds: string[],
   ownerId: string,
 ) {
-  const result = new Map<string, Set<string>>();
-  for (const listId of listIds) {
-    result.set(listId, new Set(await listSyncUserIds(ctx, listId, ownerId)));
-  }
-  return result;
+  return getEffectiveListAccessUserIds(ctx, ownerId, listIds);
 }
 
 async function recordListAccessDiff(
@@ -870,7 +867,7 @@ export const listsAppRouter = router({
           where: eq(bookmarkLists.id, input.listId),
         });
         if (!rawList) {
-          throw new Error("Expected list to exist while leaving collaboration");
+          throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
         }
         const grant = await getEffectiveCollaboratorGrant(
           transactionCtx,
@@ -878,7 +875,10 @@ export const listsAppRouter = router({
           ctx.user.id,
         );
         if (!grant) {
-          throw new Error("Expected an effective collaboration grant");
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Collaborator not found",
+          });
         }
         const source = await List.fromId(transactionCtx, grant.sourceListId);
         const sourceSerialized = source.asZBookmarkList();

@@ -305,6 +305,98 @@ export async function getAllSharedListAccess(ctx: AuthedContext) {
   }));
 }
 
+export async function getEffectiveListAccessUserIds(
+  ctx: AuthedContext,
+  ownerId: string,
+  targetListIds: string[],
+): Promise<Map<string, Set<string>>> {
+  const result = new Map(
+    targetListIds.map((listId) => [listId, new Set([ownerId])]),
+  );
+  if (targetListIds.length === 0) {
+    return result;
+  }
+
+  const ownerLists = await ctx.db.query.bookmarkLists.findMany({
+    columns: {
+      id: true,
+      name: true,
+      userId: true,
+      parentId: true,
+      type: true,
+    },
+    where: eq(bookmarkLists.userId, ownerId),
+  });
+  if (ownerLists.length === 0) {
+    return result;
+  }
+
+  const ownerListIds = ownerLists.map((list) => list.id);
+  const memberships = await ctx.db.query.listCollaborators.findMany({
+    where: inArray(listCollaborators.listId, ownerListIds),
+  });
+  if (memberships.length === 0) {
+    return result;
+  }
+
+  const collaboratorUserIds = [
+    ...new Set(memberships.map((membership) => membership.userId)),
+  ];
+  const scopes = await ctx.db.query.listCollaborationScopes.findMany({
+    where: and(
+      inArray(listCollaborationScopes.listId, ownerListIds),
+      inArray(listCollaborationScopes.userId, collaboratorUserIds),
+    ),
+  });
+
+  const listById = new Map(ownerLists.map((list) => [list.id, list]));
+  const membershipsByList = new Map<string, typeof memberships>();
+  for (const membership of memberships) {
+    const entries = membershipsByList.get(membership.listId) ?? [];
+    entries.push(membership);
+    membershipsByList.set(membership.listId, entries);
+  }
+  const scopeByKey = new Map(
+    scopes.map((scope) => [`${scope.listId}:${scope.userId}`, scope.recursive]),
+  );
+
+  for (const targetListId of targetListIds) {
+    const target = listById.get(targetListId);
+    if (!target || target.type !== "manual") {
+      continue;
+    }
+
+    const accessUserIds = result.get(targetListId)!;
+    const resolvedCollaborators = new Set<string>();
+    let current: AccessibleListData | undefined = target;
+    let depth = 0;
+    const visited = new Set<string>();
+
+    while (current && !visited.has(current.id)) {
+      visited.add(current.id);
+      for (const membership of membershipsByList.get(current.id) ?? []) {
+        if (resolvedCollaborators.has(membership.userId)) {
+          continue;
+        }
+        const recursive =
+          scopeByKey.get(`${current.id}:${membership.userId}`) ?? false;
+        if (depth === 0 || recursive) {
+          accessUserIds.add(membership.userId);
+          resolvedCollaborators.add(membership.userId);
+        }
+      }
+
+      if (!current.parentId) {
+        break;
+      }
+      current = listById.get(current.parentId);
+      depth += 1;
+    }
+  }
+
+  return result;
+}
+
 export async function getEffectiveCollaboratorsForList(
   ctx: AuthedContext,
   list: AccessibleListData,
