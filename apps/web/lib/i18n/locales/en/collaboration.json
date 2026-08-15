@@ -19,5 +19,6 @@
   "invitation_delivery_sent": "Invitation created and email sent.",
   "invitation_delivery_failed": "Invitation created, but the email was not sent. You can resend it later.",
   "remove_aria": "Remove {{name}}",
-  "remove_confirmation": "Remove {{name}} from this shared list? Bookmark entries they contributed through this collaboration will be removed from this shared list, but their underlying bookmarks will remain in their library."
+  "remove_confirmation": "Remove {{name}} from this shared list? Bookmark entries they contributed through this collaboration will be removed from this shared list, but their underlying bookmarks will remain in their library.",
+  "breadcrumb_label": "List hierarchy"
 }
