@@ -27,7 +27,7 @@
     "android": "pnpm --filter @karakeep/mobile android",
     "ios": "pnpm --filter @karakeep/mobile ios",
     "prepare": "husky",
-    "format": "turbo --no-daemon format --continue",
+    "format": "turbo --no-daemon format:fix --continue && git diff --exit-code",
     "format:fix": "turbo --no-daemon format:fix --continue",
     "lint": "turbo --no-daemon lint --continue",
     "lint:fix": "turbo --no-daemon lint:fix --continue",
