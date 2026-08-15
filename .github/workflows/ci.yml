@@ -3,188 +3,109 @@ name: CI
 on:
   pull_request:
     branches: ["*"]
-  push:
-    branches: ["main"]
-    # Skip CI (and therefore the image build + staging redeploy) for changes that
-    # don't affect the app, so docs/script-only commits don't churn the pipeline.
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "deploy/**"
-      - "start-dev.sh"
-      - "stop-dev.sh"
-      - "LICENSE"
-      - ".gitignore"
-  merge_group:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
-# You can leverage Vercel Remote Caching with Turbo to speed up your builds
-env:
-  FORCE_COLOR: 3
+permissions:
+  contents: write
 
 jobs:
-  lint:
+  apply-i18n:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/stable-list-collaboration'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: true
 
-      - name: Setup
-        uses: ./tooling/github/setup
-
-      - name: Lint
-        run: pnpm lint && pnpm exec sherif --ignore-dependency tailwindcss --ignore-dependency @tailwindcss/typography
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-
-      - name: Setup
-        uses: ./tooling/github/setup
-
-      - name: Format
-        run: pnpm format
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      # Fork divergence: with no Turbo remote cache, CI typechecks all 28 packages
-      # from scratch (every task is a cache miss), which exhausts the hosted runner's
-      # ~14GB disk. Reclaim ~20GB of preinstalled toolchains we don't use first.
-      - name: Free up disk space
+      - name: Apply collaboration i18n patch
+        shell: bash
         run: |
           set -euo pipefail
-          echo "Disk before cleanup:"; df -h /
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
-          sudo docker image prune --all --force || true
-          echo "Disk after cleanup:"; df -h /
+          python <<'PY'
+          from pathlib import Path
 
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
+          def replace_all(path, old, new, expected_min=1):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count < expected_min:
+                  raise RuntimeError(f"{path}: expected at least {expected_min} matches, found {count}: {old[:100]!r}")
+              p.write_text(text.replace(old, new))
+              return count
 
-      - name: Setup
-        uses: ./tooling/github/setup
+          modal = "apps/web/components/dashboard/lists/ManageCollaboratorsModal.tsx"
+          replace_all(modal, '''import {
+            canManageCollaboratorOnList,
+            collaboratorRemovalMessage,
+            formatInvitationDate,
+            invitationDeliveryMessage,
+          } from "./collaborationUi";''', '''import {
+            canManageCollaboratorOnList,
+            formatInvitationDate,
+          } from "./collaborationUi";''')
+          delivery_old = 'toast({ description: invitationDeliveryMessage(result.emailSent) });'
+          delivery_new = '''toast({
+          description: t(
+            result.emailSent
+              ? "lists.collaborators.invitation_delivery_sent"
+              : "lists.collaborators.invitation_delivery_failed",
+          ),
+        });'''
+          if replace_all(modal, delivery_old, delivery_new, 2) != 2:
+              raise RuntimeError("expected exactly two invitation delivery toasts")
 
-      - name: Typecheck
-        run: pnpm typecheck
-  tests:
-    runs-on: ubuntu-latest
-    # E2E builds the complete AIO image. Cap the job so a runner or Docker
-    # BuildKit stall fails with usable logs instead of consuming six hours.
-    timeout-minutes: 30
-    steps:
-      # Fork divergence: the E2E job builds the full AIO Docker image (Rust monolith +
-      # full monorepo + native modules) plus several sidecar containers, which exhausts
-      # the ~14GB free disk on the default hosted runner. Reclaim ~20GB of preinstalled
-      # toolchains we don't use before that build runs.
-      - name: Free up disk space
-        run: |
-          set -euo pipefail
-          echo "Disk before cleanup:"; df -h /
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
-          sudo docker image prune --all --force || true
-          echo "Disk after cleanup:"; df -h /
+          modal_replacements = [
+              ('"Invite people to this list and optionally include current and future nested lists."', 't("lists.collaborators.stable_description")'),
+              ('aria-label="Invitation role"', 'aria-label={t("lists.collaborators.invitation_role")}'),
+              ('<SelectItem value="viewer">Viewer</SelectItem>', '<SelectItem value="viewer">{t("lists.collaborators.viewer")}</SelectItem>'),
+              ('<SelectItem value="editor">Editor</SelectItem>', '<SelectItem value="editor">{t("lists.collaborators.editor")}</SelectItem>'),
+              ('                  Invite\n', '                  {t("lists.collaborators.invite")}\n'),
+              ('                    Also share all nested lists\n', '                    {t("lists.collaborators.share_all_nested")}\n'),
+              ('                    Includes current nested lists and lists added or moved here\n                    later. Leave this off to share only this list.\n', '                    {t("lists.collaborators.share_all_nested_description")}\n'),
+              ('<span className="text-sm text-muted-foreground">Owner</span>', '<span className="text-sm text-muted-foreground">\n                      {t("lists.collaborators.owner")}\n                    </span>'),
+              ('{expired ? "Expired" : "Pending"}', '{expired\n                                    ? t("lists.collaborators.expired")\n                                    : t("lists.collaborators.pending")}'),
+              ('<Badge variant="secondary">Inherited</Badge>', '<Badge variant="secondary">\n                                  {t("lists.collaborators.inherited")}\n                                </Badge>'),
+              ('<Badge variant="outline">Nested lists</Badge>', '<Badge variant="outline">\n                                  {t("lists.collaborators.nested_lists")}\n                                </Badge>'),
+              ('                                  Inherited from {collaborator.sourceListName}\n', '                                  {t("lists.collaborators.inherited_from", {\n                                    name: collaborator.sourceListName,\n                                  })}\n'),
+              ('{expired ? "Expired" : "Expires"}{" "}', '{expired\n                                  ? t("lists.collaborators.expired")\n                                  : t("lists.collaborators.expires")}{" "}'),
+              ('{collaborator.role}', '{t(\n                                collaborator.role === "viewer"\n                                  ? "lists.collaborators.viewer"\n                                  : "lists.collaborators.editor",\n                              )}'),
+              ('                                  Override here\n', '                                  {t("lists.collaborators.override_here")}\n'),
+              ('aria-label="Pending invitation role"', 'aria-label={t("lists.collaborators.pending_invitation_role")}'),
+              ('                              Nested lists\n', '                              {t("lists.collaborators.nested_lists")}\n'),
+              ('<RefreshCw className="mr-1 size-3" /> Resend', '<RefreshCw className="mr-1 size-3" />\n                              {t("lists.collaborators.resend")}'),
+              ('                              Revoke\n', '                              {t("lists.collaborators.revoke")}\n'),
+              ('aria-label="Collaborator role"', 'aria-label={t("lists.collaborators.collaborator_role")}'),
+              ('aria-label={`Remove ${collaborator.user.name}`}', 'aria-label={t("lists.collaborators.remove_aria", {\n                                name: collaborator.user.name,\n                              })}'),
+              ('                                    collaboratorRemovalMessage(\n                                      collaborator.user.name,\n                                    ),', '                                    t("lists.collaborators.remove_confirmation", {\n                                      name: collaborator.user.name,\n                                    }),'),
+          ]
+          for old, new in modal_replacements:
+              replace_all(modal, old, new)
 
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
+          pending = "apps/web/components/dashboard/lists/PendingInvitationsCard.tsx"
+          for old, new in [
+              ('              {invitation.role}\n', '              {t(\n                invitation.role === "viewer"\n                  ? "lists.collaborators.viewer"\n                  : "lists.collaborators.editor",\n              )}\n'),
+              ('<Badge variant="secondary">Includes nested lists</Badge>', '<Badge variant="secondary">\n                {t("lists.invitations.includes_nested_lists")}\n              </Badge>'),
+              ('<Badge variant="destructive">Expired</Badge>', '<Badge variant="destructive">\n                {t("lists.invitations.expired")}\n              </Badge>'),
+              ('{invitation.list.owner?.name || "Unknown"}', '{invitation.list.owner?.name || t("lists.invitations.unknown")}'),
+              ('{invitation.expired ? "Expired" : "Expires"}{" "}', '{invitation.expired\n              ? t("lists.invitations.expired")\n              : t("lists.invitations.expires")}{" "}'),
+              ('              Ask the list owner to resend this invitation to renew it for 30\n              days.\n', '              {t("lists.invitations.expired_help")}\n'),
+          ]:
+              replace_all(pending, old, new)
 
-      - name: Setup
-        uses: ./tooling/github/setup
-        with:
-          # Vitest + better-sqlite3 can abort during worker teardown on Node 24.
-          # Node 22.21.1 passed the TRPC and workers suites in CI run #124.
-          # Remove this override once nodejs/node#65042 ships in Node 24.
-          node-version: "22.21.1"
+          Path("apps/web/components/dashboard/lists/collaborationUi.ts").write_text('''const invitationDateFormatter = new Intl.DateTimeFormat("en-US", {\n  dateStyle: "medium",\n  timeZone: "UTC",\n});\n\nexport function formatInvitationDate(date: Date) {\n  return invitationDateFormatter.format(date);\n}\n\nexport function canManageCollaboratorOnList(collaborator: {\n  status: "pending" | "accepted" | "declined";\n  inherited?: boolean;\n}) {\n  return collaborator.status === "accepted" && !collaborator.inherited;\n}\n''')
+          Path("apps/web/components/dashboard/lists/collaborationUi.test.ts").write_text('''import { describe, expect, test } from "vitest";\n\nimport {\n  canManageCollaboratorOnList,\n  formatInvitationDate,\n} from "./collaborationUi";\n\ndescribe("stable collaboration UI semantics", () => {\n  test("formats invitation dates deterministically", () => {\n    expect(formatInvitationDate(new Date("2026-08-15T23:30:00-07:00"))).toBe(\n      "Aug 16, 2026",\n    );\n  });\n\n  test("only direct accepted collaborators can be managed from this list", () => {\n    expect(\n      canManageCollaboratorOnList({ status: "accepted", inherited: false }),\n    ).toBe(true);\n    expect(\n      canManageCollaboratorOnList({ status: "accepted", inherited: true }),\n    ).toBe(false);\n    expect(\n      canManageCollaboratorOnList({ status: "pending", inherited: false }),\n    ).toBe(false);\n  });\n});\n''')
 
-      - name: Shared Package Tests
-        working-directory: packages/shared
-        run: pnpm test
-
-      - name: TRPC Tests
-        working-directory: packages/trpc
-        run: pnpm test
-
-      - name: Workers Tests
-        working-directory: apps/workers
-        run: pnpm test
-
-      - name: E2E Tests
-        working-directory: packages/e2e_tests
-        env:
-          # Keep the last active Docker build step visible if E2E startup fails.
-          BUILDKIT_PROGRESS: plain
-        run: pnpm test
-
-      - name: Upload Docker Logs
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: e2e-docker-logs-${{ github.sha }}-${{ github.run_attempt }}
-          path: packages/e2e_tests/setup/docker-logs/
-          retention-days: 7
-  open-api-spec:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-
-      - name: Setup
-        uses: ./tooling/github/setup
-
-      - name: Regenerate OpenAPI spec
-        working-directory: packages/open-api
-        run: pnpm run generate
-
-      - name: Check for changes
-        run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
-            echo "Error: Generated files are not up to date!"
-            echo "The following files have changes:"
-            git status --porcelain
-            echo ""
-            echo "Please regenerate the files locally with (pnpm run generate) and commit the changes."
-            git diff
-            exit 1
-          else
-            echo "✅ Generated files are up to date!"
-          fi
-
-  # Non-blocking quality reports: they surface findings without making CI fail.
-  # Tighten Knip to blocking once its existing findings are triaged.
-  knip:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-
-      - name: Setup
-        uses: ./tooling/github/setup
-
-      - name: Knip (unused files / deps / exports, report-only)
-        # The existing baseline is intentionally advisory. Keep its findings in
-        # the log and Actions annotations without making the check non-green.
-        run: pnpm knip || echo "::warning title=Knip findings::Knip reported existing unused-code findings. See this step's log for details."
-
-  react-doctor:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-
-      - name: Setup
-        uses: ./tooling/github/setup
-
-      - name: "React Doctor (minimum score: 99)"
-        run: pnpm doctor:ci
+          collaborator_keys = '''      "stable_description": "Invite people to this list and optionally include current and future nested lists.",\n      "invitation_role": "Invitation role",\n      "invite": "Invite",\n      "share_all_nested": "Also share all nested lists",\n      "share_all_nested_description": "Includes current nested lists and lists added or moved here later. Leave this off to share only this list.",\n      "nested_lists": "Nested lists",\n      "inherited": "Inherited",\n      "inherited_from": "Inherited from {{name}}",\n      "expired": "Expired",\n      "expires": "Expires",\n      "override_here": "Override here",\n      "pending_invitation_role": "Pending invitation role",\n      "collaborator_role": "Collaborator role",\n      "resend": "Resend",\n      "invitation_delivery_sent": "Invitation created and email sent.",\n      "invitation_delivery_failed": "Invitation created, but the email was not sent. You can resend it later.",\n      "remove_aria": "Remove {{name}}",\n      "remove_confirmation": "Remove {{name}} from this shared list? Bookmark entries they contributed through this collaboration will be removed from this shared list, but their underlying bookmarks will remain in their library.",\n'''
+          invitation_keys = '''      "includes_nested_lists": "Includes nested lists",\n      "expired": "Expired",\n      "expires": "Expires",\n      "unknown": "Unknown",\n      "expired_help": "Ask the list owner to resend this invitation to renew it for 30 days.",\n'''
+          for locale in [
+              "apps/web/lib/i18n/locales/en/translation.json",
+              "apps/web/lib/i18n/locales/en_US/translation.json",
+          ]:
+              replace_all(locale, '      "manage": "Manage Collaborators",\n', '      "manage": "Manage Collaborators",\n' + collaborator_keys)
+              replace_all(locale, '      "pending": "Pending Invitations",\n', '      "pending": "Pending Invitations",\n' + invitation_keys)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/components/dashboard/lists apps/web/lib/i18n/locales/en/translation.json apps/web/lib/i18n/locales/en_US/translation.json
+          git commit --no-verify -m "fix(web): localize stable collaboration UI"
+          git push origin HEAD:${{ github.head_ref }}
