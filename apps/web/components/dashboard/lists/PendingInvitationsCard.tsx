@@ -43,6 +43,7 @@ function InvitationRow({
 }) {
   const api = useTRPC();
   const { t } = useTranslation();
+  const { t: tc } = useTranslation("collaboration");
   const queryClient = useQueryClient();
 
   const invalidate = () =>
@@ -74,6 +75,12 @@ function InvitationRow({
     }),
   );
 
+  const roleLabel = t(
+    invitation.role === "viewer"
+      ? "lists.collaborators.viewer"
+      : "lists.collaborators.editor",
+  );
+
   return (
     <div
       id={`pending-invitation-${invitation.id}`}
@@ -85,13 +92,13 @@ function InvitationRow({
             <span className="font-medium">
               {invitation.list.icon} {invitation.list.name}
             </span>
-            <Badge variant="outline" className="capitalize">
-              {invitation.role}
-            </Badge>
+            <Badge variant="outline">{roleLabel}</Badge>
             {invitation.recursive && (
-              <Badge variant="secondary">Includes nested lists</Badge>
+              <Badge variant="secondary">{tc("includes_nested_lists")}</Badge>
             )}
-            {invitation.expired && <Badge variant="destructive">Expired</Badge>}
+            {invitation.expired && (
+              <Badge variant="destructive">{tc("expired")}</Badge>
+            )}
           </div>
           {invitation.list.description && (
             <div className="mt-1 text-sm text-muted-foreground">
@@ -101,18 +108,17 @@ function InvitationRow({
           <div className="mt-2 text-sm text-muted-foreground">
             {t("lists.invitations.invited_by")}{" "}
             <span className="font-medium">
-              {invitation.list.owner?.name || "Unknown"}
+              {invitation.list.owner?.name || tc("unknown")}
             </span>
           </div>
           <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <Clock3 className="size-3" />
-            {invitation.expired ? "Expired" : "Expires"}{" "}
+            {invitation.expired ? tc("expired") : tc("expires")} {" "}
             {formatInvitationDate(invitation.expiresAt)}
           </div>
           {invitation.expired && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Ask the list owner to resend this invitation to renew it for 30
-              days.
+              {tc("expired_help")}
             </p>
           )}
         </div>
