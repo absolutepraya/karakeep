@@ -1,23 +1,26 @@
-import { Alert, Platform, View } from "react-native";
+import { Alert, Platform, Pressable, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useBookmarkListLayoutMenu } from "@/components/bookmarks/BookmarkListHeader";
 import UpdatingBookmarkList from "@/components/bookmarks/UpdatingBookmarkList";
 import FullPageError from "@/components/FullPageError";
 import FullPageSpinner from "@/components/ui/FullPageSpinner";
+import { Text } from "@/components/ui/Text";
 import { useArchiveFilter } from "@/lib/hooks";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { useMenuIconColors } from "@/lib/useMenuIconColors";
 import { MenuView } from "@react-native-menu/menu";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Ellipsis } from "lucide-react-native";
+import { ChevronLeft, Ellipsis } from "lucide-react-native";
 
+import { useBookmarkLists } from "@karakeep/shared-react/hooks/lists";
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { ZBookmarkList } from "@karakeep/shared/types/lists";
 
 export default function ListView() {
   const { slug } = useLocalSearchParams();
   const api = useTRPC();
+  const { colors } = useColorScheme();
   if (typeof slug !== "string") {
     throw new Error("Unexpected param type");
   }
@@ -26,6 +29,12 @@ export default function ListView() {
     error,
     refetch,
   } = useQuery(api.lists.get.queryOptions({ listId: slug }));
+  const { data: listsData } = useBookmarkLists();
+  const hierarchyPath = listsData?.getPathById(slug);
+  const parentList =
+    hierarchyPath && hierarchyPath.length > 1
+      ? hierarchyPath[hierarchyPath.length - 2]
+      : undefined;
   const { archived, isLoading: isSettingsLoading } = useArchiveFilter();
 
   return (
@@ -33,7 +42,27 @@ export default function ListView() {
       <Stack.Screen
         options={{
           headerTitle: list ? `${list.icon} ${list.name}` : "",
-          headerBackTitle: "Back",
+          headerBackTitle: parentList?.name ?? "Back",
+          headerBackVisible: !parentList,
+          headerLeft: parentList
+            ? () => (
+                <Pressable
+                  accessibilityRole="button"
+                  className="flex max-w-48 flex-row items-center"
+                  onPress={() => {
+                    router.replace({
+                      pathname: "/dashboard/lists/[slug]",
+                      params: { slug: parentList.id },
+                    });
+                  }}
+                >
+                  <ChevronLeft size={22} color={colors.foreground} />
+                  <Text className="max-w-40" numberOfLines={1}>
+                    {parentList.name}
+                  </Text>
+                </Pressable>
+              )
+            : undefined,
           headerRight: () => (
             <ListActionsMenu listId={slug} role={list?.userRole ?? "viewer"} />
           ),
