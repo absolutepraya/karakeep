@@ -497,14 +497,15 @@ async function loadCookiesFromFile(): Promise<void> {
 }
 
 type DBAssetType = typeof assets.$inferInsert;
-type DownloadedAsset = {
+
+interface DownloadedAsset {
   assetId: string;
   userId: string;
   contentType: string;
   size: number;
-};
+}
 
-type CrawlPageResult = {
+interface CrawlPageResult {
   htmlContent: string;
   screenshot: Buffer | undefined;
   pdf: Buffer | undefined;
@@ -512,7 +513,7 @@ type CrawlPageResult = {
   url: string;
   unfurlImage: DownloadedAsset | null;
   browserThumbnailHandled: boolean;
-};
+}
 
 async function browserlessCrawlPage(
   jobId: string,
