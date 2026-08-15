@@ -464,10 +464,7 @@ export class ListInvitation {
           expired: expiresAt.getTime() <= Date.now(),
           user: {
             id: invitation.user.id,
-            name:
-              invitation.status === "pending"
-                ? "Pending User"
-                : "Declined User",
+            name: "Pending User",
             email: invitation.user.email || "",
             image: null,
           },

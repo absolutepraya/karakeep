@@ -176,10 +176,10 @@ export async function getAllSharedListAccess(ctx: AuthedContext) {
   );
   const scopeByList = new Map(scopes.map((scope) => [scope.listId, scope]));
   const listById = new Map(allOwnerLists.map((list) => [list.id, list]));
-  const result: Array<{
+  const result: {
     list: (typeof allOwnerLists)[number];
     grant: EffectiveCollaboratorGrant;
-  }> = [];
+  }[] = [];
 
   for (const list of allOwnerLists) {
     if (list.type !== "manual") {
