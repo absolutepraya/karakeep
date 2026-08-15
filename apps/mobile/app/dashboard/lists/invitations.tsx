@@ -4,9 +4,18 @@ import { Button } from "@/components/ui/Button";
 import FullPageSpinner from "@/components/ui/FullPageSpinner";
 import { Text } from "@/components/ui/Text";
 import { useToast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
+
+const invitationDateFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
 
 export default function ListInvitationsPage() {
   const api = useTRPC();
@@ -105,7 +114,7 @@ export default function ListInvitationsPage() {
                 )}
                 <Text className="text-xs text-muted-foreground">
                   {invitation.expired ? "Expired" : "Expires"}{" "}
-                  {invitation.expiresAt.toLocaleDateString()}
+                  {invitationDateFormatter.format(invitation.expiresAt)}
                 </Text>
                 {invitation.expired && (
                   <Text className="text-xs text-muted-foreground">
