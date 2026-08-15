@@ -29,13 +29,16 @@ Start here:
 ## Local setup
 
 This fork uses:
-- Node 24 (`.nvmrc`)
+- Node 24.18.1 (`.nvmrc`; temporarily pinned to avoid the Node 24.19 native-addon cleanup regression)
 - `pnpm@11.2.1` via corepack
 - root `.env` symlinked into `apps/web`, `apps/workers`, and `packages/db`
 
 Quick start:
 
 ```bash
+nvm install
+nvm use
+corepack enable
 pnpm install
 
 ln -sf ../../.env apps/web/.env
@@ -69,6 +72,7 @@ pnpm doctor:staged
 ```
 
 Notes:
+- GitHub Actions temporarily runs the combined test job on Node 22.21.1 because Vitest plus `better-sqlite3` can abort during worker teardown on Node 24. Local development and production remain on Node 24.18.1. Remove the CI override once <https://github.com/nodejs/node/pull/65042> ships in Node 24.
 - `pnpm doctor` and `pnpm doctor:staged` are advisory local checks. CI requires a React Doctor score of at least 99 through `pnpm doctor:ci`; see [`docs/react-doctor.md`](docs/react-doctor.md) for the baseline and accepted tool limitations.
 - `knip` is useful for repository cleanup, but is non-blocking in CI.
 

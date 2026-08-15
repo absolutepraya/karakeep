@@ -1,5 +1,13 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { users } from "@karakeep/db/schema";
+import serverConfig from "@karakeep/shared/config";
+import {
+  createSignedToken,
+  getAlignedExpiry,
+} from "@karakeep/shared/signedTokens";
+import { zAssetSignedTokenSchema } from "@karakeep/shared/types/assets";
 import {
   MAX_NUM_BOOKMARKS_PER_PAGE,
   zPublicBookmarkSchema,
@@ -10,6 +18,40 @@ import { zCursorV2 } from "@karakeep/shared/types/pagination";
 
 import { publicProcedure, router } from "../index";
 import { List } from "../models/lists";
+
+/**
+ * Builds an expiring public asset URL with a URL-encoded signed token.
+ */
+function getPublicSignedAssetUrl(
+  assetId: string,
+  assetOwnerId: string,
+  expireAt: number,
+) {
+  const payload: z.infer<typeof zAssetSignedTokenSchema> = {
+    assetId,
+    userId: assetOwnerId,
+  };
+  const signedToken = createSignedToken(
+    payload,
+    serverConfig.signingSecret(),
+    expireAt,
+  );
+  return `${serverConfig.publicApiUrl}/public/assets/${assetId}?token=${encodeURIComponent(signedToken)}`;
+}
+
+/**
+ * Resolves an owner's public image URL, signing locally stored assets as needed.
+ */
+function getPublicOwnerImageUrl(image: string | null, userId: string) {
+  if (!image) {
+    return null;
+  }
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  return getPublicSignedAssetUrl(image, userId, getAlignedExpiry(3600, 900));
+}
 
 export const publicBookmarks = router({
   getPublicListMetadata: publicProcedure
@@ -51,13 +93,17 @@ export const publicBookmarks = router({
             description: true,
             icon: true,
           })
-          .extend({ numItems: z.number(), ownerName: z.string() }),
+          .extend({
+            numItems: z.number(),
+            ownerName: z.string(),
+            ownerImage: z.string().nullable(),
+          }),
         bookmarks: z.array(zPublicBookmarkSchema),
         nextCursor: zCursorV2.nullable(),
       }),
     )
     .query(async ({ input, ctx }) => {
-      return await List.getPublicListContents(
+      const contents = await List.getPublicListContents(
         ctx,
         input.listId,
         /* token */ null,
@@ -67,5 +113,27 @@ export const publicBookmarks = router({
           cursor: input.cursor,
         },
       );
+      const metadata = await List.getPublicListMetadata(
+        ctx,
+        input.listId,
+        /* token */ null,
+      );
+      const owner = await ctx.db.query.users.findFirst({
+        columns: {
+          image: true,
+        },
+        where: eq(users.id, metadata.userId),
+      });
+
+      return {
+        ...contents,
+        list: {
+          ...contents.list,
+          ownerImage: getPublicOwnerImageUrl(
+            owner?.image ?? null,
+            metadata.userId,
+          ),
+        },
+      };
     }),
 });

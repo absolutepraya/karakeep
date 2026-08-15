@@ -47,28 +47,22 @@ export default async function PublicListPage(props: {
       await api.publicBookmarks.getPublicBookmarksInList({
         listId: params.listId,
       });
+    const publicList = {
+      id: params.listId,
+      name: list.name,
+      description: list.description,
+      icon: list.icon,
+      numItems: list.numItems,
+      ownerName: list.ownerName,
+      ownerImage: list.ownerImage,
+    };
+
     return (
-      <div className="mx-auto w-full max-w-7xl space-y-5">
-        <PublicListHeader
-          list={{
-            id: params.listId,
-            name: list.name,
-            description: list.description,
-            icon: list.icon,
-            numItems: list.numItems,
-            ownerName: list.ownerName,
-          }}
-        />
+      <div className="mx-auto w-full space-y-4 sm:space-y-5">
+        <PublicListHeader list={publicList} />
         {list.numItems > 0 ? (
           <PublicBookmarkGrid
-            list={{
-              id: params.listId,
-              name: list.name,
-              description: list.description,
-              icon: list.icon,
-              numItems: list.numItems,
-              ownerName: list.ownerName,
-            }}
+            list={publicList}
             bookmarks={bookmarks}
             nextCursor={nextCursor}
           />
@@ -77,7 +71,7 @@ export default async function PublicListPage(props: {
             icon={<BookmarkIcon className="size-7" />}
             title="This public list is empty"
             description="The list has been shared, but it does not have any bookmarks in it yet."
-            className="shadow-xs rounded-2xl border-border/70 bg-card/90"
+            className="rounded-2xl border-border/80 bg-card"
           />
         )}
       </div>
