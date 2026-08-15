@@ -108,13 +108,16 @@ A good PR for this repo should include:
 
 ## Review expectations
 
-Pull requests targeting `main` may receive an automated CodeRabbit review in addition to the repository's GitHub Actions checks.
+Pull requests targeting `main` may receive advisory automated reviews from CodeRabbit, Qodo, Sourcery, and Graphite Agent in addition to the repository's GitHub Actions checks.
 
-During the initial rollout, CodeRabbit is advisory:
+The AI reviewers are independent critics, not merge authorities or autonomous fixers:
 - GitHub Actions remains the source of truth for deterministic lint, format, typecheck, test, generated-artifact, Knip, and React Doctor validation.
-- CodeRabbit adds contextual review, summaries, repository-specific guidance, and check context; it does not replace CI.
-- CodeRabbit does not automatically request changes or act as a required merge gate during this calibration period.
-- Contributors can reply to CodeRabbit comments or mention `@coderabbitai` in a PR discussion for follow-up context. A review can be requested explicitly with `@coderabbitai review` when needed.
+- AI review comments are evidence of possible problems and must be verified against the issue/spec, surrounding code, tests, documentation, and intended behavior before changing code.
+- No reviewer in this repository setup is intended to automatically commit, push, or apply fixes.
+- AI reviewers are not required merge gates, and multiple reviewers agreeing on a finding does not make it automatically correct.
+- If a suggestion could change user-visible behavior, permissions, data semantics, API contracts, database behavior, compatibility, deployment, or another intentional invariant, verify the intended behavior before implementing it.
+
+See [`docs/ai-code-review.md`](docs/ai-code-review.md) for the reviewer roles, safety rules, permission policy, manual review commands, and calibration process.
 
 This is a personal fork, so human review cadence is best-effort rather than community-SLA driven.
 
