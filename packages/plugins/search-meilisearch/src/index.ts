@@ -14,6 +14,7 @@ import { PluginProvider } from "@karakeep/shared/plugins";
 
 import { envConfig } from "./env";
 import { BatchingDocumentQueue } from "../../lib/batchingDocumentQueue";
+import { buildMeiliIndexName } from "../../lib/meiliIndexName";
 
 function filterToMeiliSearchFilter(filter: FilterQuery): string {
   switch (filter.type) {
@@ -123,7 +124,10 @@ export class MeiliSearchProvider implements PluginProvider<SearchIndexClient> {
   private client: Meilisearch | undefined;
   private indexClient: SearchIndexClient | undefined;
   private initPromise: Promise<SearchIndexClient | null> | undefined;
-  private readonly indexName = "bookmarks";
+  private readonly indexName = buildMeiliIndexName(
+    "bookmarks",
+    envConfig.MEILI_INDEX_PREFIX,
+  );
 
   constructor() {
     if (MeiliSearchProvider.isConfigured()) {

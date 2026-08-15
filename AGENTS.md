@@ -15,8 +15,12 @@
 - Monorepo: Next.js, React, TypeScript, Hono, tRPC, Drizzle, SQLite, Meilisearch, pnpm, and Turborepo.
 - Runtime: Node 24 through `mise exec node@24 --`; pnpm 11.2.1 through Corepack.
 - Install with `pnpm install`, create the documented `.env` symlinks, then run `pnpm db:migrate`.
-- Start local development with `pnpm dev:start`. Use `pnpm dev:start -d` for detached mode and `pnpm dev:stop` to stop it.
+- Start local development with `pnpm dev:start`. Use `pnpm dev:start -d` for detached mode and `pnpm dev:stop` to stop only that workspace.
+- Shared local infrastructure is machine-level: one Meilisearch at `http://localhost:7700` and one Chrome/CDP at `http://localhost:9222`. Manage it explicitly with `pnpm dev:infra:up`, `pnpm dev:infra:status`, and `pnpm dev:infra:down`.
+- Parallel worktrees keep separate SQLite/assets data and unique web ports. `scripts/setup-worktree.sh` assigns each worktree a unique `MEILI_INDEX_PREFIX`; both `bookmarks` and `bookmarks_vectors` use that namespace on the shared Meilisearch server.
+- `pnpm dev:start` defaults the main workspace namespace to `main_`. Outside the fork dev launcher, an unset `MEILI_INDEX_PREFIX` preserves the original `bookmarks` and `bookmarks_vectors` index names.
 - Run focused checks before broad checks when practical. Standard checks are `pnpm format:fix`, `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
+- Validate shared-dev shell behavior with `bash scripts/dev-infra.test.sh`.
 - Root `.env` is canonical. Do not print or commit secrets.
 - Guided Docker self-hosting: `docs/docs/02-installation/11-guided-docker-setup.md`.
 
@@ -114,21 +118,41 @@ pnpm dev:start
 Useful variants:
 - `pnpm dev:start` - foreground
 - `pnpm dev:start -d` - detached
-- `pnpm dev:stop` - stop detached services
+- `pnpm dev:stop` - stop only this workspace's web/workers processes
+- `pnpm dev:infra:up` - explicitly start/reuse shared Meilisearch + Chrome
+- `pnpm dev:infra:status` - inspect shared dev infrastructure
+- `pnpm dev:infra:down` - explicitly remove shared containers while preserving Meilisearch data
 
-What it does:
-- runs `web` + `workers` natively
-- runs Meilisearch + headless Chrome in Docker
+Local-dev ownership model:
+- `web` + `workers` run natively per workspace
+- one machine-level Meilisearch container is shared at `http://localhost:7700`
+- one machine-level Chrome container is shared at `http://localhost:9222`
+- `pnpm dev:start` automatically ensures those shared containers exist
+- `pnpm dev:stop` never stops shared infrastructure because other worktrees may still use it
+- the shared Chrome image is `ghcr.io/karakeep-app/karakeep-chrome:release`
+
+Parallel-worktree isolation:
+- every worktree keeps its own `.data/local` SQLite/assets state and unique web port
+- `scripts/setup-worktree.sh` points all worktrees at shared Meilisearch/Chrome endpoints
+- every worktree receives a safe unique `MEILI_INDEX_PREFIX` derived from its normalized workspace name plus `WT_PORT_BASE`
+- both `bookmarks` and `bookmarks_vectors` use that prefix, so separate SQLite states never share Meilisearch documents
+- `pnpm dev:start` defaults the main workspace prefix to `main_`
+- outside this fork's dev launcher, unset `MEILI_INDEX_PREFIX` preserves the original `bookmarks` / `bookmarks_vectors` names
 
 ### Direct commands
 
+When bypassing `pnpm dev:start`, manual starts **must** set an explicit unique `MEILI_INDEX_PREFIX` for that workspace before starting web or workers. Use `main_` only for the main workspace; parallel worktrees need distinct prefixes.
+
 ```bash
+export MEILI_INDEX_PREFIX=main_
+pnpm dev:infra:up
 pnpm web
 pnpm workers
 ```
 
 Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
+- shared infra binds only to localhost; if ports `7700` or `9222` are occupied by something else, the helper fails rather than silently reusing an unknown service
 - If `next dev` crashes with a stale Turbopack/instrumentation issue, clear `apps/web/.next`.
 
 ### Pull prod state to local dev
@@ -145,7 +169,7 @@ Optional root `.env` keys:
 - `KARAKEEP_PROD_COMPOSE_SERVICE`
 - `KARAKEEP_PROD_EXPORT_IMAGE`
 
-Every pull restores the full `/data` volume because SQLite rows can reference stored assets. Do not use DB-only pulls or print `.env` secrets.
+Every pull restores the full `/data` volume because SQLite rows can reference stored assets. Do not use DB-only pulls or print `.env` secrets. Meilisearch remains derived local state in that workspace's own index namespace.
 
 ## Deploy model for this fork
 
@@ -175,6 +199,7 @@ Additional tooling used in this fork:
 - `pnpm doctor` - React health scan via react.doctor
 - `pnpm doctor:staged` - staged-file React scan
 - `bash scripts/install.test.sh` - guided installer shell-level validation
+- `bash scripts/dev-infra.test.sh` - shared worktree-dev infrastructure validation
 
 Notes:
 - `react.doctor` is advisory in pre-commit and can emit noisy temp-package errors.
@@ -209,6 +234,10 @@ pnpm test
 pnpm knip
 pnpm doctor
 bash scripts/install.test.sh
+bash scripts/dev-infra.test.sh
+pnpm dev:infra:up
+pnpm dev:infra:status
+pnpm dev:infra:down
 pnpm db:generate --name <description>
 pnpm db:migrate
 pnpm web

@@ -14,6 +14,7 @@ import { PluginProvider } from "@karakeep/shared/plugins";
 
 import { envConfig } from "./env";
 import { BatchingDocumentQueue } from "../../lib/batchingDocumentQueue";
+import { buildMeiliIndexName } from "../../lib/meiliIndexName";
 
 // Meilisearch document type that includes the vector field
 interface MeiliVectorDocument {
@@ -80,7 +81,7 @@ class MeiliSearchVectorClient implements VectorStoreClient {
     const result = await this.index.search("", {
       vector: options.vector,
       hybrid: {
-        semanticRatio: 1.0, // Pure vector search
+        semanticRatio: 1.0,
         embedder: "default",
       },
       filter: options.filter?.map((f) => filterToMeiliSearchFilter(f)),
@@ -150,7 +151,10 @@ export class MeiliSearchVectorProvider implements PluginProvider<VectorStoreClie
   private version: string | undefined;
   private vectorClient: VectorStoreClient | undefined;
   private initPromise: Promise<VectorStoreClient | null> | undefined;
-  private readonly indexName = "bookmarks_vectors";
+  private readonly indexName = buildMeiliIndexName(
+    "bookmarks_vectors",
+    envConfig.MEILI_INDEX_PREFIX,
+  );
 
   constructor() {
     if (MeiliSearchVectorProvider.isConfigured()) {
@@ -238,7 +242,6 @@ export class MeiliSearchVectorProvider implements PluginProvider<VectorStoreClie
 
     const settings = await index.getSettings();
 
-    // Configure filterable attributes
     if (
       JSON.stringify(settings.filterableAttributes?.sort()) !==
       JSON.stringify(desiredFilterableAttributes)
@@ -252,7 +255,6 @@ export class MeiliSearchVectorProvider implements PluginProvider<VectorStoreClie
       await this.client!.tasks.waitForTask(taskId.taskUid);
     }
 
-    // Configure embedders for vector search
     const currentEmbedders = settings.embedders;
     const desiredDimensions = serverConfig.embedding.dimensions;
     const currentEmbedder = currentEmbedders?.default;
@@ -263,7 +265,6 @@ export class MeiliSearchVectorProvider implements PluginProvider<VectorStoreClie
     ) {
       console.log(`[meilisearch-vector] Configuring user-provided embedder`);
       try {
-        // Use userProvided embedder since we generate embeddings ourselves
         await index
           .updateEmbedders({
             default: {
