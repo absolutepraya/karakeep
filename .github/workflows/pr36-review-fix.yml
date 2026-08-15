@@ -17,6 +17,8 @@ jobs:
         with:
           ref: feat/url-ingestion-processing-optimization
       - uses: ./tooling/github/setup
+        with:
+          node-version: "22.21.1"
       - name: Apply verified CodeRabbit fixes
         run: python3 scripts/pr36-review-fix.py
       - name: Apply repository formatter
