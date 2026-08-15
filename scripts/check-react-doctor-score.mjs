@@ -19,7 +19,23 @@ process.stdin.on("end", () => {
     }
 
     if (score < minimumScore) {
-      console.error(JSON.stringify(report, null, 2));
+      const diagnostics = (report.diagnostics ?? []).map((diagnostic) => ({
+        file: diagnostic.filePath,
+        line: diagnostic.line,
+        rule: `${diagnostic.plugin}/${diagnostic.rule}`,
+        severity: diagnostic.severity,
+        message: diagnostic.message,
+      }));
+      console.error(
+        JSON.stringify(
+          {
+            summary: report.summary,
+            diagnostics,
+          },
+          null,
+          2,
+        ),
+      );
       throw new Error(
         `React Doctor score ${score} is below the required ${minimumScore}.`,
       );
