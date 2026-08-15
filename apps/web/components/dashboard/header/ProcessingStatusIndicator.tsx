@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Cloud,
@@ -288,7 +288,6 @@ async function chooseServerConflictValue(conflict: ZOfflineSyncConflict) {
 
 export default function ProcessingStatusIndicator() {
   const api = useTRPC();
-  const queryClient = useQueryClient();
   const status = useOfflineLibraryStatus();
   const canReadOfflineReplica = useCanReadOfflineReplica();
   const { discardRejectedMutation, syncNow } = useOfflineLibrary();
@@ -299,8 +298,7 @@ export default function ProcessingStatusIndicator() {
   const [selectedConflict, setSelectedConflict] =
     React.useState<ZOfflineSyncConflict | null>(null);
   const lastSuccessfulSyncRef = React.useRef<Date | null>(null);
-  const previousPreparingCountRef = React.useRef(0);
-  const { data, dataUpdatedAt } = useQuery(
+  const { data } = useQuery(
     api.bookmarks.getProcessingStatus.queryOptions(undefined, {
       refetchInterval: (query) =>
         getProcessingRefreshInterval(
@@ -310,22 +308,6 @@ export default function ProcessingStatusIndicator() {
   );
   const serverProcessing = data ?? { total: 0, tasks: [] };
   const processing = getProcessingBreakdown(serverProcessing);
-
-  React.useEffect(() => {
-    const wasPreparing = previousPreparingCountRef.current > 0;
-    const isPreparing = processing.preparingCount > 0;
-
-    if (dataUpdatedAt > 0 && (isPreparing || wasPreparing)) {
-      void Promise.all([
-        queryClient.invalidateQueries(api.bookmarks.getBookmarks.pathFilter()),
-        queryClient.invalidateQueries(
-          api.bookmarks.searchBookmarks.pathFilter(),
-        ),
-      ]);
-    }
-
-    previousPreparingCountRef.current = processing.preparingCount;
-  }, [api, dataUpdatedAt, processing.preparingCount, queryClient]);
 
   const loadConflicts = React.useCallback(async () => {
     const records = await offlineLibraryDb.conflicts.toArray();
