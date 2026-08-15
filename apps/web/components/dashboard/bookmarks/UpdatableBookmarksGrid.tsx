@@ -22,6 +22,7 @@ import type {
   ZGetBookmarksRequest,
   ZGetBookmarksResponse,
 } from "@karakeep/shared/types/bookmarks";
+import { isBookmarkStillLoading } from "@karakeep/shared/utils/bookmarkUtils";
 import type { ZCursor } from "@karakeep/shared/types/pagination";
 import { BookmarkGridContextProvider } from "@karakeep/shared-react/hooks/bookmark-grid-context";
 import { useTRPC } from "@karakeep/shared-react/trpc";
@@ -306,6 +307,12 @@ function ServerBookmarksGrid({
           initialCursor: null,
           getNextPageParam: (lastPage) => lastPage.nextCursor,
           refetchOnMount: true,
+          refetchInterval: (activeQuery) =>
+            activeQuery.state.data?.pages.some((page) =>
+              page.bookmarks.some(isBookmarkStillLoading),
+            )
+              ? 1000
+              : false,
         },
       ),
     );
