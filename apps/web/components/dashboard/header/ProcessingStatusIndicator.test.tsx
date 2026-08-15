@@ -320,7 +320,9 @@ describe("ProcessingStatusIndicator", () => {
     render(<ProcessingStatusIndicator />);
 
     const trigger = screen.getByRole("button", { name: /library activity/i });
-    expect(trigger.getAttribute("aria-label")).not.toMatch(/bookmark preparing/i);
+    expect(trigger.getAttribute("aria-label")).not.toMatch(
+      /bookmark preparing/i,
+    );
     expect(trigger.textContent).not.toContain("2");
   });
 });

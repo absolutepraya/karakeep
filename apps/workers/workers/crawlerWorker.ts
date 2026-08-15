@@ -204,6 +204,7 @@ const activeContexts = new Map<
 
 const CONTEXT_CLOSE_TIMEOUT_MS = 10_000;
 const PAGE_CLOSE_TIMEOUT_MS = 5_000;
+const UNFURL_IMAGE_DOWNLOAD_TIMEOUT_MS = 3_000;
 
 function getHeaderValue(
   headers: { name: string; value: string }[] | undefined,
@@ -511,8 +512,9 @@ interface CrawlPageResult {
   pdf: Buffer | undefined;
   statusCode: number;
   url: string;
+  officialUnfurlImageUrl: string | null;
+  officialUnfurlImageAttempted: boolean;
   unfurlImage: DownloadedAsset | null;
-  browserThumbnailHandled: boolean;
 }
 
 async function browserlessCrawlPage(
@@ -545,14 +547,19 @@ async function browserlessCrawlPage(
       logger.info(
         `[Crawler][${jobId}] Successfully fetched the content of "${truncateUrl(url)}". Status: ${response.status}, Size: ${response.size}`,
       );
+      const htmlContent = await response.text();
       return {
-        htmlContent: await response.text(),
+        htmlContent,
         statusCode: response.status,
         screenshot: undefined,
         pdf: undefined,
         url: response.url,
+        officialUnfurlImageUrl: extractOfficialUnfurlImageUrl(
+          htmlContent,
+          response.url,
+        ),
+        officialUnfurlImageAttempted: false,
         unfurlImage: null,
-        browserThumbnailHandled: false,
       };
     },
   );
@@ -887,11 +894,15 @@ async function crawlPage(
         );
         let unfurlImage: DownloadedAsset | null = null;
         if (officialUnfurlImageUrl) {
+          const unfurlAbortSignal = AbortSignal.any([
+            abortSignal,
+            AbortSignal.timeout(UNFURL_IMAGE_DOWNLOAD_TIMEOUT_MS),
+          ]);
           unfurlImage = await downloadAndStoreImage(
             officialUnfurlImageUrl,
             userId,
             jobId,
-            abortSignal,
+            unfurlAbortSignal,
             runProxy,
           );
           abortSignal.throwIfAborted();
@@ -1005,8 +1016,9 @@ async function crawlPage(
           screenshot,
           pdf,
           url: activePage.url(),
+          officialUnfurlImageUrl,
+          officialUnfurlImageAttempted: officialUnfurlImageUrl !== null,
           unfurlImage,
-          browserThumbnailHandled: true,
         };
       } finally {
         await withSpan(
@@ -1605,10 +1617,7 @@ async function getContentType(
             url,
             {
               method,
-              signal: AbortSignal.any([
-                AbortSignal.timeout(5000),
-                abortSignal,
-              ]),
+              signal: AbortSignal.any([AbortSignal.timeout(5000), abortSignal]),
             },
             runProxy,
           );
@@ -1841,14 +1850,19 @@ async function crawlAndParseUrl(
           userId,
           assetId: precrawledArchiveAssetId,
         });
+        const htmlContent = asset.asset.toString();
         result = {
-          htmlContent: asset.asset.toString(),
+          htmlContent,
           screenshot: undefined,
           pdf: undefined,
           statusCode: 200,
           url,
+          officialUnfurlImageUrl: extractOfficialUnfurlImageUrl(
+            htmlContent,
+            url,
+          ),
+          officialUnfurlImageAttempted: false,
           unfurlImage: null,
-          browserThumbnailHandled: false,
         };
       } else {
         result = await crawlPage(
@@ -1906,11 +1920,7 @@ async function crawlAndParseUrl(
         }
       };
 
-      const officialUnfurlImageUrl = extractOfficialUnfurlImageUrl(
-        htmlContent,
-        browserUrl,
-      );
-      const previewImageUrl = officialUnfurlImageUrl ?? meta.image;
+      const previewImageUrl = result.officialUnfurlImageUrl ?? meta.image;
 
       await db
         .update(bookmarkLinks)
@@ -1931,17 +1941,6 @@ async function crawlAndParseUrl(
 
       let readableContent = parsedReadableContent;
 
-      const [screenshotAssetInfo, pdfAssetInfo, htmlContentAssetInfo] =
-        await Promise.all([
-          raceWith(
-            storeScreenshot(screenshot, userId, jobId),
-            abortRace(abortSignal),
-          ),
-          raceWith(storePdf(pdf, userId, jobId), abortRace(abortSignal)),
-          storeHtmlContent(readableContent?.content, userId, jobId),
-        ] as const);
-      abortSignal.throwIfAborted();
-
       let imageAssetInfo: DBAssetType | null = result.unfurlImage
         ? {
             id: result.unfurlImage.assetId,
@@ -1953,25 +1952,59 @@ async function crawlAndParseUrl(
           }
         : null;
 
-      if (!result.browserThumbnailHandled && previewImageUrl) {
-        const downloaded = await downloadAndStoreImage(
-          previewImageUrl,
-          userId,
-          jobId,
-          abortSignal,
-          runProxy,
-        );
-        if (downloaded) {
-          imageAssetInfo = {
-            id: downloaded.assetId,
-            bookmarkId,
+      if (!imageAssetInfo) {
+        const fallbackImageUrl =
+          result.officialUnfurlImageAttempted &&
+          meta.image &&
+          meta.image !== result.officialUnfurlImageUrl
+            ? meta.image
+            : previewImageUrl;
+        if (fallbackImageUrl) {
+          const unfurlAbortSignal = AbortSignal.any([
+            abortSignal,
+            AbortSignal.timeout(UNFURL_IMAGE_DOWNLOAD_TIMEOUT_MS),
+          ]);
+          const downloaded = await downloadAndStoreImage(
+            fallbackImageUrl,
             userId,
-            assetType: AssetTypes.LINK_BANNER_IMAGE,
-            contentType: downloaded.contentType,
-            size: downloaded.size,
-          };
+            jobId,
+            unfurlAbortSignal,
+            runProxy,
+          );
+          abortSignal.throwIfAborted();
+          if (downloaded) {
+            imageAssetInfo = {
+              id: downloaded.assetId,
+              bookmarkId,
+              userId,
+              assetType: AssetTypes.LINK_BANNER_IMAGE,
+              contentType: downloaded.contentType,
+              size: downloaded.size,
+            };
+          }
         }
       }
+
+      // Preserve the pre-PR check/save ordering. Quota approvals are based on
+      // current persisted usage and do not reserve bytes, so these calls must
+      // not perform their checks concurrently.
+      const screenshotAssetInfo = await raceWith(
+        storeScreenshot(imageAssetInfo ? undefined : screenshot, userId, jobId),
+        abortRace(abortSignal),
+      );
+      abortSignal.throwIfAborted();
+
+      const pdfAssetInfo = await raceWith(
+        storePdf(pdf, userId, jobId),
+        abortRace(abortSignal),
+      );
+      abortSignal.throwIfAborted();
+
+      const htmlContentAssetInfo = await storeHtmlContent(
+        readableContent?.content,
+        userId,
+        jobId,
+      );
       abortSignal.throwIfAborted();
 
       const assetDeletionTasks: Promise<void>[] = [];
@@ -2039,7 +2072,7 @@ async function crawlAndParseUrl(
         if (imageAssetInfo) {
           await updateAsset(oldImageAssetId, imageAssetInfo, txn);
           assetDeletionTasks.push(silentDeleteAsset(userId, oldImageAssetId));
-        } else if (result.browserThumbnailHandled && oldImageAssetId) {
+        } else if (!previewImageUrl && oldImageAssetId) {
           await txn.delete(assets).where(eq(assets.id, oldImageAssetId));
           assetDeletionTasks.push(silentDeleteAsset(userId, oldImageAssetId));
         }
@@ -2277,24 +2310,30 @@ async function runCrawler(
           enqueueOpts,
         );
       } else {
+        await OpenAIQueue.enqueue({ bookmarkId, type: "tag" }, enqueueOpts);
+      }
+      if (serverConfig.inference.enableAutoSummarization) {
         await OpenAIQueue.enqueue(
-          { bookmarkId, type: "tag" },
+          { bookmarkId, type: "summarize" },
           enqueueOpts,
         );
+      } else {
+        await db
+          .update(bookmarks)
+          .set({ summarizationStatus: null })
+          .where(
+            and(
+              eq(bookmarks.id, bookmarkId),
+              eq(bookmarks.summarizationStatus, "pending"),
+            ),
+          );
       }
-      await OpenAIQueue.enqueue(
-        { bookmarkId, type: "summarize" },
-        enqueueOpts,
-      );
     }
 
     await triggerSearchReindex(bookmarkId, enqueueOpts);
 
     if (serverConfig.crawler.downloadVideo) {
-      await VideoWorkerQueue.enqueue(
-        { bookmarkId, url },
-        enqueueOpts,
-      );
+      await VideoWorkerQueue.enqueue({ bookmarkId, url }, enqueueOpts);
     }
 
     const webhookService = new WebhooksService(db);

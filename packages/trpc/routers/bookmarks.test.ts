@@ -10,6 +10,7 @@ import {
   users,
 } from "@karakeep/db/schema";
 import * as sharedServer from "@karakeep/shared-server";
+import serverConfig from "@karakeep/shared/config";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
 import { RuleEngine } from "../lib/ruleEngine";
@@ -80,6 +81,7 @@ describe("Bookmark Routes", () => {
     apiCallers,
     db,
   }) => {
+    serverConfig.inference.enableAutoSummarization = false;
     const api = apiCallers[0].bookmarks;
     const user = await apiCallers[0].users.whoami();
 
@@ -110,6 +112,31 @@ describe("Bookmark Routes", () => {
         { kind: "importing", count: 1 },
       ],
     });
+  });
+
+  test<CustomTestContext>("tracks summarization when auto summarization is enabled", async ({
+    apiCallers,
+  }) => {
+    const api = apiCallers[0].bookmarks;
+    serverConfig.inference.enableAutoSummarization = true;
+    try {
+      const created = await api.createBookmark({
+        url: "https://summary-pending.example",
+        type: BookmarkTypes.LINK,
+      });
+      const bookmark = await api.getBookmark({ bookmarkId: created.id });
+      expect(bookmark.summarizationStatus).toBe("pending");
+      await expect(api.getProcessingStatus()).resolves.toEqual({
+        total: 3,
+        tasks: [
+          { kind: "crawling", count: 1 },
+          { kind: "tagging", count: 1 },
+          { kind: "summarizing", count: 1 },
+        ],
+      });
+    } finally {
+      serverConfig.inference.enableAutoSummarization = false;
+    }
   });
 
   test<CustomTestContext>("api key with read scope can read bookmarks but not write", async ({

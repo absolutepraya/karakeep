@@ -1,3 +1,5 @@
+import { decode } from "html-entities";
+
 const UNFURL_IMAGE_KEYS = new Set([
   "og:image",
   "og:image:url",
@@ -30,13 +32,16 @@ export function extractOfficialUnfurlImageUrl(
   for (const tag of tags) {
     const attributes = parseMetaAttributes(tag);
     const key = (
-      attributes.get("property") ?? attributes.get("name") ?? ""
+      attributes.get("property") ??
+      attributes.get("name") ??
+      ""
     ).toLowerCase();
     if (!UNFURL_IMAGE_KEYS.has(key)) {
       continue;
     }
 
-    const content = attributes.get("content")?.trim();
+    const rawContent = attributes.get("content")?.trim();
+    const content = rawContent ? decode(rawContent) : rawContent;
     if (!content || content.startsWith("data:")) {
       continue;
     }

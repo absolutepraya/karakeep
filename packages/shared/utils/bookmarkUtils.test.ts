@@ -40,8 +40,7 @@ function linkBookmark(overrides: {
       favicon: null,
       htmlContent: "<p>Readable content</p>",
       contentAssetId: null,
-      crawledAt:
-        "crawledAt" in overrides ? overrides.crawledAt : new Date(),
+      crawledAt: "crawledAt" in overrides ? overrides.crawledAt : new Date(),
       crawlStatus: overrides.crawlStatus ?? "success",
       crawlStatusCode: 200,
       author: null,
@@ -86,5 +85,15 @@ describe("bookmark loading semantics", () => {
 
     expect(isBookmarkStillLoading(bookmark)).toBe(true);
     expect(getBookmarkRefreshInterval(bookmark)).toBe(1000);
+  });
+
+  test("a failed crawl stops bookmark loading and polling", () => {
+    const bookmark = linkBookmark({
+      crawlStatus: "failure",
+      crawledAt: null,
+    });
+
+    expect(isBookmarkStillLoading(bookmark)).toBe(false);
+    expect(getBookmarkRefreshInterval(bookmark)).toBe(false);
   });
 });
