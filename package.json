@@ -8,6 +8,9 @@
     "dev": "turbo --no-daemon dev --parallel",
     "dev:start": "bash start-dev.sh",
     "dev:stop": "bash stop-dev.sh",
+    "dev:infra:up": "bash scripts/dev-infra.sh up",
+    "dev:infra:status": "bash scripts/dev-infra.sh status",
+    "dev:infra:down": "bash scripts/dev-infra.sh down",
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo --no-daemon clean",
     "db:generate": "pnpm --filter @karakeep/db run generate",
@@ -44,7 +47,7 @@
     "oxfmt": "^0.45.0",
     "oxlint": "^1.60.0",
     "react-doctor": "0.7.8",
-    "sherif": "^1.6.1",
+    "sherif": "^6.15.0",
     "turbo": "^2.5.5"
   },
   "packageManager": "pnpm@11.2.1"
