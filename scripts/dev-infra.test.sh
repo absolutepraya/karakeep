@@ -144,14 +144,14 @@ if FAKE_BUSY_PORTS=7700 bash "$INFRA" up >"$root/foreign.out" 2>&1; then
 fi
 assert_contains "$root/foreign.out" "Port 7700 is already in use"
 
-# Worktrees share infra endpoints but retain unique web/data state and index namespace.
+# Worktrees share infra endpoints but retain unique web/data state and a Meilisearch-safe namespace.
 main_root="$root/main"
 workspace="$root/worktree"
 mkdir -p "$main_root" "$workspace"
 printf 'NEXTAUTH_SECRET=dev-secret\n' >"$main_root/.env"
 WT_ROOT_PATH="$main_root" \
 WT_WORKSPACE_PATH="$workspace" \
-WT_WORKSPACE_NAME='Issue/ABC weird' \
+WT_WORKSPACE_NAME='Issue/ABC.weird' \
 WT_PORT_BASE=7 \
 "$SETUP_WORKTREE" >/dev/null
 assert_contains "$workspace/.env" "KARAKEEP_PORT=3007"
@@ -159,6 +159,7 @@ assert_contains "$workspace/.env" "DATA_DIR=$workspace/.data/local"
 assert_contains "$workspace/.env" "MEILI_ADDR=http://localhost:7700"
 assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9222"
 assert_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc-weird-7_"
+assert_not_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc.weird-7_"
 assert_not_contains "$workspace/.env" "http://localhost:7707"
 assert_not_contains "$workspace/.env" "http://localhost:9229"
 
