@@ -99,6 +99,11 @@ jobs:
 
       - name: Setup
         uses: ./tooling/github/setup
+        with:
+          # Vitest + better-sqlite3 can abort during worker teardown on Node 24.
+          # Node 22.21.1 passed the TRPC and workers suites in CI run #124.
+          # Remove this override once nodejs/node#65042 ships in Node 24.
+          node-version: "22.21.1"
 
       - name: Shared Package Tests
         working-directory: packages/shared
