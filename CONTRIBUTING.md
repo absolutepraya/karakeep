@@ -108,16 +108,15 @@ A good PR for this repo should include:
 
 ## Review expectations
 
-Pull requests targeting `main` may receive advisory automated reviews from CodeRabbit, Qodo, Sourcery, and Graphite Agent in addition to the repository's GitHub Actions checks.
+Pull requests targeting `main` may receive automated reviews from CodeRabbit, Sourcery, and Graphite in addition to the repository's GitHub Actions checks.
 
-The AI reviewers are independent critics, not merge authorities or autonomous fixers:
+AI review is advisory:
 - GitHub Actions remains the source of truth for deterministic lint, format, typecheck, test, generated-artifact, Knip, and React Doctor validation.
-- AI review comments are evidence of possible problems and must be verified against the issue/spec, surrounding code, tests, documentation, and intended behavior before changing code.
-- No reviewer in this repository setup is intended to automatically commit, push, or apply fixes.
-- AI reviewers are not required merge gates, and multiple reviewers agreeing on a finding does not make it automatically correct.
-- If a suggestion could change user-visible behavior, permissions, data semantics, API contracts, database behavior, compatibility, deployment, or another intentional invariant, verify the intended behavior before implementing it.
+- AI reviewers add contextual review signal; they do not replace CI and are not required merge gates by default.
+- Reviewer comments are claims to verify, not instructions to change intended behavior. Check them against the issue/spec, surrounding code, tests, docs, and actual semantics before implementing a suggested fix.
+- This repository's reviewer setup must not automatically commit, push, apply suggestions, or run autonomous fixer agents.
 
-See [`docs/ai-code-review.md`](docs/ai-code-review.md) for the reviewer roles, safety rules, permission policy, manual review commands, and calibration process.
+See [`docs/ai-code-review.md`](docs/ai-code-review.md) for reviewer roles, safety rules, permissions, calibration, and manual interaction.
 
 This is a personal fork, so human review cadence is best-effort rather than community-SLA driven.
 
