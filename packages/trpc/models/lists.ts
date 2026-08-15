@@ -388,7 +388,10 @@ export abstract class List {
 
   protected async cleanupRulesAfterListDeletion(tx: KarakeepDBTransaction) {
     const rules = await tx
-      .select({ id: ruleEngineRulesTable.id, event: ruleEngineRulesTable.event })
+      .select({
+        id: ruleEngineRulesTable.id,
+        event: ruleEngineRulesTable.event,
+      })
       .from(ruleEngineRulesTable)
       .where(
         and(
@@ -896,7 +899,10 @@ export class ManualList extends List {
         );
       }
     } catch (e) {
-      if (e instanceof SqliteError && e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
+      if (
+        e instanceof SqliteError &&
+        e.code === "SQLITE_CONSTRAINT_PRIMARYKEY"
+      ) {
         return;
       }
       throw new TRPCError({
@@ -963,10 +969,14 @@ export class ManualList extends List {
     await this.ctx.db.transaction(async (tx) => {
       await tx
         .insert(bookmarksInLists)
-        .values(bookmarkIds.map((id) => ({ bookmarkId: id, listId: targetList.id })))
+        .values(
+          bookmarkIds.map((id) => ({ bookmarkId: id, listId: targetList.id })),
+        )
         .onConflictDoNothing();
       if (deleteSourceAfterMerge) {
-        await tx.delete(bookmarkLists).where(eq(bookmarkLists.id, this.list.id));
+        await tx
+          .delete(bookmarkLists)
+          .where(eq(bookmarkLists.id, this.list.id));
         await this.cleanupRulesAfterListDeletion(tx);
       }
     });

@@ -175,7 +175,8 @@ export function PendingInvitationsCard() {
 
   useEffect(() => {
     if (!highlightedInvitationId || !invitations) return;
-    if (!invitations.some((item) => item.id === highlightedInvitationId)) return;
+    if (!invitations.some((item) => item.id === highlightedInvitationId))
+      return;
     document
       .getElementById(`pending-invitation-${highlightedInvitationId}`)
       ?.scrollIntoView({ behavior: "smooth", block: "center" });

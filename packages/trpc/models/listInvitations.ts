@@ -1,11 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 
-import {
-  listCollaborators,
-  listInvitations,
-  users,
-} from "@karakeep/db/schema";
+import { listCollaborators, listInvitations, users } from "@karakeep/db/schema";
 
 import type { AuthedContext } from "..";
 import {

@@ -26,7 +26,14 @@ import { toast } from "@/components/ui/sonner";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useTranslation } from "@/lib/i18n/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock3, Loader2, RefreshCw, Trash2, UserPlus, Users } from "lucide-react";
+import {
+  Clock3,
+  Loader2,
+  RefreshCw,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { ZBookmarkList } from "@karakeep/shared/types/lists";
@@ -273,7 +280,10 @@ export function ManageCollaboratorsModal({
                   const expired = pending && collaborator.expired;
                   const manageable = canManageCollaboratorOnList(collaborator);
                   return (
-                    <div key={collaborator.id} className="rounded-lg border p-3">
+                    <div
+                      key={collaborator.id}
+                      className="rounded-lg border p-3"
+                    >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 items-center gap-3">
                           <UserAvatar
@@ -291,7 +301,9 @@ export function ManageCollaboratorsModal({
                                 {collaborator.user.name}
                               </span>
                               {pending && (
-                                <Badge variant={expired ? "destructive" : "outline"}>
+                                <Badge
+                                  variant={expired ? "destructive" : "outline"}
+                                >
                                   {expired ? "Expired" : "Pending"}
                                 </Badge>
                               )}
@@ -307,11 +319,12 @@ export function ManageCollaboratorsModal({
                                 {collaborator.user.email}
                               </div>
                             )}
-                            {collaborator.inherited && collaborator.sourceListName && (
-                              <div className="text-xs text-muted-foreground">
-                                Inherited from {collaborator.sourceListName}
-                              </div>
-                            )}
+                            {collaborator.inherited &&
+                              collaborator.sourceListName && (
+                                <div className="text-xs text-muted-foreground">
+                                  Inherited from {collaborator.sourceListName}
+                                </div>
+                              )}
                             {pending && collaborator.expiresAt && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Clock3 className="size-3" />
@@ -327,19 +340,21 @@ export function ManageCollaboratorsModal({
                             <span className="text-sm capitalize text-muted-foreground">
                               {collaborator.role}
                             </span>
-                            {!readOnly && collaborator.inherited && collaborator.user.email && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEmail(collaborator.user.email ?? "");
-                                  setRole(collaborator.role);
-                                  setRecursive(false);
-                                }}
-                              >
-                                Override here
-                              </Button>
-                            )}
+                            {!readOnly &&
+                              collaborator.inherited &&
+                              collaborator.user.email && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEmail(collaborator.user.email ?? "");
+                                    setRole(collaborator.role);
+                                    setRecursive(false);
+                                  }}
+                                >
+                                  Override here
+                                </Button>
+                              )}
                           </div>
                         ) : pending ? (
                           <div className="flex flex-wrap items-center gap-2">
@@ -354,7 +369,10 @@ export function ManageCollaboratorsModal({
                                 })
                               }
                             >
-                              <SelectTrigger className="w-28" aria-label="Pending invitation role">
+                              <SelectTrigger
+                                className="w-28"
+                                aria-label="Pending invitation role"
+                              >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -413,7 +431,10 @@ export function ManageCollaboratorsModal({
                                 })
                               }
                             >
-                              <SelectTrigger className="w-28" aria-label="Collaborator role">
+                              <SelectTrigger
+                                className="w-28"
+                                aria-label="Collaborator role"
+                              >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>

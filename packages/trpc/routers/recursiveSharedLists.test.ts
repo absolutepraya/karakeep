@@ -43,13 +43,7 @@ describe("recursive shared-list permissions", () => {
       parentId: parent.id,
     });
 
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      parent.id,
-      "viewer",
-      true,
-    );
+    await inviteAndAccept(ownerApi, collaboratorApi, parent.id, "viewer", true);
 
     const inherited = await collaboratorApi.lists.get({ listId: child.id });
     expect(inherited.userRole).toBe("viewer");
@@ -72,13 +66,7 @@ describe("recursive shared-list permissions", () => {
       type: "manual",
     });
 
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      parent.id,
-      "editor",
-      true,
-    );
+    await inviteAndAccept(ownerApi, collaboratorApi, parent.id, "editor", true);
 
     const futureChild = await ownerApi.lists.create({
       name: "Future child",
@@ -111,16 +99,8 @@ describe("recursive shared-list permissions", () => {
       parentId: parent.id,
     });
 
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      parent.id,
-      "viewer",
-      true,
-    );
-    expect(
-      await collaboratorApi.lists.get({ listId: child.id }),
-    ).toBeDefined();
+    await inviteAndAccept(ownerApi, collaboratorApi, parent.id, "viewer", true);
+    expect(await collaboratorApi.lists.get({ listId: child.id })).toBeDefined();
 
     await ownerApi.lists.edit({
       listId: child.id,
@@ -156,20 +136,8 @@ describe("recursive shared-list permissions", () => {
       parentId: child.id,
     });
 
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      parent.id,
-      "viewer",
-      true,
-    );
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      child.id,
-      "editor",
-      false,
-    );
+    await inviteAndAccept(ownerApi, collaboratorApi, parent.id, "viewer", true);
+    await inviteAndAccept(ownerApi, collaboratorApi, child.id, "editor", false);
 
     expect(
       (await collaboratorApi.lists.get({ listId: child.id })).userRole,
@@ -203,20 +171,8 @@ describe("recursive shared-list permissions", () => {
       parentId: child.id,
     });
 
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      parent.id,
-      "viewer",
-      true,
-    );
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      child.id,
-      "editor",
-      true,
-    );
+    await inviteAndAccept(ownerApi, collaboratorApi, parent.id, "viewer", true);
+    await inviteAndAccept(ownerApi, collaboratorApi, child.id, "editor", true);
 
     expect(
       (await collaboratorApi.lists.get({ listId: grandchild.id })).userRole,
@@ -245,13 +201,7 @@ describe("recursive shared-list permissions", () => {
       text: "Viewer bookmark",
     });
 
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      parent.id,
-      "viewer",
-      true,
-    );
+    await inviteAndAccept(ownerApi, collaboratorApi, parent.id, "viewer", true);
 
     await expect(
       collaboratorApi.lists.addToList({
@@ -284,13 +234,7 @@ describe("recursive shared-list permissions", () => {
       text: "Inherited editor bookmark",
     });
 
-    await inviteAndAccept(
-      ownerApi,
-      collaboratorApi,
-      parent.id,
-      "editor",
-      true,
-    );
+    await inviteAndAccept(ownerApi, collaboratorApi, parent.id, "editor", true);
     await collaboratorApi.lists.addToList({
       listId: child.id,
       bookmarkId: bookmark.id,
