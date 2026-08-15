@@ -40,9 +40,7 @@ import { ZBookmarkList } from "@karakeep/shared/types/lists";
 
 import {
   canManageCollaboratorOnList,
-  collaboratorRemovalMessage,
   formatInvitationDate,
-  invitationDeliveryMessage,
 } from "./collaborationUi";
 
 export function ManageCollaboratorsModal({
@@ -73,6 +71,7 @@ export function ManageCollaboratorsModal({
   const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [recursive, setRecursive] = useState(false);
   const { t } = useTranslation();
+  const { t: tc } = useTranslation("collaboration");
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery(
@@ -102,7 +101,13 @@ export function ManageCollaboratorsModal({
   const addCollaborator = useMutation(
     api.lists.addCollaborator.mutationOptions({
       onSuccess: async (result) => {
-        toast({ description: invitationDeliveryMessage(result.emailSent) });
+        toast({
+          description: tc(
+            result.emailSent
+              ? "invitation_delivery_sent"
+              : "invitation_delivery_failed",
+          ),
+        });
         setEmail("");
         setRole("viewer");
         setRecursive(false);
@@ -136,7 +141,13 @@ export function ManageCollaboratorsModal({
   const resendInvitation = useMutation(
     api.lists.resendInvitation.mutationOptions({
       onSuccess: async (result) => {
-        toast({ description: invitationDeliveryMessage(result.emailSent) });
+        toast({
+          description: tc(
+            result.emailSent
+              ? "invitation_delivery_sent"
+              : "invitation_delivery_failed",
+          ),
+        });
         await invalidate();
       },
       onError: (error) =>
@@ -165,6 +176,13 @@ export function ManageCollaboratorsModal({
     });
   };
 
+  const roleLabel = (value: "viewer" | "editor") =>
+    t(
+      value === "viewer"
+        ? "lists.collaborators.viewer"
+        : "lists.collaborators.editor",
+    );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
@@ -179,7 +197,7 @@ export function ManageCollaboratorsModal({
           <DialogDescription>
             {readOnly
               ? t("lists.collaborators.people_with_access")
-              : "Invite people to this list and optionally include current and future nested lists."}
+              : tc("stable_description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -203,12 +221,16 @@ export function ManageCollaboratorsModal({
                     setRole(value as "viewer" | "editor")
                   }
                 >
-                  <SelectTrigger aria-label="Invitation role">
+                  <SelectTrigger aria-label={tc("invitation_role")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
+                    <SelectItem value="viewer">
+                      {t("lists.collaborators.viewer")}
+                    </SelectItem>
+                    <SelectItem value="editor">
+                      {t("lists.collaborators.editor")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <Button
@@ -221,7 +243,7 @@ export function ManageCollaboratorsModal({
                   ) : (
                     <UserPlus className="size-4" />
                   )}
-                  Invite
+                  {tc("invite")}
                 </Button>
               </div>
               <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
@@ -233,11 +255,10 @@ export function ManageCollaboratorsModal({
                 />
                 <span>
                   <span className="block text-sm font-medium">
-                    Also share all nested lists
+                    {tc("share_all_nested")}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    Includes current nested lists and lists added or moved here
-                    later. Leave this off to share only this list.
+                    {tc("share_all_nested_description")}
                   </span>
                 </span>
               </label>
@@ -271,7 +292,9 @@ export function ManageCollaboratorsModal({
                         )}
                       </div>
                     </div>
-                    <span className="text-sm text-muted-foreground">Owner</span>
+                    <span className="text-sm text-muted-foreground">
+                      {t("lists.collaborators.owner")}
+                    </span>
                   </div>
                 )}
 
@@ -304,14 +327,20 @@ export function ManageCollaboratorsModal({
                                 <Badge
                                   variant={expired ? "destructive" : "outline"}
                                 >
-                                  {expired ? "Expired" : "Pending"}
+                                  {expired
+                                    ? tc("expired")
+                                    : t("lists.collaborators.pending")}
                                 </Badge>
                               )}
                               {collaborator.inherited && (
-                                <Badge variant="secondary">Inherited</Badge>
+                                <Badge variant="secondary">
+                                  {tc("inherited")}
+                                </Badge>
                               )}
                               {collaborator.recursive && (
-                                <Badge variant="outline">Nested lists</Badge>
+                                <Badge variant="outline">
+                                  {tc("nested_lists")}
+                                </Badge>
                               )}
                             </div>
                             {collaborator.user.email && (
@@ -322,13 +351,15 @@ export function ManageCollaboratorsModal({
                             {collaborator.inherited &&
                               collaborator.sourceListName && (
                                 <div className="text-xs text-muted-foreground">
-                                  Inherited from {collaborator.sourceListName}
+                                  {tc("inherited_from", {
+                                    name: collaborator.sourceListName,
+                                  })}
                                 </div>
                               )}
                             {pending && collaborator.expiresAt && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Clock3 className="size-3" />
-                                {expired ? "Expired" : "Expires"}{" "}
+                                {expired ? tc("expired") : tc("expires")} {" "}
                                 {formatInvitationDate(collaborator.expiresAt)}
                               </div>
                             )}
@@ -337,8 +368,8 @@ export function ManageCollaboratorsModal({
 
                         {readOnly || collaborator.inherited ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-sm capitalize text-muted-foreground">
-                              {collaborator.role}
+                            <span className="text-sm text-muted-foreground">
+                              {roleLabel(collaborator.role)}
                             </span>
                             {!readOnly &&
                               collaborator.inherited &&
@@ -352,7 +383,7 @@ export function ManageCollaboratorsModal({
                                     setRecursive(false);
                                   }}
                                 >
-                                  Override here
+                                  {tc("override_here")}
                                 </Button>
                               )}
                           </div>
@@ -371,13 +402,17 @@ export function ManageCollaboratorsModal({
                             >
                               <SelectTrigger
                                 className="w-28"
-                                aria-label="Pending invitation role"
+                                aria-label={tc("pending_invitation_role")}
                               >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="viewer">Viewer</SelectItem>
-                                <SelectItem value="editor">Editor</SelectItem>
+                                <SelectItem value="viewer">
+                                  {t("lists.collaborators.viewer")}
+                                </SelectItem>
+                                <SelectItem value="editor">
+                                  {t("lists.collaborators.editor")}
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                             <label className="flex items-center gap-2 text-xs">
@@ -393,7 +428,7 @@ export function ManageCollaboratorsModal({
                                   })
                                 }
                               />
-                              Nested lists
+                              {tc("nested_lists")}
                             </label>
                             <Button
                               size="sm"
@@ -404,7 +439,8 @@ export function ManageCollaboratorsModal({
                                 })
                               }
                             >
-                              <RefreshCw className="mr-1 size-3" /> Resend
+                              <RefreshCw className="mr-1 size-3" />
+                              {tc("resend")}
                             </Button>
                             <Button
                               size="sm"
@@ -415,7 +451,7 @@ export function ManageCollaboratorsModal({
                                 })
                               }
                             >
-                              Revoke
+                              {t("lists.collaborators.revoke")}
                             </Button>
                           </div>
                         ) : manageable ? (
@@ -433,13 +469,17 @@ export function ManageCollaboratorsModal({
                             >
                               <SelectTrigger
                                 className="w-28"
-                                aria-label="Collaborator role"
+                                aria-label={tc("collaborator_role")}
                               >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="viewer">Viewer</SelectItem>
-                                <SelectItem value="editor">Editor</SelectItem>
+                                <SelectItem value="viewer">
+                                  {t("lists.collaborators.viewer")}
+                                </SelectItem>
+                                <SelectItem value="editor">
+                                  {t("lists.collaborators.editor")}
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                             <label className="flex items-center gap-2 text-xs">
@@ -455,18 +495,20 @@ export function ManageCollaboratorsModal({
                                   })
                                 }
                               />
-                              Nested lists
+                              {tc("nested_lists")}
                             </label>
                             <Button
                               size="icon"
                               variant="ghost"
-                              aria-label={`Remove ${collaborator.user.name}`}
+                              aria-label={tc("remove_aria", {
+                                name: collaborator.user.name,
+                              })}
                               onClick={() => {
                                 if (
                                   window.confirm(
-                                    collaboratorRemovalMessage(
-                                      collaborator.user.name,
-                                    ),
+                                    tc("remove_confirmation", {
+                                      name: collaborator.user.name,
+                                    }),
                                   )
                                 ) {
                                   removeCollaborator.mutate({
