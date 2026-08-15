@@ -141,9 +141,10 @@ Parallel-worktree isolation:
 
 ### Direct commands
 
-When bypassing `pnpm dev:start`, start shared infrastructure explicitly and set the desired index prefix yourself if needed:
+When bypassing `pnpm dev:start`, manual starts **must** set an explicit unique `MEILI_INDEX_PREFIX` for that workspace before starting web or workers. Use `main_` only for the main workspace; parallel worktrees need distinct prefixes.
 
 ```bash
+export MEILI_INDEX_PREFIX=main_
 pnpm dev:infra:up
 pnpm web
 pnpm workers
