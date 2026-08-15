@@ -44,24 +44,72 @@ pnpm dev:start
 Variants:
 - `pnpm dev:start` — foreground
 - `pnpm dev:start -d` — detached (`.dev/` logs, shell returns immediately)
-- `pnpm dev:stop` — stop detached services
+- `pnpm dev:stop` — stop only this workspace's detached web/workers processes
+- `pnpm dev:infra:status` — show the shared Chrome/Meilisearch container status
+- `pnpm dev:infra:up` — explicitly start/reuse shared Chrome + Meilisearch
+- `pnpm dev:infra:down` — explicitly remove the shared containers while preserving the Meilisearch data volume
 
-What this starts:
+`pnpm dev:start` automatically ensures the machine-level dev infrastructure is running, then starts only this workspace's native processes:
+
 - `web`
 - `workers`
-- Meilisearch in Docker
-- headless Chrome in Docker
+
+The machine-level infrastructure is shared across all local worktrees:
+
+- `karakeep-dev-meilisearch` on `127.0.0.1:7700`
+- `karakeep-dev-chrome` on `127.0.0.1:9222`
+
+The Chrome helper uses `ghcr.io/karakeep-app/karakeep-chrome:release`, which is published for both `linux/amd64` and `linux/arm64`. The Meilisearch container uses the named volume `karakeep-dev-meilisearch-data`, which survives `pnpm dev:infra:down`.
+
+`pnpm dev:stop` never stops the shared containers. This is intentional: another worktree may still be using them.
+
+### Parallel worktrees
+
+Worktrees share the physical Chrome and Meilisearch containers, but application state stays isolated.
+
+`scripts/setup-worktree.sh` keeps these values per worktree:
+
+- unique `KARAKEEP_PORT`
+- unique `DATA_DIR` (`<worktree>/.data/local`)
+- unique `API_URL` / `NEXTAUTH_URL`
+- unique `MEILI_INDEX_PREFIX`
+
+Every generated worktree points at the same local infrastructure endpoints:
+
+```text
+MEILI_ADDR=http://localhost:7700
+BROWSER_WEB_URL=http://localhost:9222
+```
+
+The Meilisearch plugins prepend `MEILI_INDEX_PREFIX` to both index UIDs. For example, a worktree prefix `issue-123-7_` produces:
+
+```text
+issue-123-7_bookmarks
+issue-123-7_bookmarks_vectors
+```
+
+The generated prefix is based on the normalized worktree name plus `WT_PORT_BASE`, so two configured worktrees do not share search/vector state even though they use the same Meilisearch server.
+
+The main workspace uses `main_` when `pnpm dev:start` does not find an explicit `MEILI_INDEX_PREFIX`. When `MEILI_INDEX_PREFIX` is entirely unset outside this fork's dev launcher, the plugins retain the original production-compatible index names `bookmarks` and `bookmarks_vectors`.
+
+Do not share a worktree's `.data/local` directory with another worktree. SQLite rows and stored assets are authoritative per workspace; Meilisearch remains derived state and can be rebuilt into that workspace's namespace.
 
 ### Direct/manual start
 
+If you intentionally bypass `pnpm dev:start`, start the shared infrastructure yourself first:
+
 ```bash
+pnpm dev:infra:up
 pnpm web
 pnpm workers
 ```
 
+Direct commands do not synthesize the main workspace's `main_` prefix for you. Set `MEILI_INDEX_PREFIX` explicitly if you want manual processes to use the same namespace as `pnpm dev:start`.
+
 Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
 - If `next dev` crashes with a stale Turbopack / `instrumentation.ts` parse issue, clear `apps/web/.next` and restart.
+- If port `7700` or `9222` is occupied by something other than the expected shared Karakeep container, `pnpm dev:infra:up` fails instead of silently reusing an unknown service.
 
 ### Verify the offline iPhone PWA
 
@@ -82,7 +130,9 @@ The root `.env` is the source of truth, but several processes load `.env` from t
 The most important variables for local development are:
 - `DATA_DIR`
 - `NEXTAUTH_SECRET`
-- `MEILI_ADDR` (if search should work)
+- `MEILI_ADDR` (shared dev default: `http://localhost:7700`)
+- `MEILI_INDEX_PREFIX` (per-worktree search/vector namespace; empty remains backward-compatible outside the dev launcher)
+- `BROWSER_WEB_URL` (shared dev default: `http://localhost:9222`)
 - `OPENAI_API_KEY` (if AI tagging/summarization should work)
 
 ### Pull production state into local development
@@ -106,6 +156,8 @@ Optional root `.env` keys:
 - `KARAKEEP_PROD_COMPOSE_SERVICE`
 - `KARAKEEP_PROD_EXPORT_IMAGE`
 
+A production-state pull still populates only that workspace's SQLite/assets state. Its local search/vector data belongs to the workspace's own `MEILI_INDEX_PREFIX` namespace in the shared local Meilisearch container.
+
 ## CI
 
 Primary workflow:
@@ -122,6 +174,7 @@ Fork-specific notes:
 - this fork does **not** use Turbo remote cache
 - some CI jobs reclaim disk space before heavy steps because typecheck/tests can otherwise exhaust hosted-runner storage
 - `knip` and `react-doctor` run as **non-blocking** report jobs
+- `.github/workflows/dev-workflow-tests.yml` validates the shared local-dev Bash lifecycle when those scripts change
 
 ## Extra quality tooling
 
