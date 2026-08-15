@@ -15,6 +15,17 @@ The operating principle is simple:
 
 > Four independent critics, zero autonomous fixers.
 
+## Free-plan and open-source access
+
+The rollout must stay at zero paid subscription cost for the intended repository usage.
+
+- **Qodo:** use Qodo's qualified open-source program. Qodo's general commercial pricing is not the basis for this rollout, so complete any OSS qualification/application step required by Qodo before treating the integration as permanently free.
+- **Sourcery:** use its free open-source repository access. Do not add paid-only functionality to the rollout.
+- **Graphite Agent:** use the free Hobby plan for this personal repository. AI reviews are limited on Hobby and review customization is not included, so Graphite must remain a best-effort bonus reviewer rather than a dependency.
+- **CodeRabbit:** preserve the repository's existing working setup.
+
+If a vendor changes its plan or the repository no longer qualifies for the expected free/open-source access, do not silently start a paid subscription. Re-evaluate the reviewer or remove it.
+
 ## Review authority
 
 An AI review comment is evidence of a possible problem. It is not an instruction to change the code.
@@ -161,7 +172,11 @@ Recommended repository settings:
 - draft reviews disabled;
 - `main` as the relevant base branch where supported;
 - dependency-bot skip behavior retained;
-- redundant summary, reviewer guide, sequence diagrams, and tips/commands disabled where supported so Sourcery primarily contributes independent findings rather than PR decoration.
+- redundant summary, reviewer guide, sequence diagrams, and tips/commands disabled where supported so Sourcery primarily contributes independent findings rather than PR decoration;
+- repository Path Filters exclude the same generated artifacts already excluded by CodeRabbit:
+  - `packages/open-api/karakeep-openapi-spec.json`
+  - `packages/sdk/src/karakeep-api.d.ts`
+  - `packages/db/drizzle/meta/**`.
 
 Review Rules should stay small and focused on areas where Sourcery adds a distinct perspective, such as maintainability, design, performance, and preserving intended behavior. Do not copy the entire CodeRabbit ruleset into Sourcery.
 
@@ -262,15 +277,16 @@ For Qodo, use the command surface shown by the active hosted integration and `/c
 For a new reviewer installation:
 
 1. Open a real implementation PR first so there is a test target.
-2. Start the vendor GitHub App installation.
-3. Select only `absolutepraya/karakeep`.
-4. Inspect the exact requested permissions.
-5. Stop if the permission ceiling is exceeded.
-6. Enable review-only behavior.
-7. Confirm the reviewer comments on the test PR.
-8. Confirm it does not commit, push, or automatically apply changes.
-9. Keep the reviewer advisory and non-required.
-10. Record any vendor-specific limitation discovered during setup.
+2. Confirm the intended free/open-source plan is active or that the required OSS application/qualification step has been completed.
+3. Start the vendor GitHub App installation.
+4. Select only `absolutepraya/karakeep`.
+5. Inspect the exact requested permissions.
+6. Stop if the permission ceiling is exceeded.
+7. Enable review-only behavior.
+8. Confirm the reviewer comments on the test PR.
+9. Confirm it does not commit, push, or automatically apply changes.
+10. Keep the reviewer advisory and non-required.
+11. Record any vendor-specific limitation discovered during setup.
 
 ## Design and implementation history
 
@@ -283,6 +299,8 @@ The rationale and complete approved decisions for the four-reviewer rollout are 
 
 These vendor behaviors change over time. Re-check official docs before changing the integration:
 
+- Qodo pricing/open-source access: <https://www.qodo.ai/pricing/>
+- Qodo open-source program: <https://www.qodo.ai/solutions/open-source/>
 - Qodo configuration: <https://docs.qodo.ai/qodo-documentation/code-review/get-started/configuration-overview/configuration-file>
 - Qodo GitHub issue integration: <https://docs.qodo.ai/code-review/integrations/ticketing-integrations/github>
 - Qodo ignore/content controls: <https://docs.qodo.ai/code-review/concepts/ignore-content-from-analysis>
