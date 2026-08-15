@@ -34,9 +34,12 @@ import { z } from "zod";
 import { useCreateBookmarkWithPostHook } from "@karakeep/shared-react/hooks/bookmarks";
 import { useAddBookmarkToList } from "@karakeep/shared-react/hooks/lists";
 import { useBookmarkListContext } from "@karakeep/shared-react/hooks/bookmark-list-context";
+import { limitConcurrency } from "@karakeep/shared/concurrency";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
 import { useUploadAsset } from "../UploadDropzone";
+
+const MULTI_URL_CREATE_CONCURRENCY = 4;
 
 /**
  * Returns the per-line URL strings if every non-empty line is a valid http(s)
@@ -129,40 +132,43 @@ export default function EditorCard({
     },
   });
 
-  const { mutate, isPending: isOnlineCreatePending } =
-    useCreateBookmarkWithPostHook({
-      onSuccess: (resp) => {
-        if (resp.alreadyExists) {
-          toast({
-            description: <BookmarkAlreadyExistsToast bookmarkId={resp.id} />,
-            variant: "default",
-          });
-        }
-        // File the new bookmark into the chosen folder, if any.
-        if (selectedListIdRef.current) {
-          void addToList({
-            bookmarkId: resp.id,
-            listId: selectedListIdRef.current,
-          });
-        }
-        form.reset();
-        // if the list layout is used, we reset the size of the editor card to the original size after submitting
-        if (bookmarkLayout === "list" && inputRef?.current?.style) {
-          inputRef.current.style.height = "auto";
-        }
-        onCreated?.();
-      },
-      onError: (e) => {
-        toast({ description: e.message, variant: "destructive" });
-      },
-    });
+  const {
+    mutate,
+    mutateAsync,
+    isPending: isOnlineCreatePending,
+  } = useCreateBookmarkWithPostHook({
+    onSuccess: (resp) => {
+      if (resp.alreadyExists) {
+        toast({
+          description: <BookmarkAlreadyExistsToast bookmarkId={resp.id} />,
+          variant: "default",
+        });
+      }
+      // File the new bookmark into the chosen folder, if any.
+      if (selectedListIdRef.current) {
+        void addToList({
+          bookmarkId: resp.id,
+          listId: selectedListIdRef.current,
+        });
+      }
+      form.reset();
+      // if the list layout is used, we reset the size of the editor card to the original size after submitting
+      if (bookmarkLayout === "list" && inputRef?.current?.style) {
+        inputRef.current.style.height = "auto";
+      }
+      onCreated?.();
+    },
+    onError: (e) => {
+      toast({ description: e.message, variant: "destructive" });
+    },
+  });
 
   const isPending = isOnlineCreatePending || isOfflineCreatePending;
   const uploadAsset = useUploadAsset();
 
   const createTextBookmark = async (text: string) => {
     if (offlineStatus.kind !== "offline") {
-      mutate({ type: BookmarkTypes.TEXT, text });
+      mutate({ type: BookmarkTypes.TEXT, text, source: "web" });
       return;
     }
     setIsOfflineCreatePending(true);
@@ -215,7 +221,21 @@ export default function EditorCard({
     const urls = parseImportableUrls(text);
     if (urls && urls.length > 0) {
       // Every line is a URL --> import each as its own link bookmark, no prompt.
-      urls.forEach((url) => mutate({ type: BookmarkTypes.LINK, url }));
+      // Bound the request fan-out so a large paste doesn't hammer SQLite and
+      // queue insertion all at once.
+      void Promise.allSettled(
+        limitConcurrency(
+          urls.map(
+            (url) => () =>
+              mutateAsync({
+                type: BookmarkTypes.LINK,
+                url,
+                source: "web",
+              }),
+          ),
+          MULTI_URL_CREATE_CONCURRENCY,
+        ),
+      );
     } else {
       void createTextBookmark(text);
     }
