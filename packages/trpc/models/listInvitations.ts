@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 
+import type { KarakeepDBTransaction } from "@karakeep/db";
 import { listCollaborators, listInvitations, users } from "@karakeep/db/schema";
 
 import type { AuthedContext } from "..";
@@ -12,6 +13,13 @@ import {
 
 type Role = "viewer" | "editor";
 type InvitationStatus = "pending" | "declined";
+
+function asTransactionContext(
+  ctx: AuthedContext,
+  db: KarakeepDBTransaction,
+): AuthedContext {
+  return { ...ctx, db } as unknown as AuthedContext;
+}
 
 export const LIST_INVITATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const LIST_INVITATION_RESEND_COOLDOWN_MS = 60 * 1000;
@@ -152,6 +160,7 @@ export class ListInvitation {
     this.ensureActive();
 
     await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
       await tx
         .delete(listInvitations)
         .where(eq(listInvitations.id, this.invitation.id));
@@ -164,28 +173,43 @@ export class ListInvitation {
           addedBy: this.invitation.invitedBy,
         })
         .onConflictDoNothing();
+      await setCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+        recursive: this.invitation.recursive,
+      });
     });
   }
 
   async decline(): Promise<void> {
     this.ensureIsInvitedUser();
     this.ensurePending();
-    this.ensureActive();
 
-    await this.ctx.db
-      .update(listInvitations)
-      .set({ status: "declined" })
-      .where(eq(listInvitations.id, this.invitation.id));
+    await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
+      await tx
+        .update(listInvitations)
+        .set({ status: "declined" })
+        .where(eq(listInvitations.id, this.invitation.id));
+      await deleteCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+      });
+    });
+    this.invitation.status = "declined";
   }
 
   async revoke(): Promise<void> {
     this.ensureIsListOwner();
-    await this.ctx.db
-      .delete(listInvitations)
-      .where(eq(listInvitations.id, this.invitation.id));
-    await deleteCollaborationScope(this.ctx, {
-      listId: this.invitation.listId,
-      userId: this.invitation.userId,
+    await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
+      await tx
+        .delete(listInvitations)
+        .where(eq(listInvitations.id, this.invitation.id));
+      await deleteCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+      });
     });
   }
 
@@ -194,14 +218,17 @@ export class ListInvitation {
     this.ensurePending();
     this.ensureActive();
 
-    await this.ctx.db
-      .update(listInvitations)
-      .set({ role: params.role })
-      .where(eq(listInvitations.id, this.invitation.id));
-    await setCollaborationScope(this.ctx, {
-      listId: this.invitation.listId,
-      userId: this.invitation.userId,
-      recursive: params.recursive,
+    await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
+      await tx
+        .update(listInvitations)
+        .set({ role: params.role })
+        .where(eq(listInvitations.id, this.invitation.id));
+      await setCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+        recursive: params.recursive,
+      });
     });
     this.invitation.role = params.role;
     this.invitation.recursive = params.recursive;
@@ -334,42 +361,48 @@ export class ListInvitation {
 
     const invitedAt = new Date();
     if (existingInvitation?.status === "declined") {
-      await ctx.db
-        .update(listInvitations)
-        .set({
-          status: "pending",
-          role,
-          invitedAt,
-          invitedEmail: normalizedEmail,
-          invitedBy: inviterUserId,
-        })
-        .where(eq(listInvitations.id, existingInvitation.id));
-      await setCollaborationScope(ctx, {
-        listId,
-        userId: user.id,
-        recursive,
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        await tx
+          .update(listInvitations)
+          .set({
+            status: "pending",
+            role,
+            invitedAt,
+            invitedEmail: normalizedEmail,
+            invitedBy: inviterUserId,
+          })
+          .where(eq(listInvitations.id, existingInvitation.id));
+        await setCollaborationScope(transactionCtx, {
+          listId,
+          userId: user.id,
+          recursive,
+        });
       });
       return existingInvitation.id;
     }
 
-    const res = await ctx.db
-      .insert(listInvitations)
-      .values({
+    return ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(ctx, tx);
+      const res = await tx
+        .insert(listInvitations)
+        .values({
+          listId,
+          userId: user.id,
+          role,
+          status: "pending",
+          invitedAt,
+          invitedEmail: normalizedEmail,
+          invitedBy: inviterUserId,
+        })
+        .returning();
+      await setCollaborationScope(transactionCtx, {
         listId,
         userId: user.id,
-        role,
-        status: "pending",
-        invitedAt,
-        invitedEmail: normalizedEmail,
-        invitedBy: inviterUserId,
-      })
-      .returning();
-    await setCollaborationScope(ctx, {
-      listId,
-      userId: user.id,
-      recursive,
+        recursive,
+      });
+      return res[0].id;
     });
-    return res[0].id;
   }
 
   static async pendingForUser(ctx: AuthedContext) {
@@ -437,7 +470,10 @@ export class ListInvitation {
     params: { listId: string },
   ) {
     const invitations = await ctx.db.query.listInvitations.findMany({
-      where: eq(listInvitations.listId, params.listId),
+      where: and(
+        eq(listInvitations.listId, params.listId),
+        eq(listInvitations.status, "pending"),
+      ),
       with: {
         user: {
           columns: {

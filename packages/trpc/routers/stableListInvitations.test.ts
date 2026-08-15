@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
+import { listCollaborationScopes } from "@karakeep/db";
 import { listInvitations } from "@karakeep/db/schema";
 
 import type { APICallerType, CustomTestContext } from "../testUtils";
@@ -19,6 +20,7 @@ async function createManualList(api: APICallerType, name = "Shared") {
 describe("stable list invitation lifecycle", () => {
   test<CustomTestContext>("normalizes invite email and reports delivery separately", async ({
     apiCallers,
+    db,
   }) => {
     const ownerApi = apiCallers[0];
     const list = await createManualList(ownerApi);
@@ -32,6 +34,10 @@ describe("stable list invitation lifecycle", () => {
 
     expect(result.invitationId).toBeTruthy();
     expect(result.emailSent).toBe(false);
+    const invitation = await db.query.listInvitations.findFirst({
+      where: eq(listInvitations.id, result.invitationId),
+    });
+    expect(invitation?.invitedEmail).toBe("test2@test.com");
   });
 
   test<CustomTestContext>("uses a neutral error for an unknown email", async ({
@@ -84,6 +90,42 @@ describe("stable list invitation lifecycle", () => {
     const [renewed] = await collaboratorApi.lists.getPendingInvitations();
     expect(renewed.expired).toBe(false);
     expect(renewed.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  test<CustomTestContext>("allows declining an expired invitation and cleans its scope", async ({
+    apiCallers,
+    db,
+  }) => {
+    const ownerApi = apiCallers[0];
+    const collaboratorApi = apiCallers[1];
+    const list = await createManualList(ownerApi);
+    const collaborator = await collaboratorApi.users.whoami();
+
+    const { invitationId } = await ownerApi.lists.addCollaborator({
+      listId: list.id,
+      email: collaborator.email!,
+      role: "viewer",
+      recursive: true,
+    });
+    await db
+      .update(listInvitations)
+      .set({ invitedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) })
+      .where(eq(listInvitations.id, invitationId));
+
+    await collaboratorApi.lists.declineInvitation({ invitationId });
+
+    expect(await collaboratorApi.lists.getPendingInvitations()).toHaveLength(0);
+    const declined = await db.query.listInvitations.findFirst({
+      where: eq(listInvitations.id, invitationId),
+    });
+    expect(declined?.status).toBe("declined");
+    const scope = await db.query.listCollaborationScopes.findFirst({
+      where: and(
+        eq(listCollaborationScopes.listId, list.id),
+        eq(listCollaborationScopes.userId, collaborator.id),
+      ),
+    });
+    expect(scope).toBeUndefined();
   });
 
   test<CustomTestContext>("rejects an immediate repeated resend", async ({

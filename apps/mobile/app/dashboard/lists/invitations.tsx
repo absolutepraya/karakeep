@@ -124,9 +124,7 @@ export default function ListInvitationsPage() {
                   <Button
                     variant="secondary"
                     disabled={
-                      invitation.expired ||
-                      declineInvitation.isPending ||
-                      acceptInvitation.isPending
+                      declineInvitation.isPending || acceptInvitation.isPending
                     }
                     onPress={() =>
                       declineInvitation.mutate({

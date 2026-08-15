@@ -129,7 +129,7 @@ function ListActionsMenu({
   const handleLeave = () => {
     Alert.alert(
       "Leave List",
-      "Leaving removes the direct collaboration grant that gives you access. If this list is inherited from a recursively shared parent, you will leave that parent share and lose access to lists that depend on it.",
+      "Leaving removes the nearest collaboration grant currently providing this access. If that grant comes from a recursively shared parent, access to lists that depend on it may also change.",
       [
         { text: "Cancel", style: "cancel" },
         {

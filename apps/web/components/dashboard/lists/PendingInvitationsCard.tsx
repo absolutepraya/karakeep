@@ -126,11 +126,7 @@ function InvitationRow({
           <Button
             size="sm"
             variant="outline"
-            disabled={
-              invitation.expired ||
-              declineInvitation.isPending ||
-              acceptInvitation.isPending
-            }
+            disabled={declineInvitation.isPending || acceptInvitation.isPending}
             onClick={() =>
               declineInvitation.mutate({ invitationId: invitation.id })
             }

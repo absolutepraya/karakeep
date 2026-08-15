@@ -23,7 +23,10 @@ function deliveryMessage(emailSent: boolean) {
 
 export default function ManageListCollaboratorsPage() {
   const { slug } = useLocalSearchParams();
-  const listId = typeof slug === "string" ? slug : "";
+  if (typeof slug !== "string" || !slug) {
+    throw new Error("Unexpected param type");
+  }
+  const listId = slug;
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -32,13 +35,10 @@ export default function ManageListCollaboratorsPage() {
   const [recursive, setRecursive] = useState(false);
 
   const { data: list, isPending: isListPending } = useQuery(
-    api.lists.get.queryOptions({ listId }, { enabled: Boolean(listId) }),
+    api.lists.get.queryOptions({ listId }),
   );
   const { data, isPending } = useQuery(
-    api.lists.getCollaborators.queryOptions(
-      { listId },
-      { enabled: Boolean(listId) },
-    ),
+    api.lists.getCollaborators.queryOptions({ listId }),
   );
 
   const invalidate = () =>
