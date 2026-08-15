@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
 
       - name: Check Bash syntax
-        run: bash -n start-dev.sh stop-dev.sh scripts/setup-worktree.sh scripts/dev-infra.test.sh
+        run: bash -n start-dev.sh stop-dev.sh scripts/setup-worktree.sh scripts/dev-infra.sh scripts/dev-infra.test.sh
 
       - name: Run shared dev infrastructure tests
         run: bash scripts/dev-infra.test.sh
