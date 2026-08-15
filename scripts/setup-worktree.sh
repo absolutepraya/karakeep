@@ -10,7 +10,7 @@ workspace_env="$WT_WORKSPACE_PATH/.env"
 workspace_data_dir="$WT_WORKSPACE_PATH/.data/local"
 refresh_data="${WT_REFRESH_DATA:-false}"
 data_source="${WT_DATA_SOURCE:-main}"
-workspace_name="${WT_WORKSPACE_NAME:-$(basename "$WT_WORKSPACE_PATH")}" 
+workspace_name="${WT_WORKSPACE_NAME:-$(basename "$WT_WORKSPACE_PATH")}"
 
 [[ -f "$root_env" ]] || {
   echo "error: missing root environment file: $root_env" >&2
