@@ -5,7 +5,7 @@ export function canRemoveBookmarkFromList(input: {
 }) {
   return Boolean(
     input.listId &&
-      input.listType === "manual" &&
-      (input.userRole === "owner" || input.userRole === "editor"),
+    input.listType === "manual" &&
+    (input.userRole === "owner" || input.userRole === "editor"),
   );
 }
