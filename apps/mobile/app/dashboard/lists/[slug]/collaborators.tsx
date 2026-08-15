@@ -31,6 +31,9 @@ export default function ManageListCollaboratorsPage() {
   const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [recursive, setRecursive] = useState(false);
 
+  const { data: list, isPending: isListPending } = useQuery(
+    api.lists.get.queryOptions({ listId }, { enabled: Boolean(listId) }),
+  );
   const { data, isPending } = useQuery(
     api.lists.getCollaborators.queryOptions(
       { listId },
@@ -101,10 +104,11 @@ export default function ManageListCollaboratorsPage() {
     }),
   );
 
-  if (isPending || !data) {
+  if (isPending || isListPending || !data || !list) {
     return <FullPageSpinner />;
   }
 
+  const canManage = list.userRole === "owner";
   const visibleCollaborators = data.collaborators.filter(
     (collaborator) => collaborator.status !== "declined",
   );
@@ -113,7 +117,7 @@ export default function ManageListCollaboratorsPage() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: "Manage Collaborators",
+          headerTitle: canManage ? "Manage Collaborators" : "Collaborators",
           headerBackTitle: "Back",
           headerLargeTitle: false,
         }}
@@ -123,62 +127,64 @@ export default function ManageListCollaboratorsPage() {
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="gap-5 p-4"
       >
-        <View className="gap-3 rounded-xl border border-border bg-card p-4">
-          <Text className="font-semibold">Invite collaborator</Text>
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="person@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <View className="gap-2">
-            <Text className="text-sm text-muted-foreground">Role</Text>
-            <View className="flex-row gap-2">
-              <View className="flex-1">
-                <Button
-                  variant={role === "viewer" ? "primary" : "secondary"}
-                  onPress={() => setRole("viewer")}
-                >
-                  <Text>Viewer</Text>
-                </Button>
-              </View>
-              <View className="flex-1">
-                <Button
-                  variant={role === "editor" ? "primary" : "secondary"}
-                  onPress={() => setRole("editor")}
-                >
-                  <Text>Editor</Text>
-                </Button>
+        {canManage && (
+          <View className="gap-3 rounded-xl border border-border bg-card p-4">
+            <Text className="font-semibold">Invite collaborator</Text>
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="person@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View className="gap-2">
+              <Text className="text-sm text-muted-foreground">Role</Text>
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <Button
+                    variant={role === "viewer" ? "primary" : "secondary"}
+                    onPress={() => setRole("viewer")}
+                  >
+                    <Text>Viewer</Text>
+                  </Button>
+                </View>
+                <View className="flex-1">
+                  <Button
+                    variant={role === "editor" ? "primary" : "secondary"}
+                    onPress={() => setRole("editor")}
+                  >
+                    <Text>Editor</Text>
+                  </Button>
+                </View>
               </View>
             </View>
-          </View>
-          <View className="flex-row items-start justify-between gap-4 rounded-lg border border-border p-3">
-            <View className="flex-1 gap-1">
-              <Text className="font-medium">Also share all nested lists</Text>
-              <Text className="text-xs text-muted-foreground">
-                Includes current nested lists and lists added or moved here
-                later.
-              </Text>
+            <View className="flex-row items-start justify-between gap-4 rounded-lg border border-border p-3">
+              <View className="flex-1 gap-1">
+                <Text className="font-medium">Also share all nested lists</Text>
+                <Text className="text-xs text-muted-foreground">
+                  Includes current nested lists and lists added or moved here
+                  later.
+                </Text>
+              </View>
+              <Switch value={recursive} onValueChange={setRecursive} />
             </View>
-            <Switch value={recursive} onValueChange={setRecursive} />
+            <Button
+              disabled={addCollaborator.isPending || !email.trim()}
+              onPress={() =>
+                addCollaborator.mutate({
+                  listId,
+                  email: email.trim(),
+                  role,
+                  recursive,
+                })
+              }
+            >
+              <Text>Send invitation</Text>
+            </Button>
           </View>
-          <Button
-            disabled={addCollaborator.isPending || !email.trim()}
-            onPress={() =>
-              addCollaborator.mutate({
-                listId,
-                email: email.trim(),
-                role,
-                recursive,
-              })
-            }
-          >
-            <Text>Send invitation</Text>
-          </Button>
-        </View>
+        )}
 
         <View className="gap-3">
           <Text className="font-semibold">People with access</Text>
@@ -244,7 +250,11 @@ export default function ManageListCollaboratorsPage() {
                   )}
                 </View>
 
-                {collaborator.inherited ? (
+                {!canManage ? (
+                  <Text className="text-sm capitalize text-muted-foreground">
+                    {collaborator.role}
+                  </Text>
+                ) : collaborator.inherited ? (
                   <View className="gap-2">
                     <Text className="text-sm capitalize text-muted-foreground">
                       {collaborator.role}
