@@ -6,9 +6,18 @@ import FullPageSpinner from "@/components/ui/FullPageSpinner";
 import { Input } from "@/components/ui/Input";
 import { Text } from "@/components/ui/Text";
 import { useToast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
+
+const invitationDateFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
 
 function deliveryMessage(emailSent: boolean) {
   return emailSent
@@ -100,6 +109,10 @@ export default function ManageListCollaboratorsPage() {
     return <FullPageSpinner />;
   }
 
+  const visibleCollaborators = data.collaborators.filter(
+    (collaborator) => collaborator.status !== "declined",
+  );
+
   return (
     <>
       <Stack.Screen
@@ -189,7 +202,7 @@ export default function ManageListCollaboratorsPage() {
             </View>
           )}
 
-          {data.collaborators.map((collaborator) => {
+          {visibleCollaborators.map((collaborator) => {
             const pending = collaborator.status === "pending";
             return (
               <View
@@ -230,7 +243,7 @@ export default function ManageListCollaboratorsPage() {
                   {pending && collaborator.expiresAt && (
                     <Text className="text-xs text-muted-foreground">
                       {collaborator.expired ? "Expired" : "Expires"}{" "}
-                      {collaborator.expiresAt.toLocaleDateString()}
+                      {invitationDateFormatter.format(collaborator.expiresAt)}
                     </Text>
                   )}
                 </View>
