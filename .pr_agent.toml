@@ -1,0 +1,16 @@
+[github_app]
+pr_commands = [
+    "/agentic_review",
+]
+
+[review_agent]
+comments_location_policy = "both"
+inline_comments_severity_threshold = 2
+issues_user_guidelines = """
+Review the pull request against the linked GitHub issue/spec and the repository's established behavior.
+Prioritize correctness, regressions, authorization/security, data-loss/lifecycle risks, and meaningful test gaps.
+Treat existing intentional functionality and semantics as constraints unless the linked issue/spec explicitly changes them.
+Do not recommend product-flow, permission, API, database, deployment, or compatibility changes merely as generic improvements.
+Prefer substantive defects over formatting, naming, or style feedback already handled by deterministic tooling.
+AI review findings are advisory evidence; do not assume a proposed behavior change is intended.
+"""
