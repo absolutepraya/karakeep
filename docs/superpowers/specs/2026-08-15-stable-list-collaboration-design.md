@@ -78,6 +78,7 @@ All user-controlled values inserted into HTML email must be escaped. Plain-text 
 - Viewer-only users never see edit/remove list-membership actions.
 - Shared trees render inside the existing `Shared Lists` sidebar section with the exact normal dashboard list styling; accessible ancestors remain navigable and inaccessible ancestors are omitted.
 - List headers expose the accessible path as clickable, semantic breadcrumbs without revealing inaccessible ancestors.
+- Stable collaboration copy lives under `lists.collaboration` in the existing typed `translation` namespace so the rest of the web app keeps its current i18n typing and fallback behavior.
 
 ### Mobile
 
