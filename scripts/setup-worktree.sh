@@ -33,7 +33,7 @@ trap 'rm -f "$tmp_env"' EXIT
 
 while IFS= read -r line || [[ -n "$line" ]]; do
   case "$line" in
-    DATA_DIR=* | KARAKEEP_PORT=* | API_URL=* | NEXTAUTH_URL=* | MEILI_ADDR=* | MEILI_INDEX_PREFIX=* | BROWSER_WEB_URL=* | BROWSER_WEBSOCKET_URL=*)
+    DATA_DIR=* | KARAKEEP_PORT=* | API_URL=* | NEXTAUTH_URL=* | MEILI_ADDR=* | MEILI_MASTER_KEY=* | MEILI_VECTOR_ADDR=* | MEILI_VECTOR_MASTER_KEY=* | MEILI_INDEX_PREFIX=* | BROWSER_WEB_URL=* | BROWSER_WEBSOCKET_URL=* | BROWSERLESS_URL=* | BROWSERLESS_TOKEN=* | BROWSER_CONNECT_ONDEMAND=*)
       ;;
     *)
       printf '%s\n' "$line" >>"$tmp_env"
@@ -47,8 +47,10 @@ KARAKEEP_PORT=$web_port
 API_URL=http://localhost:$web_port
 NEXTAUTH_URL=http://localhost:$web_port
 MEILI_ADDR=http://localhost:7700
+MEILI_MASTER_KEY=
 MEILI_INDEX_PREFIX=$meili_index_prefix
 BROWSER_WEB_URL=http://localhost:9222
+BROWSER_CONNECT_ONDEMAND=false
 ENV
 
 mv "$tmp_env" "$workspace_env"
