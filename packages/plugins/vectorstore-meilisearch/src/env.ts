@@ -4,6 +4,10 @@ const rawConfig = z
   .object({
     MEILI_ADDR: z.string().optional(),
     MEILI_MASTER_KEY: z.string().optional(),
+    MEILI_INDEX_PREFIX: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]*$/)
+      .default(""),
     // Dedicated Meilisearch instance for the vector store. When unset, the
     // vector store falls back to the main (search) Meilisearch instance.
     MEILI_VECTOR_ADDR: z.string().optional(),
@@ -17,6 +21,7 @@ export const envConfig = {
   MEILI_ADDR: rawConfig.MEILI_VECTOR_ADDR ?? rawConfig.MEILI_ADDR,
   MEILI_MASTER_KEY:
     rawConfig.MEILI_VECTOR_MASTER_KEY ?? rawConfig.MEILI_MASTER_KEY ?? "",
+  MEILI_INDEX_PREFIX: rawConfig.MEILI_INDEX_PREFIX,
   MEILI_BATCH_SIZE: rawConfig.MEILI_BATCH_SIZE,
   MEILI_BATCH_TIMEOUT_MS: rawConfig.MEILI_BATCH_TIMEOUT_MS,
 };
