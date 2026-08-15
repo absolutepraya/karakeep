@@ -292,7 +292,17 @@ export async function getAllSharedListAccess(ctx: AuthedContext) {
     }
   }
 
-  return result;
+  const accessibleListIds = new Set(result.map(({ list }) => list.id));
+  return result.map(({ list, grant }) => ({
+    list: {
+      ...list,
+      parentId:
+        list.parentId && accessibleListIds.has(list.parentId)
+          ? list.parentId
+          : null,
+    },
+    grant,
+  }));
 }
 
 export async function getEffectiveCollaboratorsForList(

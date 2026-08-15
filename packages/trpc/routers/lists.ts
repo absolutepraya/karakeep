@@ -412,7 +412,11 @@ export const listsAppRouter = router({
     )
     .query(async ({ ctx }) => {
       const results = await List.getAll(ctx);
-      return { lists: results.map((l) => l.asZBookmarkList()) };
+      return {
+        lists: results.map((l) =>
+          l.asZBookmarkList({ includeVisibleParent: true }),
+        ),
+      };
     }),
   getListsOfBookmark: listsProcedure
     .input(z.object({ bookmarkId: z.string() }))
@@ -857,9 +861,20 @@ export const listsAppRouter = router({
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
         const serialized = list.asZBookmarkList();
+        if (serialized.userRole === "owner") {
+          await list.leaveList();
+          return;
+        }
+        const rawList = await transactionCtx.db.query.bookmarkLists.findFirst({
+          columns: { rssToken: false },
+          where: eq(bookmarkLists.id, input.listId),
+        });
+        if (!rawList) {
+          throw new Error("Expected list to exist while leaving collaboration");
+        }
         const grant = await getEffectiveCollaboratorGrant(
           transactionCtx,
-          serialized,
+          rawList,
           ctx.user.id,
         );
         if (!grant) {

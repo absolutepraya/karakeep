@@ -53,7 +53,7 @@ export abstract class List {
     return this.list.id;
   }
 
-  asZBookmarkList() {
+  asZBookmarkList(options?: { includeVisibleParent?: boolean }) {
     if (this.list.userId === this.ctx.user.id) {
       return this.list;
     }
@@ -68,7 +68,7 @@ export abstract class List {
       query: this.list.query,
       userRole: this.list.userRole,
       hasCollaborators: this.list.hasCollaborators,
-      parentId: null,
+      parentId: options?.includeVisibleParent ? this.list.parentId : null,
       public: false,
     };
   }
