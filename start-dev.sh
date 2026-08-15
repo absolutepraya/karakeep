@@ -61,7 +61,7 @@ MEILI_INDEX_PREFIX="${MEILI_INDEX_PREFIX:-$(env_value MEILI_INDEX_PREFIX)}"
 MEILI_INDEX_PREFIX="${MEILI_INDEX_PREFIX:-main_}"
 export MEILI_ADDR BROWSER_WEB_URL MEILI_INDEX_PREFIX
 
-"$SCRIPT_DIR/scripts/dev-infra.sh" up
+bash "$SCRIPT_DIR/scripts/dev-infra.sh" up
 
 if [ ! -d "node_modules" ]; then
     echo "Installing dependencies..."
@@ -116,11 +116,11 @@ fi
 
 echo ""
 echo "Development environment is running!"
-echo "  Web app:           http://localhost:$WEB_PORT"
-echo "  Meilisearch:       $MEILI_ADDR"
+echo "  Web app:            http://localhost:$WEB_PORT"
+echo "  Meilisearch:        $MEILI_ADDR"
 echo "  Meili index prefix: $MEILI_INDEX_PREFIX"
-echo "  Chrome debugger:   $BROWSER_WEB_URL"
-echo "  Shared infra:      pnpm dev:infra:status"
+echo "  Chrome debugger:    $BROWSER_WEB_URL"
+echo "  Shared infra:       pnpm dev:infra:status"
 
 if [ "$DETACH" -eq 1 ]; then
     echo ""
