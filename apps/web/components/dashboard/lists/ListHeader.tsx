@@ -27,6 +27,7 @@ export default function ListHeader({
 }) {
   const api = useTRPC();
   const { t } = useTranslation();
+  const { t: tCollaboration } = useTranslation("collaboration");
   const router = useRouter();
   const { data: list, error } = useQuery(
     api.lists.get.queryOptions(
@@ -70,13 +71,16 @@ export default function ListHeader({
         </span>
         <div className="min-w-0 flex-1">
           {hierarchyPath.length > 1 && (
-            <div className="mb-1 flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground">
+            <nav
+              aria-label={tCollaboration("breadcrumb_label")}
+              className="mb-1 flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground"
+            >
               {hierarchyPath.map((pathList, index) => {
                 const isCurrent = index === hierarchyPath.length - 1;
                 return (
                   <Fragment key={pathList.id}>
                     {isCurrent ? (
-                      <span className="min-w-0 truncate">
+                      <span aria-current="page" className="min-w-0 truncate">
                         {pathList.icon} {pathList.name}
                       </span>
                     ) : (
@@ -93,7 +97,7 @@ export default function ListHeader({
                   </Fragment>
                 );
               })}
-            </div>
+            </nav>
           )}
           <h1 className="truncate text-2xl font-semibold leading-tight">
             {list.name}
