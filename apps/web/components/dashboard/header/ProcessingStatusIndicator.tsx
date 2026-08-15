@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Cloud,
@@ -38,6 +38,10 @@ import type {
 } from "@karakeep/shared/types/offlineSync";
 
 import LibrarySyncConflictDialog from "./LibrarySyncConflictDialog";
+import {
+  getProcessingBreakdown,
+  getProcessingRefreshInterval,
+} from "./processingStatusUtils";
 
 const LABEL_BY_KIND = {
   crawling: "Crawling",
@@ -284,6 +288,7 @@ async function chooseServerConflictValue(conflict: ZOfflineSyncConflict) {
 
 export default function ProcessingStatusIndicator() {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const status = useOfflineLibraryStatus();
   const canReadOfflineReplica = useCanReadOfflineReplica();
   const { discardRejectedMutation, syncNow } = useOfflineLibrary();
@@ -294,12 +299,33 @@ export default function ProcessingStatusIndicator() {
   const [selectedConflict, setSelectedConflict] =
     React.useState<ZOfflineSyncConflict | null>(null);
   const lastSuccessfulSyncRef = React.useRef<Date | null>(null);
-  const { data } = useQuery(
+  const previousPreparingCountRef = React.useRef(0);
+  const { data, dataUpdatedAt } = useQuery(
     api.bookmarks.getProcessingStatus.queryOptions(undefined, {
-      refetchInterval: 15_000,
+      refetchInterval: (query) =>
+        getProcessingRefreshInterval(
+          query.state.data ?? { total: 0, tasks: [] },
+        ),
     }),
   );
   const serverProcessing = data ?? { total: 0, tasks: [] };
+  const processing = getProcessingBreakdown(serverProcessing);
+
+  React.useEffect(() => {
+    const wasPreparing = previousPreparingCountRef.current > 0;
+    const isPreparing = processing.preparingCount > 0;
+
+    if (dataUpdatedAt > 0 && (isPreparing || wasPreparing)) {
+      void Promise.all([
+        queryClient.invalidateQueries(api.bookmarks.getBookmarks.pathFilter()),
+        queryClient.invalidateQueries(
+          api.bookmarks.searchBookmarks.pathFilter(),
+        ),
+      ]);
+    }
+
+    previousPreparingCountRef.current = processing.preparingCount;
+  }, [api, dataUpdatedAt, processing.preparingCount, queryClient]);
 
   const loadConflicts = React.useCallback(async () => {
     const records = await offlineLibraryDb.conflicts.toArray();
@@ -404,7 +430,19 @@ export default function ProcessingStatusIndicator() {
       break;
   }
 
-  const buttonLabel = `Library activity: ${libraryState}, ${libraryDetail}, ${dataSourceLabel}${pendingWrites > 0 ? `, ${pendingWritesLabel(pendingWrites)}` : ""}${serverProcessing.total > 0 ? `, ${serverProcessing.total} background task${serverProcessing.total === 1 ? "" : "s"} processing` : ""}`;
+  const processingLabels = [
+    processing.preparingCount > 0
+      ? `${processing.preparingCount} bookmark${processing.preparingCount === 1 ? "" : "s"} preparing`
+      : null,
+    processing.importingCount > 0
+      ? `${processing.importingCount} import${processing.importingCount === 1 ? "" : "s"} running`
+      : null,
+    processing.backgroundTotal > 0
+      ? `${processing.backgroundTotal} background enrichment task${processing.backgroundTotal === 1 ? "" : "s"}`
+      : null,
+  ].filter((label): label is string => label !== null);
+
+  const buttonLabel = `Library activity: ${libraryState}, ${libraryDetail}, ${dataSourceLabel}${pendingWrites > 0 ? `, ${pendingWritesLabel(pendingWrites)}` : ""}${processingLabels.length > 0 ? `, ${processingLabels.join(", ")}` : ""}`;
 
   async function retrySync() {
     await syncNow();
@@ -467,10 +505,16 @@ export default function ProcessingStatusIndicator() {
                 {pendingWrites}
               </span>
             )}
-            {serverProcessing.total > 0 && (
+            {processing.preparingCount > 0 && (
               <span className="flex items-center gap-1 text-sm font-medium tabular-nums">
                 <LoaderCircle className="size-3.5 animate-spin text-primary" />
-                {serverProcessing.total}
+                {processing.preparingCount}
+              </span>
+            )}
+            {processing.importingCount > 0 && (
+              <span className="flex items-center gap-1 text-sm font-medium tabular-nums">
+                <FileDown className="size-3.5 text-primary" />
+                {processing.importingCount}
               </span>
             )}
           </Button>
@@ -545,40 +589,81 @@ export default function ProcessingStatusIndicator() {
 
           {serverProcessing.total > 0 && (
             <section
-              aria-labelledby="background-processing-heading"
+              aria-labelledby="processing-activity-heading"
               className="mt-2 border-t border-border/70 pt-2"
             >
               <div className="flex items-center gap-2 px-2 py-1">
-                <LoaderCircle className="size-4 animate-spin text-primary" />
+                <LoaderCircle
+                  className={`size-4 text-primary ${processing.preparingCount > 0 ? "animate-spin" : ""}`}
+                />
                 <p
-                  id="background-processing-heading"
+                  id="processing-activity-heading"
                   className="text-sm font-medium"
                 >
-                  Background processing
+                  Processing activity
                 </p>
-                <span className="ml-auto text-sm font-medium tabular-nums">
-                  {serverProcessing.total}
-                </span>
               </div>
-              <div className="mt-1 space-y-0.5">
-                {serverProcessing.tasks.map((task) => {
-                  const TaskIcon = ICON_BY_KIND[task.kind];
-                  return (
-                    <div
-                      key={task.kind}
-                      className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm"
-                    >
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <TaskIcon className="size-3.5" />
-                        {LABEL_BY_KIND[task.kind]}
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        {task.count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+
+              {processing.preparingCount > 0 && (
+                <div className="mt-1">
+                  <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Preparing bookmarks
+                  </p>
+                  <div className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Globe className="size-3.5" />
+                      Crawling
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {processing.preparingCount}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {processing.importingCount > 0 && (
+                <div className="mt-1">
+                  <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Imports
+                  </p>
+                  <div className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <FileDown className="size-3.5" />
+                      Importing
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {processing.importingCount}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {processing.backgroundTotal > 0 && (
+                <div className="mt-1">
+                  <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Background enrichment
+                  </p>
+                  <div className="space-y-0.5">
+                    {processing.backgroundTasks.map((task) => {
+                      const TaskIcon = ICON_BY_KIND[task.kind];
+                      return (
+                        <div
+                          key={task.kind}
+                          className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm"
+                        >
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <TaskIcon className="size-3.5" />
+                            {LABEL_BY_KIND[task.kind]}
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {task.count}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </section>
           )}
         </PopoverContent>
