@@ -20,13 +20,9 @@ export interface EffectiveCollaboratorGrant {
 interface AccessibleListData {
   id: string;
   name: string;
-  description: string | null;
-  icon: string;
   userId: string;
   parentId: string | null;
   type: "manual" | "smart";
-  query: string | null;
-  public: boolean;
 }
 
 async function getScope(
@@ -180,28 +176,31 @@ export async function getAllSharedListAccess(ctx: AuthedContext) {
   );
   const scopeByList = new Map(scopes.map((scope) => [scope.listId, scope]));
   const listById = new Map(allOwnerLists.map((list) => [list.id, list]));
+  const result: Array<{
+    list: (typeof allOwnerLists)[number];
+    grant: EffectiveCollaboratorGrant;
+  }> = [];
 
-  return allOwnerLists.flatMap((list) => {
+  for (const list of allOwnerLists) {
     if (list.type !== "manual") {
-      return [];
+      continue;
     }
 
     const direct = membershipByList.get(list.id);
     if (direct) {
-      return [
-        {
-          list,
-          grant: {
-            membershipId: direct.id,
-            userId: ctx.user.id,
-            role: direct.role,
-            recursive: scopeByList.get(list.id)?.recursive ?? false,
-            inherited: false,
-            sourceListId: list.id,
-            sourceListName: list.name,
-          } satisfies EffectiveCollaboratorGrant,
+      result.push({
+        list,
+        grant: {
+          membershipId: direct.id,
+          userId: ctx.user.id,
+          role: direct.role,
+          recursive: scopeByList.get(list.id)?.recursive ?? false,
+          inherited: false,
+          sourceListId: list.id,
+          sourceListName: list.name,
         },
-      ];
+      });
+      continue;
     }
 
     let parentId = list.parentId;
@@ -218,25 +217,25 @@ export async function getAllSharedListAccess(ctx: AuthedContext) {
         ancestor.type === "manual" &&
         scopeByList.get(ancestor.id)?.recursive
       ) {
-        return [
-          {
-            list,
-            grant: {
-              membershipId: ancestorMembership.id,
-              userId: ctx.user.id,
-              role: ancestorMembership.role,
-              recursive: true,
-              inherited: true,
-              sourceListId: ancestor.id,
-              sourceListName: ancestor.name,
-            } satisfies EffectiveCollaboratorGrant,
+        result.push({
+          list,
+          grant: {
+            membershipId: ancestorMembership.id,
+            userId: ctx.user.id,
+            role: ancestorMembership.role,
+            recursive: true,
+            inherited: true,
+            sourceListId: ancestor.id,
+            sourceListName: ancestor.name,
           },
-        ];
+        });
+        break;
       }
       parentId = ancestor.parentId;
     }
-    return [];
-  });
+  }
+
+  return result;
 }
 
 export async function getEffectiveCollaboratorsForList(
@@ -256,13 +255,9 @@ export async function getEffectiveCollaboratorsForList(
       columns: {
         id: true,
         name: true,
-        description: true,
-        icon: true,
         userId: true,
         parentId: true,
         type: true,
-        query: true,
-        public: true,
       },
       where: eq(bookmarkLists.id, parentId),
     });
@@ -291,7 +286,9 @@ export async function getEffectiveCollaboratorsForList(
     return [];
   }
 
-  const userIds = [...new Set(memberships.map((membership) => membership.userId))];
+  const userIds = [
+    ...new Set(memberships.map((membership) => membership.userId)),
+  ];
   const scopes = await ctx.db.query.listCollaborationScopes.findMany({
     where: and(
       inArray(listCollaborationScopes.listId, ancestryIds),

@@ -63,10 +63,6 @@ export class ListInvitation {
     return invitationIsExpired(this.invitation.invitedAt);
   }
 
-  /**
-   * Load an invitation by ID. Unauthorized callers intentionally receive
-   * NOT_FOUND so invitation IDs do not become an account/list oracle.
-   */
   static async fromId(
     ctx: AuthedContext,
     invitationId: string,
@@ -92,7 +88,6 @@ export class ListInvitation {
 
     const isInvitedUser = invitation.userId === ctx.user.id;
     const isListOwner = invitation.list.userId === ctx.user.id;
-
     if (!isInvitedUser && !isListOwner) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -163,7 +158,6 @@ export class ListInvitation {
       await tx
         .delete(listInvitations)
         .where(eq(listInvitations.id, this.invitation.id));
-
       await tx
         .insert(listCollaborators)
         .values({
@@ -173,8 +167,6 @@ export class ListInvitation {
           addedBy: this.invitation.invitedBy,
         })
         .onConflictDoNothing();
-      // The scope row deliberately survives invitation -> membership so the
-      // accepted direct grant keeps the invitation's recursive setting.
     });
   }
 
@@ -191,7 +183,6 @@ export class ListInvitation {
 
   async revoke(): Promise<void> {
     this.ensureIsListOwner();
-
     await this.ctx.db
       .delete(listInvitations)
       .where(eq(listInvitations.id, this.invitation.id));
@@ -219,7 +210,6 @@ export class ListInvitation {
     this.invitation.recursive = params.recursive;
   }
 
-  /** Renew the invitation for another 30 days, then attempt delivery. */
   async resend(): Promise<boolean> {
     this.ensureIsListOwner();
     this.ensurePending();
@@ -233,10 +223,6 @@ export class ListInvitation {
     return this.sendEmail();
   }
 
-  /**
-   * Attempt delivery for an already-committed invitation. SMTP failure never
-   * changes invitation state; callers can report the delivery result truthfully.
-   */
   async sendEmail(): Promise<boolean> {
     if (!this.invitation.invitedEmail) {
       return false;
@@ -263,11 +249,6 @@ export class ListInvitation {
     }
   }
 
-  /**
-   * Create or reactivate an invitation. This mutates database state only;
-   * email must be attempted by the caller after the surrounding transaction
-   * has committed.
-   */
   static async inviteByEmail(
     ctx: AuthedContext,
     params: {
@@ -303,16 +284,12 @@ export class ListInvitation {
     const user = await ctx.db.query.users.findFirst({
       where: sql`lower(${users.email}) = ${normalizedEmail}`,
     });
-
-    // Keep unknown-address failures neutral to avoid confirming whether an
-    // arbitrary email address has a Marka account.
     if (!user) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Unable to create an invitation for that email address",
       });
     }
-
     if (user.id === listOwnerId) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -328,7 +305,6 @@ export class ListInvitation {
         ),
       },
     );
-
     if (existingCollaborator) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -342,7 +318,6 @@ export class ListInvitation {
         eq(listInvitations.userId, user.id),
       ),
     });
-
     if (existingInvitation?.status === "pending") {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -454,13 +429,8 @@ export class ListInvitation {
     ctx: AuthedContext,
     params: { listId: string },
   ) {
-    // Declined invitations remain usable for a later re-invite but intentionally
-    // disappear from the normal owner management surface.
     const invitations = await ctx.db.query.listInvitations.findMany({
-      where: and(
-        eq(listInvitations.listId, params.listId),
-        eq(listInvitations.status, "pending"),
-      ),
+      where: eq(listInvitations.listId, params.listId),
       with: {
         user: {
           columns: {
@@ -494,9 +464,10 @@ export class ListInvitation {
           expired: expiresAt.getTime() <= Date.now(),
           user: {
             id: invitation.user.id,
-            // Protect the user's identity until they accept. The owner already
-            // knows the address they invited, so showing the email is safe.
-            name: "Pending User",
+            name:
+              invitation.status === "pending"
+                ? "Pending User"
+                : "Declined User",
             email: invitation.user.email || "",
             image: null,
           },
