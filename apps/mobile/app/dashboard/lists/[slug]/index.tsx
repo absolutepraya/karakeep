@@ -49,6 +49,8 @@ export default function ListView() {
                 <Pressable
                   accessibilityRole="button"
                   className="flex max-w-48 flex-row items-center"
+                  hitSlop={4}
+                  style={{ minHeight: 48, minWidth: 48 }}
                   onPress={() => {
                     router.replace({
                       pathname: "/dashboard/lists/[slug]",
