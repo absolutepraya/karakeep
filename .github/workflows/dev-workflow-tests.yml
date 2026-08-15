@@ -1,0 +1,37 @@
+name: Dev Workflow Tests
+
+on:
+  pull_request:
+    paths:
+      - "start-dev.sh"
+      - "stop-dev.sh"
+      - "scripts/setup-worktree.sh"
+      - "scripts/dev-infra.sh"
+      - "scripts/dev-infra.test.sh"
+      - "package.json"
+      - ".github/workflows/dev-workflow-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "start-dev.sh"
+      - "stop-dev.sh"
+      - "scripts/setup-worktree.sh"
+      - "scripts/dev-infra.sh"
+      - "scripts/dev-infra.test.sh"
+      - "package.json"
+      - ".github/workflows/dev-workflow-tests.yml"
+
+jobs:
+  shared-dev-infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check Bash syntax
+        run: bash -n start-dev.sh stop-dev.sh scripts/setup-worktree.sh scripts/dev-infra.test.sh
+
+      - name: Run shared dev infrastructure tests
+        run: bash scripts/dev-infra.test.sh
