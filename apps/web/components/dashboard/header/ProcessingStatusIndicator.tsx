@@ -89,6 +89,10 @@ function pendingWritesLabel(pendingWrites: number) {
   return `${pendingWrites} pending write${pendingWrites === 1 ? "" : "s"}`;
 }
 
+function pluralSuffix(count: number) {
+  return count === 1 ? "" : "s";
+}
+
 function lastSyncedLabel(lastSyncedAt: Date | null) {
   return lastSyncedAt
     ? `Last synced ${lastSyncedAt.toLocaleString()}`
@@ -363,11 +367,12 @@ export default function ProcessingStatusIndicator() {
   const usesOfflineReplica =
     status.kind === "offline" ||
     (typeof navigator !== "undefined" && navigator.onLine === false);
-  const dataSourceLabel = usesOfflineReplica
-    ? canReadOfflineReplica
+  let dataSourceLabel = "Showing server data";
+  if (usesOfflineReplica) {
+    dataSourceLabel = canReadOfflineReplica
       ? "Showing offline replica"
-      : "Preparing offline library"
-    : "Showing server data";
+      : "Preparing offline library";
+  }
 
   switch (status.kind) {
     case "online":
@@ -397,14 +402,14 @@ export default function ProcessingStatusIndicator() {
       needsAttention = true;
       break;
     case "conflict":
-      libraryState = `${status.conflictCount} conflict${status.conflictCount === 1 ? "" : "s"}`;
+      libraryState = `${status.conflictCount} conflict${pluralSuffix(status.conflictCount)}`;
       libraryDetail = "Choose which value to keep before syncing can continue.";
       pendingWrites = status.pendingWrites;
       Icon = TriangleAlert;
       needsAttention = true;
       break;
     case "rejected":
-      libraryState = `${status.rejectionCount} rejected offline change${status.rejectionCount === 1 ? "" : "s"}`;
+      libraryState = `${status.rejectionCount} rejected offline change${pluralSuffix(status.rejectionCount)}`;
       libraryDetail = "The server could not apply a queued offline change.";
       pendingWrites = status.pendingWrites;
       Icon = TriangleAlert;
@@ -414,15 +419,15 @@ export default function ProcessingStatusIndicator() {
 
   const processingLabels = [
     processing.preparingCount > 0
-      ? `${processing.preparingCount} bookmark${processing.preparingCount === 1 ? "" : "s"} preparing`
-      : null,
+      ? `${processing.preparingCount} bookmark${pluralSuffix(processing.preparingCount)} preparing`
+      : undefined,
     processing.importingCount > 0
-      ? `${processing.importingCount} import${processing.importingCount === 1 ? "" : "s"} running`
-      : null,
+      ? `${processing.importingCount} import${pluralSuffix(processing.importingCount)} running`
+      : undefined,
     processing.backgroundTotal > 0
-      ? `${processing.backgroundTotal} background enrichment task${processing.backgroundTotal === 1 ? "" : "s"}`
-      : null,
-  ].filter((label): label is string => label !== null);
+      ? `${processing.backgroundTotal} background enrichment task${pluralSuffix(processing.backgroundTotal)}`
+      : undefined,
+  ].filter((label): label is string => label !== undefined);
 
   const buttonLabel = `Library activity: ${libraryState}, ${libraryDetail}, ${dataSourceLabel}${pendingWrites > 0 ? `, ${pendingWritesLabel(pendingWrites)}` : ""}${processingLabels.length > 0 ? `, ${processingLabels.join(", ")}` : ""}`;
 
@@ -539,7 +544,7 @@ export default function ProcessingStatusIndicator() {
                   onClick={() => void openConflict()}
                 >
                   Resolve {status.conflictCount} conflict
-                  {status.conflictCount === 1 ? "" : "s"}
+                  {pluralSuffix(status.conflictCount)}
                 </Button>
               )}
               {status.kind === "rejected" && (
@@ -562,7 +567,7 @@ export default function ProcessingStatusIndicator() {
                 >
                   <Button type="button" size="sm">
                     Resolve {status.rejectionCount} rejected change
-                    {status.rejectionCount === 1 ? "" : "s"}
+                    {pluralSuffix(status.rejectionCount)}
                   </Button>
                 </ActionConfirmingDialog>
               )}
