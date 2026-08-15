@@ -148,7 +148,18 @@ assert_contains "$root/foreign.out" "Port 7700 is already in use"
 main_root="$root/main"
 workspace="$root/worktree"
 mkdir -p "$main_root" "$workspace"
-printf 'NEXTAUTH_SECRET=dev-secret\n' >"$main_root/.env"
+cat >"$main_root/.env" <<'EOF_ROOT_ENV'
+NEXTAUTH_SECRET=dev-secret
+MEILI_ADDR=https://old-meili.example
+MEILI_MASTER_KEY=old-meili-secret
+MEILI_VECTOR_ADDR=https://old-vector.example
+MEILI_VECTOR_MASTER_KEY=old-vector-secret
+BROWSER_WEB_URL=http://localhost:9333
+BROWSER_WEBSOCKET_URL=ws://localhost:9334
+BROWSERLESS_URL=https://old-browserless.example
+BROWSERLESS_TOKEN=old-browserless-secret
+BROWSER_CONNECT_ONDEMAND=true
+EOF_ROOT_ENV
 WT_ROOT_PATH="$main_root" \
 WT_WORKSPACE_PATH="$workspace" \
 WT_WORKSPACE_NAME='Issue/ABC.weird' \
@@ -157,9 +168,19 @@ WT_PORT_BASE=7 \
 assert_contains "$workspace/.env" "KARAKEEP_PORT=3007"
 assert_contains "$workspace/.env" "DATA_DIR=$workspace/.data/local"
 assert_contains "$workspace/.env" "MEILI_ADDR=http://localhost:7700"
+assert_contains "$workspace/.env" "MEILI_MASTER_KEY="
 assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9222"
+assert_contains "$workspace/.env" "BROWSER_CONNECT_ONDEMAND=false"
 assert_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc-weird-7_"
 assert_not_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc.weird-7_"
+assert_not_contains "$workspace/.env" "old-meili.example"
+assert_not_contains "$workspace/.env" "old-meili-secret"
+assert_not_contains "$workspace/.env" "old-vector.example"
+assert_not_contains "$workspace/.env" "old-vector-secret"
+assert_not_contains "$workspace/.env" "old-browserless.example"
+assert_not_contains "$workspace/.env" "old-browserless-secret"
+assert_not_contains "$workspace/.env" "http://localhost:9333"
+assert_not_contains "$workspace/.env" "ws://localhost:9334"
 assert_not_contains "$workspace/.env" "http://localhost:7707"
 assert_not_contains "$workspace/.env" "http://localhost:9229"
 
