@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Podsumowanie {{year}}",
-    "subtitle": "Rok w Karakeep",
+    "subtitle": "Rok w Marka",
     "banner": {
       "title": "Twoje podsumowanie 2025 jest gotowe!",
       "description": "Zobacz swój rok w zakładkach",
@@ -1161,7 +1161,7 @@
         "assets": "Zasoby"
       }
     },
-    "footer": "Stworzone z Karakeep",
+    "footer": "Stworzone z Marka",
     "share": "Udostępnij",
     "download": "Pobierz",
     "close": "Zamknij",

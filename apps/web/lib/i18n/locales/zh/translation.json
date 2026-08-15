@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "你的 {{year}} 年终报告",
-    "subtitle": "Karakeep 年度回顾",
+    "subtitle": "Marka 年度回顾",
     "banner": {
       "title": "你的 2025 年度报告已准备就绪！",
       "description": "查看你一年来的书签",
@@ -1161,7 +1161,7 @@
         "assets": "资产"
       }
     },
-    "footer": "用 Karakeep 制作",
+    "footer": "用 Marka 制作",
     "share": "分享",
     "download": "下载",
     "close": "关闭",

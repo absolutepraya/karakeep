@@ -1121,7 +1121,7 @@
   },
   "wrapped": {
     "title": "Sinun {{year}}-koosteesi",
-    "subtitle": "Vuosi Karakeepissä",
+    "subtitle": "Vuosi Marka",
     "banner": {
       "title": "Sinun 2025 -koosteesi on valmis!",
       "description": "Katso vuotesi kirjanmerkeissä",
@@ -1162,7 +1162,7 @@
         "assets": "Resurssit"
       }
     },
-    "footer": "Tehty Karakeepillä",
+    "footer": "Tehty Marka",
     "share": "Jaa",
     "download": "Lataa",
     "close": "Sulje",

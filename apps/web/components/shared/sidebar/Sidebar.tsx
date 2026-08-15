@@ -18,7 +18,7 @@ export default async function Sidebar({
   const { t } = await useTranslation();
 
   return (
-    <aside className="sidebar-scrollbar bg-sidebar/95 flex h-[calc(100vh-64px)] w-64 flex-col gap-4 overflow-y-auto px-3 py-4">
+    <aside className="sidebar-scrollbar flex h-[calc(100vh-64px)] w-64 flex-col gap-4 overflow-y-auto px-3 py-4">
       <div>
         <ul className="space-y-1 text-sm">
           {items(t).map((item) => (

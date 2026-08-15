@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import SubscriptionSettings from "@/components/settings/SubscriptionSettings";
 import { QuotaProgress } from "@/components/subscription/QuotaProgress";
+import { MARKA } from "@/lib/brand";
 import { useTranslation } from "@/lib/i18n/server";
 import { CreditCard } from "lucide-react";
 
@@ -12,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // oxlint-disable-next-line rules-of-hooks
   const { t } = await useTranslation();
   return {
-    title: `${t("settings.subscription.subscription")} | Karakeep`,
+    title: `${t("settings.subscription.subscription")} | ${MARKA.name}`,
   };
 }
 

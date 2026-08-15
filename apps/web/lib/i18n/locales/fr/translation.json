@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Votre récap de {{year}}",
-    "subtitle": "Une année dans Karakeep",
+    "subtitle": "Une année dans Marka",
     "banner": {
       "title": "Votre récap 2025 est prêt !",
       "description": "Consultez votre année en signets",
@@ -1161,7 +1161,7 @@
         "assets": "Ressources"
       }
     },
-    "footer": "Fait avec Karakeep",
+    "footer": "Fait avec Marka",
     "share": "Partager",
     "download": "Télécharger",
     "close": "Fermer",

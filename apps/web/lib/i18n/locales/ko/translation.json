@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "나만의 {{year}} 랩",
-    "subtitle": "카라킵에서 보낸 1년",
+    "subtitle": "Marka에서 보낸 1년",
     "banner": {
       "title": "나만의 2025 랩이 준비되었습니다!",
       "description": "나만의 책갈피 한 해 보기",
@@ -1161,7 +1161,7 @@
         "assets": "자산"
       }
     },
-    "footer": "Karakeep으로 만들었습니다",
+    "footer": "Marka으로 만들었습니다",
     "share": "공유",
     "download": "다운로드",
     "close": "닫기",

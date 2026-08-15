@@ -1120,7 +1120,7 @@
   },
   "wrapped": {
     "title": "Din sammanfattning för {{year}}",
-    "subtitle": "Ett år i Karakeep",
+    "subtitle": "Ett år i Marka",
     "banner": {
       "title": "Din sammanfattning för 2025 är klar!",
       "description": "Se ditt år i bokmärken",
@@ -1161,7 +1161,7 @@
         "assets": "Tillgångar"
       }
     },
-    "footer": "Gjord med Karakeep",
+    "footer": "Gjord med Marka",
     "share": "Dela",
     "download": "Ladda ner",
     "close": "Stäng",

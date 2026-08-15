@@ -13,20 +13,22 @@
   </a>
 </div>
 
-# <img height="50" src="./screenshots/logo.png" alt="Karakeep logo" />
+# Marka
 
-Karakeep is a self-hostable bookmark-everything app for saving links, notes, images, PDFs, and web pages, then finding them again with fast search, lists, highlights, and optional AI tagging/summarization.
+<img height="83" src="./screenshots/marka-logo.png" alt="Marka logo" />
 
-> This repository is **not the upstream Karakeep repo**. It is an opinionated personal fork of [karakeep-app/karakeep](https://github.com/karakeep-app/karakeep) focused on UX, QoL, and personal operator workflow changes while staying close to upstream.
+Marka is a self-hostable library for saving links, notes, images, PDFs, and web pages, then finding them again with fast search, lists, highlights, and optional AI tagging and summarization.
+
+> [`absolutepraya/karakeep`](https://github.com/absolutepraya/karakeep) is the Marka fork. The upstream Karakeep project is <https://github.com/karakeep-app/karakeep>.
 
 ![Homepage screenshot](./screenshots/homepage.png)
 
 ## What this repository is
 
-This fork keeps the upstream Karakeep product intact in spirit, but documents and operates it as a real personal deployment:
+This fork keeps the upstream product intact in spirit, while presenting and operating it as Marka:
 
-- **Origin:** `absolutepraya/karakeep`
-- **Upstream:** `karakeep-app/karakeep`
+- **Marka fork:** `absolutepraya/karakeep`
+- **Upstream project:** <https://github.com/karakeep-app/karakeep>
 - **Focus:** UX polish, quality-of-life improvements, and personal deployment ergonomics
 - **Local dev:** one-command workflow via `pnpm dev:start`
 - **Deploy model:** pull-based Docker image delivery via GHCR + Watchtower
@@ -38,9 +40,9 @@ If you want the main project, releases, or community-first contribution flow, st
 If you are here to work on **this fork**, the most important repo-specific guide is:
 - [`docs/fork-setup.md`](docs/fork-setup.md)
 
-## What Karakeep does
+## What Marka does
 
-Karakeep can:
+Marka can:
 
 - save **links, notes, images, and PDFs**
 - fetch link titles, descriptions, and preview images automatically
@@ -171,30 +173,30 @@ For the complete local-dev and deploy workflow, read:
 - Docs-site development guide: [`docs/README.md`](docs/README.md)
 - Contribution guidance for this repo: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-### For upstream Karakeep product usage
-- Main docs: <https://docs.karakeep.app>
-- Installation: <https://docs.karakeep.app>
-- Configuration: <https://docs.karakeep.app>
-- Development docs: <https://docs.karakeep.app>
-- API docs: <https://docs.karakeep.app/api>
+### For upstream product usage
+- Upstream main docs: <https://docs.karakeep.app>
+- Upstream installation docs: <https://docs.karakeep.app>
+- Upstream configuration docs: <https://docs.karakeep.app>
+- Upstream development docs: <https://docs.karakeep.app>
+- Upstream API docs: <https://docs.karakeep.app/api>
 
 ## Demo
 
-Upstream maintains the public demo at:
-- <https://try.karakeep.app>
+The upstream project maintains the public demo:
+- Upstream demo: <https://try.karakeep.app>
 
 Demo credentials:
 
 ```text
-email: demo@karakeep.app
+email: demo@karakeep.app (upstream demo)
 password: demodemo
 ```
 
 The demo is read-only.
 
-## About the name
+## Upstream name
 
-Karakeep is inspired by the Arabic word **كراكيب** (*karakeeb*), a colloquial term for miscellaneous clutter, odds and ends, or things that look messy but still feel worth keeping. It fits a personal library for links, notes, screenshots, and all the other things you are not ready to lose.
+The upstream Karakeep name is inspired by the Arabic word **كراكيب** (*karakeeb*), a colloquial term for miscellaneous clutter, odds and ends, or things that look messy but still feel worth keeping.
 
 ## Tech stack
 
@@ -218,8 +220,8 @@ This fork intentionally differs from upstream in a few practical ways:
 
 There are two contribution paths:
 
-1. **Upstream Karakeep contributions**
-   - Use <https://github.com/karakeep-app/karakeep>
+1. **Upstream contributions**
+   - Use the upstream repository: <https://github.com/karakeep-app/karakeep>
    - Follow the upstream community process
 
 2. **Fork-specific contributions for this repo**
@@ -237,4 +239,4 @@ There are two contribution paths:
 
 This fork remains licensed under [AGPL-3.0](./LICENSE).
 
-Upstream Karakeep is developed by [Localhost Labs Ltd](https://localhostlabs.co.uk). This repository is a personal fork, not the canonical upstream source.
+The upstream Karakeep project is developed by [Localhost Labs Ltd](https://localhostlabs.co.uk). Marka is a personal fork, not the canonical upstream source.

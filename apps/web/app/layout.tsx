@@ -10,6 +10,7 @@ import "streamdown/styles.css";
 import type { Viewport } from "next";
 import { headers } from "next/headers";
 import React from "react";
+import { MARKA } from "@/lib/brand";
 import Providers from "@/lib/providers";
 import { getUserLocalSettings } from "@/lib/userLocalSettings/userLocalSettings";
 import { getServerAuthSession } from "@/server/auth";
@@ -43,38 +44,33 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Karakeep",
-  applicationName: "Karakeep",
-  description:
-    "The Bookmark Everything app. Hoard links, notes, and images and they will get automatically tagged AI.",
+  title: MARKA.name,
+  applicationName: MARKA.name,
+  description: MARKA.description,
   appleWebApp: {
     capable: true,
-    title: "Karakeep",
+    title: MARKA.name,
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
-    // Theme-aware favicon: the icon lives in the browser tab chrome, so it
-    // tracks the OS/browser color scheme. Light tab -> dark (black) logo;
-    // dark tab -> light (white) logo. favicon.ico remains the legacy fallback.
+    // Theme-aware favicon tracks the OS/browser color scheme.
     icon: [
       {
-        url: "/karakeep-dark.svg",
+        url: MARKA.icon.light,
         media: "(prefers-color-scheme: light)",
-        type: "image/svg+xml",
+        type: "image/png",
       },
       {
-        url: "/karakeep-light.svg",
+        url: MARKA.icon.dark,
         media: "(prefers-color-scheme: dark)",
-        type: "image/svg+xml",
+        type: "image/png",
       },
     ],
-    // iOS Safari ignores the manifest icons for Home Screen installation.
-    // apple-touch-icon is the only way to control the installed PWA icon.
     apple: [
       {
-        url: "/icons/karakeep-ios-1024.png",
+        url: MARKA.icon.apple,
         sizes: "1024x1024",
         type: "image/png",
       },

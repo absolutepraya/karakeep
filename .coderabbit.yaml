@@ -1,0 +1,178 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: en-US
+
+chat:
+  auto_reply: true
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  changed_files_summary: true
+  poem: false
+  review_status: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  path_filters:
+    - "!packages/open-api/karakeep-openapi-spec.json"
+    - "!packages/sdk/src/karakeep-api.d.ts"
+    - "!packages/db/drizzle/meta/**"
+
+  path_instructions:
+    - path: "apps/web/**"
+      instructions: |
+        - Review React/Next.js correctness and client/server boundaries.
+        - Check accessibility for interactive UI and icon-only controls.
+        - Check responsive and mobile-web behavior.
+        - Flag user-visible strings that should use the existing i18n system.
+        - Keep changes consistent with the fork's current design language instead of introducing a second style system.
+        - Watch for stale React Query cache invalidation after mutations.
+        - Avoid unnecessary client-side state and effects when existing patterns are sufficient.
+
+    - path: "packages/trpc/**"
+      instructions: |
+        - Review authentication and authorization boundaries carefully.
+        - Ensure viewer, editor, owner, and similar permission rules are enforced server-side, not only in the UI.
+        - Review input validation and error handling.
+        - Review transaction boundaries and avoid external network side effects inside database transactions where practical.
+        - Check rate limiting where endpoints can be abused.
+        - Flag accidental exposure of secrets, private user data, or account-enumeration information.
+        - Require meaningful tests for permission, security, or lifecycle changes.
+
+    - path: "packages/db/**"
+      instructions: |
+        - Review migrations for destructive changes, unsafe cascades, data-loss risk, and rollout compatibility.
+        - Check foreign keys, uniqueness constraints, and indexes against intended semantics.
+        - Consider compatibility with the fork's rolling web/workers deployment model.
+        - Require operator or deploy notes when a schema change needs a controlled rollout.
+
+    - path: "apps/mobile/**"
+      instructions: |
+        - Review Expo/React Native behavior and platform-specific assumptions.
+        - Check touch-target and accessibility behavior.
+        - Check navigation and deep-link handling.
+        - Keep shared business permissions aligned with web and backend behavior.
+
+    - path: "apps/browser-extension/**"
+      instructions: |
+        - Review browser permission changes carefully.
+        - Check authentication and session assumptions.
+        - Avoid exposing secrets or privileged data to extension contexts unnecessarily.
+        - Preserve editor/viewer permission behavior when interacting with shared lists or write targets.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        - Preserve least-privilege GitHub Actions permissions.
+        - Prefer pinned action SHAs, matching the existing workflows.
+        - Never expose .env values, tokens, or production credentials.
+        - Preserve the fork's pull-based deployment model unless the change explicitly intends to alter it.
+        - Call out changes that affect GHCR, Watchtower, production Compose, migrations, or production/local state tooling.
+
+    - path: "deploy/**"
+      instructions: |
+        - Preserve least-privilege GitHub Actions permissions where applicable.
+        - Prefer pinned action SHAs when GitHub Actions are involved, matching the existing workflows.
+        - Never expose .env values, tokens, or production credentials.
+        - Preserve the fork's pull-based deployment model unless the change explicitly intends to alter it.
+        - Call out changes that affect GHCR, Watchtower, production Compose, migrations, or production/local state tooling.
+
+    - path: "scripts/**"
+      instructions: |
+        - Preserve least-privilege behavior and avoid unnecessary host-level changes.
+        - Never expose .env values, tokens, or production credentials.
+        - Preserve the fork's pull-based deployment model unless the change explicitly intends to alter it.
+        - Call out changes that affect GHCR, Watchtower, production Compose, migrations, or production/local state tooling.
+
+    - path: "start-dev.sh"
+      instructions: |
+        - Preserve existing local-development behavior unless the change explicitly intends to alter it.
+        - Never expose .env values, tokens, or production credentials.
+        - Call out changes that affect developer setup, local state, containers, or required tooling.
+
+    - path: "stop-dev.sh"
+      instructions: |
+        - Preserve existing local-development behavior unless the change explicitly intends to alter it.
+        - Never expose .env values, tokens, or production credentials.
+        - Call out changes that affect developer setup, local state, containers, or required tooling.
+
+    - path: "README.md"
+      instructions: |
+        - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
+        - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
+        - Flag contradictory setup, contributor, deployment, or operator instructions.
+
+    - path: "CONTRIBUTING.md"
+      instructions: |
+        - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
+        - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
+        - Flag contradictory setup, contributor, deployment, or operator instructions.
+
+    - path: "AGENTS.md"
+      instructions: |
+        - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
+        - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
+        - Flag contradictory setup, contributor, deployment, or operator instructions.
+
+    - path: "CLAUDE.md"
+      instructions: |
+        - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
+        - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
+        - Flag contradictory setup, contributor, deployment, or operator instructions.
+
+    - path: "GEMINI.md"
+      instructions: |
+        - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
+        - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
+        - Flag contradictory setup, contributor, deployment, or operator instructions.
+
+    - path: "docs/fork-setup.md"
+      instructions: |
+        - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
+        - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
+        - Flag contradictory setup, contributor, deployment, or operator instructions.
+
+    - path: "docs/docs/**"
+      instructions: |
+        - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
+        - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
+        - Flag contradictory setup, contributor, deployment, or operator instructions.
+
+    - path: "**/*.test.*"
+      instructions: |
+        - Prefer tests that protect externally observable behavior and permission boundaries.
+        - Cover meaningful error and edge paths for backend changes where reasonable.
+        - Avoid suggestions that only increase test volume without protecting meaningful behavior.
+
+    - path: "**/*.spec.*"
+      instructions: |
+        - Prefer tests that protect externally observable behavior and permission boundaries.
+        - Cover meaningful error and edge paths for backend changes where reasonable.
+        - Avoid suggestions that only increase test volume without protecting meaningful behavior.
+
+    - path: "**/tests/**"
+      instructions: |
+        - Prefer tests that protect externally observable behavior and permission boundaries.
+        - Cover meaningful error and edge paths for backend changes where reasonable.
+        - Avoid suggestions that only increase test volume without protecting meaningful behavior.
+
+  tools:
+    github-checks:
+      enabled: true
+
+  pre_merge_checks:
+    docstrings:
+      mode: off
+    title:
+      mode: warning
+      requirements: >-
+        Use a concise, descriptive title that reflects the actual scope of the change.
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
