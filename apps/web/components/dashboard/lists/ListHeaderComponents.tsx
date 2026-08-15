@@ -156,11 +156,7 @@ export function ListHeaderActions({ list }: { list: ZBookmarkList }) {
       {list.userRole === "owner" && (
         <>
           <EditListModal open={editOpen} setOpen={setEditOpen} list={list} />
-          <ShareListModal
-            open={shareOpen}
-            setOpen={setShareOpen}
-            list={list}
-          />
+          <ShareListModal open={shareOpen} setOpen={setShareOpen} list={list} />
           {list.type === "manual" && (
             <ManageCollaboratorsModal
               open={collaboratorsOpen}
