@@ -40,7 +40,8 @@ function linkBookmark(overrides: {
       favicon: null,
       htmlContent: "<p>Readable content</p>",
       contentAssetId: null,
-      crawledAt: overrides.crawledAt ?? new Date(),
+      crawledAt:
+        "crawledAt" in overrides ? overrides.crawledAt : new Date(),
       crawlStatus: overrides.crawlStatus ?? "success",
       crawlStatusCode: 200,
       author: null,
@@ -63,9 +64,22 @@ describe("bookmark loading semantics", () => {
     expect(getBookmarkRefreshInterval(bookmark)).toBe(false);
   });
 
+  test("persisted core content is ready before the crawler job fully completes", () => {
+    const bookmark = linkBookmark({
+      crawlStatus: "pending",
+      crawledAt: new Date(),
+      taggingStatus: "pending",
+      summarizationStatus: "pending",
+    });
+
+    expect(isBookmarkStillLoading(bookmark)).toBe(false);
+    expect(getBookmarkRefreshInterval(bookmark)).toBe(false);
+  });
+
   test("a link is still loading while its core crawl is pending", () => {
     const bookmark = linkBookmark({
       crawlStatus: "pending",
+      crawledAt: null,
       taggingStatus: "pending",
       summarizationStatus: "pending",
     });
