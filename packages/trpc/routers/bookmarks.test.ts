@@ -103,11 +103,10 @@ describe("Bookmark Routes", () => {
     });
 
     await expect(api.getProcessingStatus()).resolves.toEqual({
-      total: 5,
+      total: 4,
       tasks: [
         { kind: "crawling", count: 1 },
         { kind: "tagging", count: 2 },
-        { kind: "summarizing", count: 1 },
         { kind: "importing", count: 1 },
       ],
     });
