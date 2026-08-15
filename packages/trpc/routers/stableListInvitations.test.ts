@@ -86,6 +86,32 @@ describe("stable list invitation lifecycle", () => {
     expect(renewed.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
+  test<CustomTestContext>("rejects an immediate repeated resend", async ({
+    apiCallers,
+    db,
+  }) => {
+    const ownerApi = apiCallers[0];
+    const collaboratorApi = apiCallers[1];
+    const list = await createManualList(ownerApi);
+    const collaborator = await collaboratorApi.users.whoami();
+
+    const { invitationId } = await ownerApi.lists.addCollaborator({
+      listId: list.id,
+      email: collaborator.email!,
+      role: "viewer",
+      recursive: false,
+    });
+    await db
+      .update(listInvitations)
+      .set({ invitedAt: new Date(Date.now() - 61_000) })
+      .where(eq(listInvitations.id, invitationId));
+
+    await ownerApi.lists.resendInvitation({ invitationId });
+    await expect(
+      ownerApi.lists.resendInvitation({ invitationId }),
+    ).rejects.toThrow("Please wait before resending this invitation");
+  });
+
   test<CustomTestContext>("updates pending role and recursive scope before acceptance", async ({
     apiCallers,
   }) => {
