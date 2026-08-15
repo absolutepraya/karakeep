@@ -73,6 +73,37 @@ describe("recursive shared-list offline sync", () => {
     );
   });
 
+  test<CustomTestContext>("a future child under a recursive grant is created offline", async ({
+    apiCallers,
+  }) => {
+    const owner = apiCallers[0];
+    const collaborator = apiCallers[1];
+    const parent = await owner.lists.create({
+      name: "Parent",
+      icon: "folder",
+      type: "manual",
+    });
+    const { invitationId } = await inviteRecursively(
+      owner,
+      collaborator,
+      parent.id,
+    );
+    await collaborator.lists.acceptInvitation({ invitationId });
+    const before = await collaborator.offlineSync.snapshot();
+
+    const child = await owner.lists.create({
+      name: "Future child",
+      icon: "folder",
+      type: "manual",
+      parentId: parent.id,
+    });
+    const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+
+    expect(listEvents(delta.events)).toContainEqual(
+      expect.objectContaining({ entityId: child.id, operation: "create" }),
+    );
+  });
+
   test<CustomTestContext>("disabling recursion revokes inherited descendants offline", async ({
     apiCallers,
   }) => {
