@@ -1,0 +1,151 @@
+name: PR39 invitation hardening
+
+on:
+  push:
+    branches:
+      - feat/stable-list-collaboration
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/stable-list-collaboration
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply reviewed lifecycle fixes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one match, got {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          p = "packages/trpc/models/listInvitations.ts"
+          replace_once(
+              p,
+              'import { listCollaborators, listInvitations, users } from "@karakeep/db/schema";\n\nimport type { AuthedContext } from "..";',
+              'import type { KarakeepDBTransaction } from "@karakeep/db";\nimport { listCollaborators, listInvitations, users } from "@karakeep/db/schema";\n\nimport type { AuthedContext } from "..";',
+          )
+          replace_once(
+              p,
+              'type InvitationStatus = "pending" | "declined";\n\nexport const LIST_INVITATION_TTL_MS',
+              'type InvitationStatus = "pending" | "declined";\n\nfunction asTransactionContext(\n  ctx: AuthedContext,\n  db: KarakeepDBTransaction,\n): AuthedContext {\n  return { ...ctx, db } as unknown as AuthedContext;\n}\n\nexport const LIST_INVITATION_TTL_MS',
+          )
+          replace_once(
+              p,
+              '''    await this.ctx.db.transaction(async (tx) => {\n      await tx\n        .delete(listInvitations)\n        .where(eq(listInvitations.id, this.invitation.id));\n      await tx\n        .insert(listCollaborators)\n        .values({\n          listId: this.invitation.listId,\n          userId: this.invitation.userId,\n          role: this.invitation.role,\n          addedBy: this.invitation.invitedBy,\n        })\n        .onConflictDoNothing();\n    });''',
+              '''    await this.ctx.db.transaction(async (tx) => {\n      const transactionCtx = asTransactionContext(this.ctx, tx);\n      await tx\n        .delete(listInvitations)\n        .where(eq(listInvitations.id, this.invitation.id));\n      await tx\n        .insert(listCollaborators)\n        .values({\n          listId: this.invitation.listId,\n          userId: this.invitation.userId,\n          role: this.invitation.role,\n          addedBy: this.invitation.invitedBy,\n        })\n        .onConflictDoNothing();\n      await setCollaborationScope(transactionCtx, {\n        listId: this.invitation.listId,\n        userId: this.invitation.userId,\n        recursive: this.invitation.recursive,\n      });\n    });''',
+          )
+          replace_once(
+              p,
+              '''  async decline(): Promise<void> {\n    this.ensureIsInvitedUser();\n    this.ensurePending();\n    this.ensureActive();\n\n    await this.ctx.db\n      .update(listInvitations)\n      .set({ status: "declined" })\n      .where(eq(listInvitations.id, this.invitation.id));\n  }''',
+              '''  async decline(): Promise<void> {\n    this.ensureIsInvitedUser();\n    this.ensurePending();\n\n    await this.ctx.db.transaction(async (tx) => {\n      const transactionCtx = asTransactionContext(this.ctx, tx);\n      await tx\n        .update(listInvitations)\n        .set({ status: "declined" })\n        .where(eq(listInvitations.id, this.invitation.id));\n      await deleteCollaborationScope(transactionCtx, {\n        listId: this.invitation.listId,\n        userId: this.invitation.userId,\n      });\n    });\n    this.invitation.status = "declined";\n  }''',
+          )
+          replace_once(
+              p,
+              '''  async revoke(): Promise<void> {\n    this.ensureIsListOwner();\n    await this.ctx.db\n      .delete(listInvitations)\n      .where(eq(listInvitations.id, this.invitation.id));\n    await deleteCollaborationScope(this.ctx, {\n      listId: this.invitation.listId,\n      userId: this.invitation.userId,\n    });\n  }''',
+              '''  async revoke(): Promise<void> {\n    this.ensureIsListOwner();\n    await this.ctx.db.transaction(async (tx) => {\n      const transactionCtx = asTransactionContext(this.ctx, tx);\n      await tx\n        .delete(listInvitations)\n        .where(eq(listInvitations.id, this.invitation.id));\n      await deleteCollaborationScope(transactionCtx, {\n        listId: this.invitation.listId,\n        userId: this.invitation.userId,\n      });\n    });\n  }''',
+          )
+          replace_once(
+              p,
+              '''    await this.ctx.db\n      .update(listInvitations)\n      .set({ role: params.role })\n      .where(eq(listInvitations.id, this.invitation.id));\n    await setCollaborationScope(this.ctx, {\n      listId: this.invitation.listId,\n      userId: this.invitation.userId,\n      recursive: params.recursive,\n    });\n    this.invitation.role = params.role;\n    this.invitation.recursive = params.recursive;''',
+              '''    await this.ctx.db.transaction(async (tx) => {\n      const transactionCtx = asTransactionContext(this.ctx, tx);\n      await tx\n        .update(listInvitations)\n        .set({ role: params.role })\n        .where(eq(listInvitations.id, this.invitation.id));\n      await setCollaborationScope(transactionCtx, {\n        listId: this.invitation.listId,\n        userId: this.invitation.userId,\n        recursive: params.recursive,\n      });\n    });\n    this.invitation.role = params.role;\n    this.invitation.recursive = params.recursive;''',
+          )
+          replace_once(
+              p,
+              '''    if (existingInvitation?.status === "declined") {\n      await ctx.db\n        .update(listInvitations)\n        .set({\n          status: "pending",\n          role,\n          invitedAt,\n          invitedEmail: normalizedEmail,\n          invitedBy: inviterUserId,\n        })\n        .where(eq(listInvitations.id, existingInvitation.id));\n      await setCollaborationScope(ctx, {\n        listId,\n        userId: user.id,\n        recursive,\n      });\n      return existingInvitation.id;\n    }''',
+              '''    if (existingInvitation?.status === "declined") {\n      await ctx.db.transaction(async (tx) => {\n        const transactionCtx = asTransactionContext(ctx, tx);\n        await tx\n          .update(listInvitations)\n          .set({\n            status: "pending",\n            role,\n            invitedAt,\n            invitedEmail: normalizedEmail,\n            invitedBy: inviterUserId,\n          })\n          .where(eq(listInvitations.id, existingInvitation.id));\n        await setCollaborationScope(transactionCtx, {\n          listId,\n          userId: user.id,\n          recursive,\n        });\n      });\n      return existingInvitation.id;\n    }''',
+          )
+          replace_once(
+              p,
+              '''    const res = await ctx.db\n      .insert(listInvitations)\n      .values({\n        listId,\n        userId: user.id,\n        role,\n        status: "pending",\n        invitedAt,\n        invitedEmail: normalizedEmail,\n        invitedBy: inviterUserId,\n      })\n      .returning();\n    await setCollaborationScope(ctx, {\n      listId,\n      userId: user.id,\n      recursive,\n    });\n    return res[0].id;''',
+              '''    return ctx.db.transaction(async (tx) => {\n      const transactionCtx = asTransactionContext(ctx, tx);\n      const res = await tx\n        .insert(listInvitations)\n        .values({\n          listId,\n          userId: user.id,\n          role,\n          status: "pending",\n          invitedAt,\n          invitedEmail: normalizedEmail,\n          invitedBy: inviterUserId,\n        })\n        .returning();\n      await setCollaborationScope(transactionCtx, {\n        listId,\n        userId: user.id,\n        recursive,\n      });\n      return res[0].id;\n    });''',
+          )
+          replace_once(
+              p,
+              '''    const invitations = await ctx.db.query.listInvitations.findMany({\n      where: eq(listInvitations.listId, params.listId),''',
+              '''    const invitations = await ctx.db.query.listInvitations.findMany({\n      where: and(\n        eq(listInvitations.listId, params.listId),\n        eq(listInvitations.status, "pending"),\n      ),''',
+          )
+
+          replace_once(
+              "apps/web/components/dashboard/lists/PendingInvitationsCard.tsx",
+              '''            disabled={\n              invitation.expired ||\n              declineInvitation.isPending ||\n              acceptInvitation.isPending\n            }''',
+              '''            disabled={\n              declineInvitation.isPending || acceptInvitation.isPending\n            }''',
+          )
+          replace_once(
+              "apps/mobile/app/dashboard/lists/invitations.tsx",
+              '''                    disabled={\n                      invitation.expired ||\n                      declineInvitation.isPending ||\n                      acceptInvitation.isPending\n                    }''',
+              '''                    disabled={\n                      declineInvitation.isPending || acceptInvitation.isPending\n                    }''',
+          )
+          replace_once(
+              "apps/mobile/app/dashboard/lists/[slug]/index.tsx",
+              '"Leaving removes the direct collaboration grant that gives you access. If this list is inherited from a recursively shared parent, you will leave that parent share and lose access to lists that depend on it.",',
+              '"Leaving removes the nearest collaboration grant currently providing this access. If that grant comes from a recursively shared parent, access to lists that depend on it may also change.",',
+          )
+          replace_once(
+              "apps/mobile/app/dashboard/lists/[slug]/collaborators.tsx",
+              '''  const { slug } = useLocalSearchParams();\n  const listId = typeof slug === "string" ? slug : "";\n  const api = useTRPC();''',
+              '''  const { slug } = useLocalSearchParams();\n  if (typeof slug !== "string" || !slug) {\n    throw new Error("Unexpected param type");\n  }\n  const listId = slug;\n  const api = useTRPC();''',
+          )
+          replace_once(
+              "apps/mobile/app/dashboard/lists/[slug]/collaborators.tsx",
+              'api.lists.get.queryOptions({ listId }, { enabled: Boolean(listId) })',
+              'api.lists.get.queryOptions({ listId })',
+          )
+          replace_once(
+              "apps/mobile/app/dashboard/lists/[slug]/collaborators.tsx",
+              '''    api.lists.getCollaborators.queryOptions(\n      { listId },\n      { enabled: Boolean(listId) },\n    ),''',
+              '''    api.lists.getCollaborators.queryOptions({ listId }),''',
+          )
+
+          test_path = "packages/trpc/routers/stableListInvitations.test.ts"
+          replace_once(
+              test_path,
+              'import { eq } from "drizzle-orm";\n\nimport { listInvitations } from "@karakeep/db/schema";',
+              'import { and, eq } from "drizzle-orm";\n\nimport { listCollaborationScopes } from "@karakeep/db";\nimport { listInvitations } from "@karakeep/db/schema";',
+          )
+          replace_once(
+              test_path,
+              '''  test<CustomTestContext>("normalizes invite email and reports delivery separately", async ({\n    apiCallers,\n  }) => {''',
+              '''  test<CustomTestContext>("normalizes invite email and reports delivery separately", async ({\n    apiCallers,\n    db,\n  }) => {''',
+          )
+          replace_once(
+              test_path,
+              '''    expect(result.invitationId).toBeTruthy();\n    expect(result.emailSent).toBe(false);''',
+              '''    expect(result.invitationId).toBeTruthy();\n    expect(result.emailSent).toBe(false);\n    const invitation = await db.query.listInvitations.findFirst({\n      where: eq(listInvitations.id, result.invitationId),\n    });\n    expect(invitation?.invitedEmail).toBe("test2@test.com");''',
+          )
+          anchor = '''  test<CustomTestContext>("rejects an immediate repeated resend", async ({'''
+          addition = '''  test<CustomTestContext>("allows declining an expired invitation and cleans its scope", async ({\n    apiCallers,\n    db,\n  }) => {\n    const ownerApi = apiCallers[0];\n    const collaboratorApi = apiCallers[1];\n    const list = await createManualList(ownerApi);\n    const collaborator = await collaboratorApi.users.whoami();\n\n    const { invitationId } = await ownerApi.lists.addCollaborator({\n      listId: list.id,\n      email: collaborator.email!,\n      role: "viewer",\n      recursive: true,\n    });\n    await db\n      .update(listInvitations)\n      .set({ invitedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) })\n      .where(eq(listInvitations.id, invitationId));\n\n    await collaboratorApi.lists.declineInvitation({ invitationId });\n\n    expect(await collaboratorApi.lists.getPendingInvitations()).toHaveLength(0);\n    const declined = await db.query.listInvitations.findFirst({\n      where: eq(listInvitations.id, invitationId),\n    });\n    expect(declined?.status).toBe("declined");\n    const scope = await db.query.listCollaborationScopes.findFirst({\n      where: and(\n        eq(listCollaborationScopes.listId, list.id),\n        eq(listCollaborationScopes.userId, collaborator.id),\n      ),\n    });\n    expect(scope).toBeUndefined();\n  });\n\n'''
+          replace_once(test_path, anchor, addition + anchor)
+
+          Path(".github/workflows/pr39-invitation-hardening.yml").unlink()
+          PY
+      - name: Format
+        run: pnpm format:fix
+      - name: Commit patch and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit --no-verify -m "fix: harden invitation lifecycle"
+          git push origin HEAD:feat/stable-list-collaboration
