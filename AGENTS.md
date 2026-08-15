@@ -206,6 +206,16 @@ Notes:
 - **Biome is intentionally not used** in this repo.
 - `react-grab` is loaded in dev-only mode in the web app.
 
+### AI-assisted pull request review
+
+- Pull requests may receive advisory reviews from CodeRabbit, Qodo, Sourcery, and Graphite Agent.
+- Treat every AI review comment as a claim to verify against the issue/spec, surrounding code, tests, docs, and intended behavior before changing code.
+- Never change intended product flow, authorization, data semantics, API/database behavior, compatibility, deployment behavior, or another invariant solely to satisfy an AI reviewer.
+- If a suggestion could change intended behavior and the available sources do not resolve intent, ask the repository owner rather than implementing it automatically.
+- Never enable automatic reviewer commits, pushes, applied fixes, or reviewer-driven coding agents as part of this repository's review setup.
+- AI reviewers are advisory and do not replace deterministic CI or become required merge gates by default.
+- Read `docs/ai-code-review.md` before configuring reviewers or resolving substantive AI review feedback.
+
 ## Documentation guidance
 
 This repo's docs are intentionally split into audiences:
