@@ -96,21 +96,32 @@ function ListActionsMenu({
   };
 
   const handleLeave = () => {
-    Alert.alert("Leave List", "Are you sure you want to leave this list?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Leave",
-        onPress: () => {
-          leaveList({ listId });
+    Alert.alert(
+      "Leave List",
+      "Leaving removes the direct collaboration grant that gives you access. If this list is inherited from a recursively shared parent, you will leave that parent share and lose access to lists that depend on it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Leave",
+          onPress: () => {
+            leaveList({ listId });
+          },
+          style: "destructive",
         },
-        style: "destructive",
-      },
-    ]);
+      ],
+    );
   };
 
   const handleEdit = () => {
     router.push({
       pathname: "/dashboard/lists/[slug]/edit",
+      params: { slug: listId },
+    });
+  };
+
+  const handleCollaborators = () => {
+    router.push({
+      pathname: "/dashboard/lists/[slug]/collaborators",
       params: { slug: listId },
     });
   };
@@ -125,12 +136,17 @@ function ListActionsMenu({
           attributes: {
             hidden: role !== "owner",
           },
-          image: Platform.select({
-            ios: "square.and.pencil",
-          }),
-          imageColor: Platform.select({
-            ios: menuIconColor,
-          }),
+          image: Platform.select({ ios: "square.and.pencil" }),
+          imageColor: Platform.select({ ios: menuIconColor }),
+        },
+        {
+          id: "collaborators",
+          title: "Manage Collaborators",
+          attributes: {
+            hidden: role !== "owner",
+          },
+          image: Platform.select({ ios: "person.2" }),
+          imageColor: Platform.select({ ios: menuIconColor }),
         },
         {
           id: "delete_list",
@@ -139,12 +155,8 @@ function ListActionsMenu({
             destructive: true,
             hidden: role !== "owner",
           },
-          image: Platform.select({
-            ios: "trash",
-          }),
-          imageColor: Platform.select({
-            ios: destructiveMenuIconColor,
-          }),
+          image: Platform.select({ ios: "trash" }),
+          imageColor: Platform.select({ ios: destructiveMenuIconColor }),
         },
         {
           id: "leave",
@@ -153,12 +165,8 @@ function ListActionsMenu({
             destructive: true,
             hidden: role === "owner",
           },
-          image: Platform.select({
-            ios: "arrowshape.turn.up.left",
-          }),
-          imageColor: Platform.select({
-            ios: destructiveMenuIconColor,
-          }),
+          image: Platform.select({ ios: "arrowshape.turn.up.left" }),
+          imageColor: Platform.select({ ios: destructiveMenuIconColor }),
         },
       ]}
       onPressAction={({ nativeEvent }) => {
@@ -172,6 +180,8 @@ function ListActionsMenu({
           handleLeave();
         } else if (nativeEvent.event === "edit") {
           handleEdit();
+        } else if (nativeEvent.event === "collaborators") {
+          handleCollaborators();
         }
       }}
       shouldOpenOnLongPress={false}
