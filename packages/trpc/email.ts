@@ -13,6 +13,9 @@ function buildTransporter() {
     host: serverConfig.email.smtp.host,
     port: serverConfig.email.smtp.port,
     secure: serverConfig.email.smtp.secure,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 30_000,
     auth:
       serverConfig.email.smtp.user && serverConfig.email.smtp.password
         ? {
