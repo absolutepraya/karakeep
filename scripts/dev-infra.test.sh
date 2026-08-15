@@ -120,7 +120,9 @@ export FAKE_DOCKER_LOG="$root/docker.log"
 : >"$FAKE_DOCKER_LOG"
 
 [[ -f "$INFRA" ]] || fail "Missing scripts/dev-infra.sh"
-bash -n "$INFRA" "$SETUP_WORKTREE" "$START_DEV" "$STOP_DEV"
+for script in "$INFRA" "$SETUP_WORKTREE" "$START_DEV" "$STOP_DEV"; do
+  bash -n "$script"
+done
 
 # Shared infra starts exactly one stable Meilisearch and Chrome container.
 bash "$INFRA" up >/dev/null
