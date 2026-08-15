@@ -1,0 +1,113 @@
+name: Apply collaboration i18n cleanup
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collaboration-i18n-fix-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/stable-list-collaboration'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: true
+
+      - name: Apply i18n cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{path}: expected 1 match, found {count}: {old[:80]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          modal = "apps/web/components/dashboard/lists/ManageCollaboratorsModal.tsx"
+          replace_once(modal, '''import {
+            canManageCollaboratorOnList,
+            collaboratorRemovalMessage,
+            formatInvitationDate,
+            invitationDeliveryMessage,
+          } from "./collaborationUi";''', '''import {
+            canManageCollaboratorOnList,
+            formatInvitationDate,
+          } from "./collaborationUi";''')
+          replace_once(modal, 'toast({ description: invitationDeliveryMessage(result.emailSent) });', 'toast({\n          description: t(\n            result.emailSent\n              ? "lists.collaborators.invitation_delivery_sent"\n              : "lists.collaborators.invitation_delivery_failed",\n          ),\n        });')
+          replace_once(modal, 'toast({ description: invitationDeliveryMessage(result.emailSent) });', 'toast({\n          description: t(\n            result.emailSent\n              ? "lists.collaborators.invitation_delivery_sent"\n              : "lists.collaborators.invitation_delivery_failed",\n          ),\n        });')
+          replacements = {
+            '"Invite people to this list and optionally include current and future nested lists."': 't("lists.collaborators.stable_description")',
+            'aria-label="Invitation role"': 'aria-label={t("lists.collaborators.invitation_role")}',
+            '<SelectItem value="viewer">Viewer</SelectItem>': '<SelectItem value="viewer">{t("lists.collaborators.viewer")}</SelectItem>',
+            '<SelectItem value="editor">Editor</SelectItem>': '<SelectItem value="editor">{t("lists.collaborators.editor")}</SelectItem>',
+            '                  Invite\n': '                  {t("lists.collaborators.invite")}\n',
+            '                    Also share all nested lists\n': '                    {t("lists.collaborators.share_all_nested")}\n',
+            '                    Includes current nested lists and lists added or moved here\n                    later. Leave this off to share only this list.\n': '                    {t("lists.collaborators.share_all_nested_description")}\n',
+            '<span className="text-sm text-muted-foreground">Owner</span>': '<span className="text-sm text-muted-foreground">\n                      {t("lists.collaborators.owner")}\n                    </span>',
+            '{expired ? "Expired" : "Pending"}': '{expired\n                                    ? t("lists.collaborators.expired")\n                                    : t("lists.collaborators.pending")}',
+            '<Badge variant="secondary">Inherited</Badge>': '<Badge variant="secondary">\n                                  {t("lists.collaborators.inherited")}\n                                </Badge>',
+            '<Badge variant="outline">Nested lists</Badge>': '<Badge variant="outline">\n                                  {t("lists.collaborators.nested_lists")}\n                                </Badge>',
+            '                                  Inherited from {collaborator.sourceListName}\n': '                                  {t("lists.collaborators.inherited_from", {\n                                    name: collaborator.sourceListName,\n                                  })}\n',
+            '{expired ? "Expired" : "Expires"}{" "}': '{expired\n                                  ? t("lists.collaborators.expired")\n                                  : t("lists.collaborators.expires")}{" "}',
+            '                                  {collaborator.role}\n': '                                  {t(\n                                    collaborator.role === "viewer"\n                                      ? "lists.collaborators.viewer"\n                                      : "lists.collaborators.editor",\n                                  )}\n',
+            '                                  Override here\n': '                                  {t("lists.collaborators.override_here")}\n',
+            'aria-label="Pending invitation role"': 'aria-label={t("lists.collaborators.pending_invitation_role")}',
+            '                              Nested lists\n': '                              {t("lists.collaborators.nested_lists")}\n',
+            '<RefreshCw className="mr-1 size-3" /> Resend': '<RefreshCw className="mr-1 size-3" />\n                              {t("lists.collaborators.resend")}',
+            '                              Revoke\n': '                              {t("lists.collaborators.revoke")}\n',
+            'aria-label="Collaborator role"': 'aria-label={t("lists.collaborators.collaborator_role")}',
+            'aria-label={`Remove ${collaborator.user.name}`}': 'aria-label={t("lists.collaborators.remove_aria", {\n                                name: collaborator.user.name,\n                              })}',
+            '                                    collaboratorRemovalMessage(\n                                      collaborator.user.name,\n                                    ),': '                                    t("lists.collaborators.remove_confirmation", {\n                                      name: collaborator.user.name,\n                                    }),',
+          }
+          for old, new in replacements.items():
+              replace_once(modal, old, new)
+          # The second role display is a distinct occurrence after the first replacement.
+          replace_once(modal, '                              {collaborator.role}\n', '                              {t(\n                                collaborator.role === "viewer"\n                                  ? "lists.collaborators.viewer"\n                                  : "lists.collaborators.editor",\n                              )}\n')
+
+          pending = "apps/web/components/dashboard/lists/PendingInvitationsCard.tsx"
+          pending_replacements = {
+            '              {invitation.role}\n': '              {t(\n                invitation.role === "viewer"\n                  ? "lists.collaborators.viewer"\n                  : "lists.collaborators.editor",\n              )}\n',
+            '<Badge variant="secondary">Includes nested lists</Badge>': '<Badge variant="secondary">\n                {t("lists.invitations.includes_nested_lists")}\n              </Badge>',
+            '<Badge variant="destructive">Expired</Badge>': '<Badge variant="destructive">\n                {t("lists.invitations.expired")}\n              </Badge>',
+            '{invitation.list.owner?.name || "Unknown"}': '{invitation.list.owner?.name || t("lists.invitations.unknown")}',
+            '{invitation.expired ? "Expired" : "Expires"}{" "}': '{invitation.expired\n              ? t("lists.invitations.expired")\n              : t("lists.invitations.expires")}{" "}',
+            '              Ask the list owner to resend this invitation to renew it for 30\n              days.\n': '              {t("lists.invitations.expired_help")}\n',
+          }
+          for old, new in pending_replacements.items():
+              replace_once(pending, old, new)
+
+          helper = "apps/web/components/dashboard/lists/collaborationUi.ts"
+          p = Path(helper)
+          p.write_text('''const invitationDateFormatter = new Intl.DateTimeFormat("en-US", {\n  dateStyle: "medium",\n  timeZone: "UTC",\n});\n\nexport function formatInvitationDate(date: Date) {\n  return invitationDateFormatter.format(date);\n}\n\nexport function canManageCollaboratorOnList(collaborator: {\n  status: "pending" | "accepted" | "declined";\n  inherited?: boolean;\n}) {\n  return collaborator.status === "accepted" && !collaborator.inherited;\n}\n''')
+
+          test = "apps/web/components/dashboard/lists/collaborationUi.test.ts"
+          Path(test).write_text('''import { describe, expect, test } from "vitest";\n\nimport {\n  canManageCollaboratorOnList,\n  formatInvitationDate,\n} from "./collaborationUi";\n\ndescribe("stable collaboration UI semantics", () => {\n  test("formats invitation dates deterministically", () => {\n    expect(formatInvitationDate(new Date("2026-08-15T23:30:00-07:00"))).toBe(\n      "Aug 16, 2026",\n    );\n  });\n\n  test("only direct accepted collaborators can be managed from this list", () => {\n    expect(\n      canManageCollaboratorOnList({ status: "accepted", inherited: false }),\n    ).toBe(true);\n    expect(\n      canManageCollaboratorOnList({ status: "accepted", inherited: true }),\n    ).toBe(false);\n    expect(\n      canManageCollaboratorOnList({ status: "pending", inherited: false }),\n    ).toBe(false);\n  });\n});\n''')
+
+          collaborator_keys = '''      "stable_description": "Invite people to this list and optionally include current and future nested lists.",\n      "invitation_role": "Invitation role",\n      "invite": "Invite",\n      "share_all_nested": "Also share all nested lists",\n      "share_all_nested_description": "Includes current nested lists and lists added or moved here later. Leave this off to share only this list.",\n      "nested_lists": "Nested lists",\n      "inherited": "Inherited",\n      "inherited_from": "Inherited from {{name}}",\n      "expired": "Expired",\n      "expires": "Expires",\n      "override_here": "Override here",\n      "pending_invitation_role": "Pending invitation role",\n      "collaborator_role": "Collaborator role",\n      "resend": "Resend",\n      "invitation_delivery_sent": "Invitation created and email sent.",\n      "invitation_delivery_failed": "Invitation created, but the email was not sent. You can resend it later.",\n      "remove_aria": "Remove {{name}}",\n      "remove_confirmation": "Remove {{name}} from this shared list? Bookmark entries they contributed through this collaboration will be removed from this shared list, but their underlying bookmarks will remain in their library.",\n'''
+          invitation_keys = '''      "includes_nested_lists": "Includes nested lists",\n      "expired": "Expired",\n      "expires": "Expires",\n      "unknown": "Unknown",\n      "expired_help": "Ask the list owner to resend this invitation to renew it for 30 days.",\n'''
+          for locale in [
+              "apps/web/lib/i18n/locales/en/translation.json",
+              "apps/web/lib/i18n/locales/en_US/translation.json",
+          ]:
+              replace_once(locale, '      "manage": "Manage Collaborators",\n', '      "manage": "Manage Collaborators",\n' + collaborator_keys)
+              replace_once(locale, '      "pending": "Pending Invitations",\n', '      "pending": "Pending Invitations",\n' + invitation_keys)
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/components/dashboard/lists apps/web/lib/i18n/locales/en/translation.json apps/web/lib/i18n/locales/en_US/translation.json
+          git commit --no-verify -m "fix(web): localize stable collaboration UI"
+          git push origin HEAD:${{ github.head_ref }}
