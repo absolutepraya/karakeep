@@ -29,9 +29,13 @@ const mocks = vi.hoisted(() => ({
     message: string;
   }[],
   discardRejectedMutation: vi.fn(),
+  invalidateQueries: vi.fn(),
   serverProcessing: {
     total: 0,
-    tasks: [] as { kind: "crawling" | "tagging"; count: number }[],
+    tasks: [] as {
+      kind: "crawling" | "tagging" | "summarizing" | "importing";
+      count: number;
+    }[],
   },
   status: {
     kind: "online",
@@ -51,7 +55,8 @@ function mockServerProcessing(processing: typeof mocks.serverProcessing) {
 }
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: () => ({ data: mocks.serverProcessing }),
+  useQuery: () => ({ data: mocks.serverProcessing, dataUpdatedAt: 1 }),
+  useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
 }));
 
 vi.mock("@karakeep/shared-react/trpc", () => ({
@@ -59,6 +64,12 @@ vi.mock("@karakeep/shared-react/trpc", () => ({
     bookmarks: {
       getProcessingStatus: {
         queryOptions: () => ({}),
+      },
+      getBookmarks: {
+        pathFilter: () => ({ queryKey: ["bookmarks", "getBookmarks"] }),
+      },
+      searchBookmarks: {
+        pathFilter: () => ({ queryKey: ["bookmarks", "searchBookmarks"] }),
       },
     },
   }),
@@ -122,6 +133,7 @@ afterEach(() => {
   cleanup();
   mocks.rejections = [];
   mocks.discardRejectedMutation.mockReset();
+  mocks.invalidateQueries.mockReset();
 });
 
 describe("ProcessingStatusIndicator", () => {
@@ -256,23 +268,28 @@ describe("ProcessingStatusIndicator", () => {
     ).toBeTruthy();
   });
 
-  it("opens the activity popover and keeps server processing separate", () => {
+  it("shows core preparation separately from background enrichment", () => {
     mockLibraryStatus({
       kind: "offline",
       lastSyncedAt: new Date("2026-07-12T00:00:00Z"),
       pendingWrites: 1,
     });
     mockServerProcessing({
-      total: 3,
+      total: 4,
       tasks: [
         { kind: "crawling", count: 1 },
         { kind: "tagging", count: 2 },
+        { kind: "summarizing", count: 1 },
       ],
     });
 
     render(<ProcessingStatusIndicator />);
 
     const trigger = screen.getByRole("button", { name: /library activity/i });
+    expect(trigger.getAttribute("aria-label")).toMatch(/1 bookmark preparing/i);
+    expect(trigger.getAttribute("aria-label")).toMatch(
+      /3 background enrichment tasks/i,
+    );
     expect(screen.queryByText("Library sync")).toBeNull();
     expect(trigger.querySelector("svg")?.getAttribute("class")).not.toContain(
       "animate-spin",
@@ -280,9 +297,30 @@ describe("ProcessingStatusIndicator", () => {
 
     fireEvent.click(trigger);
     expect(screen.getByText("Library sync")).toBeTruthy();
-    expect(screen.getByText("Background processing")).toBeTruthy();
+    expect(screen.getByText("Processing activity")).toBeTruthy();
+    expect(screen.getByText("Preparing bookmarks")).toBeTruthy();
+    expect(screen.getByText("Background enrichment")).toBeTruthy();
     expect(screen.getByText("Crawling")).toBeTruthy();
     expect(screen.getByText("Tagging")).toBeTruthy();
+    expect(screen.getByText("Summarizing")).toBeTruthy();
     expect(screen.queryByText("Embedding")).toBeNull();
+  });
+
+  it("does not show background enrichment as a foreground count", () => {
+    mockLibraryStatus({
+      kind: "online",
+      lastSyncedAt: new Date("2026-07-12T00:00:00Z"),
+      pendingWrites: 0,
+    });
+    mockServerProcessing({
+      total: 2,
+      tasks: [{ kind: "tagging", count: 2 }],
+    });
+
+    render(<ProcessingStatusIndicator />);
+
+    const trigger = screen.getByRole("button", { name: /library activity/i });
+    expect(trigger.getAttribute("aria-label")).not.toMatch(/bookmark preparing/i);
+    expect(trigger.textContent).not.toContain("2");
   });
 });
