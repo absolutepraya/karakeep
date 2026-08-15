@@ -14,6 +14,7 @@ type Role = "viewer" | "editor";
 type InvitationStatus = "pending" | "declined";
 
 export const LIST_INVITATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const LIST_INVITATION_RESEND_COOLDOWN_MS = 60 * 1000;
 
 interface InvitationData {
   id: string;
@@ -209,6 +210,16 @@ export class ListInvitation {
   async resend(): Promise<boolean> {
     this.ensureIsListOwner();
     this.ensurePending();
+
+    if (
+      Date.now() - this.invitation.invitedAt.getTime() <
+      LIST_INVITATION_RESEND_COOLDOWN_MS
+    ) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: "Please wait before resending this invitation",
+      });
+    }
 
     const invitedAt = new Date();
     await this.ctx.db
