@@ -21,6 +21,7 @@ import {
   zNewBookmarkListSchema,
 } from "@karakeep/shared/types/lists";
 import { ZCursor } from "@karakeep/shared/types/pagination";
+import { zRuleEngineRuleEventSchema } from "@karakeep/shared/types/rules";
 import { switchCase } from "@karakeep/shared/utils/switch";
 
 import { AuthedContext, Context } from "..";
@@ -28,8 +29,15 @@ import { buildImpersonatingAuthedContext } from "../lib/impersonate";
 import { RuleEngine } from "../lib/ruleEngine";
 import { getBookmarkIdsFromMatcher } from "../lib/search";
 import { Bookmark } from "./bookmarks";
+import {
+  deleteCollaborationScope,
+  getAllSharedListAccess,
+  getDirectCollaborationScope,
+  getEffectiveCollaboratorGrant,
+  getEffectiveCollaboratorsForList,
+  setCollaborationScope,
+} from "./listCollaborationAccess";
 import { ListInvitation } from "./listInvitations";
-import { zRuleEngineRuleEventSchema } from "@karakeep/shared/types/rules";
 
 interface ListCollaboratorEntry {
   membershipId: string;
@@ -63,7 +71,7 @@ export abstract class List {
       userRole: this.list.userRole,
       hasCollaborators: this.list.hasCollaborators,
 
-      // Hide parentId as it is not relevant to the user
+      // Hide parentId so an inherited share doesn't leak private hierarchy.
       parentId: null,
       // Hide whether the list is public or not.
       public: false,
@@ -86,7 +94,7 @@ export abstract class List {
     ctx: AuthedContext,
     id: string,
   ): Promise<ManualList | SmartList> {
-    // First try to find the list owned by the user
+    // First try to find the list owned by the user.
     let list = await (async (): Promise<
       (ZBookmarkList & { userId: string }) | undefined
     > => {
@@ -116,32 +124,30 @@ export abstract class List {
         : l;
     })();
 
-    // If not found, check if the user is a collaborator
+    // Otherwise resolve an exact direct grant or the nearest recursive ancestor.
     let collaboratorEntry: ListCollaboratorEntry | null = null;
     if (!list) {
-      const collaborator = await ctx.db.query.listCollaborators.findFirst({
-        where: and(
-          eq(listCollaborators.listId, id),
-          eq(listCollaborators.userId, ctx.user.id),
-        ),
-        with: {
-          list: {
-            columns: {
-              rssToken: false,
-            },
-          },
+      const candidate = await ctx.db.query.bookmarkLists.findFirst({
+        columns: {
+          rssToken: false,
         },
+        where: eq(bookmarkLists.id, id),
       });
-
-      if (collaborator) {
-        list = {
-          ...collaborator.list,
-          userRole: collaborator.role,
-          hasCollaborators: true, // If you're a collaborator, the list has collaborators
-        };
-        collaboratorEntry = {
-          membershipId: collaborator.id,
-        };
+      if (candidate) {
+        const grant = await getEffectiveCollaboratorGrant(ctx, candidate);
+        if (grant) {
+          list = {
+            ...candidate,
+            userRole: grant.role,
+            hasCollaborators: true,
+          };
+          collaboratorEntry = {
+            // Contributions made through inherited editor access belong to the
+            // granting direct membership. Removing that grant therefore cleans
+            // those list-membership rows without deleting the bookmarks.
+            membershipId: grant.membershipId,
+          };
+        }
       }
     }
 
@@ -325,28 +331,17 @@ export abstract class List {
           columns: {
             rssToken: false,
           },
-          with: {
-            collaborators: {
-              where: eq(listCollaborators.userId, ctx.user.id),
-              columns: {
-                id: true,
-                role: true,
-              },
-            },
-          },
         },
       },
     });
 
-    // For owner lists, we need to check if they actually have collaborators
-    // by querying the collaborators table separately (without user filter)
+    // For owner lists, check whether they have direct collaborators.
     const ownerListIds = lists
       .filter((l) => l.list.userId === ctx.user.id)
       .map((l) => l.list.id);
 
     const listsWithCollaborators = new Set<string>();
     if (ownerListIds.length > 0) {
-      // Use a single query with inArray instead of N queries
       const collaborators = await ctx.db.query.listCollaborators.findMany({
         where: inArray(listCollaborators.listId, ownerListIds),
         columns: {
@@ -358,37 +353,39 @@ export abstract class List {
       });
     }
 
-    return lists.flatMap((l) => {
-      let userRole: "owner" | "editor" | "viewer" | null;
-      let collaboratorEntry: ListCollaboratorEntry | null = null;
-      if (l.list.collaborators.length > 0) {
-        invariant(l.list.collaborators.length == 1);
-        userRole = l.list.collaborators[0].role;
-        collaboratorEntry = {
-          membershipId: l.list.collaborators[0].id,
-        };
-      } else if (l.list.userId === ctx.user.id) {
-        userRole = "owner";
-      } else {
-        userRole = null;
-      }
-      return userRole
-        ? [
-            this.fromData(
-              ctx,
-              {
-                ...l.list,
-                userRole,
-                hasCollaborators:
-                  userRole !== "owner"
-                    ? true
-                    : listsWithCollaborators.has(l.list.id),
-              },
-              collaboratorEntry,
-            ),
-          ]
-        : [];
-    });
+    const resolved = await Promise.all(
+      lists.map(async (l) => {
+        if (l.list.userId === ctx.user.id) {
+          return this.fromData(
+            ctx,
+            {
+              ...l.list,
+              userRole: "owner",
+              hasCollaborators: listsWithCollaborators.has(l.list.id),
+            },
+            null,
+          );
+        }
+
+        const grant = await getEffectiveCollaboratorGrant(ctx, l.list);
+        if (!grant) {
+          return null;
+        }
+        return this.fromData(
+          ctx,
+          {
+            ...l.list,
+            userRole: grant.role,
+            hasCollaborators: true,
+          },
+          { membershipId: grant.membershipId },
+        );
+      }),
+    );
+
+    return resolved.filter(
+      (list): list is ManualList | SmartList => list !== null,
+    );
   }
 
   /**
@@ -689,12 +686,14 @@ export abstract class List {
   async addCollaboratorByEmail(
     email: string,
     role: "viewer" | "editor",
+    recursive = false,
   ): Promise<string> {
     this.ensureCanManage();
 
     return await ListInvitation.inviteByEmail(this.ctx, {
       email,
       role,
+      recursive,
       listId: this.list.id,
       listName: this.list.name,
       listType: this.list.type,
@@ -705,9 +704,9 @@ export abstract class List {
   }
 
   /**
-   * Remove a collaborator from this list.
-   * Only the list owner can remove collaborators.
-   * This also removes all bookmarks that the collaborator added to the list.
+   * Remove a direct collaborator grant from this list.
+   * Contributions tied to that direct membership are removed by the existing
+   * bookmarksInLists foreign key; underlying bookmarks remain untouched.
    */
   async removeCollaborator(userId: string): Promise<void> {
     this.ensureCanManage();
@@ -727,12 +726,16 @@ export abstract class List {
         message: "Collaborator not found",
       });
     }
+    await deleteCollaborationScope(this.ctx, {
+      listId: this.list.id,
+      userId,
+    });
   }
 
   /**
-   * Allow a user to leave a list (remove themselves as a collaborator).
-   * This bypasses the owner check since users should be able to leave lists they're collaborating on.
-   * This also removes all bookmarks that the user added to the list.
+   * Leave the direct grant that provides access. For inherited access this
+   * means leaving the granting recursive share, not creating a child-only
+   * denial override.
    */
   async leaveList(): Promise<void> {
     if (this.list.userRole === "owner") {
@@ -742,30 +745,45 @@ export abstract class List {
           "List owners cannot leave their own list. Delete the list instead.",
       });
     }
+    if (!this.collaboratorEntry) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Collaborator not found",
+      });
+    }
+
+    const membership = await this.ctx.db.query.listCollaborators.findFirst({
+      where: and(
+        eq(listCollaborators.id, this.collaboratorEntry.membershipId),
+        eq(listCollaborators.userId, this.ctx.user.id),
+      ),
+    });
+    if (!membership) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Collaborator not found",
+      });
+    }
 
     const result = await this.ctx.db
       .delete(listCollaborators)
-      .where(
-        and(
-          eq(listCollaborators.listId, this.list.id),
-          eq(listCollaborators.userId, this.ctx.user.id),
-        ),
-      );
-
+      .where(eq(listCollaborators.id, membership.id));
     if (result.changes === 0) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "Collaborator not found",
       });
     }
+    await deleteCollaborationScope(this.ctx, {
+      listId: membership.listId,
+      userId: this.ctx.user.id,
+    });
   }
 
-  /**
-   * Update a collaborator's role.
-   */
-  async updateCollaboratorRole(
+  async updateCollaborator(
     userId: string,
     role: "viewer" | "editor",
+    recursive: boolean,
   ): Promise<void> {
     this.ensureCanManage();
 
@@ -785,11 +803,30 @@ export abstract class List {
         message: "Collaborator not found",
       });
     }
+    await setCollaborationScope(this.ctx, {
+      listId: this.list.id,
+      userId,
+      recursive,
+    });
   }
 
   /**
-   * Get all collaborators for this list, including pending invitations.
-   * For privacy, pending invitations show masked user info unless the invitation has been accepted.
+   * Backwards-compatible role-only update. Preserve the existing direct scope.
+   */
+  async updateCollaboratorRole(
+    userId: string,
+    role: "viewer" | "editor",
+  ): Promise<void> {
+    const recursive = await getDirectCollaborationScope(this.ctx, {
+      listId: this.list.id,
+      userId,
+    });
+    await this.updateCollaborator(userId, role, recursive);
+  }
+
+  /**
+   * Get effective accepted collaborators plus this list's pending invitations.
+   * Accepted inherited grants are annotated with their source list.
    */
   async getCollaborators() {
     this.ensureCanView();
@@ -797,20 +834,7 @@ export abstract class List {
     const isOwner = this.list.userId === this.ctx.user.id;
 
     const [collaborators, invitations] = await Promise.all([
-      this.ctx.db.query.listCollaborators.findMany({
-        where: eq(listCollaborators.listId, this.list.id),
-        with: {
-          user: {
-            columns: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-            },
-          },
-        },
-      }),
-      // Only show invitations for the owner
+      getEffectiveCollaboratorsForList(this.ctx, this.list),
       isOwner
         ? ListInvitation.invitationsForList(this.ctx, {
             listId: this.list.id,
@@ -818,7 +842,6 @@ export abstract class List {
         : [],
     ]);
 
-    // Get the owner information
     const owner = await this.ctx.db.query.users.findFirst({
       where: eq(users.id, this.list.userId),
       columns: {
@@ -834,6 +857,10 @@ export abstract class List {
         id: c.id,
         userId: c.userId,
         role: c.role,
+        recursive: c.recursive,
+        inherited: c.inherited,
+        sourceListId: c.sourceListId,
+        sourceListName: c.sourceListName,
         status: "accepted" as const,
         addedAt: c.addedAt,
         invitedAt: c.addedAt,
@@ -862,33 +889,23 @@ export abstract class List {
   }
 
   /**
-   * Get all lists shared with the user (as a collaborator).
-   * Only includes lists where the invitation has been accepted.
+   * Get all direct and inherited manual lists shared with the user.
    */
   static async getSharedWithUser(
     ctx: AuthedContext,
   ): Promise<(ManualList | SmartList)[]> {
-    const collaborations = await ctx.db.query.listCollaborators.findMany({
-      where: eq(listCollaborators.userId, ctx.user.id),
-      with: {
-        list: {
-          columns: {
-            rssToken: false,
-          },
-        },
-      },
-    });
+    const collaborations = await getAllSharedListAccess(ctx);
 
-    return collaborations.map((c) =>
+    return collaborations.map(({ list, grant }) =>
       this.fromData(
         ctx,
         {
-          ...c.list,
-          userRole: c.role,
-          hasCollaborators: true, // If you're a collaborator, the list has collaborators
+          ...list,
+          userRole: grant.role,
+          hasCollaborators: true,
         },
         {
-          membershipId: c.id,
+          membershipId: grant.membershipId,
         },
       ),
     );

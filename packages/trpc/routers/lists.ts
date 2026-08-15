@@ -5,11 +5,7 @@ import { eq } from "drizzle-orm";
 
 import type { KarakeepDBTransaction } from "@karakeep/db";
 
-import {
-  bookmarkLists,
-  listCollaborators,
-  listInvitations,
-} from "@karakeep/db/schema";
+import { bookmarkLists, listInvitations } from "@karakeep/db/schema";
 import {
   zBookmarkListSchema,
   zEditBookmarkListSchemaWithValidation,
@@ -26,10 +22,14 @@ import {
   createScopedAuthedProcedure,
   router,
 } from "../index";
+import {
+  getEffectiveCollaboratorGrant,
+  getEffectiveCollaboratorsForList,
+} from "../models/listCollaborationAccess";
 import { ListInvitation } from "../models/listInvitations";
 import { List } from "../models/lists";
-import { ensureBookmarkOwnership } from "./bookmarks";
 import { recordOfflineSyncEvent } from "../models/offlineSync";
+import { ensureBookmarkOwnership } from "./bookmarks";
 
 const listsProcedure = createScopedAuthedProcedure("lists");
 
@@ -64,18 +64,39 @@ async function listSyncUserIds(
   listId: string,
   ownerId: string,
 ) {
-  const collaborators = await ctx.db
-    .select({ userId: listCollaborators.userId })
-    .from(listCollaborators)
-    .where(eq(listCollaborators.listId, listId));
+  const list = await ctx.db.query.bookmarkLists.findFirst({
+    columns: { rssToken: false },
+    where: eq(bookmarkLists.id, listId),
+  });
+  if (!list) {
+    return [ownerId];
+  }
+  const collaborators = await getEffectiveCollaboratorsForList(ctx, list);
   return [ownerId, ...collaborators.map((collaborator) => collaborator.userId)];
+}
+
+async function inheritedListIdsFromGrant(
+  ctx: AuthedContext,
+  sourceListId: string,
+  userId: string,
+) {
+  const source = await List.fromId(ctx, sourceListId);
+  const descendants = await source.getChildren();
+  const result = [sourceListId];
+  for (const descendant of descendants) {
+    const serialized = descendant.asZBookmarkList();
+    const grant = await getEffectiveCollaboratorGrant(ctx, serialized, userId);
+    if (grant?.sourceListId === sourceListId) {
+      result.push(serialized.id);
+    }
+  }
+  return result;
 }
 
 export const ensureListAtLeastViewer = experimental_trpcMiddleware<{
   ctx: AuthedContext;
   input: { listId: string };
 }>().create(async (opts) => {
-  // This would throw if the user can't view the list
   const list = await List.fromId(opts.ctx, opts.input.listId);
   return opts.next({
     ctx: {
@@ -410,11 +431,13 @@ export const listsAppRouter = router({
         listId: z.string(),
         email: z.string().email(),
         role: z.enum(["viewer", "editor"]),
+        recursive: z.boolean().optional().default(false),
       }),
     )
     .output(
       z.object({
         invitationId: z.string(),
+        emailSent: z.boolean(),
       }),
     )
     .use(
@@ -433,13 +456,18 @@ export const listsAppRouter = router({
         const invitationId = await list.addCollaboratorByEmail(
           input.email,
           input.role,
+          input.recursive,
         );
         await recordListSyncEvent(tx, [ctx.user.id], list.id, "update", [
           "collaborators",
         ]);
         return invitationId;
       });
-      return { invitationId };
+
+      // Delivery deliberately happens after the database commit.
+      const invitation = await ListInvitation.fromId(ctx, invitationId);
+      const emailSent = await invitation.sendEmail();
+      return { invitationId, emailSent };
     }),
   removeCollaborator: listsProcedure
     .input(
@@ -455,6 +483,11 @@ export const listsAppRouter = router({
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
         const serialized = list.asZBookmarkList();
+        const revokedListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
         const syncUserIds = await listSyncUserIds(
           transactionCtx,
           serialized.id,
@@ -468,15 +501,52 @@ export const listsAppRouter = router({
           "update",
           ["collaborators"],
         );
+        for (const revokedListId of revokedListIds) {
+          await recordListSyncEvent(
+            tx,
+            [input.userId],
+            revokedListId,
+            "revoke",
+            [],
+          );
+        }
+      });
+    }),
+  updateCollaborator: listsProcedure
+    .input(
+      z.object({
+        listId: z.string(),
+        userId: z.string(),
+        role: z.enum(["viewer", "editor"]),
+        recursive: z.boolean(),
+      }),
+    )
+    .use(ensureListAtLeastViewer)
+    .use(ensureListAtLeastOwner)
+    .mutation(async ({ input, ctx }) => {
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        await list.updateCollaborator(
+          input.userId,
+          input.role,
+          input.recursive,
+        );
+        const serialized = list.asZBookmarkList();
         await recordListSyncEvent(
           tx,
-          [input.userId],
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
           serialized.id,
-          "revoke",
-          [],
+          "update",
+          ["collaborators"],
         );
       });
     }),
+  // Keep the role-only mutation for existing clients. It preserves scope.
   updateCollaboratorRole: listsProcedure
     .input(
       z.object({
@@ -519,9 +589,15 @@ export const listsAppRouter = router({
             id: z.string(),
             userId: z.string(),
             role: z.enum(["viewer", "editor"]),
+            recursive: z.boolean().optional().default(false),
+            inherited: z.boolean().optional().default(false),
+            sourceListId: z.string().optional(),
+            sourceListName: z.string().nullable().optional(),
             status: z.enum(["pending", "accepted", "declined"]),
             addedAt: z.date(),
             invitedAt: z.date(),
+            expiresAt: z.date().optional(),
+            expired: z.boolean().optional().default(false),
             user: z.object({
               id: z.string(),
               name: z.string(),
@@ -605,6 +681,34 @@ export const listsAppRouter = router({
       await ctx.invitation.revoke();
     }),
 
+  updateInvitation: listsProcedure
+    .input(
+      z.object({
+        invitationId: z.string(),
+        role: z.enum(["viewer", "editor"]),
+        recursive: z.boolean(),
+      }),
+    )
+    .use(ensureInvitationAccess)
+    .mutation(async ({ ctx, input }) => {
+      await ctx.invitation.update({
+        role: input.role,
+        recursive: input.recursive,
+      });
+    }),
+
+  resendInvitation: listsProcedure
+    .input(
+      z.object({
+        invitationId: z.string(),
+      }),
+    )
+    .output(z.object({ emailSent: z.boolean() }))
+    .use(ensureInvitationAccess)
+    .mutation(async ({ ctx }) => {
+      return { emailSent: await ctx.invitation.resend() };
+    }),
+
   getPendingInvitations: listsProcedure
     .output(
       z.array(
@@ -612,7 +716,10 @@ export const listsAppRouter = router({
           id: z.string(),
           listId: z.string(),
           role: z.enum(["viewer", "editor"]),
+          recursive: z.boolean(),
           invitedAt: z.date(),
+          expiresAt: z.date(),
+          expired: z.boolean(),
           list: z.object({
             id: z.string(),
             name: z.string(),

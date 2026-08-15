@@ -1,7 +1,7 @@
 import { createTransport } from "nodemailer";
 
-import { getTracer, withSpan } from "@karakeep/shared-server";
 import serverConfig from "@karakeep/shared/config";
+import { getTracer, withSpan } from "@karakeep/shared-server";
 
 const tracer = getTracer("@karakeep/trpc");
 
@@ -46,6 +46,19 @@ function withTracing<Args extends unknown[]>(
     const transporter = buildTransporter();
     await withSpan(tracer, name, {}, () => fn(transporter, ...args));
   };
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function sanitizeHeaderValue(value: string) {
+  return value.replace(/[\r\n]+/g, " ").trim();
 }
 
 export const sendVerificationEmail = withTracing(
@@ -191,25 +204,38 @@ If you didn't request a password reset, please ignore this email. Your password 
   },
 );
 
-export const sendListInvitationEmail = withTracing(
-  "sendListInvitationEmail",
-  async (
-    transporter: Transporter,
-    email: string,
-    inviterName: string,
-    listName: string,
-    listId: string,
-  ) => {
-    const inviteUrl = `${serverConfig.publicUrl}/dashboard/lists?pendingInvitation=${encodeURIComponent(listId)}`;
+/**
+ * Send a committed list invitation. Missing SMTP or a delivery failure returns
+ * false so the caller can say "invitation created, email not sent" instead of
+ * pretending delivery succeeded.
+ */
+export async function sendListInvitationEmail(
+  email: string,
+  inviterName: string,
+  listName: string,
+  invitationId: string,
+): Promise<boolean> {
+  if (!serverConfig.email.smtp) {
+    return false;
+  }
 
-    const mailOptions = {
-      from: serverConfig.email.smtp!.from,
-      to: email,
-      subject: `${inviterName} invited you to collaborate on "${listName}"`,
-      html: `
+  const inviteUrl = `${serverConfig.publicUrl}/dashboard/lists?pendingInvitation=${encodeURIComponent(invitationId)}`;
+  const safeInviterName = sanitizeHeaderValue(inviterName);
+  const safeListName = sanitizeHeaderValue(listName);
+  const htmlInviterName = escapeHtml(safeInviterName);
+  const htmlListName = escapeHtml(safeListName);
+
+  try {
+    const transporter = buildTransporter();
+    await withSpan(tracer, "sendListInvitationEmail", {}, async () => {
+      await transporter.sendMail({
+        from: serverConfig.email.smtp!.from,
+        to: email,
+        subject: `${safeInviterName} invited you to collaborate on "${safeListName}"`,
+        html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>You've been invited to collaborate on a list!</h2>
-        <p>${inviterName} has invited you to collaborate on the list <strong>"${listName}"</strong> in Karakeep.</p>
+        <p>${htmlInviterName} has invited you to collaborate on the list <strong>"${htmlListName}"</strong> in Marka.</p>
         <p>Click the link below to view and accept or decline the invitation:</p>
         <p>
           <a href="${inviteUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
@@ -218,25 +244,27 @@ export const sendListInvitationEmail = withTracing(
         </p>
         <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
         <p><a href="${inviteUrl}">${inviteUrl}</a></p>
-        <p>You can accept or decline this invitation from your Karakeep dashboard.</p>
+        <p>This invitation expires after 30 days. You can accept or decline it from your Marka dashboard.</p>
         <p>If you weren't expecting this invitation, you can safely ignore this email or decline it in your dashboard.</p>
       </div>
     `,
-      text: `
+        text: `
 You've been invited to collaborate on a list!
 
-${inviterName} has invited you to collaborate on the list "${listName}" in Karakeep.
+${safeInviterName} has invited you to collaborate on the list "${safeListName}" in Marka.
 
 View your invitation by visiting this link:
 ${inviteUrl}
 
-You can accept or decline this invitation from your Karakeep dashboard.
+This invitation expires after 30 days. You can accept or decline it from your Marka dashboard.
 
 If you weren't expecting this invitation, you can safely ignore this email or decline it in your dashboard.
     `,
-    };
-
-    await transporter.sendMail(mailOptions);
-  },
-  { silentFail: true },
-);
+      });
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send list invitation email:", error);
+    return false;
+  }
+}
