@@ -491,10 +491,13 @@ export abstract class List {
 
     const resultIds: string[] = [];
     const queue: string[] = [this.list.id];
+    const visited = new Set<string>([this.list.id]);
     while (queue.length > 0) {
       const id = queue.pop()!;
       const children = adjacencyList.get(id) ?? [];
       children.forEach((childId) => {
+        if (visited.has(childId)) return;
+        visited.add(childId);
         queue.push(childId);
         resultIds.push(childId);
       });
@@ -506,6 +509,21 @@ export abstract class List {
     input: z.infer<typeof zEditBookmarkListSchemaWithValidation>,
   ): Promise<void> {
     this.ensureCanManage();
+    if (input.parentId !== undefined && input.parentId !== null) {
+      if (input.parentId === this.list.id) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A list cannot be its own parent",
+        });
+      }
+      const descendants = await this.getChildren();
+      if (descendants.some((descendant) => descendant.id === input.parentId)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A list cannot be moved inside one of its descendants",
+        });
+      }
+    }
     const result = await this.ctx.db
       .update(bookmarkLists)
       .set({
@@ -722,8 +740,8 @@ export abstract class List {
       role: c.role,
       recursive: c.recursive,
       inherited: c.inherited,
-      sourceListId: c.sourceListId,
-      sourceListName: c.sourceListName,
+      sourceListId: isOwner ? c.sourceListId : undefined,
+      sourceListName: isOwner ? c.sourceListName : null,
       status: "accepted" as const,
       addedAt: c.addedAt,
       invitedAt: c.addedAt,

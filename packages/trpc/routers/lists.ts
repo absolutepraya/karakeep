@@ -24,6 +24,7 @@ import {
 } from "../index";
 import {
   getEffectiveCollaboratorGrant,
+  getEffectiveCollaboratorGrantsForOwner,
   getEffectiveCollaboratorsForList,
 } from "../models/listCollaborationAccess";
 import { ListInvitation } from "../models/listInvitations";
@@ -81,16 +82,51 @@ async function inheritedListIdsFromGrant(
   userId: string,
 ) {
   const source = await List.fromId(ctx, sourceListId);
-  const descendants = await source.getChildren();
-  const result = [sourceListId];
-  for (const descendant of descendants) {
-    const serialized = descendant.asZBookmarkList();
-    const grant = await getEffectiveCollaboratorGrant(ctx, serialized, userId);
-    if (grant?.sourceListId === sourceListId) {
-      result.push(serialized.id);
-    }
+  const ownerId = source.asZBookmarkList().userId;
+  const grants = await getEffectiveCollaboratorGrantsForOwner(
+    ctx,
+    ownerId,
+    userId,
+  );
+  return grants
+    .filter(({ grant }) => grant.sourceListId === sourceListId)
+    .map(({ list }) => list.id);
+}
+
+async function listAccessSnapshot(
+  ctx: AuthedContext,
+  listIds: string[],
+  ownerId: string,
+) {
+  const result = new Map<string, Set<string>>();
+  for (const listId of listIds) {
+    result.set(listId, new Set(await listSyncUserIds(ctx, listId, ownerId)));
   }
   return result;
+}
+
+async function recordListAccessDiff(
+  tx: KarakeepDBTransaction,
+  listId: string,
+  before: Set<string>,
+  after: Set<string>,
+  changedFields: string[],
+  updateRetained: boolean,
+) {
+  const revoked = [...before].filter((userId) => !after.has(userId));
+  const created = [...after].filter((userId) => !before.has(userId));
+  const retained = updateRetained
+    ? [...after].filter((userId) => before.has(userId))
+    : [];
+  if (revoked.length > 0) {
+    await recordListSyncEvent(tx, revoked, listId, "revoke", []);
+  }
+  if (created.length > 0) {
+    await recordListSyncEvent(tx, created, listId, "create", changedFields);
+  }
+  if (retained.length > 0) {
+    await recordListSyncEvent(tx, retained, listId, "update", changedFields);
+  }
 }
 
 export const ensureListAtLeastViewer = experimental_trpcMiddleware<{
@@ -151,13 +187,18 @@ export const listsAppRouter = router({
       const list = await ctx.db.transaction(async (tx) => {
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.create(transactionCtx, input);
-        await recordListSyncEvent(tx, [ctx.user.id], list.id, "create", [
-          "name",
-          "description",
-          "icon",
-          "parentId",
-          "query",
-        ]);
+        const serialized = list.asZBookmarkList();
+        await recordListSyncEvent(
+          tx,
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
+          serialized.id,
+          "create",
+          ["name", "description", "icon", "parentId", "query"],
+        );
         return list;
       });
       addLogFields<"list.create">({ "list.id": list.id });
@@ -172,26 +213,45 @@ export const listsAppRouter = router({
       const list = await ctx.db.transaction(async (tx) => {
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
+        const beforeSerialized = list.asZBookmarkList();
+        const changedFields = [
+          ...(input.name !== undefined ? ["name"] : []),
+          ...(input.description !== undefined ? ["description"] : []),
+          ...(input.icon !== undefined ? ["icon"] : []),
+          ...(input.parentId !== undefined ? ["parentId"] : []),
+          ...(input.query !== undefined ? ["query"] : []),
+          ...(input.public !== undefined ? ["public"] : []),
+        ];
+        const affectedListIds =
+          input.parentId !== undefined
+            ? [
+                beforeSerialized.id,
+                ...(await list.getChildren()).map((child) => child.id),
+              ]
+            : [beforeSerialized.id];
+        const beforeAccess = await listAccessSnapshot(
+          transactionCtx,
+          affectedListIds,
+          beforeSerialized.userId,
+        );
+
         await list.update(input);
         const serialized = list.asZBookmarkList();
-        await recordListSyncEvent(
-          tx,
-          await listSyncUserIds(
-            transactionCtx,
-            serialized.id,
-            serialized.userId,
-          ),
-          serialized.id,
-          "update",
-          [
-            ...(input.name !== undefined ? ["name"] : []),
-            ...(input.description !== undefined ? ["description"] : []),
-            ...(input.icon !== undefined ? ["icon"] : []),
-            ...(input.parentId !== undefined ? ["parentId"] : []),
-            ...(input.query !== undefined ? ["query"] : []),
-            ...(input.public !== undefined ? ["public"] : []),
-          ],
+        const afterAccess = await listAccessSnapshot(
+          transactionCtx,
+          affectedListIds,
+          serialized.userId,
         );
+        for (const listId of affectedListIds) {
+          await recordListAccessDiff(
+            tx,
+            listId,
+            beforeAccess.get(listId) ?? new Set(),
+            afterAccess.get(listId) ?? new Set(),
+            listId === serialized.id ? changedFields : [],
+            listId === serialized.id,
+          );
+        }
         return serialized;
       });
       if (input.public !== undefined) {
@@ -527,23 +587,45 @@ export const listsAppRouter = router({
       await ctx.db.transaction(async (tx) => {
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
+        const serialized = list.asZBookmarkList();
+        const beforeListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
         await list.updateCollaborator(
           input.userId,
           input.role,
           input.recursive,
         );
-        const serialized = list.asZBookmarkList();
+        const afterListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
+        const beforeSet = new Set(beforeListIds);
+        const afterSet = new Set(afterListIds);
         await recordListSyncEvent(
           tx,
-          await listSyncUserIds(
-            transactionCtx,
-            serialized.id,
-            serialized.userId,
-          ),
+          [serialized.userId],
           serialized.id,
           "update",
           ["collaborators"],
         );
+        for (const listId of beforeSet) {
+          if (!afterSet.has(listId)) {
+            await recordListSyncEvent(tx, [input.userId], listId, "revoke", []);
+          }
+        }
+        for (const listId of afterSet) {
+          await recordListSyncEvent(
+            tx,
+            [input.userId],
+            listId,
+            beforeSet.has(listId) ? "update" : "create",
+            ["collaborators"],
+          );
+        }
       });
     }),
   // Keep the role-only mutation for existing clients. It preserves scope.
@@ -561,19 +643,25 @@ export const listsAppRouter = router({
       await ctx.db.transaction(async (tx) => {
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
-        await list.updateCollaboratorRole(input.userId, input.role);
         const serialized = list.asZBookmarkList();
+        const affectedListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
+        await list.updateCollaboratorRole(input.userId, input.role);
         await recordListSyncEvent(
           tx,
-          await listSyncUserIds(
-            transactionCtx,
-            serialized.id,
-            serialized.userId,
-          ),
+          [serialized.userId],
           serialized.id,
           "update",
           ["collaborators"],
         );
+        for (const listId of affectedListIds) {
+          await recordListSyncEvent(tx, [input.userId], listId, "update", [
+            "collaborators",
+          ]);
+        }
       });
     }),
   getCollaborators: listsProcedure
@@ -648,13 +736,23 @@ export const listsAppRouter = router({
           .where(eq(listInvitations.id, invitation.id));
         await invitation.accept();
         if (invitationData) {
+          const createdListIds = await inheritedListIdsFromGrant(
+            transactionCtx,
+            invitationData.listId,
+            ctx.user.id,
+          );
           await recordListSyncEvent(
             tx,
-            [ctx.user.id, invitationData.listOwnerUserId],
+            [invitationData.listOwnerUserId],
             invitationData.listId,
-            "create",
+            "update",
             ["collaborators"],
           );
+          for (const listId of createdListIds) {
+            await recordListSyncEvent(tx, [ctx.user.id], listId, "create", [
+              "collaborators",
+            ]);
+          }
         }
       });
     }),
@@ -704,6 +802,13 @@ export const listsAppRouter = router({
       }),
     )
     .output(z.object({ emailSent: z.boolean() }))
+    .use(
+      createRateLimitMiddleware({
+        name: "lists.resendInvitation",
+        windowMs: 15 * 60 * 1000,
+        maxRequests: 5,
+      }),
+    )
     .use(ensureInvitationAccess)
     .mutation(async ({ ctx }) => {
       return { emailSent: await ctx.invitation.resend() };
@@ -752,14 +857,32 @@ export const listsAppRouter = router({
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
         const serialized = list.asZBookmarkList();
+        const grant = await getEffectiveCollaboratorGrant(
+          transactionCtx,
+          serialized,
+          ctx.user.id,
+        );
+        if (!grant) {
+          throw new Error("Expected an effective collaboration grant");
+        }
+        const source = await List.fromId(transactionCtx, grant.sourceListId);
+        const sourceSerialized = source.asZBookmarkList();
+        const revokedListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          grant.sourceListId,
+          ctx.user.id,
+        );
         await list.leaveList();
         await recordListSyncEvent(
           tx,
-          [ctx.user.id],
-          serialized.id,
-          "revoke",
-          [],
+          [sourceSerialized.userId],
+          sourceSerialized.id,
+          "update",
+          ["collaborators"],
         );
+        for (const listId of revokedListIds) {
+          await recordListSyncEvent(tx, [ctx.user.id], listId, "revoke", []);
+        }
       });
     }),
 });
