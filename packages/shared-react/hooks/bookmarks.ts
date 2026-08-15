@@ -41,6 +41,9 @@ export function useCreateBookmark(
         queryClient.invalidateQueries(
           api.bookmarks.searchBookmarks.pathFilter(),
         );
+        queryClient.invalidateQueries(
+          api.bookmarks.getProcessingStatus.pathFilter(),
+        );
         queryClient.invalidateQueries(api.lists.stats.pathFilter());
         return opts?.onSuccess?.(res, req, meta, context);
       },
@@ -63,6 +66,9 @@ export function useCreateBookmarkWithPostHook(
         queryClient.invalidateQueries(api.bookmarks.getBookmarks.pathFilter());
         queryClient.invalidateQueries(
           api.bookmarks.searchBookmarks.pathFilter(),
+        );
+        queryClient.invalidateQueries(
+          api.bookmarks.getProcessingStatus.pathFilter(),
         );
         await postCreationCB(res.id);
         return opts?.onSuccess?.(res, req, meta, context);
@@ -166,6 +172,9 @@ export function useRecrawlBookmark(
       onSuccess: (res, req, meta, context) => {
         queryClient.invalidateQueries(
           api.bookmarks.getBookmark.queryFilter({ bookmarkId: req.bookmarkId }),
+        );
+        queryClient.invalidateQueries(
+          api.bookmarks.getProcessingStatus.pathFilter(),
         );
         return opts?.onSuccess?.(res, req, meta, context);
       },
