@@ -8,6 +8,7 @@
 - **Recursive grant**: a direct grant whose role may be inherited by descendants of that list, including descendants created or moved into the subtree later.
 - **Inherited access**: effective access to a list obtained from the nearest ancestor direct grant for the same user whose recursive flag is enabled.
 - **Effective role**: the role used for authorization on a list. A direct grant on the list wins. Otherwise the nearest recursive ancestor grant wins. Otherwise the user has no collaborator access.
+- **Accessible shared hierarchy**: the portion of an owner's real list tree that a collaborator can access. Parent/child relationships are preserved between accessible nodes; an inaccessible ancestor is omitted and the first accessible descendant becomes a shared root.
 - **Invitation**: a pending offer for a direct grant. Invitations may request viewer/editor access and may optionally request recursive sharing.
 - **Invitation expiry**: a pending invitation is valid for 30 days from `invitedAt`. Resending renews `invitedAt` for another 30 days.
 - **Public access**: anonymous read-only access to a list through its public-list mechanism. Public access never creates collaborator membership and is independent from collaboration.
@@ -21,4 +22,5 @@
 - Current and future descendants can inherit a recursive grant.
 - Moving a descendant out of a recursively shared subtree removes access that existed only through that inheritance.
 - Explicit direct access on a descendant overrides an inherited role on that descendant. Descendants inherit from the nearest recursive direct grant available on their own ancestor chain.
+- Accessible parents remain navigable in the shared hierarchy. Inaccessible ancestors are not revealed.
 - Public sharing and collaborator sharing can coexist on the same list.
