@@ -67,7 +67,7 @@ jobs:
             'packages/trpc/models/listInvitations.ts' \
             'packages/trpc/models/lists.ts' \
             'packages/trpc/routers/recursiveSharedLists.test.ts'
-          git commit -m "style: apply formatter"
+          git commit --no-verify -m "style: apply formatter"
           git push origin HEAD:${{ github.head_ref }}
 
   typecheck:
