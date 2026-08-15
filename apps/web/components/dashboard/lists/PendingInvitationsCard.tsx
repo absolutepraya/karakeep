@@ -18,6 +18,8 @@ import { Check, Clock3, Loader2, Mail, X } from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 
+import { formatInvitationDate } from "./collaborationUi";
+
 interface Invitation {
   id: string;
   role: "viewer" | "editor";
@@ -28,9 +30,7 @@ interface Invitation {
     name: string;
     icon?: string;
     description?: string | null;
-    owner?: {
-      name?: string;
-    } | null;
+    owner?: { name?: string } | null;
   };
 }
 
@@ -45,7 +45,7 @@ function InvitationRow({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const invalidateInvitationCaches = () =>
+  const invalidate = () =>
     Promise.all([
       queryClient.invalidateQueries(
         api.lists.getPendingInvitations.pathFilter(),
@@ -57,30 +57,20 @@ function InvitationRow({
     api.lists.acceptInvitation.mutationOptions({
       onSuccess: async () => {
         toast({ description: t("lists.invitations.accepted") });
-        await invalidateInvitationCaches();
+        await invalidate();
       },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description: error.message || t("lists.invitations.failed_to_accept"),
-        });
-      },
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
-
   const declineInvitation = useMutation(
     api.lists.declineInvitation.mutationOptions({
       onSuccess: async () => {
         toast({ description: t("lists.invitations.declined") });
-        await invalidateInvitationCaches();
+        await invalidate();
       },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description:
-            error.message || t("lists.invitations.failed_to_decline"),
-        });
-      },
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
 
@@ -92,9 +82,8 @@ function InvitationRow({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{invitation.list.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {invitation.list.icon}
+            <span className="font-medium">
+              {invitation.list.icon} {invitation.list.name}
             </span>
             <Badge variant="outline" className="capitalize">
               {invitation.role}
@@ -102,9 +91,7 @@ function InvitationRow({
             {invitation.recursive && (
               <Badge variant="secondary">Includes nested lists</Badge>
             )}
-            {invitation.expired && (
-              <Badge variant="destructive">Expired</Badge>
-            )}
+            {invitation.expired && <Badge variant="destructive">Expired</Badge>}
           </div>
           {invitation.list.description && (
             <div className="mt-1 text-sm text-muted-foreground">
@@ -120,9 +107,7 @@ function InvitationRow({
           <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <Clock3 className="size-3" />
             {invitation.expired ? "Expired" : "Expires"}{" "}
-            {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-              invitation.expiresAt,
-            )}
+            {formatInvitationDate(invitation.expiresAt)}
           </div>
           {invitation.expired && (
             <p className="mt-2 text-xs text-muted-foreground">
@@ -135,40 +120,40 @@ function InvitationRow({
           <Button
             size="sm"
             variant="outline"
-            onClick={() =>
-              declineInvitation.mutate({ invitationId: invitation.id })
-            }
             disabled={
               invitation.expired ||
               declineInvitation.isPending ||
               acceptInvitation.isPending
             }
+            onClick={() =>
+              declineInvitation.mutate({ invitationId: invitation.id })
+            }
           >
             {declineInvitation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
               <>
-                <X className="mr-1 h-4 w-4" />
+                <X className="mr-1 size-4" />
                 {t("lists.invitations.decline")}
               </>
             )}
           </Button>
           <Button
             size="sm"
-            onClick={() =>
-              acceptInvitation.mutate({ invitationId: invitation.id })
-            }
             disabled={
               invitation.expired ||
               acceptInvitation.isPending ||
               declineInvitation.isPending
             }
+            onClick={() =>
+              acceptInvitation.mutate({ invitationId: invitation.id })
+            }
           >
             {acceptInvitation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
               <>
-                <Check className="mr-1 h-4 w-4" />
+                <Check className="mr-1 size-4" />
                 {t("lists.invitations.accept")}
               </>
             )}
@@ -184,35 +169,25 @@ export function PendingInvitationsCard() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const highlightedInvitationId = searchParams.get("pendingInvitation");
-
   const { data: invitations, isLoading } = useQuery(
     api.lists.getPendingInvitations.queryOptions(),
   );
 
   useEffect(() => {
-    if (!highlightedInvitationId || !invitations) {
-      return;
-    }
-    const invitation = invitations.find(
-      (item) => item.id === highlightedInvitationId,
-    );
-    if (!invitation) {
-      return;
-    }
+    if (!highlightedInvitationId || !invitations) return;
+    if (!invitations.some((item) => item.id === highlightedInvitationId)) return;
     document
       .getElementById(`pending-invitation-${highlightedInvitationId}`)
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlightedInvitationId, invitations]);
 
-  if (isLoading || !invitations || invitations.length === 0) {
-    return null;
-  }
+  if (isLoading || !invitations?.length) return null;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-normal">
-          <Mail className="h-5 w-5" />
+          <Mail className="size-5" />
           {t("lists.invitations.pending")}
           <span className="rounded bg-secondary p-1 text-sm text-secondary-foreground">
             {invitations.length}
