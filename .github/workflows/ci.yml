@@ -50,7 +50,9 @@ jobs:
         uses: ./tooling/github/setup
 
       - name: Format
-        run: pnpm format
+        run: |
+          pnpm format:fix
+          git diff --exit-code
 
   typecheck:
     runs-on: ubuntu-latest
