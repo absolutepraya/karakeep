@@ -24,7 +24,7 @@ case "$WT_PORT_BASE" in
     ;;
 esac
 
-workspace_slug="$(printf '%s' "$workspace_name" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-*//; s/-*$//')"
+workspace_slug="$(printf '%s' "$workspace_name" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_-' '-' | sed 's/^-*//; s/-*$//')"
 [[ -n "$workspace_slug" ]] || workspace_slug="worktree"
 web_port=$((3000 + WT_PORT_BASE))
 meili_index_prefix="${workspace_slug}-${WT_PORT_BASE}_"
