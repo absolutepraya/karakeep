@@ -101,17 +101,21 @@ cleanup() {
     exit 0
 }
 
-echo "Waiting for web app to start..."
-ATTEMPT=0
-while [ $ATTEMPT -lt 30 ]; do
-    if command_exists nc && nc -z localhost "$WEB_PORT" 2>/dev/null; then
-        break
+if command_exists nc; then
+    echo "Waiting for web app to start..."
+    ATTEMPT=0
+    while [ $ATTEMPT -lt 30 ]; do
+        if nc -z localhost "$WEB_PORT" 2>/dev/null; then
+            break
+        fi
+        sleep 1
+        ATTEMPT=$((ATTEMPT + 1))
+    done
+    if [ $ATTEMPT -eq 30 ]; then
+        echo "Warning: Web app may not have started properly after 30 seconds"
     fi
-    sleep 1
-    ATTEMPT=$((ATTEMPT + 1))
-done
-if [ $ATTEMPT -eq 30 ]; then
-    echo "Warning: Web app may not have started properly after 30 seconds"
+else
+    echo "Skipping web readiness probe because 'nc' is not installed."
 fi
 
 echo ""
