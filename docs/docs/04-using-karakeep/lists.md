@@ -42,6 +42,8 @@ A direct grant on a nested list overrides inherited access on that list. For exa
 
 Shared lists keep their normal hierarchy wherever the collaborator can access that hierarchy. If both a parent and child are accessible, they appear nested normally in **Shared Lists**. If an ancestor is not accessible, it is not revealed; the first accessible descendant appears as a shared root instead. If parent access is later removed while an independent child grant remains, that child automatically becomes a root in the collaborator's shared tree.
 
+On the web, accessible ancestors are available as clickable breadcrumbs while viewing a nested shared list. On native mobile, the list header lets you move up to the accessible parent. Hidden ancestors never appear in either path.
+
 ### Leaving and removing collaborators
 
 When a collaborator leaves, or the owner removes their direct grant, bookmark entries contributed through that collaboration are removed from the shared list. The collaborator's underlying bookmarks stay in their own library.
