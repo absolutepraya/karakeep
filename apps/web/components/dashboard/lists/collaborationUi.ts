@@ -1,3 +1,12 @@
+const invitationDateFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
+
+export function formatInvitationDate(date: Date) {
+  return invitationDateFormatter.format(date);
+}
+
 export function invitationDeliveryMessage(emailSent: boolean) {
   return emailSent
     ? "Invitation created and email sent."
