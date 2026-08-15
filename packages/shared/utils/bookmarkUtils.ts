@@ -31,10 +31,15 @@ export function isBookmarkStillCrawling(bookmark: ZBookmark) {
   if (bookmark.content.type != BookmarkTypes.LINK) {
     return false;
   }
+  // crawledAt is persisted together with the core readable content and asset
+  // references, before secondary inference/search/archive work finishes.
+  if (bookmark.content.crawledAt) {
+    return false;
+  }
   if (bookmark.content.crawlStatus) {
     return bookmark.content.crawlStatus === "pending";
   }
-  return !bookmark.content.crawledAt;
+  return true;
 }
 
 export function isBookmarkStillTagging(bookmark: ZBookmark) {
@@ -46,11 +51,7 @@ export function isBookmarkStillSummarizing(bookmark: ZBookmark) {
 }
 
 export function isBookmarkStillLoading(bookmark: ZBookmark) {
-  return (
-    isBookmarkStillTagging(bookmark) ||
-    isBookmarkStillCrawling(bookmark) ||
-    isBookmarkStillSummarizing(bookmark)
-  );
+  return isBookmarkStillCrawling(bookmark);
 }
 
 export function getBookmarkRefreshInterval(

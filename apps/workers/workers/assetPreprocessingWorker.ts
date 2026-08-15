@@ -491,13 +491,25 @@ async function run(req: DequeuedJob<AssetPreprocessingRequest>) {
         enqueueOpts,
       );
     }
-    await OpenAIQueue.enqueue(
-      {
-        bookmarkId,
-        type: "summarize",
-      },
-      enqueueOpts,
-    );
+    if (serverConfig.inference.enableAutoSummarization) {
+      await OpenAIQueue.enqueue(
+        {
+          bookmarkId,
+          type: "summarize",
+        },
+        enqueueOpts,
+      );
+    } else {
+      await db
+        .update(bookmarks)
+        .set({ summarizationStatus: null })
+        .where(
+          and(
+            eq(bookmarks.id, bookmarkId),
+            eq(bookmarks.summarizationStatus, "pending"),
+          ),
+        );
+    }
 
     // Update the search index
     await triggerSearchReindex(bookmarkId, enqueueOpts);
