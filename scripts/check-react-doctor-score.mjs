@@ -19,6 +19,7 @@ process.stdin.on("end", () => {
     }
 
     if (score < minimumScore) {
+      console.error(JSON.stringify(report, null, 2));
       throw new Error(
         `React Doctor score ${score} is below the required ${minimumScore}.`,
       );
