@@ -25,6 +25,16 @@ interface AccessibleListData {
   type: "manual" | "smart";
 }
 
+type OwnerList = typeof bookmarkLists.$inferSelect;
+type DirectMembership = typeof listCollaborators.$inferSelect;
+
+interface OwnerAccessGraph {
+  lists: OwnerList[];
+  listById: Map<string, OwnerList>;
+  membershipByList: Map<string, DirectMembership>;
+  scopeByList: Map<string, boolean>;
+}
+
 async function getScope(
   ctx: AuthedContext,
   listId: string,
@@ -37,6 +47,104 @@ async function getScope(
     ),
   });
   return scope?.recursive ?? false;
+}
+
+async function loadOwnerAccessGraph(
+  ctx: AuthedContext,
+  ownerId: string,
+  userId: string,
+): Promise<OwnerAccessGraph> {
+  const lists = await ctx.db.query.bookmarkLists.findMany({
+    columns: { rssToken: false },
+    where: eq(bookmarkLists.userId, ownerId),
+  });
+  if (lists.length === 0) {
+    return {
+      lists: [],
+      listById: new Map(),
+      membershipByList: new Map(),
+      scopeByList: new Map(),
+    };
+  }
+
+  const listIds = lists.map((list) => list.id);
+  const [memberships, scopes] = await Promise.all([
+    ctx.db.query.listCollaborators.findMany({
+      where: and(
+        eq(listCollaborators.userId, userId),
+        inArray(listCollaborators.listId, listIds),
+      ),
+    }),
+    ctx.db.query.listCollaborationScopes.findMany({
+      where: and(
+        eq(listCollaborationScopes.userId, userId),
+        inArray(listCollaborationScopes.listId, listIds),
+      ),
+    }),
+  ]);
+
+  return {
+    lists,
+    listById: new Map(lists.map((list) => [list.id, list])),
+    membershipByList: new Map(
+      memberships.map((membership) => [membership.listId, membership]),
+    ),
+    scopeByList: new Map(
+      scopes.map((scope) => [scope.listId, scope.recursive]),
+    ),
+  };
+}
+
+function resolveGrantFromGraph(
+  list: AccessibleListData,
+  userId: string,
+  graph: OwnerAccessGraph,
+): EffectiveCollaboratorGrant | null {
+  if (list.type !== "manual") {
+    return null;
+  }
+
+  const direct = graph.membershipByList.get(list.id);
+  if (direct) {
+    return {
+      membershipId: direct.id,
+      userId,
+      role: direct.role,
+      recursive: graph.scopeByList.get(list.id) ?? false,
+      inherited: false,
+      sourceListId: list.id,
+      sourceListName: list.name,
+    };
+  }
+
+  let parentId = list.parentId;
+  const visited = new Set<string>();
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId);
+    const ancestor = graph.listById.get(parentId);
+    if (!ancestor || ancestor.userId !== list.userId) {
+      break;
+    }
+    const membership = graph.membershipByList.get(ancestor.id);
+    if (
+      membership &&
+      ancestor.type === "manual" &&
+      graph.scopeByList.get(ancestor.id)
+    ) {
+      return {
+        membershipId: membership.id,
+        userId,
+        role: membership.role,
+        recursive: true,
+        inherited: true,
+        sourceListId: ancestor.id,
+        sourceListName: ancestor.name,
+      };
+    }
+    parentId = ancestor.parentId;
+  }
+
+  return null;
 }
 
 export async function setCollaborationScope(
@@ -78,71 +186,20 @@ export async function getEffectiveCollaboratorGrant(
   list: AccessibleListData,
   userId = ctx.user.id,
 ): Promise<EffectiveCollaboratorGrant | null> {
-  if (list.type !== "manual") {
-    return null;
-  }
+  const graph = await loadOwnerAccessGraph(ctx, list.userId, userId);
+  return resolveGrantFromGraph(list, userId, graph);
+}
 
-  const direct = await ctx.db.query.listCollaborators.findFirst({
-    where: and(
-      eq(listCollaborators.listId, list.id),
-      eq(listCollaborators.userId, userId),
-    ),
+export async function getEffectiveCollaboratorGrantsForOwner(
+  ctx: AuthedContext,
+  ownerId: string,
+  userId: string,
+) {
+  const graph = await loadOwnerAccessGraph(ctx, ownerId, userId);
+  return graph.lists.flatMap((list) => {
+    const grant = resolveGrantFromGraph(list, userId, graph);
+    return grant ? [{ list, grant }] : [];
   });
-  if (direct) {
-    return {
-      membershipId: direct.id,
-      userId,
-      role: direct.role,
-      recursive: await getScope(ctx, list.id, userId),
-      inherited: false,
-      sourceListId: list.id,
-      sourceListName: list.name,
-    };
-  }
-
-  let parentId = list.parentId;
-  const visited = new Set<string>();
-  while (parentId && !visited.has(parentId)) {
-    visited.add(parentId);
-    const ancestor = await ctx.db.query.bookmarkLists.findFirst({
-      columns: {
-        id: true,
-        name: true,
-        userId: true,
-        parentId: true,
-        type: true,
-      },
-      where: eq(bookmarkLists.id, parentId),
-    });
-    if (!ancestor || ancestor.userId !== list.userId) {
-      break;
-    }
-
-    const membership = await ctx.db.query.listCollaborators.findFirst({
-      where: and(
-        eq(listCollaborators.listId, ancestor.id),
-        eq(listCollaborators.userId, userId),
-      ),
-    });
-    if (
-      membership &&
-      ancestor.type === "manual" &&
-      (await getScope(ctx, ancestor.id, userId))
-    ) {
-      return {
-        membershipId: membership.id,
-        userId,
-        role: membership.role,
-        recursive: true,
-        inherited: true,
-        sourceListId: ancestor.id,
-        sourceListName: ancestor.name,
-      };
-    }
-    parentId = ancestor.parentId;
-  }
-
-  return null;
 }
 
 export async function getAllSharedListAccess(ctx: AuthedContext) {
@@ -246,22 +303,24 @@ export async function getEffectiveCollaboratorsForList(
     return [];
   }
 
-  const ancestry = [list];
+  const ownerLists = await ctx.db.query.bookmarkLists.findMany({
+    columns: {
+      id: true,
+      name: true,
+      userId: true,
+      parentId: true,
+      type: true,
+    },
+    where: eq(bookmarkLists.userId, list.userId),
+  });
+  const listById = new Map(ownerLists.map((entry) => [entry.id, entry]));
+  const ancestry: AccessibleListData[] = [list];
   let parentId = list.parentId;
   const visited = new Set<string>();
   while (parentId && !visited.has(parentId)) {
     visited.add(parentId);
-    const ancestor = await ctx.db.query.bookmarkLists.findFirst({
-      columns: {
-        id: true,
-        name: true,
-        userId: true,
-        parentId: true,
-        type: true,
-      },
-      where: eq(bookmarkLists.id, parentId),
-    });
-    if (!ancestor || ancestor.userId !== list.userId) {
+    const ancestor = listById.get(parentId);
+    if (!ancestor) {
       break;
     }
     ancestry.push(ancestor);
