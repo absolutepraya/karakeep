@@ -1,0 +1,97 @@
+name: PR39 fold collaboration i18n
+
+on:
+  push:
+    branches:
+      - feat/stable-list-collaboration
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/stable-list-collaboration
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fold collaboration strings into typed translation namespace
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import json
+
+          root = Path('.')
+          collaboration_path = root / 'apps/web/lib/i18n/locales/en/collaboration.json'
+          translation_path = root / 'apps/web/lib/i18n/locales/en/translation.json'
+
+          collaboration = json.loads(collaboration_path.read_text())
+          translation = json.loads(translation_path.read_text())
+          if 'lists' not in translation or not isinstance(translation['lists'], dict):
+              raise SystemExit('translation.json has no lists object')
+          if 'collaboration' in translation['lists']:
+              raise SystemExit('lists.collaboration already exists')
+          translation['lists']['collaboration'] = collaboration
+          translation_path.write_text(
+              json.dumps(translation, ensure_ascii=False, indent=2) + '\n'
+          )
+
+          keys = list(collaboration.keys())
+          component_paths = [
+              root / 'apps/web/components/dashboard/lists/ManageCollaboratorsModal.tsx',
+              root / 'apps/web/components/dashboard/lists/PendingInvitationsCard.tsx',
+              root / 'apps/web/components/dashboard/lists/ListHeader.tsx',
+          ]
+          for path in component_paths:
+              text = path.read_text()
+              text = text.replace(
+                  '  const { t: tc } = useTranslation("collaboration");\n',
+                  '',
+              )
+              text = text.replace(
+                  '  const { t: tCollaboration } = useTranslation("collaboration");\n',
+                  '',
+              )
+              for key in keys:
+                  text = text.replace(
+                      f'"{key}"',
+                      f'"lists.collaboration.{key}"',
+                  )
+              text = text.replace('tc(', 't(')
+              text = text.replace('tCollaboration(', 't(')
+              path.write_text(text)
+
+          type_path = root / 'apps/web/@types/i18next.d.ts'
+          type_path.write_text('''import "i18next";\n\nimport translation from "../lib/i18n/locales/en/translation.json";\n\ndeclare module "i18next" {\n  // Extend CustomTypeOptions\n  interface CustomTypeOptions {\n    defaultNS: "translation";\n    resources: {\n      translation: typeof translation;\n    };\n  }\n}\n''')
+
+          collaboration_path.unlink()
+          Path('.github/workflows/pr39-fold-collaboration-i18n.yml').unlink()
+          PY
+
+          read added deleted < <(git diff --numstat -- apps/web/lib/i18n/locales/en/translation.json)
+          if [ "$deleted" -gt 5 ] || [ "$added" -gt 40 ]; then
+            echo "Unexpectedly large translation.json rewrite: +$added -$deleted"
+            git diff -- apps/web/lib/i18n/locales/en/translation.json
+            exit 1
+          fi
+      - name: Format
+        run: pnpm format:fix
+      - name: Commit typed i18n fix and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit --no-verify -m "fix: use typed collaboration translations"
+          git push origin HEAD:feat/stable-list-collaboration
