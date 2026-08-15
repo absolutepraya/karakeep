@@ -4,15 +4,15 @@ export type ProcessingTaskKind =
   | "summarizing"
   | "importing";
 
-export type ProcessingTask = {
+export interface ProcessingTask {
   kind: ProcessingTaskKind;
   count: number;
-};
+}
 
-export type ProcessingStatus = {
+export interface ProcessingStatus {
   total: number;
   tasks: ProcessingTask[];
-};
+}
 
 export function getProcessingBreakdown(processing: ProcessingStatus) {
   const countFor = (kind: ProcessingTaskKind) =>
