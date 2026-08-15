@@ -43,7 +43,6 @@ function InvitationRow({
 }) {
   const api = useTRPC();
   const { t } = useTranslation();
-  const { t: tc } = useTranslation("collaboration");
   const queryClient = useQueryClient();
 
   const invalidate = () =>
@@ -94,10 +93,14 @@ function InvitationRow({
             </span>
             <Badge variant="outline">{roleLabel}</Badge>
             {invitation.recursive && (
-              <Badge variant="secondary">{tc("includes_nested_lists")}</Badge>
+              <Badge variant="secondary">
+                {t("lists.collaboration.includes_nested_lists")}
+              </Badge>
             )}
             {invitation.expired && (
-              <Badge variant="destructive">{tc("expired")}</Badge>
+              <Badge variant="destructive">
+                {t("lists.collaboration.expired")}
+              </Badge>
             )}
           </div>
           {invitation.list.description && (
@@ -108,17 +111,19 @@ function InvitationRow({
           <div className="mt-2 text-sm text-muted-foreground">
             {t("lists.invitations.invited_by")}{" "}
             <span className="font-medium">
-              {invitation.list.owner?.name || tc("unknown")}
+              {invitation.list.owner?.name || t("lists.collaboration.unknown")}
             </span>
           </div>
           <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <Clock3 className="size-3" />
-            {invitation.expired ? tc("expired") : tc("expires")}{" "}
+            {invitation.expired
+              ? t("lists.collaboration.expired")
+              : t("lists.collaboration.expires")}{" "}
             {formatInvitationDate(invitation.expiresAt)}
           </div>
           {invitation.expired && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {tc("expired_help")}
+              {t("lists.collaboration.expired_help")}
             </p>
           )}
         </div>

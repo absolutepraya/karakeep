@@ -1,6 +1,5 @@
 import "i18next";
 
-import collaboration from "../lib/i18n/locales/en/collaboration.json";
 import translation from "../lib/i18n/locales/en/translation.json";
 
 declare module "i18next" {
@@ -8,7 +7,6 @@ declare module "i18next" {
   interface CustomTypeOptions {
     defaultNS: "translation";
     resources: {
-      collaboration: typeof collaboration;
       translation: typeof translation;
     };
   }

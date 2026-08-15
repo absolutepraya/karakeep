@@ -27,7 +27,6 @@ export default function ListHeader({
 }) {
   const api = useTRPC();
   const { t } = useTranslation();
-  const { t: tCollaboration } = useTranslation("collaboration");
   const router = useRouter();
   const { data: list, error } = useQuery(
     api.lists.get.queryOptions(
@@ -72,7 +71,7 @@ export default function ListHeader({
         <div className="min-w-0 flex-1">
           {hierarchyPath.length > 1 && (
             <nav
-              aria-label={tCollaboration("breadcrumb_label")}
+              aria-label={t("lists.collaboration.breadcrumb_label")}
               className="mb-1 flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground"
             >
               {hierarchyPath.map((pathList, index) => {

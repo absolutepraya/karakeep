@@ -71,7 +71,6 @@ export function ManageCollaboratorsModal({
   const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [recursive, setRecursive] = useState(false);
   const { t } = useTranslation();
-  const { t: tc } = useTranslation("collaboration");
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery(
@@ -102,10 +101,10 @@ export function ManageCollaboratorsModal({
     api.lists.addCollaborator.mutationOptions({
       onSuccess: async (result) => {
         toast({
-          description: tc(
+          description: t(
             result.emailSent
-              ? "invitation_delivery_sent"
-              : "invitation_delivery_failed",
+              ? "lists.collaboration.invitation_delivery_sent"
+              : "lists.collaboration.invitation_delivery_failed",
           ),
         });
         setEmail("");
@@ -142,10 +141,10 @@ export function ManageCollaboratorsModal({
     api.lists.resendInvitation.mutationOptions({
       onSuccess: async (result) => {
         toast({
-          description: tc(
+          description: t(
             result.emailSent
-              ? "invitation_delivery_sent"
-              : "invitation_delivery_failed",
+              ? "lists.collaboration.invitation_delivery_sent"
+              : "lists.collaboration.invitation_delivery_failed",
           ),
         });
         await invalidate();
@@ -197,7 +196,7 @@ export function ManageCollaboratorsModal({
           <DialogDescription>
             {readOnly
               ? t("lists.collaborators.people_with_access")
-              : tc("stable_description")}
+              : t("lists.collaboration.stable_description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -221,7 +220,9 @@ export function ManageCollaboratorsModal({
                     setRole(value as "viewer" | "editor")
                   }
                 >
-                  <SelectTrigger aria-label={tc("invitation_role")}>
+                  <SelectTrigger
+                    aria-label={t("lists.collaboration.invitation_role")}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -243,7 +244,7 @@ export function ManageCollaboratorsModal({
                   ) : (
                     <UserPlus className="size-4" />
                   )}
-                  {tc("invite")}
+                  {t("lists.collaboration.invite")}
                 </Button>
               </div>
               <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
@@ -255,10 +256,10 @@ export function ManageCollaboratorsModal({
                 />
                 <span>
                   <span className="block text-sm font-medium">
-                    {tc("share_all_nested")}
+                    {t("lists.collaboration.share_all_nested")}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {tc("share_all_nested_description")}
+                    {t("lists.collaboration.share_all_nested_description")}
                   </span>
                 </span>
               </label>
@@ -328,18 +329,18 @@ export function ManageCollaboratorsModal({
                                   variant={expired ? "destructive" : "outline"}
                                 >
                                   {expired
-                                    ? tc("expired")
+                                    ? t("lists.collaboration.expired")
                                     : t("lists.collaborators.pending")}
                                 </Badge>
                               )}
                               {collaborator.inherited && (
                                 <Badge variant="secondary">
-                                  {tc("inherited")}
+                                  {t("lists.collaboration.inherited")}
                                 </Badge>
                               )}
                               {collaborator.recursive && (
                                 <Badge variant="outline">
-                                  {tc("nested_lists")}
+                                  {t("lists.collaboration.nested_lists")}
                                 </Badge>
                               )}
                             </div>
@@ -351,7 +352,7 @@ export function ManageCollaboratorsModal({
                             {collaborator.inherited &&
                               collaborator.sourceListName && (
                                 <div className="text-xs text-muted-foreground">
-                                  {tc("inherited_from", {
+                                  {t("lists.collaboration.inherited_from", {
                                     name: collaborator.sourceListName,
                                   })}
                                 </div>
@@ -359,7 +360,9 @@ export function ManageCollaboratorsModal({
                             {pending && collaborator.expiresAt && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Clock3 className="size-3" />
-                                {expired ? tc("expired") : tc("expires")}{" "}
+                                {expired
+                                  ? t("lists.collaboration.expired")
+                                  : t("lists.collaboration.expires")}{" "}
                                 {formatInvitationDate(collaborator.expiresAt)}
                               </div>
                             )}
@@ -383,7 +386,7 @@ export function ManageCollaboratorsModal({
                                     setRecursive(false);
                                   }}
                                 >
-                                  {tc("override_here")}
+                                  {t("lists.collaboration.override_here")}
                                 </Button>
                               )}
                           </div>
@@ -402,7 +405,9 @@ export function ManageCollaboratorsModal({
                             >
                               <SelectTrigger
                                 className="w-28"
-                                aria-label={tc("pending_invitation_role")}
+                                aria-label={t(
+                                  "lists.collaboration.pending_invitation_role",
+                                )}
                               >
                                 <SelectValue />
                               </SelectTrigger>
@@ -428,7 +433,7 @@ export function ManageCollaboratorsModal({
                                   })
                                 }
                               />
-                              {tc("nested_lists")}
+                              {t("lists.collaboration.nested_lists")}
                             </label>
                             <Button
                               size="sm"
@@ -440,7 +445,7 @@ export function ManageCollaboratorsModal({
                               }
                             >
                               <RefreshCw className="mr-1 size-3" />
-                              {tc("resend")}
+                              {t("lists.collaboration.resend")}
                             </Button>
                             <Button
                               size="sm"
@@ -469,7 +474,9 @@ export function ManageCollaboratorsModal({
                             >
                               <SelectTrigger
                                 className="w-28"
-                                aria-label={tc("collaborator_role")}
+                                aria-label={t(
+                                  "lists.collaboration.collaborator_role",
+                                )}
                               >
                                 <SelectValue />
                               </SelectTrigger>
@@ -495,20 +502,23 @@ export function ManageCollaboratorsModal({
                                   })
                                 }
                               />
-                              {tc("nested_lists")}
+                              {t("lists.collaboration.nested_lists")}
                             </label>
                             <Button
                               size="icon"
                               variant="ghost"
-                              aria-label={tc("remove_aria", {
+                              aria-label={t("lists.collaboration.remove_aria", {
                                 name: collaborator.user.name,
                               })}
                               onClick={() => {
                                 if (
                                   window.confirm(
-                                    tc("remove_confirmation", {
-                                      name: collaborator.user.name,
-                                    }),
+                                    t(
+                                      "lists.collaboration.remove_confirmation",
+                                      {
+                                        name: collaborator.user.name,
+                                      },
+                                    ),
                                   )
                                 ) {
                                   removeCollaborator.mutate({
