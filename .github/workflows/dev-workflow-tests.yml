@@ -30,6 +30,9 @@ on:
       - "package.json"
       - ".github/workflows/dev-workflow-tests.yml"
 
+permissions:
+  contents: read
+
 jobs:
   shared-dev-infra:
     runs-on: ubuntu-latest
@@ -42,7 +45,10 @@ jobs:
         uses: ./tooling/github/setup
 
       - name: Check Bash syntax
-        run: bash -n start-dev.sh stop-dev.sh scripts/setup-worktree.sh scripts/dev-infra.sh scripts/dev-infra.test.sh
+        run: |
+          for script in start-dev.sh stop-dev.sh scripts/setup-worktree.sh scripts/dev-infra.sh scripts/dev-infra.test.sh; do
+            bash -n "$script"
+          done
 
       - name: Run shared dev infrastructure tests
         run: bash scripts/dev-infra.test.sh
