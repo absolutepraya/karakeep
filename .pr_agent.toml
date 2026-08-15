@@ -1,4 +1,5 @@
 [github_app]
+feedback_on_draft_pr = false
 pr_commands = [
     "/agentic_review",
 ]
