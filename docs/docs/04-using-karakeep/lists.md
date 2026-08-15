@@ -40,6 +40,8 @@ If a list is moved out of the recursively shared subtree, access inherited only 
 
 A direct grant on a nested list overrides inherited access on that list. For example, a user can inherit Viewer access from a recursively shared parent while receiving Editor access directly on one child list. Otherwise, the nearest recursively shared ancestor determines the inherited role.
 
+Shared lists keep their normal hierarchy wherever the collaborator can access that hierarchy. If both a parent and child are accessible, they appear nested normally in **Shared Lists**. If an ancestor is not accessible, it is not revealed; the first accessible descendant appears as a shared root instead. If parent access is later removed while an independent child grant remains, that child automatically becomes a root in the collaborator's shared tree.
+
 ### Leaving and removing collaborators
 
 When a collaborator leaves, or the owner removes their direct grant, bookmark entries contributed through that collaboration are removed from the shared list. The collaborator's underlying bookmarks stay in their own library.
