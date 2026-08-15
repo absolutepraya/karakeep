@@ -17,6 +17,9 @@ on:
       - ".gitignore"
   merge_group:
 
+permissions:
+  contents: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -44,27 +47,28 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: true
 
       - name: Setup
         uses: ./tooling/github/setup
 
-      - name: Format
-        run: pnpm format:fix
-
-      - name: Upload formatter output
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: collaboration-formatter-output-${{ github.sha }}
-          path: |
-            apps/mobile/app/dashboard/lists/
-            apps/web/components/dashboard/lists/
-            packages/trpc/models/
-            packages/trpc/routers/
-          retention-days: 1
-
-      - name: Show formatter diff
-        run: git diff --exit-code
+      - name: Format and commit
+        run: |
+          set -euo pipefail
+          pnpm format:fix
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            'apps/mobile/app/dashboard/lists/[slug]/collaborators.tsx' \
+            'apps/mobile/app/dashboard/lists/invitations.tsx' \
+            'apps/web/components/dashboard/lists/ManageCollaboratorsModal.tsx' \
+            'apps/web/components/dashboard/lists/PendingInvitationsCard.tsx' \
+            'packages/trpc/models/listInvitations.ts' \
+            'packages/trpc/models/lists.ts' \
+            'packages/trpc/routers/recursiveSharedLists.test.ts'
+          git commit -m "style: apply formatter"
+          git push origin HEAD:${{ github.head_ref }}
 
   typecheck:
     runs-on: ubuntu-latest
