@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import serverConfig from "@karakeep/shared/config";
 import {
   EnqueueOptions,
   getQueueClient,
@@ -128,28 +127,12 @@ export const zOpenAIRequestSchema = z.object({
 });
 export type ZOpenAIRequest = z.infer<typeof zOpenAIRequestSchema>;
 
-const deferredOpenAIQueue = createDeferredQueue<ZOpenAIRequest>(
-  "openai_queue",
-  {
-    defaultJobArgs: {
-      numRetries: 3,
-    },
-    keepFailedJobs: false,
+export const OpenAIQueue = createDeferredQueue<ZOpenAIRequest>("openai_queue", {
+  defaultJobArgs: {
+    numRetries: 3,
   },
-);
-
-export const OpenAIQueue: Queue<ZOpenAIRequest> = {
-  ...deferredOpenAIQueue,
-  async enqueue(payload, opts) {
-    if (
-      payload.type === "summarize" &&
-      !serverConfig.inference.enableAutoSummarization
-    ) {
-      return undefined;
-    }
-    return deferredOpenAIQueue.enqueue(payload, opts);
-  },
-};
+  keepFailedJobs: false,
+});
 
 // Embeddings Worker
 //
