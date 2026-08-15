@@ -25,7 +25,7 @@ interface AccessibleListData {
   type: "manual" | "smart";
 }
 
-type OwnerList = typeof bookmarkLists.$inferSelect;
+type OwnerList = Omit<typeof bookmarkLists.$inferSelect, "rssToken">;
 type DirectMembership = typeof listCollaborators.$inferSelect;
 
 interface OwnerAccessGraph {
