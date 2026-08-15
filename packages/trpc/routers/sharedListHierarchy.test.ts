@@ -43,7 +43,9 @@ describe("shared-list visible hierarchy", () => {
     await inviteAndAccept(ownerApi, collaboratorApi, parent.id, true);
 
     const { lists } = await collaboratorApi.lists.list();
-    expect(lists.find((list) => list.id === child.id)?.parentId).toBe(parent.id);
+    expect(lists.find((list) => list.id === child.id)?.parentId).toBe(
+      parent.id,
+    );
   });
 
   test<CustomTestContext>("hides an inaccessible parent and promotes the shared child to a root", async ({

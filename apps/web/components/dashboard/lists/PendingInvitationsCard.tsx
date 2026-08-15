@@ -113,7 +113,7 @@ function InvitationRow({
           </div>
           <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <Clock3 className="size-3" />
-            {invitation.expired ? tc("expired") : tc("expires")} {" "}
+            {invitation.expired ? tc("expired") : tc("expires")}{" "}
             {formatInvitationDate(invitation.expiresAt)}
           </div>
           {invitation.expired && (

@@ -359,7 +359,7 @@ export function ManageCollaboratorsModal({
                             {pending && collaborator.expiresAt && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Clock3 className="size-3" />
-                                {expired ? tc("expired") : tc("expires")} {" "}
+                                {expired ? tc("expired") : tc("expires")}{" "}
                                 {formatInvitationDate(collaborator.expiresAt)}
                               </div>
                             )}

@@ -62,7 +62,9 @@ describe("recursive shared-list offline sync", () => {
     const before = await collaborator.offlineSync.snapshot();
 
     await collaborator.lists.acceptInvitation({ invitationId });
-    const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+    const delta = await collaborator.offlineSync.pull({
+      cursor: before.cursor,
+    });
 
     expect(listEvents(delta.events)).toEqual(
       expect.arrayContaining(
@@ -97,7 +99,9 @@ describe("recursive shared-list offline sync", () => {
       type: "manual",
       parentId: parent.id,
     });
-    const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+    const delta = await collaborator.offlineSync.pull({
+      cursor: before.cursor,
+    });
 
     expect(listEvents(delta.events)).toContainEqual(
       expect.objectContaining({ entityId: child.id, operation: "create" }),
@@ -124,7 +128,9 @@ describe("recursive shared-list offline sync", () => {
       role: "viewer",
       recursive: false,
     });
-    const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+    const delta = await collaborator.offlineSync.pull({
+      cursor: before.cursor,
+    });
     const events = listEvents(delta.events);
 
     expect(events).toEqual(
@@ -154,7 +160,9 @@ describe("recursive shared-list offline sync", () => {
     const before = await collaborator.offlineSync.snapshot();
 
     await owner.lists.edit({ listId: child.id, parentId: null });
-    const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+    const delta = await collaborator.offlineSync.pull({
+      cursor: before.cursor,
+    });
     const events = listEvents(delta.events);
 
     expect(events).toEqual(
@@ -184,7 +192,9 @@ describe("recursive shared-list offline sync", () => {
     const before = await collaborator.offlineSync.snapshot();
 
     await collaborator.lists.leaveList({ listId: child.id });
-    const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+    const delta = await collaborator.offlineSync.pull({
+      cursor: before.cursor,
+    });
 
     expect(listEvents(delta.events)).toEqual(
       expect.arrayContaining(
