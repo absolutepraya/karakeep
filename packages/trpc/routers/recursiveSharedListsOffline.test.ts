@@ -125,13 +125,17 @@ describe("recursive shared-list offline sync", () => {
       recursive: false,
     });
     const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+    const events = listEvents(delta.events);
 
-    expect(listEvents(delta.events)).toEqual(
+    expect(events).toEqual(
       expect.arrayContaining(
         [child.id, grandchild.id].map((entityId) =>
           expect.objectContaining({ entityId, operation: "revoke" }),
         ),
       ),
+    );
+    expect(events).not.toContainEqual(
+      expect.objectContaining({ entityId: parent.id, operation: "revoke" }),
     );
   });
 
@@ -151,13 +155,17 @@ describe("recursive shared-list offline sync", () => {
 
     await owner.lists.edit({ listId: child.id, parentId: null });
     const delta = await collaborator.offlineSync.pull({ cursor: before.cursor });
+    const events = listEvents(delta.events);
 
-    expect(listEvents(delta.events)).toEqual(
+    expect(events).toEqual(
       expect.arrayContaining(
         [child.id, grandchild.id].map((entityId) =>
           expect.objectContaining({ entityId, operation: "revoke" }),
         ),
       ),
+    );
+    expect(events).not.toContainEqual(
+      expect.objectContaining({ entityId: parent.id, operation: "revoke" }),
     );
   });
 
