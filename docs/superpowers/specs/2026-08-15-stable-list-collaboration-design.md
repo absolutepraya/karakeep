@@ -49,7 +49,7 @@ The list collection exposed to a collaborator is the owner's real tree filtered 
 
 The web sidebar must reuse the original dashboard sidebar styling and interaction patterns. `Shared Lists` remains the existing collapsible section and shared nodes use the same `SidebarItem`, nesting, spacing, icons, hover/active states, collapse affordances, and list options as normal lists. No parallel sidebar design system is introduced.
 
-Native mobile follows the same access-filtered tree model using its existing Lists hierarchy UI.
+Web list pages show the accessible path as lightweight clickable breadcrumbs above the existing list title. Native mobile follows the same access-filtered tree model using its existing Lists hierarchy UI and replaces the child screen's back affordance with an explicit up-navigation action when an accessible parent exists.
 
 ## Invitations
 
@@ -73,6 +73,7 @@ All user-controlled values inserted into HTML email must be escaped. Plain-text 
 - Removing a collaborator explains that bookmark entries contributed through that direct membership disappear from the list while underlying bookmarks remain.
 - Viewer-only users never see edit/remove list-membership actions.
 - Shared trees render inside the existing `Shared Lists` sidebar section with the exact normal dashboard list styling; accessible ancestors remain navigable and inaccessible ancestors are omitted.
+- List headers expose the accessible path as clickable breadcrumbs without revealing inaccessible ancestors.
 
 ### Mobile
 
@@ -81,6 +82,7 @@ All user-controlled values inserted into HTML email must be escaped. Plain-text 
 - The management screen supports invite, role/scope changes, resend/revoke, and confirmed collaborator removal.
 - Collaborators retain Leave List.
 - Shared lists preserve the same access-filtered parent/child hierarchy used by web.
+- When a list has an accessible parent, the native header provides an up action to that parent instead of dropping the user back to the shared-list root.
 
 ## Intentional non-goals
 
