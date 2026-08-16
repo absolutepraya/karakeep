@@ -33,7 +33,7 @@ Repository-controlled current references, raw GitHub URLs, installer entry point
 
 Before any production mutation, a fresh production backup is copied to the local MacBook used by the implementation agent and verified readable. A short controlled maintenance window is acceptable.
 
-No designed rollback sequence is required. The rollout is checkpointed and fail-fast: if a prerequisite or verification fails, stop, diagnose, and continue forward with a fix before crossing the next checkpoint.
+The GitHub rename is intentionally forward-only, but production service recovery remains viable until the cutover stabilizes. Before any mutation, retain the verified local backup, old image references, deployed Compose/environment files, and nginx configuration. If Marka fails before the legacy redirect is enabled, restore the previous Compose image references, `NEXTAUTH_URL`, and old-host application server block from that evidence; do not proceed to the redirect checkpoint. Do not attempt to recreate the old GitHub repository name, because that would break GitHub's rename redirect.
 
 Database/schema changes and persisted-data rewriting solely for branding are forbidden in #27.
 
@@ -48,6 +48,10 @@ Machine-facing/internal identifiers remain unchanged during #27, including, wher
 - Docker network names such as `karakeep-renderer`
 - export/protocol identifiers and compatibility keys
 - other internal constants that do not form the active public identity
+- the VPS deployment directory under the operator's home directory
+- the MacBook checkout directory under `Documents/Projects`
+
+The VPS and MacBook directory renames are explicitly deferred to #35. They are machine-facing paths that can affect Compose project discovery, local backup tooling, worktree configuration, shell history, and operator automation. They require their own path-by-path migration and validation rather than an incidental `mv` during #27.
 
 Their audit and deliberate migration are tracked separately by #35.
 

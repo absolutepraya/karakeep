@@ -18,9 +18,10 @@
 - Keep `KARAKEEP_*`, `@karakeep/*`, persisted paths, Compose service/project names, Docker networks, protocol/export identifiers, and other compatibility-sensitive internal names unchanged under #27. #35 owns their later migration.
 - Do not rewrite Git history or historical issues/PRs/comments merely to remove old names.
 - Browser extension/mobile/npm/SDK/MCP distribution identities are audit-only in #27; do not rename/publish those identities here.
+- Do not rename the VPS deployment directory or the MacBook checkout directory in #27. Both are machine-facing paths deferred to #35 after the public cutover stabilizes.
 - Before the first production mutation, copy a fresh production backup to the local MacBook running this plan and verify it is readable. Never commit or print secrets.
 - A short controlled maintenance window is acceptable. Do not add complexity solely for zero downtime.
-- There is no designed rollback choreography. At every checkpoint, stop on failure, diagnose, fix forward, and re-run the checkpoint before continuing.
+- The GitHub rename is forward-only, but service recovery is mandatory until the legacy redirect is enabled. Retain the verified backup and captured Compose, environment, image, and nginx state. If direct Marka validation fails, restore the previous application origin, image references, and old-host application server block before continuing. Never recreate the old GitHub repository name.
 - Do not close #27 automatically.
 
 ---
@@ -71,9 +72,9 @@
 - Consumes: current `main`, planning branch `absolutepraya/marka-public-cutover-plan`, current production `.env` access available only at execution time.
 - Produces: a current classified list of old fork-identity references and a confirmed implementation worktree based on the latest `main`.
 
-- [ ] **Step 1: Create an isolated execution worktree using the repository's worktree workflow**
+- [ ] **Step 1: Create an isolated execution worktree using the repository's `wt` workflow**
 
-Use `superpowers:using-git-worktrees`. Base the execution worktree on the latest `origin/main`, then bring the three planning documents from `absolutepraya/marka-public-cutover-plan` into the implementation branch if they are not already merged.
+Use the `wt` skill and CLI. Base the execution worktree on the latest `origin/main`, then bring the three planning documents from `absolutepraya/marka-public-cutover-plan` into the implementation branch if they are not already merged.
 
 Do not edit a stale root worktree.
 
@@ -748,7 +749,18 @@ docker buildx imagetools inspect ghcr.io/absolutepraya/marka:workers-main
 
 Expected: both resolve successfully for `linux/amd64`. Record the resulting digest identifiers in private execution notes and later completion evidence.
 
-- [ ] **Step 7: Confirm the old package is no longer a workflow output**
+- [ ] **Step 7: Prove the VPS can pull the new public package before the maintenance window**
+
+From the VPS, without adding registry credentials, pull or inspect both canonical tags:
+
+```bash
+docker pull ghcr.io/absolutepraya/marka:web-main
+docker pull ghcr.io/absolutepraya/marka:workers-main
+```
+
+Expected: both pulls succeed and resolve to the digests recorded in the prior step. A MacBook-local image inspection is not sufficient evidence because it can use local credentials. Do not stop Watchtower or alter deployed Compose references until this succeeds.
+
+- [ ] **Step 8: Confirm the old package is no longer a workflow output**
 
 Inspect the successful workflow logs/metadata. There must be no new `ghcr.io/absolutepraya/karakeep:*` push created by the updated workflow.
 
@@ -979,6 +991,8 @@ Do not enable the old-host redirect until every applicable check in Task 11 pass
 - Consumes: fully verified Marka app origin.
 - Produces: one canonical live application origin with legacy URL continuity.
 
+**Recovery boundary:** Until this task is complete, a failure on direct Marka validation must be recovered by restoring the pre-cutover application-origin setting, Compose image references, and old-host nginx application server block captured in Task 6. Do not attempt to reverse the GitHub rename or recreate `absolutepraya/karakeep`.
+
 - [ ] **Step 1: Replace the old live-app server block with a path/query-preserving permanent redirect**
 
 For nginx, use equivalent semantics to:
@@ -1190,6 +1204,7 @@ Before claiming the plan is complete, verify all of the following:
 - [ ] Marka worked directly before the old-host redirect was enabled.
 - [ ] Production runs both Marka images and Watchtower is active.
 - [ ] `keep.abhipraya.dev` preserves path and query in its permanent redirect.
+- [ ] The VPS deployment directory and MacBook checkout directory were not renamed during #27; #35 owns their later path migration.
 - [ ] Current repository/docs/runtime links use the Marka repo/GHCR identity.
 - [ ] Internal Karakeep identifiers were not swept into #27.
 - [ ] Browser/mobile/npm/SDK/MCP publishing identities were not broadened into this cutover.

@@ -53,6 +53,8 @@ No external mutation is authorized merely by the existence of these documents. D
 - Renaming `karakeep-renderer` or other internal Docker networks solely for branding.
 - Rewriting database/application persisted data for branding.
 - Renaming protocol/export/compatibility identifiers.
+- Renaming the VPS deployment directory under the operator's home directory.
+- Renaming the MacBook repository checkout directory under `Documents/Projects`.
 - Publishing/renaming browser-extension store identity.
 - Publishing/renaming mobile-store identity.
 - Publishing/renaming npm/SDK package identity.
@@ -73,6 +75,8 @@ Current production Compose defaults are explicitly:
 
 - `ghcr.io/absolutepraya/karakeep:web-main`
 - `ghcr.io/absolutepraya/karakeep:workers-main`
+
+The new `ghcr.io/absolutepraya/marka` package must be proven pullable by the VPS before the controlled maintenance window. A successful image inspection on the MacBook is insufficient because local credentials can hide a package-visibility or anonymous-pull failure.
 
 The guided installer also hardcodes the fork's old repository/raw URL and old GHCR path. Its shell-level contract is covered by `bash scripts/install.test.sh`.
 
@@ -238,7 +242,7 @@ No automated retention/deletion policy is part of #27.
 
 ## Cutover staging model
 
-The migration uses checkpoints, not a rollback choreography.
+The migration uses checkpoints with a bounded service-recovery path. The repository rename is forward-only, but until the legacy redirect is enabled the captured pre-cutover Compose, origin, and nginx configuration can restore the previous running application if Marka validation fails. The implementation must stop and recover before advancing, rather than attempting a blind all-surface reversal.
 
 ### Checkpoint 0: plan readiness
 
@@ -284,6 +288,8 @@ Apply/push the prepared workflow change so CI publishes the canonical Marka imag
 
 Verify both mutable Marka tags exist before production configuration points to them. Record their digests and confirm they correspond to the intended commit.
 
+Before the maintenance window, verify from the VPS that both Marka images can be pulled without relying on an interactive MacBook registry login. A package-visibility or pull failure blocks the production image switch.
+
 Do not dual-publish the old fork package.
 
 ### Checkpoint 5: make Marka hostname directly reachable
@@ -310,6 +316,8 @@ Only after this checkpoint succeeds may the legacy hostname redirect be enabled.
 
 Convert `keep.abhipraya.dev` to a permanent redirect that preserves path and query string. Verify representative root, authenticated-entry, public-list, and query-string URLs.
 
+The legacy redirect is the recovery boundary: do not enable it until all direct Marka tests pass. If a pre-redirect failure occurs, restore the previously captured application origin, image references, and old-host nginx application block before continuing. Do not recreate the old GitHub repository name.
+
 Do not keep the old hostname serving the application after the redirect is accepted.
 
 ### Checkpoint 9: repository/GitHub presentation cleanup
@@ -317,6 +325,10 @@ Do not keep the old hostname serving the application after the redirect is accep
 Finish GitHub-side description/homepage/topics/social-preview/package linkage and any active current-tree references that could not safely be finalized before the external rename.
 
 Run the final repository audit and record intentional remaining `karakeep` categories.
+
+### Deferred path migration
+
+The VPS deployment directory and MacBook checkout directory remain unchanged throughout #27. After the public cutover has stabilized, #35 must inventory every path-dependent Compose invocation, backup job, worktree setting, shell alias, editor workspace, and local automation reference before either directory is renamed.
 
 ## Required production smoke tests
 
