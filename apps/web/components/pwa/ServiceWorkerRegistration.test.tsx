@@ -140,7 +140,9 @@ describe("ServiceWorkerRegistration", () => {
   });
 
   it("reloads exactly once after an explicitly armed waiting-worker handoff", async () => {
-    const go = vi.spyOn(window.history, "go").mockImplementation(() => {});
+    const go = vi
+      .spyOn(window.history, "go")
+      .mockImplementation(() => undefined);
     mocks.getRegistration.mockResolvedValue({
       active: mocks.messagePort,
       waiting: mocks.waitingWorker,
@@ -164,7 +166,9 @@ describe("ServiceWorkerRegistration", () => {
   });
 
   it("does not reload for an ordinary controller change without an update handoff", async () => {
-    const go = vi.spyOn(window.history, "go").mockImplementation(() => {});
+    const go = vi
+      .spyOn(window.history, "go")
+      .mockImplementation(() => undefined);
 
     renderRegistration();
     await waitFor(() => {
@@ -198,11 +202,11 @@ describe("ServiceWorkerRegistration", () => {
   });
 
   it("provides shared running-build and deployed-update state to descendants", async () => {
-    const module = await import("./ServiceWorkerRegistration");
-    expect(module).toHaveProperty("usePwaLifecycle");
+    const registrationModule = await import("./ServiceWorkerRegistration");
+    expect(registrationModule).toHaveProperty("usePwaLifecycle");
 
     const usePwaLifecycle = (
-      module as typeof module & {
+      registrationModule as typeof registrationModule & {
         usePwaLifecycle: () => {
           appBuild: string;
           deployedBuild: string | null;
