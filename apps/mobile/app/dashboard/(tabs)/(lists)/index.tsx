@@ -79,13 +79,14 @@ export default function Lists() {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { data: listStats } = useQuery(api.lists.stats.queryOptions());
+  const { data: pendingInvitations } = useQuery(
+    api.lists.getPendingInvitations.queryOptions(),
+  );
 
-  // Check if there are any shared lists
   const hasSharedLists = useMemo(() => {
     return lists?.data.some((list) => list.userRole !== "owner") ?? false;
   }, [lists?.data]);
 
-  // Check if any list has children to determine if we need chevron spacing
   const hasAnyListsWithChildren = useMemo(() => {
     const checkForChildren = (node: ZBookmarkListTreeNode): boolean => {
       if (node.children && node.children.length > 0) return true;
@@ -111,6 +112,7 @@ export default function Lists() {
   const onRefresh = () => {
     queryClient.invalidateQueries(api.lists.list.pathFilter());
     queryClient.invalidateQueries(api.lists.stats.pathFilter());
+    queryClient.invalidateQueries(api.lists.getPendingInvitations.pathFilter());
   };
 
   const links: ListLink[] = [
@@ -134,9 +136,19 @@ export default function Lists() {
     },
   ];
 
-  // Add shared lists section if there are any
+  if (pendingInvitations && pendingInvitations.length > 0) {
+    links.push({
+      id: "pending-invitations",
+      logo: "✉️",
+      name: `List Invitations (${pendingInvitations.length})`,
+      href: "/dashboard/lists/invitations",
+      level: 0,
+      numChildren: 0,
+      collapsed: false,
+    });
+  }
+
   if (hasSharedLists) {
-    // Count shared lists to determine if section has children
     const sharedListsCount = Object.values(lists.root).filter(
       (list) => list.item.userRole !== "owner",
     ).length;
@@ -152,7 +164,6 @@ export default function Lists() {
       isSharedSection: true,
     });
 
-    // Add shared lists as children if section is expanded
     if (showChildrenOf["shared-section"]) {
       Object.values(lists.root).forEach((list) => {
         if (list.item.userRole !== "owner") {
@@ -169,7 +180,6 @@ export default function Lists() {
     }
   }
 
-  // Add owned lists only
   Object.values(lists.root).forEach((list) => {
     if (list.item.userRole === "owner") {
       traverseTree(list, links, showChildrenOf, listStats?.stats);

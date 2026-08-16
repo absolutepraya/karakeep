@@ -2042,8 +2042,9 @@ describe("Shared Lists", () => {
         listId: list.id,
       });
 
-      expect(collaborators).toHaveLength(1);
-      expect(collaborators[0].status).toBe("declined");
+      // Declined invitations are retained internally for reinvitation history
+      // but hidden from the normal owner collaborator-management response.
+      expect(collaborators).toHaveLength(0);
 
       // Verify no pending invitations
       const pendingInvitations =
@@ -2788,7 +2789,7 @@ describe("Shared Lists", () => {
       expect(acceptedCollaborator?.user.email).toBe(collaboratorEmail);
     });
 
-    test<CustomTestContext>("should not show invitee name for declined invitations", async ({
+    test<CustomTestContext>("should hide declined invitations from owner management", async ({
       apiCallers,
     }) => {
       const ownerApi = apiCallers[0];
@@ -2800,36 +2801,19 @@ describe("Shared Lists", () => {
         type: "manual",
       });
 
-      const collaboratorUser = await collaboratorApi.users.whoami();
-      const collaboratorEmail = collaboratorUser.email!;
-      const collaboratorName = collaboratorUser.name;
-
+      const collaboratorEmail = (await collaboratorApi.users.whoami()).email!;
       const { invitationId } = await ownerApi.lists.addCollaborator({
         listId: list.id,
         email: collaboratorEmail,
         role: "viewer",
       });
 
-      // Decline the invitation
-      await collaboratorApi.lists.declineInvitation({
-        invitationId,
-      });
+      await collaboratorApi.lists.declineInvitation({ invitationId });
 
-      // Owner checks declined invitations
       const { collaborators } = await ownerApi.lists.getCollaborators({
         listId: list.id,
       });
-
-      const declinedInvitation = collaborators.find(
-        (c) => c.status === "declined",
-      );
-
-      expect(declinedInvitation).toBeDefined();
-      // Name should still be masked as "Pending User" even after decline
-      expect(declinedInvitation?.user.name).toBe("Pending User");
-      expect(declinedInvitation?.user.name).not.toBe(collaboratorName);
-      // Email should still be visible to owner
-      expect(declinedInvitation?.user.email).toBe(collaboratorEmail);
+      expect(collaborators).toHaveLength(0);
     });
 
     test<CustomTestContext>("should hide emails from non-owners", async ({

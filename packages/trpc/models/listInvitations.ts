@@ -1,23 +1,49 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
-import { listCollaborators, listInvitations } from "@karakeep/db/schema";
+import type { KarakeepDBTransaction } from "@karakeep/db";
+import { listCollaborators, listInvitations, users } from "@karakeep/db/schema";
 
 import type { AuthedContext } from "..";
+import {
+  deleteCollaborationScope,
+  getDirectCollaborationScope,
+  setCollaborationScope,
+} from "./listCollaborationAccess";
 
 type Role = "viewer" | "editor";
 type InvitationStatus = "pending" | "declined";
 
+function asTransactionContext(
+  ctx: AuthedContext,
+  db: KarakeepDBTransaction,
+): AuthedContext {
+  return { ...ctx, db } as unknown as AuthedContext;
+}
+
+export const LIST_INVITATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const LIST_INVITATION_RESEND_COOLDOWN_MS = 60 * 1000;
+
 interface InvitationData {
   id: string;
   listId: string;
+  listName: string;
   userId: string;
   role: Role;
+  recursive: boolean;
   status: InvitationStatus;
   invitedAt: Date;
   invitedEmail: string | null;
   invitedBy: string | null;
   listOwnerUserId: string;
+}
+
+function invitationExpiresAt(invitedAt: Date) {
+  return new Date(invitedAt.getTime() + LIST_INVITATION_TTL_MS);
+}
+
+function invitationIsExpired(invitedAt: Date) {
+  return invitationExpiresAt(invitedAt).getTime() <= Date.now();
 }
 
 export class ListInvitation {
@@ -30,12 +56,18 @@ export class ListInvitation {
     return this.invitation.id;
   }
 
-  /**
-   * Load an invitation by ID
-   * Can be accessed by:
-   * - The invited user (userId matches)
-   * - The list owner (via list ownership check)
-   */
+  get recursive() {
+    return this.invitation.recursive;
+  }
+
+  get expiresAt() {
+    return invitationExpiresAt(this.invitation.invitedAt);
+  }
+
+  get expired() {
+    return invitationIsExpired(this.invitation.invitedAt);
+  }
+
   static async fromId(
     ctx: AuthedContext,
     invitationId: string,
@@ -46,6 +78,7 @@ export class ListInvitation {
         list: {
           columns: {
             userId: true,
+            name: true,
           },
         },
       },
@@ -58,10 +91,8 @@ export class ListInvitation {
       });
     }
 
-    // Check if user has access to this invitation
     const isInvitedUser = invitation.userId === ctx.user.id;
     const isListOwner = invitation.list.userId === ctx.user.id;
-
     if (!isInvitedUser && !isListOwner) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -72,8 +103,13 @@ export class ListInvitation {
     return new ListInvitation(ctx, {
       id: invitation.id,
       listId: invitation.listId,
+      listName: invitation.list.name,
       userId: invitation.userId,
       role: invitation.role,
+      recursive: await getDirectCollaborationScope(ctx, {
+        listId: invitation.listId,
+        userId: invitation.userId,
+      }),
       status: invitation.status,
       invitedAt: invitation.invitedAt,
       invitedEmail: invitation.invitedEmail,
@@ -82,9 +118,6 @@ export class ListInvitation {
     });
   }
 
-  /**
-   * Ensure the current user is the invited user
-   */
   ensureIsInvitedUser() {
     if (this.invitation.userId !== this.ctx.user.id) {
       throw new TRPCError({
@@ -94,9 +127,6 @@ export class ListInvitation {
     }
   }
 
-  /**
-   * Ensure the current user is the list owner
-   */
   ensureIsListOwner() {
     if (this.invitation.listOwnerUserId !== this.ctx.user.id) {
       throw new TRPCError({
@@ -106,24 +136,34 @@ export class ListInvitation {
     }
   }
 
-  /**
-   * Accept the invitation
-   */
-  async accept(): Promise<void> {
-    this.ensureIsInvitedUser();
-
+  private ensurePending() {
     if (this.invitation.status !== "pending") {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "Only pending invitations can be accepted",
+        message: "Only pending invitations can be changed",
       });
     }
+  }
+
+  private ensureActive() {
+    if (this.expired) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Invitation has expired",
+      });
+    }
+  }
+
+  async accept(): Promise<void> {
+    this.ensureIsInvitedUser();
+    this.ensurePending();
+    this.ensureActive();
 
     await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
       await tx
         .delete(listInvitations)
         .where(eq(listInvitations.id, this.invitation.id));
-
       await tx
         .insert(listCollaborators)
         .values({
@@ -133,49 +173,122 @@ export class ListInvitation {
           addedBy: this.invitation.invitedBy,
         })
         .onConflictDoNothing();
+      await setCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+        recursive: this.invitation.recursive,
+      });
     });
   }
 
-  /**
-   * Decline the invitation
-   */
   async decline(): Promise<void> {
     this.ensureIsInvitedUser();
+    this.ensurePending();
 
-    if (this.invitation.status !== "pending") {
+    await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
+      await tx
+        .update(listInvitations)
+        .set({ status: "declined" })
+        .where(eq(listInvitations.id, this.invitation.id));
+      await deleteCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+      });
+    });
+    this.invitation.status = "declined";
+  }
+
+  async revoke(): Promise<void> {
+    this.ensureIsListOwner();
+    await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
+      await tx
+        .delete(listInvitations)
+        .where(eq(listInvitations.id, this.invitation.id));
+      await deleteCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+      });
+    });
+  }
+
+  async update(params: { role: Role; recursive: boolean }): Promise<void> {
+    this.ensureIsListOwner();
+    this.ensurePending();
+    this.ensureActive();
+
+    await this.ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(this.ctx, tx);
+      await tx
+        .update(listInvitations)
+        .set({ role: params.role })
+        .where(eq(listInvitations.id, this.invitation.id));
+      await setCollaborationScope(transactionCtx, {
+        listId: this.invitation.listId,
+        userId: this.invitation.userId,
+        recursive: params.recursive,
+      });
+    });
+    this.invitation.role = params.role;
+    this.invitation.recursive = params.recursive;
+  }
+
+  async resend(): Promise<boolean> {
+    this.ensureIsListOwner();
+    this.ensurePending();
+
+    if (
+      Date.now() - this.invitation.invitedAt.getTime() <
+      LIST_INVITATION_RESEND_COOLDOWN_MS
+    ) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Only pending invitations can be declined",
+        code: "TOO_MANY_REQUESTS",
+        message: "Please wait before resending this invitation",
       });
     }
 
+    const invitedAt = new Date();
     await this.ctx.db
       .update(listInvitations)
-      .set({
-        status: "declined",
-      })
+      .set({ invitedAt })
       .where(eq(listInvitations.id, this.invitation.id));
+    this.invitation.invitedAt = invitedAt;
+    return this.sendEmail();
   }
 
-  /**
-   * Revoke the invitation (owner only)
-   */
-  async revoke(): Promise<void> {
-    this.ensureIsListOwner();
+  async sendEmail(): Promise<boolean> {
+    if (!this.invitation.invitedEmail) {
+      return false;
+    }
 
-    await this.ctx.db
-      .delete(listInvitations)
-      .where(eq(listInvitations.id, this.invitation.id));
+    const inviter = this.invitation.invitedBy
+      ? await this.ctx.db.query.users.findFirst({
+          where: eq(users.id, this.invitation.invitedBy),
+          columns: { name: true },
+        })
+      : null;
+
+    try {
+      const { sendListInvitationEmail } = await import("../email");
+      return await sendListInvitationEmail(
+        this.invitation.invitedEmail,
+        inviter?.name || "A user",
+        this.invitation.listName,
+        this.invitation.id,
+      );
+    } catch (error) {
+      console.error("Failed to send list invitation email:", error);
+      return false;
+    }
   }
 
-  /**
-   * @returns the invitation ID
-   */
   static async inviteByEmail(
     ctx: AuthedContext,
     params: {
       email: string;
       role: Role;
+      recursive: boolean;
       listId: string;
       listName: string;
       listType: "manual" | "smart";
@@ -187,36 +300,34 @@ export class ListInvitation {
     const {
       email,
       role,
+      recursive,
       listId,
-      listName,
       listType,
       listOwnerId,
       inviterUserId,
-      inviterName,
     } = params;
-
-    const user = await ctx.db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, email),
-    });
-
-    if (!user) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "No user found with that email address",
-      });
-    }
-
-    if (user.id === listOwnerId) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Cannot add the list owner as a collaborator",
-      });
-    }
+    const normalizedEmail = email.trim().toLowerCase();
 
     if (listType !== "manual") {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Only manual lists can have collaborators",
+      });
+    }
+
+    const user = await ctx.db.query.users.findFirst({
+      where: sql`lower(${users.email}) = ${normalizedEmail}`,
+    });
+    if (!user) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Unable to create an invitation for that email address",
+      });
+    }
+    if (user.id === listOwnerId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Cannot add the list owner as a collaborator",
       });
     }
 
@@ -228,7 +339,6 @@ export class ListInvitation {
         ),
       },
     );
-
     if (existingCollaborator) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -242,54 +352,57 @@ export class ListInvitation {
         eq(listInvitations.userId, user.id),
       ),
     });
+    if (existingInvitation?.status === "pending") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "User already has a pending invitation for this list",
+      });
+    }
 
-    if (existingInvitation) {
-      if (existingInvitation.status === "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "User already has a pending invitation for this list",
-        });
-      } else if (existingInvitation.status === "declined") {
-        await ctx.db
+    const invitedAt = new Date();
+    if (existingInvitation?.status === "declined") {
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        await tx
           .update(listInvitations)
           .set({
             status: "pending",
             role,
-            invitedAt: new Date(),
-            invitedEmail: email,
+            invitedAt,
+            invitedEmail: normalizedEmail,
             invitedBy: inviterUserId,
           })
           .where(eq(listInvitations.id, existingInvitation.id));
-
-        await this.sendInvitationEmail({
-          email,
-          inviterName,
-          listName,
+        await setCollaborationScope(transactionCtx, {
           listId,
+          userId: user.id,
+          recursive,
         });
-        return existingInvitation.id;
-      }
+      });
+      return existingInvitation.id;
     }
 
-    const res = await ctx.db
-      .insert(listInvitations)
-      .values({
+    return ctx.db.transaction(async (tx) => {
+      const transactionCtx = asTransactionContext(ctx, tx);
+      const res = await tx
+        .insert(listInvitations)
+        .values({
+          listId,
+          userId: user.id,
+          role,
+          status: "pending",
+          invitedAt,
+          invitedEmail: normalizedEmail,
+          invitedBy: inviterUserId,
+        })
+        .returning();
+      await setCollaborationScope(transactionCtx, {
         listId,
         userId: user.id,
-        role,
-        status: "pending",
-        invitedEmail: email,
-        invitedBy: inviterUserId,
-      })
-      .returning();
-
-    await this.sendInvitationEmail({
-      email,
-      inviterName,
-      listName,
-      listId,
+        recursive,
+      });
+      return res[0].id;
     });
-    return res[0].id;
   }
 
   static async pendingForUser(ctx: AuthedContext) {
@@ -320,25 +433,36 @@ export class ListInvitation {
       },
     });
 
-    return invitations.map((inv) => ({
-      id: inv.id,
-      listId: inv.listId,
-      role: inv.role,
-      invitedAt: inv.invitedAt,
-      list: {
-        id: inv.list.id,
-        name: inv.list.name,
-        icon: inv.list.icon,
-        description: inv.list.description,
-        owner: inv.list.user
-          ? {
-              id: inv.list.user.id,
-              name: inv.list.user.name,
-              email: inv.list.user.email,
-            }
-          : null,
-      },
-    }));
+    return Promise.all(
+      invitations.map(async (inv) => {
+        const expiresAt = invitationExpiresAt(inv.invitedAt);
+        return {
+          id: inv.id,
+          listId: inv.listId,
+          role: inv.role,
+          recursive: await getDirectCollaborationScope(ctx, {
+            listId: inv.listId,
+            userId: inv.userId,
+          }),
+          invitedAt: inv.invitedAt,
+          expiresAt,
+          expired: expiresAt.getTime() <= Date.now(),
+          list: {
+            id: inv.list.id,
+            name: inv.list.name,
+            icon: inv.list.icon,
+            description: inv.list.description,
+            owner: inv.list.user
+              ? {
+                  id: inv.list.user.id,
+                  name: inv.list.user.name,
+                  email: inv.list.user.email,
+                }
+              : null,
+          },
+        };
+      }),
+    );
   }
 
   static async invitationsForList(
@@ -346,7 +470,10 @@ export class ListInvitation {
     params: { listId: string },
   ) {
     const invitations = await ctx.db.query.listInvitations.findMany({
-      where: eq(listInvitations.listId, params.listId),
+      where: and(
+        eq(listInvitations.listId, params.listId),
+        eq(listInvitations.status, "pending"),
+      ),
       with: {
         user: {
           columns: {
@@ -358,42 +485,34 @@ export class ListInvitation {
       },
     });
 
-    return invitations.map((invitation) => ({
-      id: invitation.id,
-      listId: invitation.listId,
-      userId: invitation.userId,
-      role: invitation.role,
-      status: invitation.status,
-      invitedAt: invitation.invitedAt,
-      addedAt: invitation.invitedAt,
-      user: {
-        id: invitation.user.id,
-        // Don't show the actual user's name for any invitation (pending or declined)
-        // This protects user privacy until they accept
-        name: "Pending User",
-        email: invitation.user.email || "",
-        image: null,
-      },
-    }));
-  }
-
-  static async sendInvitationEmail(params: {
-    email: string;
-    inviterName: string | null;
-    listName: string;
-    listId: string;
-  }) {
-    try {
-      const { sendListInvitationEmail } = await import("../email");
-      await sendListInvitationEmail(
-        params.email,
-        params.inviterName || "A user",
-        params.listName,
-        params.listId,
-      );
-    } catch (error) {
-      // Log the error but don't fail the invitation
-      console.error("Failed to send list invitation email:", error);
-    }
+    return Promise.all(
+      invitations.map(async (invitation) => {
+        const expiresAt = invitationExpiresAt(invitation.invitedAt);
+        return {
+          id: invitation.id,
+          listId: invitation.listId,
+          userId: invitation.userId,
+          role: invitation.role,
+          recursive: await getDirectCollaborationScope(ctx, {
+            listId: invitation.listId,
+            userId: invitation.userId,
+          }),
+          inherited: false,
+          sourceListId: invitation.listId,
+          sourceListName: null,
+          status: invitation.status,
+          invitedAt: invitation.invitedAt,
+          addedAt: invitation.invitedAt,
+          expiresAt,
+          expired: expiresAt.getTime() <= Date.now(),
+          user: {
+            id: invitation.user.id,
+            name: "Pending User",
+            email: invitation.user.email || "",
+            image: null,
+          },
+        };
+      }),
+    );
   }
 }

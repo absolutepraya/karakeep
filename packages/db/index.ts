@@ -2,8 +2,12 @@ import Database from "better-sqlite3";
 import { ExtractTablesWithRelations } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 
-import * as schema from "./schema";
+import * as collaborationScopeSchema from "./collaborationScopes";
+import * as baseSchema from "./schema";
 
+const transactionSchema = { ...baseSchema, ...collaborationScopeSchema };
+
+export { listCollaborationScopes } from "./collaborationScopes";
 export { db } from "./drizzle";
 export type { DB } from "./drizzle";
 export * as schema from "./schema";
@@ -13,6 +17,6 @@ export { SqliteError } from "better-sqlite3";
 export type KarakeepDBTransaction = SQLiteTransaction<
   "sync",
   Database.RunResult,
-  typeof schema,
-  ExtractTablesWithRelations<typeof schema>
+  typeof transactionSchema,
+  ExtractTablesWithRelations<typeof transactionSchema>
 >;

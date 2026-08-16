@@ -55,6 +55,7 @@ import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 
 import { BookmarkedTextEditor } from "./BookmarkedTextEditor";
+import { canRemoveBookmarkFromList } from "./bookmarkListPermissions";
 import DeleteBookmarkConfirmationDialog from "./DeleteBookmarkConfirmationDialog";
 import { EditBookmarkDialog } from "./EditBookmarkDialog";
 import { ArchivedActionIcon, FavouritedActionIcon } from "./icons";
@@ -97,13 +98,11 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
   const offlineStatus = useOfflineLibraryStatus();
   const requiresOnline = offlineStatus.kind !== "online";
 
-  // Check if the current user owns this bookmark
   const isOwner = session?.user?.id === bookmark.userId;
 
   const [isClipboardAvailable, setIsClipboardAvailable] = useState(false);
 
   useEffect(() => {
-    // This code only runs in the browser
     setIsClipboardAvailable(
       typeof window !== "undefined" &&
         window.navigator &&
@@ -257,7 +256,6 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
     }
   };
 
-  // Define action items array
   const actionItems: ActionItemType[] = [
     {
       id: "edit",
@@ -339,15 +337,11 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       id: "remove-from-list",
       title: t("actions.remove_from_list"),
       icon: <ListX className="mr-2 size-4" />,
-      visible: Boolean(
-        (isOwner ||
-          (withinListContext &&
-            (withinListContext.userRole === "editor" ||
-              withinListContext.userRole === "owner"))) &&
-        !!listId &&
-        !!withinListContext &&
-        withinListContext.type === "manual",
-      ),
+      visible: canRemoveBookmarkFromList({
+        listId,
+        listType: withinListContext?.type,
+        userRole: withinListContext?.userRole,
+      }),
       disabled: demoMode,
       onClick: removeFromList,
     },
@@ -479,7 +473,6 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
     },
   ];
 
-  // Filter visible items
   const visibleItems: ActionItemType[] = actionItems.filter((item) => {
     if (isSubsectionItem(item)) {
       return item.visible && item.items.some((subItem) => subItem.visible);
@@ -487,7 +480,6 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
     return item.visible;
   });
 
-  // If no items are visible, don't render the dropdown
   if (visibleItems.length === 0) {
     return null;
   }

@@ -7,9 +7,12 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 import serverConfig from "@karakeep/shared/config";
 
+import * as collaborationScopeSchema from "./collaborationScopes";
 import dbConfig from "./drizzle.config";
 import { instrumentDatabase } from "./instrumentation";
-import * as schema from "./schema";
+import * as baseSchema from "./schema";
+
+const schema = { ...baseSchema, ...collaborationScopeSchema };
 
 const sqlite = new Database(dbConfig.dbCredentials.url);
 

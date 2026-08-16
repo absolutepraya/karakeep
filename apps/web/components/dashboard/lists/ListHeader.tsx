@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/client";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { MoreHorizontal, Sparkles } from "lucide-react";
+import { ChevronRight, MoreHorizontal, Sparkles } from "lucide-react";
 
+import { useBookmarkLists } from "@karakeep/shared-react/hooks/lists";
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { parseSearchQuery } from "@karakeep/shared/searchQueryParser";
 import { ZBookmarkList } from "@karakeep/shared/types/lists";
@@ -36,6 +38,7 @@ export default function ListHeader({
       },
     ),
   );
+  const { data: listsData } = useBookmarkLists();
 
   const { data: statsData } = useQuery(
     api.lists.stats.queryOptions(undefined, {
@@ -43,6 +46,7 @@ export default function ListHeader({
     }),
   );
   const itemCount = statsData?.stats.get(list.id);
+  const hierarchyPath = listsData?.getPathById(list.id) ?? [];
 
   const parsedQuery = useMemo(() => {
     if (!list.query) {
@@ -65,6 +69,35 @@ export default function ListHeader({
           {list.icon}
         </span>
         <div className="min-w-0 flex-1">
+          {hierarchyPath.length > 1 && (
+            <nav
+              aria-label={t("lists.collaboration.breadcrumb_label")}
+              className="mb-1 flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground"
+            >
+              {hierarchyPath.map((pathList, index) => {
+                const isCurrent = index === hierarchyPath.length - 1;
+                return (
+                  <Fragment key={pathList.id}>
+                    {isCurrent ? (
+                      <span aria-current="page" className="min-w-0 truncate">
+                        {pathList.icon} {pathList.name}
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/dashboard/lists/${pathList.id}`}
+                        className="min-w-0 truncate transition-colors hover:text-foreground"
+                      >
+                        {pathList.icon} {pathList.name}
+                      </Link>
+                    )}
+                    {!isCurrent && (
+                      <ChevronRight className="size-3 shrink-0" aria-hidden />
+                    )}
+                  </Fragment>
+                );
+              })}
+            </nav>
+          )}
           <h1 className="truncate text-2xl font-semibold leading-tight">
             {list.name}
           </h1>
