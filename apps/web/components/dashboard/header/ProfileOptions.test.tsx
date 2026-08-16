@@ -105,9 +105,7 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   }: {
     children: React.ReactNode;
     disabled?: boolean;
-  }) => (
-    <div data-disabled={disabled ? "true" : "false"}>{children}</div>
-  ),
+  }) => <div data-disabled={disabled ? "true" : "false"}>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
@@ -136,7 +134,9 @@ describe("ProfileOptions", () => {
     expect(hrefs).not.toContain("https://karakeep.app/apps");
     expect(hrefs).not.toContain("https://docs.karakeep.app");
     expect(hrefs).not.toContain("https://x.com/karakeep_app");
-    expect(container.textContent).not.toContain("Follow upstream Karakeep on X");
+    expect(container.textContent).not.toContain(
+      "Follow upstream Karakeep on X",
+    );
 
     const disabledItems = container.querySelectorAll('[data-disabled="true"]');
     expect(disabledItems).toHaveLength(2);
