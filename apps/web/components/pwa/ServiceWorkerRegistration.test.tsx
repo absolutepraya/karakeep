@@ -235,6 +235,77 @@ describe("ServiceWorkerRegistration", () => {
     expect(installingWorker.onstatechange).toBeNull();
   });
 
+  it("does not mark a newer deployed worker ready because an older worker is waiting", async () => {
+    const registrationModule = await import("./ServiceWorkerRegistration");
+    const usePwaLifecycle = (
+      registrationModule as typeof registrationModule & {
+        usePwaLifecycle: () => {
+          appBuild: string;
+          deployedBuild: string | null;
+          updateStatus: string;
+        };
+      }
+    ).usePwaLifecycle;
+
+    function Probe() {
+      const state = usePwaLifecycle();
+      return <span data-testid="update-status">{state.updateStatus}</span>;
+    }
+
+    const waitingBuildB = {
+      postMessage: vi.fn(),
+      scriptURL: "https://karakeep.test/sw.js?v=bbbbbbb",
+    };
+    const installingBuildC = {
+      state: "installing",
+      onstatechange: null as (() => void) | null,
+      scriptURL: "https://karakeep.test/sw.js?v=ccccccc",
+    };
+    const targetRegistration = {
+      active: mocks.messagePort,
+      installing: installingBuildC as unknown as ServiceWorker,
+      waiting: waitingBuildB as unknown as ServiceWorker,
+    };
+
+    mocks.getRegistration.mockResolvedValue({
+      active: mocks.messagePort,
+      waiting: waitingBuildB,
+    });
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "ccccccc" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+    mocks.register.mockResolvedValueOnce(targetRegistration);
+
+    renderRegistration(<Probe />);
+
+    await waitFor(() => {
+      expect(mocks.register).toHaveBeenCalledWith("/sw.js?v=ccccccc", {
+        scope: "/",
+        updateViaCache: "none",
+      });
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("update-status").textContent).toBe("available");
+    expect(installingBuildC.onstatechange).toEqual(expect.any(Function));
+
+    targetRegistration.waiting = installingBuildC as unknown as ServiceWorker;
+    installingBuildC.state = "installed";
+    act(() => {
+      installingBuildC.onstatechange?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("update-status").textContent).toBe("ready");
+    });
+  });
+
   it("provides shared running-build and deployed-update state to descendants", async () => {
     const registrationModule = await import("./ServiceWorkerRegistration");
     expect(registrationModule).toHaveProperty("usePwaLifecycle");
@@ -266,11 +337,15 @@ describe("ServiceWorkerRegistration", () => {
         status: 200,
       }),
     );
+    const waitingBuildB = {
+      ...mocks.waitingWorker,
+      scriptURL: "https://karakeep.test/sw.js?v=bbbbbbb",
+    };
     mocks.register
       .mockResolvedValueOnce({ active: mocks.messagePort })
       .mockResolvedValueOnce({
         active: mocks.messagePort,
-        waiting: mocks.waitingWorker,
+        waiting: waitingBuildB,
       });
 
     renderRegistration(<Probe />);
