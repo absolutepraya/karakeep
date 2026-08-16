@@ -6,8 +6,8 @@ import React, {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
+import type { ReactNode } from "react";
 
 import { useSession } from "@/lib/auth/client";
 import { recordThumbnailAccess } from "@/lib/offline-library/repository";
