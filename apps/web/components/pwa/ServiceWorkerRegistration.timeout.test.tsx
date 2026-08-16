@@ -82,9 +82,13 @@ describe("ServiceWorkerRegistration version timeout", () => {
       ([, delay]) => delay === 10_000,
     );
     expect(timeoutCall).toBeDefined();
+    const timeoutCallback = timeoutCall?.[0];
+    if (typeof timeoutCallback !== "function") {
+      throw new Error("Expected PWA update timeout callback");
+    }
 
     await act(async () => {
-      (timeoutCall?.[0] as () => void)();
+      timeoutCallback();
       await Promise.resolve();
     });
 
