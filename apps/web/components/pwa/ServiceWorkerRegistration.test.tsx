@@ -209,6 +209,7 @@ describe("ServiceWorkerRegistration", () => {
     const installingWorker = {
       state: "installing",
       onstatechange: null as (() => void) | null,
+      scriptURL: "https://karakeep.test/sw.js?v=bbbbbbb",
     };
     mocks.fetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ version: "bbbbbbb" }), {
