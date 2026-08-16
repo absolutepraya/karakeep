@@ -1,6 +1,6 @@
 # AI Reviewer Safety and Research Implementation Plan
 
-> **For agentic workers:** preserve the review-only safety model. Do not merge the final PR automatically. Do not authorize a GitHub App past the approved permission ceiling without explicit maintainer approval.
+> **For agentic workers:** preserve the review-only safety model. Do not merge the final PR without explicit maintainer approval. Do not authorize a GitHub App past the approved permission ceiling without explicit maintainer approval.
 
 **Goal:** Salvage the durable AI-review safety policy from the multi-reviewer experiment, record why Qodo/Sourcery/Graphite were rejected, keep CodeRabbit as the only accepted active reviewer, and leave issue #40 open as research for a future least-privilege additional reviewer.
 
@@ -21,7 +21,7 @@
 - Do not add API keys, LLM secrets, or AI service tokens.
 - Reject candidate Apps that require repository-content write, Actions/workflow write, administration, secrets/environments, or equivalent broad mutation privileges.
 - Prefer a smaller safe reviewer set to weakening the permission ceiling.
-- Do not merge PR #41 automatically. Final merge remains an explicit maintainer action.
+- Do not merge PR #41 without explicit maintainer approval. Final merge remains an explicit maintainer action.
 
 ---
 
@@ -143,7 +143,7 @@ The description should explain:
 - the PR keeps the durable evidence-not-authority and least-privilege policies;
 - issue #40 remains open for future reviewer research;
 - no application/runtime/CI/deploy behavior changed;
-- the maintainer still needs to uninstall rejected hosted Apps if they remain installed.
+- the maintainer removed rejected hosted App access after the evaluation.
 
 Use `Relates to #40`, not `Closes #40`.
 
@@ -164,7 +164,7 @@ After removal, verify:
 - no Sourcery/Graphite reviewer status became a required branch/ruleset check;
 - CodeRabbit continues operating normally.
 
-Do not claim this task complete until the maintainer confirms removal or repository administration proves it.
+**Status: complete as of 2026-08-16.** The maintainer confirmed that Sourcery and Graphite repository access was removed after the evaluation. The repository's `main` branch protection/ruleset state does not require an AI reviewer status, and CodeRabbit remains the accepted reviewer.
 
 ---
 
@@ -231,6 +231,4 @@ For each future reviewer candidate:
 
 ## Completion boundary
 
-For PR #41, "done" means the repository-side policy/docs accurately reflect the failed multi-reviewer experiment and final CodeRabbit-only accepted state, issue #40 is repurposed for future least-privilege reviewer research, the branch is current with `main`, current-head validation is green, and the PR remains open for explicit maintainer merge approval.
-
-Hosted cleanup remains a separate maintainer action until Sourcery and Graphite repository access is actually removed.
+For PR #41, "done" means the repository-side policy/docs accurately reflect the failed multi-reviewer experiment and final CodeRabbit-only accepted state, issue #40 is repurposed for future least-privilege reviewer research, hosted cleanup is confirmed complete, the branch is current with `main`, current-head validation is green, and the PR has explicit maintainer merge approval.
