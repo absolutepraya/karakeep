@@ -205,11 +205,10 @@ describe("ServiceWorkerRegistration", () => {
     });
   });
 
-  it("cleans up an installing worker state listener when the provider unmounts", async () => {
+  it("cleans up an installing worker state handler when the provider unmounts", async () => {
     const installingWorker = {
       state: "installing",
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
+      onstatechange: null as (() => void) | null,
     };
     mocks.fetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ version: "bbbbbbb" }), {
@@ -228,18 +227,12 @@ describe("ServiceWorkerRegistration", () => {
     const rendered = renderRegistration();
 
     await waitFor(() => {
-      expect(installingWorker.addEventListener).toHaveBeenCalledWith(
-        "statechange",
-        expect.any(Function),
-      );
+      expect(installingWorker.onstatechange).toEqual(expect.any(Function));
     });
 
     rendered.unmount();
 
-    expect(installingWorker.removeEventListener).toHaveBeenCalledWith(
-      "statechange",
-      expect.any(Function),
-    );
+    expect(installingWorker.onstatechange).toBeNull();
   });
 
   it("provides shared running-build and deployed-update state to descendants", async () => {
