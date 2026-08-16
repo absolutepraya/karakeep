@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
   getRegistration: vi.fn(),
   fetch: vi.fn(),
   messagePort: { postMessage: vi.fn() },
-  waitingWorker: { postMessage: vi.fn() },
+  waitingWorker: {
+    postMessage: vi.fn(),
+    scriptURL: "https://karakeep.test/sw.js",
+  },
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
 }));
@@ -122,7 +125,7 @@ describe("ServiceWorkerRegistration", () => {
     });
   });
 
-  it("requests activation from a worker that was already waiting without re-registering the old app worker", async () => {
+  it("requests activation from a waiting worker that matches the running app build", async () => {
     mocks.getRegistration.mockResolvedValue({
       active: mocks.messagePort,
       waiting: mocks.waitingWorker,
@@ -141,6 +144,29 @@ describe("ServiceWorkerRegistration", () => {
     expect(mocks.register).not.toHaveBeenCalledWith("/sw.js", {
       scope: "/",
       updateViaCache: "none",
+    });
+  });
+
+  it("does not activate a stale waiting worker and registers the running app build instead", async () => {
+    const staleWaitingWorker = {
+      postMessage: vi.fn(),
+      scriptURL: "https://karakeep.test/sw.js?v=bbbbbbb",
+    };
+    mocks.getRegistration.mockResolvedValue({
+      active: mocks.messagePort,
+      waiting: staleWaitingWorker,
+    });
+
+    renderRegistration();
+
+    await waitFor(() => {
+      expect(mocks.register).toHaveBeenCalledWith("/sw.js", {
+        scope: "/",
+        updateViaCache: "none",
+      });
+    });
+    expect(staleWaitingWorker.postMessage).not.toHaveBeenCalledWith({
+      type: "ACTIVATE_UPDATE",
     });
   });
 
