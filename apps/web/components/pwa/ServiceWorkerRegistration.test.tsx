@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
@@ -33,6 +33,13 @@ function installServiceWorkerMock() {
   });
 }
 
+function renderRegistration(children?: React.ReactNode) {
+  const Provider = ServiceWorkerRegistration as React.ComponentType<{
+    children?: React.ReactNode;
+  }>;
+  return render(<Provider>{children}</Provider>);
+}
+
 describe("ServiceWorkerRegistration", () => {
   beforeEach(() => {
     installServiceWorkerMock();
@@ -45,6 +52,10 @@ describe("ServiceWorkerRegistration", () => {
         status: 200,
       }),
     );
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
   });
 
   afterEach(() => {
@@ -59,7 +70,7 @@ describe("ServiceWorkerRegistration", () => {
   });
 
   it("registers the worker without caching updates and clears user caches when unauthenticated", async () => {
-    render(<ServiceWorkerRegistration />);
+    renderRegistration();
 
     await waitFor(() => {
       expect(mocks.register).toHaveBeenCalledWith("/sw.js", {
@@ -83,7 +94,7 @@ describe("ServiceWorkerRegistration", () => {
       }),
     );
 
-    render(<ServiceWorkerRegistration />);
+    renderRegistration();
 
     await waitFor(() => {
       expect(mocks.fetch).toHaveBeenCalledWith("/api/version", {
@@ -105,7 +116,7 @@ describe("ServiceWorkerRegistration", () => {
       waiting: mocks.waitingWorker,
     });
 
-    render(<ServiceWorkerRegistration />);
+    renderRegistration();
 
     await waitFor(() => {
       expect(mocks.getRegistration).toHaveBeenCalledWith("/");
@@ -114,6 +125,74 @@ describe("ServiceWorkerRegistration", () => {
       expect(mocks.waitingWorker.postMessage).toHaveBeenCalledWith({
         type: "ACTIVATE_UPDATE",
       });
+    });
+  });
+
+  it("checks again when an existing document returns to the foreground", async () => {
+    renderRegistration();
+
+    await waitFor(() => {
+      expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    });
+    mocks.fetch.mockClear();
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => {
+      expect(mocks.fetch).toHaveBeenCalledWith("/api/version", {
+        cache: "no-store",
+      });
+    });
+  });
+
+  it("provides shared running-build and deployed-update state to descendants", async () => {
+    const module = await import("./ServiceWorkerRegistration");
+    expect(module).toHaveProperty("usePwaLifecycle");
+
+    const usePwaLifecycle = (
+      module as typeof module & {
+        usePwaLifecycle: () => {
+          appBuild: string;
+          deployedBuild: string | null;
+          updateStatus: string;
+        };
+      }
+    ).usePwaLifecycle;
+
+    function Probe() {
+      const state = usePwaLifecycle();
+      return (
+        <div>
+          <span data-testid="app-build">{state.appBuild}</span>
+          <span data-testid="deployed-build">{state.deployedBuild}</span>
+          <span data-testid="update-status">{state.updateStatus}</span>
+        </div>
+      );
+    }
+
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "bbbbbbb" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+    mocks.register
+      .mockResolvedValueOnce({ active: mocks.messagePort })
+      .mockResolvedValueOnce({
+        active: mocks.messagePort,
+        waiting: mocks.waitingWorker,
+      });
+
+    renderRegistration(<Probe />);
+
+    expect(screen.getByTestId("app-build")).toHaveTextContent("development");
+    await waitFor(() => {
+      expect(screen.getByTestId("deployed-build")).toHaveTextContent(
+        "bbbbbbb",
+      );
+      expect(screen.getByTestId("update-status")).toHaveTextContent("ready");
     });
   });
 });
