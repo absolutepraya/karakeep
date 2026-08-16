@@ -6,6 +6,7 @@ import { useSession } from "@/lib/auth/client";
 import { recordThumbnailAccess } from "@/lib/offline-library/repository";
 
 type WorkerMessage =
+  | { type: "ACTIVATE_UPDATE" }
   | { type: "CLEAR_USER_CACHES" }
   | { type: "SET_DOCUMENT_CACHE_SESSION"; sessionId: string | null }
   | { type: "THUMBNAIL_USED"; url: string };
@@ -15,6 +16,10 @@ const serviceWorkerBuildVersion =
 const serviceWorkerUrl = serviceWorkerBuildVersion
   ? `/sw.js?v=${encodeURIComponent(serviceWorkerBuildVersion)}`
   : "/sw.js";
+
+function isDeployBuild(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{7,40}$/i.test(value);
+}
 
 export default function ServiceWorkerRegistration() {
   const { data: session, status } = useSession();
@@ -77,25 +82,65 @@ export default function ServiceWorkerRegistration() {
       }
     };
 
+    const checkForUpdate = async () => {
+      try {
+        const response = await fetch("/api/version", { cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+
+        const body = (await response.json()) as { version?: unknown };
+        if (
+          !isDeployBuild(body.version) ||
+          body.version === serviceWorkerBuildVersion
+        ) {
+          return;
+        }
+
+        await navigator.serviceWorker.register(
+          `/sw.js?v=${encodeURIComponent(body.version)}`,
+          {
+            scope: "/",
+            updateViaCache: "none",
+          },
+        );
+      } catch {
+        // Update discovery is best-effort and must never block app startup.
+      }
+    };
+
     navigator.serviceWorker.addEventListener("message", receiveWorkerMessage);
     navigator.serviceWorker.addEventListener(
       "controllerchange",
       handleControllerChange,
     );
 
-    void navigator.serviceWorker
-      .register(serviceWorkerUrl, {
-        scope: "/",
-        updateViaCache: "none",
-      })
-      .then((registration) => {
+    void (async () => {
+      try {
+        const existingRegistration =
+          await navigator.serviceWorker.getRegistration("/");
+        existingRegistration?.waiting?.postMessage({
+          type: "ACTIVATE_UPDATE",
+        } satisfies WorkerMessage);
+
+        const registration = await navigator.serviceWorker.register(
+          serviceWorkerUrl,
+          {
+            scope: "/",
+            updateViaCache: "none",
+          },
+        );
         registrationRef.current = registration;
         syncDocumentCacheSession();
         if (sessionStatusRef.current === "unauthenticated") {
           clearUserCaches();
         }
-      })
-      .catch(() => undefined);
+
+        await checkForUpdate();
+      } catch {
+        // Service-worker registration is best-effort in unsupported/broken clients.
+      }
+    })();
 
     return () => {
       navigator.serviceWorker.removeEventListener(
