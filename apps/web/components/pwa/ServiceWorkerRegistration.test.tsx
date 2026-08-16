@@ -205,6 +205,43 @@ describe("ServiceWorkerRegistration", () => {
     });
   });
 
+  it("cleans up an installing worker state listener when the provider unmounts", async () => {
+    const installingWorker = {
+      state: "installing",
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "bbbbbbb" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+    mocks.register
+      .mockResolvedValueOnce({ active: mocks.messagePort })
+      .mockResolvedValueOnce({
+        active: mocks.messagePort,
+        installing: installingWorker,
+        waiting: null,
+      });
+
+    const rendered = renderRegistration();
+
+    await waitFor(() => {
+      expect(installingWorker.addEventListener).toHaveBeenCalledWith(
+        "statechange",
+        expect.any(Function),
+      );
+    });
+
+    rendered.unmount();
+
+    expect(installingWorker.removeEventListener).toHaveBeenCalledWith(
+      "statechange",
+      expect.any(Function),
+    );
+  });
+
   it("provides shared running-build and deployed-update state to descendants", async () => {
     const registrationModule = await import("./ServiceWorkerRegistration");
     expect(registrationModule).toHaveProperty("usePwaLifecycle");
