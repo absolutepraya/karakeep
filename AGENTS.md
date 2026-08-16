@@ -26,7 +26,7 @@
 
 ## Durable identifiers
 
-Preserve package scopes, database paths, export-format names, `KARAKEEP_*` variables, Compose service names, GHCR image paths, and Docker-network names. These are operations and compatibility identifiers, not product presentation.
+Preserve package scopes, database paths, export-format names, `KARAKEEP_` variables, Compose service names, GHCR image paths, and Docker-network names. These are operations and compatibility identifiers, not product presentation.
 
 The fork deploys through CI-built GHCR images and VPS Watchtower polling. The canonical production compose is `deploy/docker-compose.prod.yml`; use `docs/fork-setup.md` for the complete operator workflow.
 
