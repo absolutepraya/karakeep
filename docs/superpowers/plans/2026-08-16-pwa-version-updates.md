@@ -4,7 +4,7 @@
 
 **Goal:** Show the frontend commit actually running in the installed PWA and automatically install newly deployed web builds while delaying activation until a safe later load, with matching desktop/mobile version UI and Marka-owned profile placeholders.
 
-**Architecture:** Expand `ServiceWorkerRegistration.tsx` into the app-shell lifecycle provider instead of introducing a second service-worker owner. The provider keeps the existing auth/cache messages, tracks `appBuild` versus live `/api/version`, registers a versioned worker for a newer commit, and only arms a reload when a worker was already waiting before the current document started update discovery. The worker itself decides whether `ACTIVATE_UPDATE` is safe by checking other window clients before calling `skipWaiting()`.
+**Architecture:** Expand `ServiceWorkerRegistration.tsx` into the single app-shell lifecycle provider. It preserves the existing auth/cache messaging, tracks `appBuild` versus live `/api/version`, registers the fork's existing versioned worker URL for a newer commit, and only arms a reload when a worker was already waiting before the current document started update discovery. The worker itself decides whether `ACTIVATE_UPDATE` is safe by checking same-origin window clients before calling `skipWaiting()`.
 
 **Tech Stack:** Next.js App Router, React, TypeScript, Service Worker API, Vitest, Testing Library, i18next, Tailwind CSS.
 
@@ -16,6 +16,7 @@
 - A running session must not be replaced mid-edit.
 - Do not show an update modal, toast, confirmation prompt, or manual `Update now` button.
 - Do not force activation while another relevant window client remains open.
+- Preserve the fork's existing `/sw.js?v=<build>` worker identity for this change; a stable worker-URL build-pipeline redesign is out of scope.
 - Keep worker scope `/`, API/RSC network-only routing, logout cache clearing, offline-library ownership rules, and IndexedDB contents intact.
 - Mobile version information belongs in the profile dropdown footer; desktop keeps the sidebar version area.
 - Remove the upstream social row. Replace upstream apps/docs links with disabled Marka `Coming soon` rows.
@@ -26,17 +27,18 @@
 
 ## File Structure
 
-- `apps/web/components/pwa/ServiceWorkerRegistration.tsx`: becomes the single React owner for service-worker registration, build discovery, update state, safe handoff arming, auth-cache messages, and the `usePwaLifecycle()` context.
-- `apps/web/components/pwa/ServiceWorkerRegistration.test.tsx`: regression coverage for update discovery, foreground checks, waiting-worker rules, controller handoff, and existing auth/cache behavior.
-- `apps/web/public/sw.js`: adds the safe `ACTIVATE_UPDATE` message path and blocked-activation reply without changing existing cache routing.
-- `apps/web/components/pwa/sw.test.ts`: VM-level worker tests for sole-client activation and multi-client refusal.
-- `apps/web/lib/providers.tsx`: wraps the application subtree with the lifecycle provider so sidebar/profile consumers share one source of truth.
-- `apps/web/components/shared/sidebar/SidebarVersion.tsx`: renders the running app build plus deployed-update status from lifecycle context; supports sidebar and mobile-profile layouts.
-- `apps/web/components/shared/sidebar/Sidebar.tsx`: stops passing server config as though it were the browser build.
-- `apps/web/components/dashboard/header/ProfileOptions.tsx`: removes upstream/social links, adds disabled Marka future-feature rows, and shows the mobile build footer.
-- `apps/web/components/dashboard/header/ProfileOptions.test.tsx`: validates disabled placeholders, absence of upstream/social URLs, and the mobile build footer.
-- `apps/web/lib/i18n/locales/en/translation.json`: adds typed fallback strings for profile future features and build/update labels.
-- `docs/superpowers/specs/2026-07-12-offline-library-pwa-design.md`: points app-shell lifecycle wording at the dedicated version/update design without changing offline-library behavior.
+- `apps/web/components/pwa/ServiceWorkerRegistration.tsx`: React owner for service-worker registration, build discovery, update state, safe handoff arming, auth-cache messages, and `usePwaLifecycle()`.
+- `apps/web/components/pwa/ServiceWorkerRegistration.test.tsx`: lifecycle and existing auth/cache regression tests.
+- `apps/web/public/sw.js`: safe `ACTIVATE_UPDATE` handling and blocked-activation reply.
+- `apps/web/components/pwa/sw.test.ts`: VM-level worker activation safety tests.
+- `apps/web/lib/providers.tsx`: wraps the app subtree with the lifecycle provider.
+- `apps/web/components/shared/sidebar/SidebarVersion.tsx`: shared running-build/update presentation for desktop sidebar and mobile profile footer.
+- `apps/web/components/shared/sidebar/SidebarVersion.test.tsx`: lifecycle-truth and commit-link presentation tests.
+- `apps/web/components/shared/sidebar/Sidebar.tsx`: stops passing live server config as browser build identity.
+- `apps/web/components/dashboard/header/ProfileOptions.tsx`: removes upstream/social links, adds disabled Marka future-feature rows, and adds the mobile build footer.
+- `apps/web/components/dashboard/header/ProfileOptions.test.tsx`: profile menu regression coverage.
+- `apps/web/lib/i18n/locales/en/translation.json`: typed English fallback strings for the new UI.
+- `docs/superpowers/specs/2026-07-12-offline-library-pwa-design.md`: links the old app-shell statement to the dedicated lifecycle design.
 
 ---
 
@@ -48,72 +50,45 @@
 - Modify: `apps/web/lib/providers.tsx`
 
 **Interfaces:**
-- Produces:
-  - `type PwaUpdateStatus = "current" | "available" | "ready"`
-  - `interface PwaLifecycleState { appBuild: string; deployedBuild: string | null; updateStatus: PwaUpdateStatus }`
-  - `function usePwaLifecycle(): PwaLifecycleState`
-  - default provider component accepting `{ children: React.ReactNode }`
-- Consumes:
-  - `process.env.NEXT_PUBLIC_SERVICE_WORKER_BUILD_VERSION`
-  - `GET /api/version` returning `{ version: string }`
-  - `navigator.serviceWorker.getRegistration("/")`
-  - `navigator.serviceWorker.register(url, { scope: "/", updateViaCache: "none" })`
+- Produces `type PwaUpdateStatus = "current" | "available" | "ready"`.
+- Produces `interface PwaLifecycleState { appBuild: string; deployedBuild: string | null; updateStatus: PwaUpdateStatus }`.
+- Produces `function usePwaLifecycle(): PwaLifecycleState`.
+- Default export becomes a provider accepting `{ children: React.ReactNode }`.
+- Consumes `process.env.NEXT_PUBLIC_SERVICE_WORKER_BUILD_VERSION`, `GET /api/version`, `navigator.serviceWorker.getRegistration("/")`, and `navigator.serviceWorker.register()`.
 
-- [ ] **Step 1: Expand the test harness and write failing lifecycle tests**
+- [ ] **Step 1: Write failing lifecycle tests**
 
-Add registration objects with `installing`, `waiting`, `active`, and worker `statechange` listeners; mock `global.fetch`; mock `window.location.reload`; expose `document.visibilityState`. Cover these concrete contracts:
-
-```tsx
-it("fetches the live build without cache and registers a newer versioned worker", async () => {
-  fetchMock.mockResolvedValueOnce(
-    new Response(JSON.stringify({ version: "bbbbbbb" }), {
-      headers: { "content-type": "application/json" },
-    }),
-  );
-
-  render(<ServiceWorkerRegistration><div /></ServiceWorkerRegistration>);
-
-  await waitFor(() =>
-    expect(fetchMock).toHaveBeenCalledWith("/api/version", { cache: "no-store" }),
-  );
-  await waitFor(() =>
-    expect(register).toHaveBeenCalledWith("/sw.js?v=bbbbbbb", {
-      scope: "/",
-      updateViaCache: "none",
-    }),
-  );
-});
-```
-
-Also add tests that:
+Expand the existing jsdom harness with mocked `getRegistration`, richer registration objects (`installing`, `waiting`, `active`), worker `statechange`, `global.fetch`, `document.visibilityState`, and a reload spy. Add tests for:
 
 ```text
-- an identical deployed build stays current;
-- a malformed/non-SHA deployed value is ignored for worker targeting;
-- visibilitychange -> visible performs another no-store version check;
-- simultaneous checks are deduplicated;
-- an installing target reports available, then ready when it becomes waiting;
-- a worker that becomes waiting during this document is NOT sent ACTIVATE_UPDATE;
-- a worker already waiting before provider mount IS sent ACTIVATE_UPDATE;
-- controllerchange reloads exactly once only after the provider armed a handoff;
-- an ordinary first-registration controllerchange does not reload;
-- fetch/register failures leave the app mounted and usable;
-- the existing CLEAR_USER_CACHES, SET_DOCUMENT_CACHE_SESSION, and THUMBNAIL_USED behavior still passes.
+- initial live-version fetch uses fetch("/api/version", { cache: "no-store" });
+- valid newer SHA registers /sw.js?v=<deployedBuild> with scope / and updateViaCache none;
+- identical deployed build stays current;
+- malformed/non-SHA deployed version is ignored for worker targeting;
+- visible visibilitychange performs another live-version check;
+- overlapping checks are deduplicated;
+- installing target reports available and waiting target reports ready;
+- a worker that becomes waiting during this document is never sent ACTIVATE_UPDATE;
+- a worker already waiting before mount is sent ACTIVATE_UPDATE;
+- controllerchange reloads once only when a handoff was explicitly armed;
+- ordinary first-registration controllerchange does not reload;
+- version/registration failures do not unmount or throw;
+- CLEAR_USER_CACHES, SET_DOCUMENT_CACHE_SESSION, and THUMBNAIL_USED still work.
 ```
 
-- [ ] **Step 2: Run the focused test and verify failure**
+Use the existing unauthenticated test as a regression rather than replacing it.
 
-Run:
+- [ ] **Step 2: Run the focused test and verify failure**
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run components/pwa/ServiceWorkerRegistration.test.tsx
 ```
 
-Expected: FAIL because the current component returns `null`, has no lifecycle context, never fetches `/api/version`, and never performs safe activation handoff logic.
+Expected: FAIL because the current component does not expose lifecycle state, fetch `/api/version`, or perform controlled activation.
 
-- [ ] **Step 3: Implement the lifecycle context and provider**
+- [ ] **Step 3: Implement lifecycle state and build validation**
 
-Use the existing file rather than creating a second service-worker owner. The public shape is:
+In `ServiceWorkerRegistration.tsx`, define:
 
 ```tsx
 export type PwaUpdateStatus = "current" | "available" | "ready";
@@ -124,86 +99,127 @@ export interface PwaLifecycleState {
   updateStatus: PwaUpdateStatus;
 }
 
-const PwaLifecycleContext = createContext<PwaLifecycleState>({
-  appBuild: serviceWorkerBuildVersion ?? "development",
-  deployedBuild: null,
-  updateStatus: "current",
-});
+const serviceWorkerBuildVersion =
+  process.env.NEXT_PUBLIC_SERVICE_WORKER_BUILD_VERSION ?? "development";
 
-export function usePwaLifecycle() {
-  return useContext(PwaLifecycleContext);
-}
-```
-
-Validate deployment targets with the fork's commit format:
-
-```ts
 function isDeployBuild(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{7,40}$/i.test(value);
 }
 ```
 
-On mount, call `getRegistration("/")` before starting new update discovery. If `registration?.waiting` already exists, set a handoff-armed ref and send:
+Create a context defaulted to the compiled `serviceWorkerBuildVersion` and export:
 
-```ts
-registration.waiting.postMessage({ type: "ACTIVATE_UPDATE" });
+```tsx
+export function usePwaLifecycle() {
+  return useContext(PwaLifecycleContext);
+}
 ```
 
-Register the current app worker if needed using:
+- [ ] **Step 4: Implement initial registration and pre-existing waiting-worker detection**
+
+On mount, call `navigator.serviceWorker.getRegistration("/")` before starting new update discovery. If `existingRegistration?.waiting` exists, arm the handoff with refs and send:
 
 ```ts
-const workerUrl = appBuild === "development"
-  ? "/sw.js"
-  : `/sw.js?v=${encodeURIComponent(appBuild)}`;
+existingRegistration.waiting.postMessage({ type: "ACTIVATE_UPDATE" });
 ```
 
-Create one deduplicated `checkForUpdate()` promise/ref that:
+Use the existing current-build URL rule:
+
+```ts
+const currentWorkerUrl =
+  serviceWorkerBuildVersion === "development"
+    ? "/sw.js"
+    : `/sw.js?v=${encodeURIComponent(serviceWorkerBuildVersion)}`;
+```
+
+Register it with:
+
+```ts
+{ scope: "/", updateViaCache: "none" }
+```
+
+Keep existing active-worker/session-cache synchronization behavior.
+
+- [ ] **Step 5: Implement deduplicated live-version discovery**
+
+Use `const checkPromiseRef = useRef<Promise<void> | null>(null)`. `checkForUpdate()` returns the existing promise while one is running and clears the ref in `finally`.
+
+The request path is exactly:
 
 ```ts
 const response = await fetch("/api/version", { cache: "no-store" });
+if (!response.ok) return;
 const body = (await response.json()) as { version?: unknown };
-if (!isDeployBuild(body.version) || body.version === appBuild) return;
+if (!isDeployBuild(body.version)) return;
 setDeployedBuild(body.version);
+if (body.version === serviceWorkerBuildVersion) {
+  setUpdateStatus("current");
+  return;
+}
 setUpdateStatus("available");
+```
+
+Register the newer target with:
+
+```ts
 const registration = await navigator.serviceWorker.register(
   `/sw.js?v=${encodeURIComponent(body.version)}`,
   { scope: "/", updateViaCache: "none" },
 );
 ```
 
-Observe `registration.waiting` immediately and `registration.installing.statechange`; when the target reaches `installed` and a waiting worker exists, set `updateStatus` to `"ready"`. Do not send `ACTIVATE_UPDATE` to a worker that became waiting from this check.
+If `registration.waiting` exists after registration, set `ready`. Otherwise observe `registration.installing` and set `ready` only after its `state` becomes `installed` and `registration.waiting` is present. Never send `ACTIVATE_UPDATE` from this newly discovered path.
 
-Add `visibilitychange` and run `checkForUpdate()` only when `document.visibilityState === "visible"`.
+- [ ] **Step 6: Add foreground checking and exact reload guard**
 
-Keep the existing message/session/cache methods inside the same provider. For `controllerchange`, reload only when the explicit handoff-armed ref is true and a session-storage loop guard is not set for this navigation. Clear/consume the guard so unrelated future controller changes do not loop.
+Register `visibilitychange`; when `document.visibilityState === "visible"`, call `checkForUpdate()`.
+
+Use only per-document refs for the handoff guard:
+
+```ts
+const handoffArmedRef = useRef(false);
+const handoffReloadedRef = useRef(false);
+```
+
+The `controllerchange` listener performs:
+
+```ts
+if (!handoffArmedRef.current || handoffReloadedRef.current) return;
+handoffReloadedRef.current = true;
+window.location.reload();
+```
+
+A newly loaded document starts with fresh refs, and no second reload occurs unless that new document independently finds a pre-existing waiting worker and arms a new handoff. Do not reload for ordinary controller changes.
+
+- [ ] **Step 7: Convert the component into the context provider and wire providers**
 
 Return:
 
 ```tsx
-return (
-  <PwaLifecycleContext.Provider value={{ appBuild, deployedBuild, updateStatus }}>
-    {children}
-  </PwaLifecycleContext.Provider>
-);
+<PwaLifecycleContext.Provider
+  value={{
+    appBuild: serviceWorkerBuildVersion,
+    deployedBuild,
+    updateStatus,
+  }}
+>
+  {children}
+</PwaLifecycleContext.Provider>
 ```
 
-- [ ] **Step 4: Wrap the application subtree with the provider**
-
-In `apps/web/lib/providers.tsx`, change the current standalone registration node into the owner of the rest of the app providers:
+In `apps/web/lib/providers.tsx`, replace the standalone `<ServiceWorkerRegistration />` with:
 
 ```tsx
 <SessionProvider session={session}>
   <ServiceWorkerRegistration>
     <QueryClientProvider client={queryClient}>
-      {/* existing TRPC / offline-library / i18n / theme subtree unchanged */}
+      {/* existing TRPC/offline/i18n/theme subtree unchanged */}
     </QueryClientProvider>
   </ServiceWorkerRegistration>
 </SessionProvider>
 ```
 
-- [ ] **Step 5: Run the focused lifecycle test**
-
-Run:
+- [ ] **Step 8: Run the focused lifecycle test**
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run components/pwa/ServiceWorkerRegistration.test.tsx
@@ -211,7 +227,7 @@ mise exec -- pnpm --filter @karakeep/web test --run components/pwa/ServiceWorker
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add apps/web/components/pwa/ServiceWorkerRegistration.tsx apps/web/components/pwa/ServiceWorkerRegistration.test.tsx apps/web/lib/providers.tsx
@@ -227,72 +243,48 @@ git commit -m "feat: add PWA build update lifecycle"
 - Modify: `apps/web/components/pwa/sw.test.ts`
 
 **Interfaces:**
-- Consumes client message: `{ type: "ACTIVATE_UPDATE" }`
-- Produces blocked reply: `{ type: "UPDATE_ACTIVATION_BLOCKED" }`
-- Preserves existing messages: `CLEAR_USER_CACHES`, `SET_DOCUMENT_CACHE_SESSION`, `THUMBNAIL_USED`
+- Client to waiting worker: `{ type: "ACTIVATE_UPDATE" }`.
+- Waiting worker blocked reply: `{ type: "UPDATE_ACTIVATION_BLOCKED" }`.
+- Existing cache/session messages remain unchanged.
 
-- [ ] **Step 1: Write failing worker tests for activation safety**
+- [ ] **Step 1: Write failing worker activation tests**
 
-Extend the worker harness with:
+Extend the harness with:
 
 ```ts
-const clients = {
-  claim: vi.fn().mockResolvedValue(undefined),
-  get: vi.fn().mockResolvedValue(undefined),
-  matchAll: vi.fn().mockResolvedValue([]),
-};
+matchAll: vi.fn().mockResolvedValue([]),
 ```
 
-Add these tests:
+and allow `WorkerEvent.source` to include `postMessage`.
+
+Add:
 
 ```ts
-it("activates a waiting update when the requester is the only window client", async () => {
+it("activates when the requester is the only window client", async () => {
   const worker = createWorkerHarness();
   worker.clients.matchAll.mockResolvedValue([{ id: "client-1" }]);
-
   const dispatched = await worker.dispatch("message", {
     data: { type: "ACTIVATE_UPDATE" },
     source: { id: "client-1", postMessage: vi.fn() },
   });
   await Promise.all(dispatched.work);
-
   expect(worker.self.skipWaiting).toHaveBeenCalledOnce();
 });
 ```
 
-```ts
-it("refuses force activation while another window client remains", async () => {
-  const worker = createWorkerHarness();
-  const postMessage = vi.fn();
-  worker.clients.matchAll.mockResolvedValue([
-    { id: "client-1" },
-    { id: "client-2" },
-  ]);
-
-  const dispatched = await worker.dispatch("message", {
-    data: { type: "ACTIVATE_UPDATE" },
-    source: { id: "client-1", postMessage },
-  });
-  await Promise.all(dispatched.work);
-
-  expect(worker.self.skipWaiting).not.toHaveBeenCalled();
-  expect(postMessage).toHaveBeenCalledWith({ type: "UPDATE_ACTIVATION_BLOCKED" });
-});
-```
+Add a second test with clients `client-1` and `client-2`; expect no `skipWaiting()` and expect the requester to receive `{ type: "UPDATE_ACTIVATION_BLOCKED" }`.
 
 - [ ] **Step 2: Run the worker test and verify failure**
-
-Run:
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run components/pwa/sw.test.ts
 ```
 
-Expected: FAIL because `ACTIVATE_UPDATE` is not handled.
+Expected: FAIL because the worker has no `ACTIVATE_UPDATE` branch.
 
-- [ ] **Step 3: Implement the safe activation message path**
+- [ ] **Step 3: Implement activation safety in `sw.js`**
 
-Handle `ACTIVATE_UPDATE` before the existing cache-clear branch:
+Before the existing `CLEAR_USER_CACHES` branch:
 
 ```js
 if (event.data?.type === "ACTIVATE_UPDATE") {
@@ -301,7 +293,7 @@ if (event.data?.type === "ACTIVATE_UPDATE") {
 }
 ```
 
-Add:
+Implement exactly:
 
 ```js
 async function handleActivateUpdate(event) {
@@ -324,11 +316,9 @@ async function handleActivateUpdate(event) {
 }
 ```
 
-Do not change `activate`, cache naming, navigation routing, thumbnail routing, or logout purge behavior.
+Do not alter install/activate cache behavior, navigation routing, thumbnail routing, or logout purge behavior.
 
-- [ ] **Step 4: Run worker tests**
-
-Run:
+- [ ] **Step 4: Run the worker test**
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run components/pwa/sw.test.ts
@@ -345,32 +335,23 @@ git commit -m "feat: activate PWA updates only when safe"
 
 ---
 
-### Task 3: Shared build UI, mobile profile footer, and Marka future features
+### Task 3: Shared version UI and profile cleanup
 
 **Files:**
 - Modify: `apps/web/components/shared/sidebar/SidebarVersion.tsx`
+- Create: `apps/web/components/shared/sidebar/SidebarVersion.test.tsx`
 - Modify: `apps/web/components/shared/sidebar/Sidebar.tsx`
 - Modify: `apps/web/components/dashboard/header/ProfileOptions.tsx`
 - Create: `apps/web/components/dashboard/header/ProfileOptions.test.tsx`
 - Modify: `apps/web/lib/i18n/locales/en/translation.json`
 
 **Interfaces:**
-- Consumes: `usePwaLifecycle()` from Task 1
-- Produces: `SidebarVersion({ placement?: "sidebar" | "profile" })`
+- Consumes `usePwaLifecycle()` from Task 1.
+- Produces `SidebarVersion({ placement?: "sidebar" | "profile" })`.
 
-- [ ] **Step 1: Write failing UI tests**
+- [ ] **Step 1: Write failing shared-version test**
 
-Create `ProfileOptions.test.tsx` with mocks for session, router, user profile, theme, and translations. Assert the rendered menu:
-
-```text
-- contains Apps & extensions and Documentation;
-- contains Coming soon for both;
-- does not contain hrefs to karakeep.app/apps, docs.karakeep.app, or x.com/karakeep_app;
-- does not render an X/social row;
-- renders the profile build footer inside an sm:hidden wrapper;
-```
-
-Extend or add a focused test for `SidebarVersion` that mocks `usePwaLifecycle()` as:
+Mock `usePwaLifecycle()` as:
 
 ```ts
 {
@@ -380,27 +361,42 @@ Extend or add a focused test for `SidebarVersion` that mocks `usePwaLifecycle()`
 }
 ```
 
-and expects `Build aaaaaaa` plus `Update ready · bbbbbbb`, with the running SHA linked to:
+Assert `Build aaaaaaa`, `Update ready · bbbbbbb`, repository text, and the running-build commit link:
 
 ```text
 https://github.com/absolutepraya/karakeep/commit/aaaaaaa
 ```
 
-- [ ] **Step 2: Run focused UI tests and verify failure**
+Also test `available` renders `Update available · bbbbbbb` and `current` with no differing deployment renders no update line.
 
-Run:
+- [ ] **Step 2: Write failing profile test**
+
+Mock session/router/user/theme/translations plus `SidebarVersion`. Render the profile menu and assert:
+
+```text
+- Apps & extensions appears;
+- Documentation appears;
+- Coming soon appears for both;
+- no anchor href contains karakeep.app/apps;
+- no anchor href contains docs.karakeep.app;
+- no anchor href contains x.com/karakeep_app;
+- no social/X row remains;
+- the mobile version footer wrapper has class sm:hidden.
+```
+
+- [ ] **Step 3: Run the UI tests and verify failure**
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run \
-  components/dashboard/header/ProfileOptions.test.tsx \
-  components/shared/sidebar/SidebarVersion.test.tsx
+  components/shared/sidebar/SidebarVersion.test.tsx \
+  components/dashboard/header/ProfileOptions.test.tsx
 ```
 
-Expected: FAIL because the profile still has upstream/social links and `SidebarVersion` still receives server build props.
+Expected: FAIL because the version component still receives server props and profile links still point upstream.
 
-- [ ] **Step 3: Add typed English fallback strings**
+- [ ] **Step 4: Add typed English fallback strings**
 
-Add a top-level `profile_menu` section in `apps/web/lib/i18n/locales/en/translation.json`:
+Add top-level:
 
 ```json
 "profile_menu": {
@@ -413,11 +409,11 @@ Add a top-level `profile_menu` section in `apps/web/lib/i18n/locales/en/translat
 }
 ```
 
-Other locales may use the existing English fallback until translated; do not hard-code the new labels in JSX.
+The i18n configuration already falls back to English, so other locale files do not need placeholder duplication in this focused change.
 
-- [ ] **Step 4: Refactor `SidebarVersion` to lifecycle truth**
+- [ ] **Step 5: Refactor `SidebarVersion` to browser lifecycle truth**
 
-Keep the existing fork repository constants and SHA validation. Replace `serverVersion`/`changeLogVersion` props with:
+Keep the fork repository constants and SHA validation. Replace server-version props with:
 
 ```ts
 interface SidebarVersionProps {
@@ -425,13 +421,13 @@ interface SidebarVersionProps {
 }
 ```
 
-Read:
+Read lifecycle state:
 
 ```ts
 const { appBuild, deployedBuild, updateStatus } = usePwaLifecycle();
 ```
 
-Render the running `appBuild` as the primary build. When `deployedBuild` differs, render exactly one secondary line:
+The primary line must always use `appBuild`. If `deployedBuild` differs, show exactly one translated secondary line:
 
 ```tsx
 {updateStatus === "ready"
@@ -439,49 +435,41 @@ Render the running `appBuild` as the primary build. When `deployedBuild` differs
   : t("profile_menu.update_available", { build: deployedBuild.slice(0, 7) })}
 ```
 
-Use `placement` only for spacing/border differences. Keep repo/build links and monospace build styling.
+Use `placement` only for layout/border spacing. Preserve links to the fork repository and valid running-build SHA.
 
-- [ ] **Step 5: Stop the server sidebar from substituting server build identity**
+- [ ] **Step 6: Stop `Sidebar.tsx` from passing server build as app build**
 
-In `Sidebar.tsx`, remove the `serverConfig` import and render:
+Remove its `serverConfig` import and render:
 
 ```tsx
 <SidebarVersion />
 ```
 
-instead of passing `serverConfig.serverVersion`.
-
-- [ ] **Step 6: Replace upstream profile actions and add mobile footer**
+- [ ] **Step 7: Replace profile upstream rows and add mobile build footer**
 
 In `ProfileOptions.tsx`:
 
-- remove the `Twitter` import;
-- remove all three upstream `<a>` rows;
-- render two disabled menu rows with `Puzzle` and `BookOpen`, each showing the translated feature name and `Coming soon` secondary/trailing text;
-- use disabled semantics (`disabled` on `DropdownMenuItem`) and no `href`;
-- after a separator near the bottom, add:
-
-```tsx
-<div className="sm:hidden">
-  <SidebarVersion placement="profile" />
-</div>
+```text
+- remove the Twitter import and social row;
+- remove upstream href rows for apps and docs;
+- render disabled `DropdownMenuItem` rows with Puzzle and BookOpen icons;
+- show translated Apps & extensions / Documentation with translated Coming soon secondary or trailing text;
+- do not retain hidden hrefs;
+- add a separator and `<div className="sm:hidden"><SidebarVersion placement="profile" /></div>` before the final sign-out section;
+- keep sign-out actionable and last.
 ```
 
-Keep sign-out as the final actionable row.
-
-- [ ] **Step 7: Run focused UI tests**
-
-Run:
+- [ ] **Step 8: Run the UI tests**
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run \
-  components/dashboard/header/ProfileOptions.test.tsx \
-  components/shared/sidebar/SidebarVersion.test.tsx
+  components/shared/sidebar/SidebarVersion.test.tsx \
+  components/dashboard/header/ProfileOptions.test.tsx
 ```
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add \
@@ -496,17 +484,14 @@ git commit -m "feat: surface PWA build state on mobile"
 
 ---
 
-### Task 4: Align PWA documentation and run web validation
+### Task 4: Documentation and repository validation
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-12-offline-library-pwa-design.md`
 
-**Interfaces:**
-- Consumes the approved lifecycle design at `docs/superpowers/specs/2026-08-16-pwa-version-updates-design.md`.
+- [ ] **Step 1: Align the prior PWA design**
 
-- [ ] **Step 1: Update the prior app-shell lifecycle wording**
-
-Keep the existing product rule but make the implementation ownership explicit. Replace the isolated lifecycle sentence with wording equivalent to:
+Replace the standalone app-shell lifecycle statement with:
 
 ```markdown
 App-shell update discovery, version visibility, and safe activation follow
@@ -514,25 +499,21 @@ App-shell update discovery, version visibility, and safe activation follow
 A running app is never replaced merely because a newer worker downloads; a waiting build takes over on a later safe load or after old clients close.
 ```
 
-Do not alter offline replica, mutation, conflict, or synchronization behavior.
+Do not change offline replica, mutation, conflict, or synchronization contracts.
 
-- [ ] **Step 2: Run focused PWA/UI tests together**
-
-Run:
+- [ ] **Step 2: Run all focused tests together**
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run \
   components/pwa/ServiceWorkerRegistration.test.tsx \
   components/pwa/sw.test.ts \
-  components/dashboard/header/ProfileOptions.test.tsx \
-  components/shared/sidebar/SidebarVersion.test.tsx
+  components/shared/sidebar/SidebarVersion.test.tsx \
+  components/dashboard/header/ProfileOptions.test.tsx
 ```
 
 Expected: PASS.
 
-- [ ] **Step 3: Run web-package tests**
-
-Run:
+- [ ] **Step 3: Run full web tests**
 
 ```bash
 mise exec -- pnpm --filter @karakeep/web test --run
@@ -540,9 +521,7 @@ mise exec -- pnpm --filter @karakeep/web test --run
 
 Expected: PASS.
 
-- [ ] **Step 4: Run repository-required static validation**
-
-Run:
+- [ ] **Step 4: Run required static validation**
 
 ```bash
 mise exec -- pnpm format:fix
@@ -550,9 +529,9 @@ mise exec -- pnpm lint
 mise exec -- pnpm typecheck
 ```
 
-Expected: all commands PASS after formatting changes are committed.
+Expected: PASS.
 
-- [ ] **Step 5: Commit documentation/format-only adjustments**
+- [ ] **Step 5: Commit documentation/format adjustments**
 
 ```bash
 git add docs/superpowers/specs/2026-07-12-offline-library-pwa-design.md apps/web
@@ -563,20 +542,17 @@ git commit -m "docs: align offline PWA update lifecycle"
 
 ### Task 5: PR, CI, review, and merge-ready verification
 
-**Files:**
-- No new product files unless CI/review finds a valid issue.
+- [ ] **Step 1: Re-check latest `main`**
 
-- [ ] **Step 1: Re-check `main` before opening/finalizing the PR**
-
-Compare `feat/pwa-version-updates` with the latest `main`. If behind, update the feature branch with the intended base without rewriting shared history, resolve conflicts semantically, and rerun Task 4 validation.
+Compare `feat/pwa-version-updates` with current `main`. If behind, update without rewriting shared history, resolve conflicts semantically, and rerun Task 4 validation.
 
 - [ ] **Step 2: Open a non-draft PR**
 
-Use a description that includes:
+Use a description containing:
 
 ```markdown
 ## Problem
-Installed PWAs can keep running an old frontend build without clearly showing it, and the current versioned worker URL prevents an old bundle from discovering a newly deployed worker URL by `registration.update()` alone.
+Installed PWAs can keep running an old frontend build without clearly showing it, and the fork's versioned worker URL means an old bundle needs the live deployed build before it can register that newer worker URL.
 
 ## Solution
 - expose running app build vs deployed build through one PWA lifecycle provider
@@ -597,24 +573,24 @@ Real Safari-installed iPhone and Android-installed PWA acceptance remains requir
 
 - [ ] **Step 3: Inspect actual CI jobs/logs**
 
-Do not infer failures from check names. For every failing job, fetch the job/log, classify the failure as regression, stale test, formatting/type/lint, flaky infrastructure, or unrelated base failure, then fix the root cause and push a new commit.
+For each failure, inspect the real job/log and classify it as regression, stale test, formatting/type/lint, flaky infrastructure, or unrelated base failure. Fix root causes rather than silencing checks.
 
-- [ ] **Step 4: Inspect automated/human review findings**
+- [ ] **Step 4: Inspect reviews**
 
-Verify every CodeRabbit or other reviewer finding against the current code. Fix valid correctness/security/accessibility/lifecycle findings; reject stale/noisy suggestions without changing intended behavior.
+Verify every CodeRabbit or other finding against current code. Fix valid correctness/security/accessibility/lifecycle findings and reject stale/noisy suggestions without changing intended product behavior.
 
 - [ ] **Step 5: Final current-head verification**
 
-Before calling the PR merge-ready:
+Require all of:
 
 ```text
-- branch is current with main;
-- no temporary diagnostics remain;
+- branch current with main;
+- no temporary diagnostics;
 - focused PWA/UI tests pass;
 - full web tests pass;
 - format/lint/typecheck pass;
-- CI on the current head is green except explicitly identified external/infrastructure failures;
-- review blockers are resolved;
-- PR description matches the final implementation;
-- real-device acceptance is clearly marked pending if it cannot be performed from this environment.
+- current-head CI green except explicitly identified external infrastructure failures;
+- valid review blockers resolved;
+- PR description matches implementation;
+- real-device acceptance clearly marked pending if it cannot be performed here.
 ```
