@@ -105,22 +105,18 @@ Reviewer downtime, quota exhaustion, or a negative AI status must never mechanic
 
 If a future candidate automatically introduces or encourages a required AI status, remove that requirement before evaluating the integration further.
 
-## Hosted cleanup required
+## Hosted cleanup complete
 
-The rejected integrations should not retain repository access.
+The rejected integrations no longer retain repository access.
 
-Maintainer action required outside source control:
+On 2026-08-16, the maintainer confirmed that repository access for both rejected hosted integrations was removed:
 
-- uninstall or remove `absolutepraya/karakeep` access from Sourcery;
-- uninstall or remove `absolutepraya/karakeep` access from Graphite.
+- Sourcery access to `absolutepraya/karakeep` removed;
+- Graphite access to `absolutepraya/karakeep` removed.
 
-After cleanup, verify:
+Repository-side verification also confirmed that `main` has no required AI-review status checks or branch-protection requirements. CodeRabbit remains the accepted active reviewer.
 
-- neither rejected App still has repository access;
-- no Sourcery/Graphite status is required by branch protection or rulesets;
-- CodeRabbit continues operating normally.
-
-Do not mark hosted cleanup complete solely because repository docs changed. At the time this record was updated, repository-side cleanup was complete but maintainer confirmation of App removal was still pending.
+If either rejected integration is reconsidered later, treat it as a fresh evaluation and re-check the current permission model before granting access again.
 
 ## Evaluation result
 
@@ -134,8 +130,8 @@ The resulting reviewer state is:
 | --- | --- |
 | CodeRabbit | Accepted / active |
 | Qodo | Rejected: OSS qualification/application friction |
-| Sourcery | Rejected: excessive GitHub App write permissions; first review also demonstrated noise/false-positive risk |
-| Graphite Agent | Rejected: excessive GitHub App write permissions |
+| Sourcery | Rejected and access removed: excessive GitHub App write permissions; first review also demonstrated noise/false-positive risk |
+| Graphite Agent | Rejected and access removed: excessive GitHub App write permissions |
 
 ## Future research
 
