@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { redirect, useRouter } from "next/navigation";
+import SidebarVersion from "@/components/shared/sidebar/SidebarVersion";
 import { useToggleTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,6 @@ import {
   Settings,
   Shield,
   Sun,
-  Twitter,
 } from "lucide-react";
 import { useTheme } from "@teispace/next-themes";
 
@@ -51,6 +51,28 @@ function DarkModeToggle() {
       </>
     );
   }
+}
+
+function ComingSoonFeature({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <DropdownMenuItem disabled className="items-start">
+      <span className="mr-2 mt-0.5 shrink-0">{icon}</span>
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+        <span className="truncate">{label}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {t("profile_menu.coming_soon")}
+        </span>
+      </div>
+    </DropdownMenuItem>
+  );
 }
 
 export default function SidebarProfileOptions() {
@@ -126,25 +148,19 @@ export default function SidebarProfileOptions() {
           <DarkModeToggle />
         </DropdownMenuItem>
         <Separator className="my-2" />
-        <DropdownMenuItem asChild>
-          <a href="https://karakeep.app/apps" target="_blank" rel="noreferrer">
-            <Puzzle className="mr-2 size-4" />
-            Upstream Karakeep apps and extensions
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href="https://docs.karakeep.app" target="_blank" rel="noreferrer">
-            <BookOpen className="mr-2 size-4" />
-            Upstream Karakeep documentation
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href="https://x.com/karakeep_app" target="_blank" rel="noreferrer">
-            <Twitter className="mr-2 size-4" />
-            Follow upstream Karakeep on X
-          </a>
-        </DropdownMenuItem>
+        <ComingSoonFeature
+          icon={<Puzzle className="size-4" />}
+          label={t("profile_menu.apps_extensions")}
+        />
+        <ComingSoonFeature
+          icon={<BookOpen className="size-4" />}
+          label={t("profile_menu.documentation")}
+        />
         <Separator className="my-2" />
+        <div className="sm:hidden">
+          <SidebarVersion placement="profile" />
+        </div>
+        <Separator className="my-2 sm:hidden" />
         <DropdownMenuItem onClick={() => router.push("/logout")}>
           <LogOut className="mr-2 size-4" />
           <span>{t("actions.sign_out")}</span>
