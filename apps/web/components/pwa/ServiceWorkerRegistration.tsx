@@ -269,7 +269,7 @@ export default function ServiceWorkerRegistration({
         );
         const hasStalePendingWorker = Boolean(
           (existingRegistration?.waiting && !waitingMatchesCurrent) ||
-            (existingRegistration?.installing && !installingMatchesCurrent),
+          (existingRegistration?.installing && !installingMatchesCurrent),
         );
 
         if (waitingMatchesCurrent && existingRegistration?.waiting) {
