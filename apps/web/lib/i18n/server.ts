@@ -25,12 +25,14 @@ export async function useTranslation<
   KPrefix extends KeyPrefix<FallbackNs<Ns>> = undefined,
 >(ns?: Ns, options: { keyPrefix?: KPrefix } = {}) {
   const lng = (await getUserLocalSettings()).lang;
-  const i18nextInstance = await initI18next(
-    lng,
-    Array.isArray(ns) ? (ns as string[]) : (ns as string),
-  );
+  const resolvedNs = (ns ?? "translation") as Ns;
+  const i18nextInstance = await initI18next(lng, resolvedNs);
   return {
-    t: i18nextInstance.getFixedT(lng, ns as FlatNamespace, options.keyPrefix),
+    t: i18nextInstance.getFixedT<Ns, KPrefix>(
+      lng,
+      resolvedNs,
+      options.keyPrefix,
+    ),
     i18n: i18nextInstance,
   };
 }
