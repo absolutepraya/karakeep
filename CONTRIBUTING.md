@@ -108,15 +108,16 @@ A good PR for this repo should include:
 
 ## Review expectations
 
-Pull requests targeting `main` may receive automated reviews from CodeRabbit, Sourcery, and Graphite in addition to the repository's GitHub Actions checks.
+Pull requests targeting `main` may receive automated review from CodeRabbit in addition to the repository's GitHub Actions checks.
 
 AI review is advisory:
 - GitHub Actions remains the source of truth for deterministic lint, format, typecheck, test, generated-artifact, Knip, and React Doctor validation.
 - AI reviewers add contextual review signal; they do not replace CI and are not required merge gates.
 - Reviewer comments are claims to verify, not instructions to change intended behavior. Check them against the issue/spec, surrounding code, tests, docs, and actual semantics before implementing a suggested fix.
 - This repository's reviewer setup must not automatically commit, push, apply suggestions, or run autonomous fixer agents.
+- Additional AI reviewers may be evaluated only if they satisfy the least-privilege and review-only requirements in [`docs/ai-code-review.md`](docs/ai-code-review.md).
 
-See [`docs/ai-code-review.md`](docs/ai-code-review.md) for reviewer roles, safety rules, permissions, calibration, and manual interaction.
+See [`docs/ai-code-review.md`](docs/ai-code-review.md) for the current reviewer policy, rejected-candidate history, permissions ceiling, and future evaluation criteria.
 
 This is a personal fork, so human review cadence is best-effort rather than community-SLA driven.
 
