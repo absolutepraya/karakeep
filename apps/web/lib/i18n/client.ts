@@ -30,6 +30,11 @@ i18next
     preload: runsOnServerSide ? languages : [],
   });
 
-export const useTranslation = useTranslationOrg;
+export function useTranslation<
+  Ns extends "translation" | "profile_menu" = "translation",
+>(ns?: Ns) {
+  return useTranslationOrg(ns ?? ("translation" as Ns));
+}
+
 export const Trans = TransOrg;
 export const i18n = i18next;
