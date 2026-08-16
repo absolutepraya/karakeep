@@ -1,5 +1,6 @@
 import "i18next";
 
+import profileMenu from "../lib/i18n/locales/en/profile_menu.json";
 import translation from "../lib/i18n/locales/en/translation.json";
 
 declare module "i18next" {
@@ -7,6 +8,7 @@ declare module "i18next" {
   interface CustomTypeOptions {
     defaultNS: "translation";
     resources: {
+      profile_menu: typeof profileMenu;
       translation: typeof translation;
     };
   }

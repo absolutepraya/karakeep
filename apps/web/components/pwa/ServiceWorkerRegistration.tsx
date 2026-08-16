@@ -1,27 +1,86 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { useSession } from "@/lib/auth/client";
 import { recordThumbnailAccess } from "@/lib/offline-library/repository";
 
 type WorkerMessage =
+  | { type: "ACTIVATE_UPDATE" }
   | { type: "CLEAR_USER_CACHES" }
   | { type: "SET_DOCUMENT_CACHE_SESSION"; sessionId: string | null }
   | { type: "THUMBNAIL_USED"; url: string };
 
-const serviceWorkerBuildVersion =
+export type PwaUpdateStatus = "current" | "available" | "ready";
+
+export interface PwaLifecycleState {
+  appBuild: string;
+  deployedBuild: string | null;
+  updateStatus: PwaUpdateStatus;
+}
+
+const compiledServiceWorkerBuildVersion =
   process.env.NEXT_PUBLIC_SERVICE_WORKER_BUILD_VERSION;
-const serviceWorkerUrl = serviceWorkerBuildVersion
-  ? `/sw.js?v=${encodeURIComponent(serviceWorkerBuildVersion)}`
+const appBuild = compiledServiceWorkerBuildVersion ?? "development";
+const serviceWorkerUrl = compiledServiceWorkerBuildVersion
+  ? `/sw.js?v=${encodeURIComponent(compiledServiceWorkerBuildVersion)}`
   : "/sw.js";
 
-export default function ServiceWorkerRegistration() {
+const PwaLifecycleContext = createContext<PwaLifecycleState>({
+  appBuild,
+  deployedBuild: null,
+  updateStatus: "current",
+});
+
+export function usePwaLifecycle() {
+  return useContext(PwaLifecycleContext);
+}
+
+function isDeployBuild(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{7,40}$/i.test(value);
+}
+
+function isWorkerForBuild(
+  worker: ServiceWorker | null | undefined,
+  build: string,
+) {
+  if (!worker?.scriptURL) {
+    return false;
+  }
+
+  try {
+    const workerUrl = new URL(worker.scriptURL);
+    return (
+      workerUrl.pathname.endsWith("/sw.js") &&
+      (workerUrl.searchParams.get("v") ?? "development") === build
+    );
+  } catch {
+    return false;
+  }
+}
+
+export default function ServiceWorkerRegistration({
+  children,
+}: {
+  children?: ReactNode;
+}) {
   const { data: session, status } = useSession();
+  const [deployedBuild, setDeployedBuild] = useState<string | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<PwaUpdateStatus>("current");
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const sessionStatusRef = useRef(status);
   const sessionIdRef = useRef(session?.user?.id ?? null);
   const hasClearedUserCachesRef = useRef(false);
+  const checkPromiseRef = useRef<Promise<void> | null>(null);
+  const handoffArmedRef = useRef(false);
+  const handoffReloadedRef = useRef(false);
 
   useEffect(() => {
     sessionStatusRef.current = status;
@@ -61,6 +120,8 @@ export default function ServiceWorkerRegistration() {
       return;
     }
 
+    let installingWorker: ServiceWorker | null = null;
+
     const receiveWorkerMessage = (event: MessageEvent<WorkerMessage>) => {
       if (
         event.data?.type === "THUMBNAIL_USED" &&
@@ -75,6 +136,116 @@ export default function ServiceWorkerRegistration() {
       if (sessionStatusRef.current === "unauthenticated") {
         clearUserCaches();
       }
+
+      if (handoffArmedRef.current && !handoffReloadedRef.current) {
+        handoffReloadedRef.current = true;
+        window.history.go(0);
+      }
+    };
+
+    const watchInstallingWorker = (
+      registration: ServiceWorkerRegistration,
+      installing: ServiceWorker,
+      targetBuild: string,
+    ) => {
+      const markReadyIfWaiting = () => {
+        if (
+          installing.state !== "installed" ||
+          !isWorkerForBuild(registration.waiting, targetBuild)
+        ) {
+          return;
+        }
+
+        setUpdateStatus("ready");
+        installing.onstatechange = null;
+        if (installingWorker === installing) {
+          installingWorker = null;
+        }
+      };
+
+      if (installingWorker) {
+        installingWorker.onstatechange = null;
+      }
+
+      installingWorker = installing;
+      installing.onstatechange = markReadyIfWaiting;
+      markReadyIfWaiting();
+    };
+
+    const runUpdateCheck = async () => {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10_000);
+
+      try {
+        const response = await fetch("/api/version", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const body = (await response.json()) as { version?: unknown };
+        if (!isDeployBuild(body.version)) {
+          return;
+        }
+
+        setDeployedBuild(body.version);
+        if (body.version === appBuild) {
+          setUpdateStatus("current");
+          return;
+        }
+
+        setUpdateStatus("available");
+        const registration = await navigator.serviceWorker.register(
+          `/sw.js?v=${encodeURIComponent(body.version)}`,
+          {
+            scope: "/",
+            updateViaCache: "none",
+          },
+        );
+        registrationRef.current = registration;
+
+        if (isWorkerForBuild(registration.waiting, body.version)) {
+          setUpdateStatus("ready");
+          return;
+        }
+
+        if (
+          registration.installing &&
+          isWorkerForBuild(registration.installing, body.version)
+        ) {
+          watchInstallingWorker(
+            registration,
+            registration.installing,
+            body.version,
+          );
+        }
+      } catch {
+        // Update discovery is best-effort and must never block app startup.
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    };
+
+    const checkForUpdate = () => {
+      if (checkPromiseRef.current) {
+        return checkPromiseRef.current;
+      }
+
+      const promise = runUpdateCheck().finally(() => {
+        if (checkPromiseRef.current === promise) {
+          checkPromiseRef.current = null;
+        }
+      });
+      checkPromiseRef.current = promise;
+      return promise;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkForUpdate();
+      }
     };
 
     navigator.serviceWorker.addEventListener("message", receiveWorkerMessage);
@@ -82,22 +253,69 @@ export default function ServiceWorkerRegistration() {
       "controllerchange",
       handleControllerChange,
     );
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    void navigator.serviceWorker
-      .register(serviceWorkerUrl, {
-        scope: "/",
-        updateViaCache: "none",
-      })
-      .then((registration) => {
+    void (async () => {
+      try {
+        const existingRegistration =
+          await navigator.serviceWorker.getRegistration("/");
+        let registration = existingRegistration;
+        const waitingMatchesCurrent = isWorkerForBuild(
+          existingRegistration?.waiting,
+          appBuild,
+        );
+        const installingMatchesCurrent = isWorkerForBuild(
+          existingRegistration?.installing,
+          appBuild,
+        );
+        const activeMatchesCurrent = isWorkerForBuild(
+          existingRegistration?.active,
+          appBuild,
+        );
+        const hasStalePendingWorker = Boolean(
+          (existingRegistration?.waiting && !waitingMatchesCurrent) ||
+          (existingRegistration?.installing && !installingMatchesCurrent),
+        );
+
+        if (waitingMatchesCurrent && existingRegistration?.waiting) {
+          handoffArmedRef.current = true;
+          existingRegistration.waiting.postMessage({
+            type: "ACTIVATE_UPDATE",
+          } satisfies WorkerMessage);
+        }
+
+        if (
+          !registration ||
+          hasStalePendingWorker ||
+          (!waitingMatchesCurrent &&
+            !installingMatchesCurrent &&
+            !activeMatchesCurrent)
+        ) {
+          registration = await navigator.serviceWorker.register(
+            serviceWorkerUrl,
+            {
+              scope: "/",
+              updateViaCache: "none",
+            },
+          );
+        }
+
         registrationRef.current = registration;
         syncDocumentCacheSession();
         if (sessionStatusRef.current === "unauthenticated") {
           clearUserCaches();
         }
-      })
-      .catch(() => undefined);
+
+        await checkForUpdate();
+      } catch {
+        // Service-worker registration is best-effort in unsupported/broken clients.
+      }
+    })();
 
     return () => {
+      if (installingWorker) {
+        installingWorker.onstatechange = null;
+      }
       navigator.serviceWorker.removeEventListener(
         "message",
         receiveWorkerMessage,
@@ -106,6 +324,7 @@ export default function ServiceWorkerRegistration() {
         "controllerchange",
         handleControllerChange,
       );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -122,5 +341,11 @@ export default function ServiceWorkerRegistration() {
     }
   }, [session?.user?.id, status]);
 
-  return null;
+  return (
+    <PwaLifecycleContext.Provider
+      value={{ appBuild, deployedBuild, updateStatus }}
+    >
+      {children}
+    </PwaLifecycleContext.Provider>
+  );
 }

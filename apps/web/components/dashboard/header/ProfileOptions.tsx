@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { redirect, useRouter } from "next/navigation";
+import SidebarVersion from "@/components/shared/sidebar/SidebarVersion";
 import { useToggleTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,6 @@ import {
   Settings,
   Shield,
   Sun,
-  Twitter,
 } from "lucide-react";
 import { useTheme } from "@teispace/next-themes";
 
@@ -53,8 +53,31 @@ function DarkModeToggle() {
   }
 }
 
+function ComingSoonFeature({
+  icon,
+  label,
+  comingSoon,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  comingSoon: string;
+}) {
+  return (
+    <DropdownMenuItem disabled className="items-start">
+      <span className="mr-2 mt-0.5 shrink-0">{icon}</span>
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+        <span className="truncate">{label}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {comingSoon}
+        </span>
+      </div>
+    </DropdownMenuItem>
+  );
+}
+
 export default function SidebarProfileOptions() {
   const { t } = useTranslation();
+  const { t: tProfile } = useTranslation("profile_menu");
   const toggleTheme = useToggleTheme();
   const { data: session } = useSession();
   const { data: whoami } = useWhoAmI();
@@ -126,25 +149,21 @@ export default function SidebarProfileOptions() {
           <DarkModeToggle />
         </DropdownMenuItem>
         <Separator className="my-2" />
-        <DropdownMenuItem asChild>
-          <a href="https://karakeep.app/apps" target="_blank" rel="noreferrer">
-            <Puzzle className="mr-2 size-4" />
-            Upstream Karakeep apps and extensions
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href="https://docs.karakeep.app" target="_blank" rel="noreferrer">
-            <BookOpen className="mr-2 size-4" />
-            Upstream Karakeep documentation
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href="https://x.com/karakeep_app" target="_blank" rel="noreferrer">
-            <Twitter className="mr-2 size-4" />
-            Follow upstream Karakeep on X
-          </a>
-        </DropdownMenuItem>
+        <ComingSoonFeature
+          icon={<Puzzle className="size-4" />}
+          label={tProfile("apps_extensions")}
+          comingSoon={tProfile("coming_soon")}
+        />
+        <ComingSoonFeature
+          icon={<BookOpen className="size-4" />}
+          label={tProfile("documentation")}
+          comingSoon={tProfile("coming_soon")}
+        />
         <Separator className="my-2" />
+        <div className="sm:hidden">
+          <SidebarVersion placement="profile" />
+        </div>
+        <Separator className="my-2 sm:hidden" />
         <DropdownMenuItem onClick={() => router.push("/logout")}>
           <LogOut className="mr-2 size-4" />
           <span>{t("actions.sign_out")}</span>

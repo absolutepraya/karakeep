@@ -91,28 +91,29 @@ export default function Providers({
       <ServerHintsCtx.Provider value={{ isMobile }}>
         <UserLocalSettingsCtx.Provider value={userLocalSettings}>
           <SessionProvider session={session}>
-            <ServiceWorkerRegistration />
-            <QueryClientProvider client={queryClient}>
-              <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-                <OfflineLibraryProvider trpcClient={trpcClient}>
-                  <CustomI18nextProvider lang={userLocalSettings.lang}>
-                    <ThemeProvider
-                      attribute="class"
-                      defaultTheme="system"
-                      enableSystem
-                      disableTransitionOnChange
-                    >
-                      <TooltipProvider
-                        delayDuration={450}
-                        skipDelayDuration={200}
+            <ServiceWorkerRegistration>
+              <QueryClientProvider client={queryClient}>
+                <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+                  <OfflineLibraryProvider trpcClient={trpcClient}>
+                    <CustomI18nextProvider lang={userLocalSettings.lang}>
+                      <ThemeProvider
+                        attribute="class"
+                        defaultTheme="system"
+                        enableSystem
+                        disableTransitionOnChange
                       >
-                        {children}
-                      </TooltipProvider>
-                    </ThemeProvider>
-                  </CustomI18nextProvider>
-                </OfflineLibraryProvider>
-              </TRPCProvider>
-            </QueryClientProvider>
+                        <TooltipProvider
+                          delayDuration={450}
+                          skipDelayDuration={200}
+                        >
+                          {children}
+                        </TooltipProvider>
+                      </ThemeProvider>
+                    </CustomI18nextProvider>
+                  </OfflineLibraryProvider>
+                </TRPCProvider>
+              </QueryClientProvider>
+            </ServiceWorkerRegistration>
           </SessionProvider>
         </UserLocalSettingsCtx.Provider>
       </ServerHintsCtx.Provider>

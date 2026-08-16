@@ -122,6 +122,11 @@ self.addEventListener("message", (event) => {
     return;
   }
 
+  if (event.data?.type === "ACTIVATE_UPDATE") {
+    event.waitUntil(handleActivateUpdate(event));
+    return;
+  }
+
   if (event.data?.type !== "CLEAR_USER_CACHES") {
     return;
   }
@@ -167,6 +172,27 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(handleNavigation(event));
   }
 });
+
+async function handleActivateUpdate(event) {
+  const requesterId = event.source?.id;
+  if (typeof requesterId !== "string") {
+    return;
+  }
+
+  const windowClients = await self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+  const safe =
+    windowClients.length === 1 && windowClients[0]?.id === requesterId;
+
+  if (!safe) {
+    event.source?.postMessage?.({ type: "UPDATE_ACTIVATION_BLOCKED" });
+    return;
+  }
+
+  await self.skipWaiting();
+}
 
 async function handleStaticAsset(request) {
   const cache = await caches.open(KARAKEEP_SHELL_CACHE);

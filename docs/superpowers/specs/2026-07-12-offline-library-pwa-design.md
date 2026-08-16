@@ -71,7 +71,7 @@ The service validates session and authorization for every request. Browser state
 - When offline, use the local replica for browsing and search. Eligible metadata/tag changes update local state immediately and enter the durable mutation outbox.
 - On next successful synchronization, delete records and thumbnails that are no longer authorized, including revoked shared-list access.
 - On logout, purge all user-scoped data: metadata, thumbnails, local index, conflicts, sync cursor, and queued writes. The non-sensitive app shell remains cached.
-- App-shell updates activate on next PWA open. A running app is not replaced mid-edit.
+- App-shell update discovery, version visibility, and safe activation follow [PWA Version Visibility and Safe Auto-Update Design](2026-08-16-pwa-version-updates-design.md). A running app is never replaced merely because a newer worker downloads; a waiting build takes over on a later safe load or after old clients close.
 
 ### Offline-safe write policy
 

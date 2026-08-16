@@ -19,7 +19,7 @@ interface WorkerEvent {
     mode: RequestMode;
     url: string;
   };
-  source?: { id: string };
+  source?: { id: string; postMessage?: (message: unknown) => void };
   respondWith: (response: Promise<Response> | Response) => void;
   waitUntil: (work: Promise<unknown>) => void;
 }
@@ -32,6 +32,7 @@ function createWorkerHarness() {
   const clients = {
     claim: vi.fn().mockResolvedValue(undefined),
     get: vi.fn().mockResolvedValue(undefined),
+    matchAll: vi.fn().mockResolvedValue([]),
   };
 
   const keyOf = (request: Request | string) =>
@@ -78,7 +79,7 @@ function createWorkerHarness() {
       origin: APP_ORIGIN,
     },
     registration: { scope: WORKER_SCOPE },
-    skipWaiting: vi.fn(),
+    skipWaiting: vi.fn().mockResolvedValue(undefined),
   };
 
   runInNewContext(workerSource, {
@@ -237,6 +238,39 @@ describe("service worker cache boundaries", () => {
     expect(worker.self.skipWaiting).not.toHaveBeenCalled();
   });
 
+  it("activates a waiting update when the requester is the only window client", async () => {
+    const worker = createWorkerHarness();
+    worker.clients.matchAll.mockResolvedValue([{ id: "client-1" }]);
+
+    const dispatched = await worker.dispatch("message", {
+      data: { type: "ACTIVATE_UPDATE" },
+      source: { id: "client-1", postMessage: vi.fn() },
+    });
+    await Promise.all(dispatched.work);
+
+    expect(worker.self.skipWaiting).toHaveBeenCalledOnce();
+  });
+
+  it("refuses force activation while another window client remains", async () => {
+    const worker = createWorkerHarness();
+    const postMessage = vi.fn();
+    worker.clients.matchAll.mockResolvedValue([
+      { id: "client-1" },
+      { id: "client-2" },
+    ]);
+
+    const dispatched = await worker.dispatch("message", {
+      data: { type: "ACTIVATE_UPDATE" },
+      source: { id: "client-1", postMessage },
+    });
+    await Promise.all(dispatched.work);
+
+    expect(worker.self.skipWaiting).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "UPDATE_ACTIVATION_BLOCKED",
+    });
+  });
+
   it("uses the offline fallback when a navigation cache entry is expired or belongs to another session", async () => {
     const worker = createWorkerHarness();
     const request = getRequest("/dashboard", { mode: "navigate" });
@@ -289,6 +323,7 @@ describe("service worker cache boundaries", () => {
       dispatched.response?.then((response) => response.text()),
     ).resolves.toBe("offline");
   });
+
   it("signals thumbnail use only after the thumbnail response is persisted", async () => {
     const worker = createWorkerHarness();
     const postMessage = vi.fn(() => worker.events.push("thumbnail.used"));
