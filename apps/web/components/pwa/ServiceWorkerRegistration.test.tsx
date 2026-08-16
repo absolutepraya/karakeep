@@ -121,7 +121,7 @@ describe("ServiceWorkerRegistration", () => {
     });
   });
 
-  it("requests activation from a worker that was already waiting before this document checked for updates", async () => {
+  it("requests activation from a worker that was already waiting without re-registering the old app worker", async () => {
     mocks.getRegistration.mockResolvedValue({
       active: mocks.messagePort,
       waiting: mocks.waitingWorker,
@@ -136,6 +136,10 @@ describe("ServiceWorkerRegistration", () => {
       expect(mocks.waitingWorker.postMessage).toHaveBeenCalledWith({
         type: "ACTIVATE_UPDATE",
       });
+    });
+    expect(mocks.register).not.toHaveBeenCalledWith("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
     });
   });
 
