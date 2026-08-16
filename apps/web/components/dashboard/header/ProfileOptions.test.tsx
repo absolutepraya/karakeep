@@ -41,16 +41,22 @@ vi.mock("@karakeep/shared-react/hooks/users", () => ({
 }));
 
 vi.mock("@/lib/i18n/client", () => ({
-  useTranslation: () => ({
+  useTranslation: (namespace?: string) => ({
     t: (key: string) => {
+      if (namespace === "profile_menu") {
+        const profileTranslations: Record<string, string> = {
+          apps_extensions: "Apps & extensions",
+          coming_soon: "Coming soon",
+          documentation: "Documentation",
+        };
+        return profileTranslations[key] ?? key;
+      }
+
       const translations: Record<string, string> = {
         "actions.sign_out": "Sign out",
         "cleanups.cleanups": "Cleanups",
         "options.dark_mode": "Dark mode",
         "options.light_mode": "Light mode",
-        "profile_menu.apps_extensions": "Apps & extensions",
-        "profile_menu.coming_soon": "Coming soon",
-        "profile_menu.documentation": "Documentation",
         "settings.user_settings": "Settings",
       };
       return translations[key] ?? key;
