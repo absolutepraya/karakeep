@@ -187,12 +187,10 @@ describe("ServiceWorkerRegistration", () => {
 
     renderRegistration(<Probe />);
 
-    expect(screen.getByTestId("app-build")).toHaveTextContent("development");
+    expect(screen.getByTestId("app-build").textContent).toBe("development");
     await waitFor(() => {
-      expect(screen.getByTestId("deployed-build")).toHaveTextContent(
-        "bbbbbbb",
-      );
-      expect(screen.getByTestId("update-status")).toHaveTextContent("ready");
+      expect(screen.getByTestId("deployed-build").textContent).toBe("bbbbbbb");
+      expect(screen.getByTestId("update-status").textContent).toBe("ready");
     });
   });
 });
