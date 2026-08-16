@@ -24,7 +24,7 @@ interface SidebarVersionProps {
 export default function SidebarVersion({
   placement = "sidebar",
 }: SidebarVersionProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("profile_menu");
   const { appBuild, deployedBuild, updateStatus } = usePwaLifecycle();
   const visibleBuild = displayBuild(appBuild);
   const newerBuild =
@@ -36,7 +36,7 @@ export default function SidebarVersion({
       ? "flex min-w-0 flex-col gap-0.5 px-2 py-1 text-xs leading-tight"
       : "mt-auto flex min-w-0 flex-col gap-0.5 border-t pt-4 text-xs leading-tight";
 
-  const buildLabel = t("profile_menu.build", { build: visibleBuild });
+  const buildLabel = t("build", { build: visibleBuild });
 
   return (
     <div className={containerClassName}>
@@ -69,8 +69,8 @@ export default function SidebarVersion({
       {newerBuild && (
         <span className="truncate pl-5 font-mono text-muted-foreground">
           {updateStatus === "ready"
-            ? t("profile_menu.update_ready", { build: newerBuild })
-            : t("profile_menu.update_available", { build: newerBuild })}
+            ? t("update_ready", { build: newerBuild })
+            : t("update_available", { build: newerBuild })}
         </span>
       )}
     </div>
