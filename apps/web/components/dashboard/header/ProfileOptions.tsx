@@ -56,19 +56,19 @@ function DarkModeToggle() {
 function ComingSoonFeature({
   icon,
   label,
+  comingSoon,
 }: {
   icon: React.ReactNode;
   label: string;
+  comingSoon: string;
 }) {
-  const { t } = useTranslation();
-
   return (
     <DropdownMenuItem disabled className="items-start">
       <span className="mr-2 mt-0.5 shrink-0">{icon}</span>
       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
         <span className="truncate">{label}</span>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {t("profile_menu.coming_soon")}
+          {comingSoon}
         </span>
       </div>
     </DropdownMenuItem>
@@ -77,6 +77,7 @@ function ComingSoonFeature({
 
 export default function SidebarProfileOptions() {
   const { t } = useTranslation();
+  const { t: tProfile } = useTranslation("profile_menu");
   const toggleTheme = useToggleTheme();
   const { data: session } = useSession();
   const { data: whoami } = useWhoAmI();
@@ -150,11 +151,13 @@ export default function SidebarProfileOptions() {
         <Separator className="my-2" />
         <ComingSoonFeature
           icon={<Puzzle className="size-4" />}
-          label={t("profile_menu.apps_extensions")}
+          label={tProfile("apps_extensions")}
+          comingSoon={tProfile("coming_soon")}
         />
         <ComingSoonFeature
           icon={<BookOpen className="size-4" />}
-          label={t("profile_menu.documentation")}
+          label={tProfile("documentation")}
+          comingSoon={tProfile("coming_soon")}
         />
         <Separator className="my-2" />
         <div className="sm:hidden">
