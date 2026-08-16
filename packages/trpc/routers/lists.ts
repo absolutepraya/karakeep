@@ -1,15 +1,11 @@
-import { experimental_trpcMiddleware } from "@trpc/server";
+import { experimental_trpcMiddleware, TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { eq } from "drizzle-orm";
 
 import type { KarakeepDBTransaction } from "@karakeep/db";
 
-import {
-  bookmarkLists,
-  listCollaborators,
-  listInvitations,
-} from "@karakeep/db/schema";
+import { bookmarkLists, listInvitations } from "@karakeep/db/schema";
 import {
   zBookmarkListSchema,
   zEditBookmarkListSchemaWithValidation,
@@ -26,10 +22,16 @@ import {
   createScopedAuthedProcedure,
   router,
 } from "../index";
+import {
+  getEffectiveCollaboratorGrant,
+  getEffectiveCollaboratorGrantsForOwner,
+  getEffectiveCollaboratorsForList,
+  getEffectiveListAccessUserIds,
+} from "../models/listCollaborationAccess";
 import { ListInvitation } from "../models/listInvitations";
 import { List } from "../models/lists";
-import { ensureBookmarkOwnership } from "./bookmarks";
 import { recordOfflineSyncEvent } from "../models/offlineSync";
+import { ensureBookmarkOwnership } from "./bookmarks";
 
 const listsProcedure = createScopedAuthedProcedure("lists");
 
@@ -64,18 +66,70 @@ async function listSyncUserIds(
   listId: string,
   ownerId: string,
 ) {
-  const collaborators = await ctx.db
-    .select({ userId: listCollaborators.userId })
-    .from(listCollaborators)
-    .where(eq(listCollaborators.listId, listId));
+  const list = await ctx.db.query.bookmarkLists.findFirst({
+    columns: { rssToken: false },
+    where: eq(bookmarkLists.id, listId),
+  });
+  if (!list) {
+    return [ownerId];
+  }
+  const collaborators = await getEffectiveCollaboratorsForList(ctx, list);
   return [ownerId, ...collaborators.map((collaborator) => collaborator.userId)];
+}
+
+async function inheritedListIdsFromGrant(
+  ctx: AuthedContext,
+  sourceListId: string,
+  userId: string,
+) {
+  const source = await List.fromId(ctx, sourceListId);
+  const ownerId = source.asZBookmarkList().userId;
+  const grants = await getEffectiveCollaboratorGrantsForOwner(
+    ctx,
+    ownerId,
+    userId,
+  );
+  return grants
+    .filter(({ grant }) => grant.sourceListId === sourceListId)
+    .map(({ list }) => list.id);
+}
+
+async function listAccessSnapshot(
+  ctx: AuthedContext,
+  listIds: string[],
+  ownerId: string,
+) {
+  return getEffectiveListAccessUserIds(ctx, ownerId, listIds);
+}
+
+async function recordListAccessDiff(
+  tx: KarakeepDBTransaction,
+  listId: string,
+  before: Set<string>,
+  after: Set<string>,
+  changedFields: string[],
+  updateRetained: boolean,
+) {
+  const revoked = [...before].filter((userId) => !after.has(userId));
+  const created = [...after].filter((userId) => !before.has(userId));
+  const retained = updateRetained
+    ? [...after].filter((userId) => before.has(userId))
+    : [];
+  if (revoked.length > 0) {
+    await recordListSyncEvent(tx, revoked, listId, "revoke", []);
+  }
+  if (created.length > 0) {
+    await recordListSyncEvent(tx, created, listId, "create", changedFields);
+  }
+  if (retained.length > 0) {
+    await recordListSyncEvent(tx, retained, listId, "update", changedFields);
+  }
 }
 
 export const ensureListAtLeastViewer = experimental_trpcMiddleware<{
   ctx: AuthedContext;
   input: { listId: string };
 }>().create(async (opts) => {
-  // This would throw if the user can't view the list
   const list = await List.fromId(opts.ctx, opts.input.listId);
   return opts.next({
     ctx: {
@@ -130,13 +184,18 @@ export const listsAppRouter = router({
       const list = await ctx.db.transaction(async (tx) => {
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.create(transactionCtx, input);
-        await recordListSyncEvent(tx, [ctx.user.id], list.id, "create", [
-          "name",
-          "description",
-          "icon",
-          "parentId",
-          "query",
-        ]);
+        const serialized = list.asZBookmarkList();
+        await recordListSyncEvent(
+          tx,
+          await listSyncUserIds(
+            transactionCtx,
+            serialized.id,
+            serialized.userId,
+          ),
+          serialized.id,
+          "create",
+          ["name", "description", "icon", "parentId", "query"],
+        );
         return list;
       });
       addLogFields<"list.create">({ "list.id": list.id });
@@ -151,26 +210,45 @@ export const listsAppRouter = router({
       const list = await ctx.db.transaction(async (tx) => {
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
+        const beforeSerialized = list.asZBookmarkList();
+        const changedFields = [
+          ...(input.name !== undefined ? ["name"] : []),
+          ...(input.description !== undefined ? ["description"] : []),
+          ...(input.icon !== undefined ? ["icon"] : []),
+          ...(input.parentId !== undefined ? ["parentId"] : []),
+          ...(input.query !== undefined ? ["query"] : []),
+          ...(input.public !== undefined ? ["public"] : []),
+        ];
+        const affectedListIds =
+          input.parentId !== undefined
+            ? [
+                beforeSerialized.id,
+                ...(await list.getChildren()).map((child) => child.id),
+              ]
+            : [beforeSerialized.id];
+        const beforeAccess = await listAccessSnapshot(
+          transactionCtx,
+          affectedListIds,
+          beforeSerialized.userId,
+        );
+
         await list.update(input);
         const serialized = list.asZBookmarkList();
-        await recordListSyncEvent(
-          tx,
-          await listSyncUserIds(
-            transactionCtx,
-            serialized.id,
-            serialized.userId,
-          ),
-          serialized.id,
-          "update",
-          [
-            ...(input.name !== undefined ? ["name"] : []),
-            ...(input.description !== undefined ? ["description"] : []),
-            ...(input.icon !== undefined ? ["icon"] : []),
-            ...(input.parentId !== undefined ? ["parentId"] : []),
-            ...(input.query !== undefined ? ["query"] : []),
-            ...(input.public !== undefined ? ["public"] : []),
-          ],
+        const afterAccess = await listAccessSnapshot(
+          transactionCtx,
+          affectedListIds,
+          serialized.userId,
         );
+        for (const listId of affectedListIds) {
+          await recordListAccessDiff(
+            tx,
+            listId,
+            beforeAccess.get(listId) ?? new Set(),
+            afterAccess.get(listId) ?? new Set(),
+            listId === serialized.id ? changedFields : [],
+            listId === serialized.id,
+          );
+        }
         return serialized;
       });
       if (input.public !== undefined) {
@@ -331,7 +409,11 @@ export const listsAppRouter = router({
     )
     .query(async ({ ctx }) => {
       const results = await List.getAll(ctx);
-      return { lists: results.map((l) => l.asZBookmarkList()) };
+      return {
+        lists: results.map((l) =>
+          l.asZBookmarkList({ includeVisibleParent: true }),
+        ),
+      };
     }),
   getListsOfBookmark: listsProcedure
     .input(z.object({ bookmarkId: z.string() }))
@@ -410,11 +492,13 @@ export const listsAppRouter = router({
         listId: z.string(),
         email: z.string().email(),
         role: z.enum(["viewer", "editor"]),
+        recursive: z.boolean().optional().default(false),
       }),
     )
     .output(
       z.object({
         invitationId: z.string(),
+        emailSent: z.boolean(),
       }),
     )
     .use(
@@ -433,13 +517,18 @@ export const listsAppRouter = router({
         const invitationId = await list.addCollaboratorByEmail(
           input.email,
           input.role,
+          input.recursive,
         );
         await recordListSyncEvent(tx, [ctx.user.id], list.id, "update", [
           "collaborators",
         ]);
         return invitationId;
       });
-      return { invitationId };
+
+      // Delivery deliberately happens after the database commit.
+      const invitation = await ListInvitation.fromId(ctx, invitationId);
+      const emailSent = await invitation.sendEmail();
+      return { invitationId, emailSent };
     }),
   removeCollaborator: listsProcedure
     .input(
@@ -455,6 +544,11 @@ export const listsAppRouter = router({
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
         const serialized = list.asZBookmarkList();
+        const revokedListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
         const syncUserIds = await listSyncUserIds(
           transactionCtx,
           serialized.id,
@@ -468,15 +562,74 @@ export const listsAppRouter = router({
           "update",
           ["collaborators"],
         );
-        await recordListSyncEvent(
-          tx,
-          [input.userId],
-          serialized.id,
-          "revoke",
-          [],
-        );
+        for (const revokedListId of revokedListIds) {
+          await recordListSyncEvent(
+            tx,
+            [input.userId],
+            revokedListId,
+            "revoke",
+            [],
+          );
+        }
       });
     }),
+  updateCollaborator: listsProcedure
+    .input(
+      z.object({
+        listId: z.string(),
+        userId: z.string(),
+        role: z.enum(["viewer", "editor"]),
+        recursive: z.boolean(),
+      }),
+    )
+    .use(ensureListAtLeastViewer)
+    .use(ensureListAtLeastOwner)
+    .mutation(async ({ input, ctx }) => {
+      await ctx.db.transaction(async (tx) => {
+        const transactionCtx = asTransactionContext(ctx, tx);
+        const list = await List.fromId(transactionCtx, input.listId);
+        const serialized = list.asZBookmarkList();
+        const beforeListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
+        await list.updateCollaborator(
+          input.userId,
+          input.role,
+          input.recursive,
+        );
+        const afterListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
+        const beforeSet = new Set(beforeListIds);
+        const afterSet = new Set(afterListIds);
+        await recordListSyncEvent(
+          tx,
+          [serialized.userId],
+          serialized.id,
+          "update",
+          ["collaborators"],
+        );
+        for (const listId of beforeSet) {
+          if (!afterSet.has(listId)) {
+            await recordListSyncEvent(tx, [input.userId], listId, "revoke", []);
+          }
+        }
+        for (const listId of afterSet) {
+          await recordListSyncEvent(
+            tx,
+            [input.userId],
+            listId,
+            beforeSet.has(listId) ? "update" : "create",
+            ["collaborators"],
+          );
+        }
+      });
+    }),
+  // Keep the role-only mutation for existing clients. It preserves scope.
   updateCollaboratorRole: listsProcedure
     .input(
       z.object({
@@ -491,19 +644,25 @@ export const listsAppRouter = router({
       await ctx.db.transaction(async (tx) => {
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
-        await list.updateCollaboratorRole(input.userId, input.role);
         const serialized = list.asZBookmarkList();
+        const affectedListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          serialized.id,
+          input.userId,
+        );
+        await list.updateCollaboratorRole(input.userId, input.role);
         await recordListSyncEvent(
           tx,
-          await listSyncUserIds(
-            transactionCtx,
-            serialized.id,
-            serialized.userId,
-          ),
+          [serialized.userId],
           serialized.id,
           "update",
           ["collaborators"],
         );
+        for (const listId of affectedListIds) {
+          await recordListSyncEvent(tx, [input.userId], listId, "update", [
+            "collaborators",
+          ]);
+        }
       });
     }),
   getCollaborators: listsProcedure
@@ -519,9 +678,15 @@ export const listsAppRouter = router({
             id: z.string(),
             userId: z.string(),
             role: z.enum(["viewer", "editor"]),
+            recursive: z.boolean().optional().default(false),
+            inherited: z.boolean().optional().default(false),
+            sourceListId: z.string().optional(),
+            sourceListName: z.string().nullable().optional(),
             status: z.enum(["pending", "accepted", "declined"]),
             addedAt: z.date(),
             invitedAt: z.date(),
+            expiresAt: z.date().optional(),
+            expired: z.boolean().optional().default(false),
             user: z.object({
               id: z.string(),
               name: z.string(),
@@ -572,13 +737,23 @@ export const listsAppRouter = router({
           .where(eq(listInvitations.id, invitation.id));
         await invitation.accept();
         if (invitationData) {
+          const createdListIds = await inheritedListIdsFromGrant(
+            transactionCtx,
+            invitationData.listId,
+            ctx.user.id,
+          );
           await recordListSyncEvent(
             tx,
-            [ctx.user.id, invitationData.listOwnerUserId],
+            [invitationData.listOwnerUserId],
             invitationData.listId,
-            "create",
+            "update",
             ["collaborators"],
           );
+          for (const listId of createdListIds) {
+            await recordListSyncEvent(tx, [ctx.user.id], listId, "create", [
+              "collaborators",
+            ]);
+          }
         }
       });
     }),
@@ -605,6 +780,41 @@ export const listsAppRouter = router({
       await ctx.invitation.revoke();
     }),
 
+  updateInvitation: listsProcedure
+    .input(
+      z.object({
+        invitationId: z.string(),
+        role: z.enum(["viewer", "editor"]),
+        recursive: z.boolean(),
+      }),
+    )
+    .use(ensureInvitationAccess)
+    .mutation(async ({ ctx, input }) => {
+      await ctx.invitation.update({
+        role: input.role,
+        recursive: input.recursive,
+      });
+    }),
+
+  resendInvitation: listsProcedure
+    .input(
+      z.object({
+        invitationId: z.string(),
+      }),
+    )
+    .output(z.object({ emailSent: z.boolean() }))
+    .use(
+      createRateLimitMiddleware({
+        name: "lists.resendInvitation",
+        windowMs: 15 * 60 * 1000,
+        maxRequests: 5,
+      }),
+    )
+    .use(ensureInvitationAccess)
+    .mutation(async ({ ctx }) => {
+      return { emailSent: await ctx.invitation.resend() };
+    }),
+
   getPendingInvitations: listsProcedure
     .output(
       z.array(
@@ -612,7 +822,10 @@ export const listsAppRouter = router({
           id: z.string(),
           listId: z.string(),
           role: z.enum(["viewer", "editor"]),
+          recursive: z.boolean(),
           invitedAt: z.date(),
+          expiresAt: z.date(),
+          expired: z.boolean(),
           list: z.object({
             id: z.string(),
             name: z.string(),
@@ -645,14 +858,46 @@ export const listsAppRouter = router({
         const transactionCtx = asTransactionContext(ctx, tx);
         const list = await List.fromId(transactionCtx, input.listId);
         const serialized = list.asZBookmarkList();
+        if (serialized.userRole === "owner") {
+          await list.leaveList();
+          return;
+        }
+        const rawList = await transactionCtx.db.query.bookmarkLists.findFirst({
+          columns: { rssToken: false },
+          where: eq(bookmarkLists.id, input.listId),
+        });
+        if (!rawList) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
+        }
+        const grant = await getEffectiveCollaboratorGrant(
+          transactionCtx,
+          rawList,
+          ctx.user.id,
+        );
+        if (!grant) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Collaborator not found",
+          });
+        }
+        const source = await List.fromId(transactionCtx, grant.sourceListId);
+        const sourceSerialized = source.asZBookmarkList();
+        const revokedListIds = await inheritedListIdsFromGrant(
+          transactionCtx,
+          grant.sourceListId,
+          ctx.user.id,
+        );
         await list.leaveList();
         await recordListSyncEvent(
           tx,
-          [ctx.user.id],
-          serialized.id,
-          "revoke",
-          [],
+          [sourceSerialized.userId],
+          sourceSerialized.id,
+          "update",
+          ["collaborators"],
         );
+        for (const listId of revokedListIds) {
+          await recordListSyncEvent(tx, [ctx.user.id], listId, "revoke", []);
+        }
       });
     }),
 });

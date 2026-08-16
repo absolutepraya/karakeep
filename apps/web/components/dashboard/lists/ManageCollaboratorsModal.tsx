@@ -26,10 +26,22 @@ import { toast } from "@/components/ui/sonner";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useTranslation } from "@/lib/i18n/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Trash2, UserPlus, Users } from "lucide-react";
+import {
+  Clock3,
+  Loader2,
+  RefreshCw,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 import { ZBookmarkList } from "@karakeep/shared/types/lists";
+
+import {
+  canManageCollaboratorOnList,
+  formatInvitationDate,
+} from "./collaborationUi";
 
 export function ManageCollaboratorsModal({
   open: userOpen,
@@ -51,29 +63,32 @@ export function ManageCollaboratorsModal({
   ) {
     throw new Error("You must provide both open and setOpen or neither");
   }
+
   const [customOpen, customSetOpen] = useState(false);
-  const [open, setOpen] = [
-    userOpen ?? customOpen,
-    userSetOpen ?? customSetOpen,
-  ];
-
-  const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
-  const [newCollaboratorRole, setNewCollaboratorRole] = useState<
-    "viewer" | "editor"
-  >("viewer");
-
+  const open = userOpen ?? customOpen;
+  const setOpen = userSetOpen ?? customSetOpen;
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"viewer" | "editor">("viewer");
+  const [recursive, setRecursive] = useState(false);
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const invalidateListCaches = () =>
+  const { data, isLoading } = useQuery(
+    api.lists.getCollaborators.queryOptions(
+      { listId: list.id },
+      { enabled: open },
+    ),
+  );
+
+  const invalidate = () =>
     Promise.all([
       queryClient.invalidateQueries(
         api.lists.getCollaborators.queryFilter({ listId: list.id }),
       ),
-      queryClient.invalidateQueries(
-        api.lists.get.queryFilter({ listId: list.id }),
-      ),
       queryClient.invalidateQueries(api.lists.list.pathFilter()),
+      queryClient.invalidateQueries(
+        api.lists.getPendingInvitations.pathFilter(),
+      ),
       queryClient.invalidateQueries(
         api.bookmarks.getBookmarks.queryFilter({ listId: list.id }),
       ),
@@ -82,360 +97,453 @@ export function ManageCollaboratorsModal({
       ),
     ]);
 
-  // Fetch collaborators
-  const { data: collaboratorsData, isLoading } = useQuery(
-    api.lists.getCollaborators.queryOptions(
-      { listId: list.id },
-      { enabled: open },
-    ),
-  );
-
-  // Mutations
   const addCollaborator = useMutation(
     api.lists.addCollaborator.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async (result) => {
         toast({
-          description: t("lists.collaborators.invitation_sent"),
+          description: t(
+            result.emailSent
+              ? "lists.collaboration.invitation_delivery_sent"
+              : "lists.collaboration.invitation_delivery_failed",
+          ),
         });
-        setNewCollaboratorEmail("");
-        await invalidateListCaches();
+        setEmail("");
+        setRole("viewer");
+        setRecursive(false);
+        await invalidate();
       },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description: error.message || t("lists.collaborators.failed_to_add"),
-        });
-      },
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
-
+  const updateCollaborator = useMutation(
+    api.lists.updateCollaborator.mutationOptions({
+      onSuccess: invalidate,
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
+    }),
+  );
   const removeCollaborator = useMutation(
     api.lists.removeCollaborator.mutationOptions({
-      onSuccess: async () => {
-        toast({
-          description: t("lists.collaborators.removed"),
-        });
-        await invalidateListCaches();
-      },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description:
-            error.message || t("lists.collaborators.failed_to_remove"),
-        });
-      },
+      onSuccess: invalidate,
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
-
-  const updateCollaboratorRole = useMutation(
-    api.lists.updateCollaboratorRole.mutationOptions({
-      onSuccess: async () => {
-        toast({
-          description: t("lists.collaborators.role_updated"),
-        });
-        await invalidateListCaches();
-      },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description:
-            error.message || t("lists.collaborators.failed_to_update_role"),
-        });
-      },
+  const updateInvitation = useMutation(
+    api.lists.updateInvitation.mutationOptions({
+      onSuccess: invalidate,
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
-
+  const resendInvitation = useMutation(
+    api.lists.resendInvitation.mutationOptions({
+      onSuccess: async (result) => {
+        toast({
+          description: t(
+            result.emailSent
+              ? "lists.collaboration.invitation_delivery_sent"
+              : "lists.collaboration.invitation_delivery_failed",
+          ),
+        });
+        await invalidate();
+      },
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
+    }),
+  );
   const revokeInvitation = useMutation(
     api.lists.revokeInvitation.mutationOptions({
-      onSuccess: async () => {
-        toast({
-          description: t("lists.collaborators.invitation_revoked"),
-        });
-        await invalidateListCaches();
-      },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description:
-            error.message || t("lists.collaborators.failed_to_revoke"),
-        });
-      },
+      onSuccess: invalidate,
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
 
-  const handleAddCollaborator = () => {
-    if (!newCollaboratorEmail.trim()) {
-      toast({
-        variant: "destructive",
-        description: t("lists.collaborators.please_enter_email"),
-      });
-      return;
-    }
+  const visibleCollaborators =
+    data?.collaborators.filter((entry) => entry.status !== "declined") ?? [];
 
+  const invite = () => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) return;
     addCollaborator.mutate({
       listId: list.id,
-      email: newCollaboratorEmail,
-      role: newCollaboratorRole,
+      email: normalizedEmail,
+      role,
+      recursive,
     });
   };
 
+  const roleLabel = (value: "viewer" | "editor") =>
+    t(
+      value === "viewer"
+        ? "lists.collaborators.viewer"
+        : "lists.collaborators.editor",
+    );
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(s) => {
-        setOpen(s);
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <ResponsiveDialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+            <Users className="size-5" />
             {readOnly
               ? t("lists.collaborators.collaborators")
               : t("lists.collaborators.manage")}
-            <Badge className="bg-green-600 text-white hover:bg-green-600/80">
-              Beta
-            </Badge>
           </DialogTitle>
           <DialogDescription>
             {readOnly
               ? t("lists.collaborators.people_with_access")
-              : t("lists.collaborators.add_or_remove")}
+              : t("lists.collaboration.stable_description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Add Collaborator Section */}
           {!readOnly && (
             <div className="space-y-3">
               <Label>{t("lists.collaborators.add")}</Label>
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
-                <div className="min-w-0">
-                  <Input
-                    type="email"
-                    placeholder={t("lists.collaborators.enter_email")}
-                    value={newCollaboratorEmail}
-                    onChange={(e) => setNewCollaboratorEmail(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleAddCollaborator();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:contents">
-                  <Select
-                    value={newCollaboratorRole}
-                    onValueChange={(value) =>
-                      setNewCollaboratorRole(value as "viewer" | "editor")
-                    }
+                <Input
+                  type="email"
+                  value={email}
+                  placeholder={t("lists.collaborators.enter_email")}
+                  onChange={(event) => setEmail(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") invite();
+                  }}
+                />
+                <Select
+                  value={role}
+                  onValueChange={(value) =>
+                    setRole(value as "viewer" | "editor")
+                  }
+                >
+                  <SelectTrigger
+                    aria-label={t("lists.collaboration.invitation_role")}
                   >
-                    <SelectTrigger
-                      className="h-10 w-full sm:w-32"
-                      aria-label={`${t("lists.collaborators.add")} ${t("common.role")}`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="viewer">
-                        {t("lists.collaborators.viewer")}
-                      </SelectItem>
-                      <SelectItem value="editor">
-                        {t("lists.collaborators.editor")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    className="h-10 w-full gap-2 sm:w-auto"
-                    onClick={handleAddCollaborator}
-                    disabled={addCollaborator.isPending}
-                    aria-label={t("lists.collaborators.add")}
-                  >
-                    {addCollaborator.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <UserPlus className="h-4 w-4" />
-                    )}
-                    <span className="sm:hidden">
-                      {t("lists.collaborators.add")}
-                    </span>
-                  </Button>
-                </div>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">
+                      {t("lists.collaborators.viewer")}
+                    </SelectItem>
+                    <SelectItem value="editor">
+                      {t("lists.collaborators.editor")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  className="gap-2"
+                  onClick={invite}
+                  disabled={addCollaborator.isPending || !email.trim()}
+                >
+                  {addCollaborator.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="size-4" />
+                  )}
+                  {t("lists.collaboration.invite")}
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                <strong>{t("lists.collaborators.viewer")}:</strong>{" "}
-                {t("lists.collaborators.viewer_description")}
-                <br />
-                <strong>{t("lists.collaborators.editor")}:</strong>{" "}
-                {t("lists.collaborators.editor_description")}
-              </p>
+              <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4"
+                  checked={recursive}
+                  onChange={(event) => setRecursive(event.target.checked)}
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    {t("lists.collaboration.share_all_nested")}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {t("lists.collaboration.share_all_nested_description")}
+                  </span>
+                </span>
+              </label>
             </div>
           )}
 
-          {/* Current Collaborators */}
           <div className="space-y-3">
-            <Label>
-              {readOnly
-                ? t("lists.collaborators.collaborators")
-                : t("lists.collaborators.current")}
-            </Label>
+            <Label>{t("lists.collaborators.current")}</Label>
             {isLoading ? (
               <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Loader2 className="size-6 animate-spin" />
               </div>
-            ) : collaboratorsData ? (
+            ) : (
               <div className="space-y-2">
-                {/* Show owner first */}
-                {collaboratorsData.owner && (
-                  <div
-                    key={`owner-${collaboratorsData.owner.id}`}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex flex-1 items-center gap-3">
+                {data?.owner && (
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <UserAvatar
-                        name={collaboratorsData.owner.name}
-                        image={collaboratorsData.owner.image}
-                        className="size-10 ring-1 ring-border"
+                        name={data.owner.name}
+                        image={data.owner.image}
+                        className="size-10"
                       />
-                      <div className="flex-1">
-                        <div className="font-medium">
-                          {collaboratorsData.owner.name}
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">
+                          {data.owner.name}
                         </div>
-                        {collaboratorsData.owner.email && (
-                          <div className="text-sm text-muted-foreground">
-                            {collaboratorsData.owner.email}
+                        {data.owner.email && (
+                          <div className="truncate text-sm text-muted-foreground">
+                            {data.owner.email}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="text-sm capitalize text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {t("lists.collaborators.owner")}
-                    </div>
+                    </span>
                   </div>
                 )}
-                {/* Show collaborators */}
-                {collaboratorsData.collaborators.length > 0 ? (
-                  collaboratorsData.collaborators.map((collaborator) => (
+
+                {visibleCollaborators.map((collaborator) => {
+                  const pending = collaborator.status === "pending";
+                  const expired = pending && collaborator.expired;
+                  const manageable = canManageCollaboratorOnList(collaborator);
+                  return (
                     <div
                       key={collaborator.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
+                      className="rounded-lg border p-3"
                     >
-                      <div className="flex flex-1 items-center gap-3">
-                        <UserAvatar
-                          name={collaborator.user.name}
-                          image={collaborator.user.image}
-                          className="size-10 ring-1 ring-border"
-                        />
-                        <div className="flex-1">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <UserAvatar
+                            name={collaborator.user.name}
+                            image={
+                              collaborator.status === "accepted"
+                                ? collaborator.user.image
+                                : null
+                            }
+                            className="size-10"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="truncate font-medium">
+                                {collaborator.user.name}
+                              </span>
+                              {pending && (
+                                <Badge
+                                  variant={expired ? "destructive" : "outline"}
+                                >
+                                  {expired
+                                    ? t("lists.collaboration.expired")
+                                    : t("lists.collaborators.pending")}
+                                </Badge>
+                              )}
+                              {collaborator.inherited && (
+                                <Badge variant="secondary">
+                                  {t("lists.collaboration.inherited")}
+                                </Badge>
+                              )}
+                              {collaborator.recursive && (
+                                <Badge variant="outline">
+                                  {t("lists.collaboration.nested_lists")}
+                                </Badge>
+                              )}
+                            </div>
+                            {collaborator.user.email && (
+                              <div className="truncate text-sm text-muted-foreground">
+                                {collaborator.user.email}
+                              </div>
+                            )}
+                            {collaborator.inherited &&
+                              collaborator.sourceListName && (
+                                <div className="text-xs text-muted-foreground">
+                                  {t("lists.collaboration.inherited_from", {
+                                    name: collaborator.sourceListName,
+                                  })}
+                                </div>
+                              )}
+                            {pending && collaborator.expiresAt && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock3 className="size-3" />
+                                {expired
+                                  ? t("lists.collaboration.expired")
+                                  : t("lists.collaboration.expires")}{" "}
+                                {formatInvitationDate(collaborator.expiresAt)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {readOnly || collaborator.inherited ? (
                           <div className="flex items-center gap-2">
-                            <div className="font-medium">
-                              {collaborator.user.name}
-                            </div>
-                            {collaborator.status === "pending" && (
-                              <Badge variant="outline" className="text-xs">
-                                {t("lists.collaborators.pending")}
-                              </Badge>
-                            )}
-                            {collaborator.status === "declined" && (
-                              <Badge variant="destructive" className="text-xs">
-                                {t("lists.collaborators.declined")}
-                              </Badge>
-                            )}
+                            <span className="text-sm text-muted-foreground">
+                              {roleLabel(collaborator.role)}
+                            </span>
+                            {!readOnly &&
+                              collaborator.inherited &&
+                              collaborator.user.email && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEmail(collaborator.user.email ?? "");
+                                    setRole(collaborator.role);
+                                    setRecursive(false);
+                                  }}
+                                >
+                                  {t("lists.collaboration.override_here")}
+                                </Button>
+                              )}
                           </div>
-                          {collaborator.user.email && (
-                            <div className="text-sm text-muted-foreground">
-                              {collaborator.user.email}
-                            </div>
-                          )}
-                        </div>
+                        ) : pending ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select
+                              value={collaborator.role}
+                              disabled={expired}
+                              onValueChange={(value) =>
+                                updateInvitation.mutate({
+                                  invitationId: collaborator.id,
+                                  role: value as "viewer" | "editor",
+                                  recursive: collaborator.recursive,
+                                })
+                              }
+                            >
+                              <SelectTrigger
+                                className="w-28"
+                                aria-label={t(
+                                  "lists.collaboration.pending_invitation_role",
+                                )}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="viewer">
+                                  {t("lists.collaborators.viewer")}
+                                </SelectItem>
+                                <SelectItem value="editor">
+                                  {t("lists.collaborators.editor")}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <label className="flex items-center gap-2 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={collaborator.recursive}
+                                disabled={expired}
+                                onChange={(event) =>
+                                  updateInvitation.mutate({
+                                    invitationId: collaborator.id,
+                                    role: collaborator.role,
+                                    recursive: event.target.checked,
+                                  })
+                                }
+                              />
+                              {t("lists.collaboration.nested_lists")}
+                            </label>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                resendInvitation.mutate({
+                                  invitationId: collaborator.id,
+                                })
+                              }
+                            >
+                              <RefreshCw className="mr-1 size-3" />
+                              {t("lists.collaboration.resend")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                revokeInvitation.mutate({
+                                  invitationId: collaborator.id,
+                                })
+                              }
+                            >
+                              {t("lists.collaborators.revoke")}
+                            </Button>
+                          </div>
+                        ) : manageable ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select
+                              value={collaborator.role}
+                              onValueChange={(value) =>
+                                updateCollaborator.mutate({
+                                  listId: list.id,
+                                  userId: collaborator.userId,
+                                  role: value as "viewer" | "editor",
+                                  recursive: collaborator.recursive,
+                                })
+                              }
+                            >
+                              <SelectTrigger
+                                className="w-28"
+                                aria-label={t(
+                                  "lists.collaboration.collaborator_role",
+                                )}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="viewer">
+                                  {t("lists.collaborators.viewer")}
+                                </SelectItem>
+                                <SelectItem value="editor">
+                                  {t("lists.collaborators.editor")}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <label className="flex items-center gap-2 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={collaborator.recursive}
+                                onChange={(event) =>
+                                  updateCollaborator.mutate({
+                                    listId: list.id,
+                                    userId: collaborator.userId,
+                                    role: collaborator.role,
+                                    recursive: event.target.checked,
+                                  })
+                                }
+                              />
+                              {t("lists.collaboration.nested_lists")}
+                            </label>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label={t("lists.collaboration.remove_aria", {
+                                name: collaborator.user.name,
+                              })}
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    t(
+                                      "lists.collaboration.remove_confirmation",
+                                      {
+                                        name: collaborator.user.name,
+                                      },
+                                    ),
+                                  )
+                                ) {
+                                  removeCollaborator.mutate({
+                                    listId: list.id,
+                                    userId: collaborator.userId,
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
-                      {readOnly ? (
-                        <div className="text-sm capitalize text-muted-foreground">
-                          {collaborator.role}
-                        </div>
-                      ) : collaborator.status !== "accepted" ? (
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm capitalize text-muted-foreground">
-                            {collaborator.role}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              revokeInvitation.mutate({
-                                invitationId: collaborator.id,
-                              })
-                            }
-                            disabled={revokeInvitation.isPending}
-                          >
-                            {t("lists.collaborators.revoke")}
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={collaborator.role}
-                            onValueChange={(value) =>
-                              updateCollaboratorRole.mutate({
-                                listId: list.id,
-                                userId: collaborator.userId,
-                                role: value as "viewer" | "editor",
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-28">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="viewer">
-                                {t("lists.collaborators.viewer")}
-                              </SelectItem>
-                              <SelectItem value="editor">
-                                {t("lists.collaborators.editor")}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              removeCollaborator.mutate({
-                                listId: list.id,
-                                userId: collaborator.userId,
-                              })
-                            }
-                            disabled={removeCollaborator.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      )}
                     </div>
-                  ))
-                ) : !collaboratorsData.owner ? (
-                  <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                    {readOnly
-                      ? t("lists.collaborators.no_collaborators_readonly")
-                      : t("lists.collaborators.no_collaborators")}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                {readOnly
-                  ? t("lists.collaborators.no_collaborators_readonly")
-                  : t("lists.collaborators.no_collaborators")}
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
-        <DialogFooter className="sm:justify-end">
+        <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
-              {t("actions.close")}
-            </Button>
+            <Button variant="secondary">{t("actions.close")}</Button>
           </DialogClose>
         </DialogFooter>
       </ResponsiveDialogContent>

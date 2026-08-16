@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,127 +14,158 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { useTranslation } from "@/lib/i18n/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Mail, X } from "lucide-react";
+import { Check, Clock3, Loader2, Mail, X } from "lucide-react";
 
 import { useTRPC } from "@karakeep/shared-react/trpc";
 
+import { formatInvitationDate } from "./collaborationUi";
+
 interface Invitation {
   id: string;
-  role: string;
+  role: "viewer" | "editor";
+  recursive: boolean;
+  expiresAt: Date;
+  expired: boolean;
   list: {
     name: string;
     icon?: string;
     description?: string | null;
-    owner?: {
-      name?: string;
-    } | null;
+    owner?: { name?: string } | null;
   };
 }
 
-function InvitationRow({ invitation }: { invitation: Invitation }) {
+function InvitationRow({
+  invitation,
+  highlighted,
+}: {
+  invitation: Invitation;
+  highlighted: boolean;
+}) {
   const api = useTRPC();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
+  const invalidate = () =>
+    Promise.all([
+      queryClient.invalidateQueries(
+        api.lists.getPendingInvitations.pathFilter(),
+      ),
+      queryClient.invalidateQueries(api.lists.list.pathFilter()),
+    ]);
+
   const acceptInvitation = useMutation(
     api.lists.acceptInvitation.mutationOptions({
       onSuccess: async () => {
-        toast({
-          description: t("lists.invitations.accepted"),
-        });
-        await Promise.all([
-          queryClient.invalidateQueries(
-            api.lists.getPendingInvitations.pathFilter(),
-          ),
-          queryClient.invalidateQueries(api.lists.list.pathFilter()),
-        ]);
+        toast({ description: t("lists.invitations.accepted") });
+        await invalidate();
       },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description: error.message || t("lists.invitations.failed_to_accept"),
-        });
-      },
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
-
   const declineInvitation = useMutation(
     api.lists.declineInvitation.mutationOptions({
       onSuccess: async () => {
-        toast({
-          description: t("lists.invitations.declined"),
-        });
-        await queryClient.invalidateQueries(
-          api.lists.getPendingInvitations.pathFilter(),
-        );
+        toast({ description: t("lists.invitations.declined") });
+        await invalidate();
       },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          description:
-            error.message || t("lists.invitations.failed_to_decline"),
-        });
-      },
+      onError: (error) =>
+        toast({ variant: "destructive", description: error.message }),
     }),
   );
 
+  const roleLabel = t(
+    invitation.role === "viewer"
+      ? "lists.collaborators.viewer"
+      : "lists.collaborators.editor",
+  );
+
   return (
-    <div className="flex items-center justify-between rounded-lg border p-4">
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{invitation.list.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {invitation.list.icon}
-          </span>
-        </div>
-        {invitation.list.description && (
-          <div className="mt-1 text-sm text-muted-foreground">
-            {invitation.list.description}
+    <div
+      id={`pending-invitation-${invitation.id}`}
+      className={`rounded-lg border p-4 ${highlighted ? "ring-2 ring-primary ring-offset-2" : ""}`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">
+              {invitation.list.icon} {invitation.list.name}
+            </span>
+            <Badge variant="outline">{roleLabel}</Badge>
+            {invitation.recursive && (
+              <Badge variant="secondary">
+                {t("lists.collaboration.includes_nested_lists")}
+              </Badge>
+            )}
+            {invitation.expired && (
+              <Badge variant="destructive">
+                {t("lists.collaboration.expired")}
+              </Badge>
+            )}
           </div>
-        )}
-        <div className="mt-2 text-sm text-muted-foreground">
-          {t("lists.invitations.invited_by")}{" "}
-          <span className="font-medium">
-            {invitation.list.owner?.name || "Unknown"}
-          </span>
-          {" • "}
-          <span className="capitalize">{invitation.role}</span>
+          {invitation.list.description && (
+            <div className="mt-1 text-sm text-muted-foreground">
+              {invitation.list.description}
+            </div>
+          )}
+          <div className="mt-2 text-sm text-muted-foreground">
+            {t("lists.invitations.invited_by")}{" "}
+            <span className="font-medium">
+              {invitation.list.owner?.name || t("lists.collaboration.unknown")}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock3 className="size-3" />
+            {invitation.expired
+              ? t("lists.collaboration.expired")
+              : t("lists.collaboration.expires")}{" "}
+            {formatInvitationDate(invitation.expiresAt)}
+          </div>
+          {invitation.expired && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("lists.collaboration.expired_help")}
+            </p>
+          )}
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() =>
-            declineInvitation.mutate({ invitationId: invitation.id })
-          }
-          disabled={declineInvitation.isPending || acceptInvitation.isPending}
-        >
-          {declineInvitation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <X className="mr-1 h-4 w-4" />
-              {t("lists.invitations.decline")}
-            </>
-          )}
-        </Button>
-        <Button
-          size="sm"
-          onClick={() =>
-            acceptInvitation.mutate({ invitationId: invitation.id })
-          }
-          disabled={acceptInvitation.isPending || declineInvitation.isPending}
-        >
-          {acceptInvitation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <Check className="mr-1 h-4 w-4" />
-              {t("lists.invitations.accept")}
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={declineInvitation.isPending || acceptInvitation.isPending}
+            onClick={() =>
+              declineInvitation.mutate({ invitationId: invitation.id })
+            }
+          >
+            {declineInvitation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <X className="mr-1 size-4" />
+                {t("lists.invitations.decline")}
+              </>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            disabled={
+              invitation.expired ||
+              acceptInvitation.isPending ||
+              declineInvitation.isPending
+            }
+            onClick={() =>
+              acceptInvitation.mutate({ invitationId: invitation.id })
+            }
+          >
+            {acceptInvitation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <Check className="mr-1 size-4" />
+                {t("lists.invitations.accept")}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -140,26 +174,29 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
 export function PendingInvitationsCard() {
   const api = useTRPC();
   const { t } = useTranslation();
-
+  const searchParams = useSearchParams();
+  const highlightedInvitationId = searchParams.get("pendingInvitation");
   const { data: invitations, isLoading } = useQuery(
     api.lists.getPendingInvitations.queryOptions(),
   );
 
-  if (isLoading) {
-    return null;
-  }
+  useEffect(() => {
+    if (!highlightedInvitationId || !invitations) return;
+    if (!invitations.some((item) => item.id === highlightedInvitationId))
+      return;
+    document
+      .getElementById(`pending-invitation-${highlightedInvitationId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightedInvitationId, invitations]);
 
-  if (!invitations || invitations.length === 0) {
-    return null;
-  }
+  if (isLoading || !invitations?.length) return null;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-normal">
-          <Mail className="h-5 w-5" />
+          <Mail className="size-5" />
           {t("lists.invitations.pending")}
-
           <span className="rounded bg-secondary p-1 text-sm text-secondary-foreground">
             {invitations.length}
           </span>
@@ -168,7 +205,11 @@ export function PendingInvitationsCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         {invitations.map((invitation) => (
-          <InvitationRow key={invitation.id} invitation={invitation} />
+          <InvitationRow
+            key={invitation.id}
+            invitation={invitation}
+            highlighted={invitation.id === highlightedInvitationId}
+          />
         ))}
       </CardContent>
     </Card>
