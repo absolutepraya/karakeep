@@ -30,10 +30,17 @@ i18next
     preload: runsOnServerSide ? languages : [],
   });
 
-export function useTranslation<
-  Ns extends "translation" | "profile_menu" = "translation",
->(ns?: Ns) {
-  return useTranslationOrg(ns ?? ("translation" as Ns));
+export function useTranslation(): ReturnType<
+  typeof useTranslationOrg<"translation">
+>;
+export function useTranslation(ns: "translation"): ReturnType<
+  typeof useTranslationOrg<"translation">
+>;
+export function useTranslation(ns: "profile_menu"): ReturnType<
+  typeof useTranslationOrg<"profile_menu">
+>;
+export function useTranslation(ns: "translation" | "profile_menu" = "translation") {
+  return useTranslationOrg(ns);
 }
 
 export const Trans = TransOrg;
