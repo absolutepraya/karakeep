@@ -112,7 +112,7 @@ Pull requests targeting `main` may receive automated reviews from CodeRabbit, So
 
 AI review is advisory:
 - GitHub Actions remains the source of truth for deterministic lint, format, typecheck, test, generated-artifact, Knip, and React Doctor validation.
-- AI reviewers add contextual review signal; they do not replace CI and are not required merge gates by default.
+- AI reviewers add contextual review signal; they do not replace CI and are not required merge gates.
 - Reviewer comments are claims to verify, not instructions to change intended behavior. Check them against the issue/spec, surrounding code, tests, docs, and actual semantics before implementing a suggested fix.
 - This repository's reviewer setup must not automatically commit, push, apply suggestions, or run autonomous fixer agents.
 
