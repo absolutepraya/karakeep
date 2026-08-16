@@ -130,7 +130,7 @@ package manifests and lockfiles
 
 Validation checklist:
 
-- compare branch with `main`;
+- compare branch with the latest `main` and sync normally if behind;
 - confirm no Qodo configuration remains;
 - confirm no AI review is described as required/blocking;
 - confirm no auto-fix/auto-commit/auto-push behavior is enabled;
@@ -138,6 +138,12 @@ Validation checklist:
 - confirm App access is repository-only;
 - confirm GitHub Actions is not described as replaced by AI review;
 - confirm no secrets or credentials are present;
+- run documentation validation:
+  - `pnpm --filter @karakeep/docs typecheck`
+  - `pnpm --filter @karakeep/docs build`
+- because this is a larger repository-doc rewrite, also run:
+  - `pnpm lint`
+  - `pnpm typecheck`
 - review final diff against issue #40 and the design file.
 
 ---
@@ -163,6 +169,8 @@ Do not merge the PR automatically.
 ## Task 6: Maintainer-assisted live GitHub App setup
 
 Perform these steps only after the PR exists so it can be used as the test target.
+
+Before either installation, inspect the `main` branch protection/rulesets and confirm no AI-review status is required. Repeat the check after each installation. If `Sourcery review`, a Graphite reviewer status, or any other AI-review check becomes required, remove that requirement before treating the rollout as successful.
 
 ### Sourcery
 
@@ -201,6 +209,7 @@ Perform these steps only after the PR exists so it can be used as the test targe
 ## Task 7: Inspect live review output
 
 - [ ] Confirm none of the reviewers automatically commits, pushes, applies code, or mutates the branch.
+- [ ] Confirm no AI reviewer status is required by branch protection/rulesets.
 - [ ] Inspect for duplicate/noisy feedback.
 - [ ] If a reviewer suggests a behavior-changing fix, classify and verify it instead of implementing it automatically.
 - [ ] Fix only repository-side configuration mistakes clearly caused by this rollout.
@@ -222,4 +231,4 @@ This task happens only after the maintainer explicitly merges the implementation
 
 ## Completion boundary
 
-For PR #41, "done" means the repository-side policy/docs are complete, Qodo is absent from the final diff, Sourcery and Graphite have been safely authorized and smoke-tested if their permissions/free plans are acceptable, CodeRabbit still works, and the PR remains open for explicit maintainer merge approval.
+For PR #41, "done" means the repository-side policy/docs are complete and current with `main`, Qodo is absent from the final diff, Sourcery and Graphite have been safely authorized and smoke-tested if their permissions/free plans are acceptable, no AI reviewer status is a required merge gate, CodeRabbit still works, validation is green, and the PR remains open for explicit maintainer merge approval.
