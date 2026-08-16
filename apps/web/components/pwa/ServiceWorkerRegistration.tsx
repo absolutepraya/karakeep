@@ -103,7 +103,6 @@ export default function ServiceWorkerRegistration({
     }
 
     let installingWorker: ServiceWorker | null = null;
-    let installingStateChange: (() => void) | null = null;
 
     const receiveWorkerMessage = (event: MessageEvent<WorkerMessage>) => {
       if (
@@ -130,27 +129,20 @@ export default function ServiceWorkerRegistration({
       registration: ServiceWorkerRegistration,
       installing: ServiceWorker,
     ) => {
-      if (installingWorker && installingStateChange) {
-        installingWorker.removeEventListener(
-          "statechange",
-          installingStateChange,
-        );
+      if (installingWorker) {
+        installingWorker.onstatechange = null;
       }
 
-      const handleStateChange = () => {
+      installingWorker = installing;
+      installing.onstatechange = () => {
         if (installing.state === "installed" && registration.waiting) {
           setUpdateStatus("ready");
-          installing.removeEventListener("statechange", handleStateChange);
+          installing.onstatechange = null;
           if (installingWorker === installing) {
             installingWorker = null;
-            installingStateChange = null;
           }
         }
       };
-
-      installingWorker = installing;
-      installingStateChange = handleStateChange;
-      installing.addEventListener("statechange", handleStateChange);
     };
 
     const runUpdateCheck = async () => {
@@ -267,11 +259,8 @@ export default function ServiceWorkerRegistration({
     })();
 
     return () => {
-      if (installingWorker && installingStateChange) {
-        installingWorker.removeEventListener(
-          "statechange",
-          installingStateChange,
-        );
+      if (installingWorker) {
+        installingWorker.onstatechange = null;
       }
       navigator.serviceWorker.removeEventListener(
         "message",
