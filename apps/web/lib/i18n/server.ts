@@ -3,9 +3,7 @@ import { createInstance } from "i18next";
 import resourcesToBackend from "i18next-resources-to-backend";
 import { initReactI18next } from "react-i18next/initReactI18next";
 
-import { getOptions } from "./settings";
-
-const DEFAULT_NAMESPACE = "translation" as const;
+import { defaultNS, getOptions } from "./settings";
 
 const initI18next = async (lng: string) => {
   const i18nInstance = createInstance();
@@ -17,7 +15,7 @@ const initI18next = async (lng: string) => {
           import(`./locales/${language}/${namespace}.json`),
       ),
     )
-    .init(getOptions(lng, DEFAULT_NAMESPACE));
+    .init(getOptions(lng, defaultNS));
   return i18nInstance;
 };
 
@@ -25,7 +23,7 @@ export async function useTranslation() {
   const lng = (await getUserLocalSettings()).lang;
   const i18nextInstance = await initI18next(lng);
   return {
-    t: i18nextInstance.getFixedT(lng, DEFAULT_NAMESPACE),
+    t: i18nextInstance.getFixedT(lng, defaultNS),
     i18n: i18nextInstance,
   };
 }
