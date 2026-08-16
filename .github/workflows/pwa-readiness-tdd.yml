@@ -1,0 +1,32 @@
+name: PWA Readiness TDD
+
+on:
+  pull_request:
+    branches: ["*"]
+    paths:
+      - "apps/web/components/pwa/ServiceWorkerRegistration.tsx"
+      - "apps/web/components/pwa/ServiceWorkerRegistration.readiness.test.tsx"
+      - ".github/workflows/pwa-readiness-tdd.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-readiness-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./tooling/github/setup
+        with:
+          node-version: "22.21.1"
+
+      - name: Reproduce installed-worker readiness race
+        run: pnpm --filter @karakeep/web test --run components/pwa/ServiceWorkerRegistration.readiness.test.tsx
