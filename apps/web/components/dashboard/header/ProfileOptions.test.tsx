@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfileOptions from "./ProfileOptions";
 
@@ -117,6 +117,10 @@ describe("ProfileOptions", () => {
   beforeEach(() => {
     mocks.push.mockReset();
     mocks.toggleTheme.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("replaces upstream actions with disabled Marka coming-soon features", () => {
