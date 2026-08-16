@@ -2,12 +2,12 @@
 
 import React, {
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useRef,
   useState,
 } from "react";
-import type { ReactNode } from "react";
 
 import { useSession } from "@/lib/auth/client";
 import { recordThumbnailAccess } from "@/lib/offline-library/repository";
@@ -168,8 +168,14 @@ export default function ServiceWorkerRegistration({
     };
 
     const runUpdateCheck = async () => {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10_000);
+
       try {
-        const response = await fetch("/api/version", { cache: "no-store" });
+        const response = await fetch("/api/version", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
         if (!response.ok) {
           return;
         }
@@ -212,6 +218,8 @@ export default function ServiceWorkerRegistration({
         }
       } catch {
         // Update discovery is best-effort and must never block app startup.
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     };
 
