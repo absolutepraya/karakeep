@@ -1,12 +1,13 @@
 import { getUserLocalSettings } from "@/lib/userLocalSettings/userLocalSettings";
-import { createInstance, FlatNamespace, KeyPrefix } from "i18next";
+import { createInstance } from "i18next";
 import resourcesToBackend from "i18next-resources-to-backend";
-import { FallbackNs } from "react-i18next";
 import { initReactI18next } from "react-i18next/initReactI18next";
 
 import { getOptions } from "./settings";
 
-const initI18next = async (lng: string, ns: string | string[]) => {
+const DEFAULT_NAMESPACE = "translation" as const;
+
+const initI18next = async (lng: string) => {
   const i18nInstance = createInstance();
   await i18nInstance
     .use(initReactI18next)
@@ -16,23 +17,15 @@ const initI18next = async (lng: string, ns: string | string[]) => {
           import(`./locales/${language}/${namespace}.json`),
       ),
     )
-    .init(getOptions(lng, ns?.toString()));
+    .init(getOptions(lng, DEFAULT_NAMESPACE));
   return i18nInstance;
 };
 
-export async function useTranslation<
-  Ns extends FlatNamespace = "translation",
-  KPrefix extends KeyPrefix<FallbackNs<Ns>> = undefined,
->(ns?: Ns, options: { keyPrefix?: KPrefix } = {}) {
+export async function useTranslation() {
   const lng = (await getUserLocalSettings()).lang;
-  const resolvedNs = (ns ?? "translation") as Ns;
-  const i18nextInstance = await initI18next(lng, resolvedNs);
+  const i18nextInstance = await initI18next(lng);
   return {
-    t: i18nextInstance.getFixedT<Ns, KPrefix>(
-      lng,
-      resolvedNs,
-      options.keyPrefix,
-    ),
+    t: i18nextInstance.getFixedT(lng, DEFAULT_NAMESPACE),
     i18n: i18nextInstance,
   };
 }
