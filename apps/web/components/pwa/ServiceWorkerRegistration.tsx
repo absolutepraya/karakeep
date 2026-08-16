@@ -102,6 +102,9 @@ export default function ServiceWorkerRegistration({
       return;
     }
 
+    let installingWorker: ServiceWorker | null = null;
+    let installingStateChange: (() => void) | null = null;
+
     const receiveWorkerMessage = (event: MessageEvent<WorkerMessage>) => {
       if (
         event.data?.type === "THUMBNAIL_USED" &&
@@ -121,6 +124,33 @@ export default function ServiceWorkerRegistration({
         handoffReloadedRef.current = true;
         window.history.go(0);
       }
+    };
+
+    const watchInstallingWorker = (
+      registration: ServiceWorkerRegistration,
+      installing: ServiceWorker,
+    ) => {
+      if (installingWorker && installingStateChange) {
+        installingWorker.removeEventListener(
+          "statechange",
+          installingStateChange,
+        );
+      }
+
+      const handleStateChange = () => {
+        if (installing.state === "installed" && registration.waiting) {
+          setUpdateStatus("ready");
+          installing.removeEventListener("statechange", handleStateChange);
+          if (installingWorker === installing) {
+            installingWorker = null;
+            installingStateChange = null;
+          }
+        }
+      };
+
+      installingWorker = installing;
+      installingStateChange = handleStateChange;
+      installing.addEventListener("statechange", handleStateChange);
     };
 
     const runUpdateCheck = async () => {
@@ -149,21 +179,15 @@ export default function ServiceWorkerRegistration({
             updateViaCache: "none",
           },
         );
+        registrationRef.current = registration;
 
         if (registration.waiting) {
           setUpdateStatus("ready");
           return;
         }
 
-        const installing = registration.installing;
-        if (installing) {
-          const handleStateChange = () => {
-            if (installing.state === "installed" && registration.waiting) {
-              setUpdateStatus("ready");
-              installing.removeEventListener("statechange", handleStateChange);
-            }
-          };
-          installing.addEventListener("statechange", handleStateChange);
+        if (registration.installing) {
+          watchInstallingWorker(registration, registration.installing);
         }
       } catch {
         // Update discovery is best-effort and must never block app startup.
@@ -201,6 +225,8 @@ export default function ServiceWorkerRegistration({
       try {
         const existingRegistration =
           await navigator.serviceWorker.getRegistration("/");
+        let registration = existingRegistration;
+
         if (existingRegistration?.waiting) {
           handoffArmedRef.current = true;
           existingRegistration.waiting.postMessage({
@@ -208,13 +234,26 @@ export default function ServiceWorkerRegistration({
           } satisfies WorkerMessage);
         }
 
-        const registration = await navigator.serviceWorker.register(
+        const expectedCurrentWorkerUrl = new URL(
           serviceWorkerUrl,
-          {
-            scope: "/",
-            updateViaCache: "none",
-          },
+          window.location.href,
+        ).href;
+        const hasPendingWorker = Boolean(
+          existingRegistration?.waiting ?? existingRegistration?.installing,
         );
+        const activeMatchesCurrent =
+          existingRegistration?.active?.scriptURL === expectedCurrentWorkerUrl;
+
+        if (!registration || (!hasPendingWorker && !activeMatchesCurrent)) {
+          registration = await navigator.serviceWorker.register(
+            serviceWorkerUrl,
+            {
+              scope: "/",
+              updateViaCache: "none",
+            },
+          );
+        }
+
         registrationRef.current = registration;
         syncDocumentCacheSession();
         if (sessionStatusRef.current === "unauthenticated") {
@@ -228,6 +267,12 @@ export default function ServiceWorkerRegistration({
     })();
 
     return () => {
+      if (installingWorker && installingStateChange) {
+        installingWorker.removeEventListener(
+          "statechange",
+          installingStateChange,
+        );
+      }
       navigator.serviceWorker.removeEventListener(
         "message",
         receiveWorkerMessage,
