@@ -25,7 +25,7 @@ The same change removes upstream-oriented profile actions, removes the social ro
 
 ### Client lifecycle provider
 
-`apps/web/components/pwa/ServiceWorkerRegistration.tsx` remains the service-worker integration point and now also provides shared PWA lifecycle state.
+`apps/web/components/pwa/ServiceWorkerRegistration.tsx` remains the service worker integration point and now also provides shared PWA lifecycle state.
 
 It exports:
 
@@ -60,6 +60,8 @@ On mount and when the document becomes visible:
 5. Report `available` while the target worker is not waiting and `ready` once that exact target build is waiting.
 
 Only one update check runs at a time. After success, failure, or timeout, the in-flight guard clears so a later lifecycle trigger may retry.
+
+When an installing worker is observed, the provider attaches a state-change handler and immediately re-checks the worker's current state and registration. This closes the race where installation can finish before the handler is attached, ensuring an already-installed matching waiting worker is reported as `ready`.
 
 ### Fresh-load handoff
 
@@ -106,7 +108,7 @@ Build abc1234
 Update ready · def5678
 ```
 
-Valid running-build SHAs link to the matching commit in `absolutepraya/karakeep`.
+Valid running-build SHAs link to the matching commit in `absolutepraya/karakeep`. Non-SHA values such as `development` render as plain build text without a commit link.
 
 ### Profile cleanup
 
@@ -126,9 +128,9 @@ The profile/build strings live in:
 apps/web/lib/i18n/locales/en/profile_menu.json
 ```
 
-`apps/web/@types/i18next.d.ts` registers `profile_menu` as a typed namespace. `apps/web/lib/i18n/client.ts` preserves the existing no-argument `useTranslation()` contract as the default `translation` namespace while allowing explicit `useTranslation("profile_menu")` calls.
+`apps/web/@types/i18next.d.ts` registers `profile_menu` as a typed namespace. The client keeps the native `react-i18next` `useTranslation` export. On the server, `apps/web/lib/i18n/server.ts` defaults its namespace generic to `translation`, matching the configured `defaultNS`, while explicit namespace calls remain typed through the registered resources.
 
-This avoids broadening unrelated callers to a `translation | profile_menu` union.
+This preserves the existing no-argument translation contract and prevents unrelated server callers from widening to a `translation | profile_menu` union.
 
 ## Files
 
@@ -141,6 +143,7 @@ This avoids broadening unrelated callers to a `translation | profile_menu` union
 - `apps/web/components/shared/sidebar/Sidebar.tsx`
 - `apps/web/components/dashboard/header/ProfileOptions.tsx`
 - `apps/web/lib/i18n/client.ts`
+- `apps/web/lib/i18n/server.ts`
 - `apps/web/@types/i18next.d.ts`
 - `apps/web/lib/i18n/locales/en/profile_menu.json`
 
@@ -148,6 +151,7 @@ This avoids broadening unrelated callers to a `translation | profile_menu` union
 
 - `apps/web/components/pwa/ServiceWorkerRegistration.test.tsx`
 - `apps/web/components/pwa/ServiceWorkerRegistration.timeout.test.tsx`
+- `apps/web/components/pwa/ServiceWorkerRegistration.readiness.test.tsx`
 - `apps/web/components/pwa/sw.test.ts`
 - `apps/web/components/shared/sidebar/SidebarVersion.test.tsx`
 - `apps/web/components/dashboard/header/ProfileOptions.test.tsx`
@@ -174,6 +178,7 @@ This avoids broadening unrelated callers to a `translation | profile_menu` union
 - [x] Deduplicates concurrent checks.
 - [x] Registers the exact deployed-build worker URL when the server is newer.
 - [x] Distinguishes available from ready using the exact worker build.
+- [x] Detects readiness when the target worker finishes before the state listener is attached.
 - [x] Does not activate a worker that became waiting during the discovering document.
 - [x] Rejects stale waiting-worker activation.
 - [x] Reloads exactly once only for an explicitly armed handoff.
@@ -193,6 +198,7 @@ This avoids broadening unrelated callers to a `translation | profile_menu` union
 - [x] Desktop surfaces the newer deployed build separately.
 - [x] Mobile profile footer shows the same lifecycle truth.
 - [x] Running-build SHA links to the fork commit.
+- [x] Non-SHA running builds render without a commit link.
 - [x] Upstream apps URL is absent.
 - [x] Upstream docs URL is absent.
 - [x] Upstream social/X row is absent.
@@ -208,6 +214,7 @@ Run focused web tests:
 pnpm --filter @karakeep/web test --run \
   components/pwa/ServiceWorkerRegistration.test.tsx \
   components/pwa/ServiceWorkerRegistration.timeout.test.tsx \
+  components/pwa/ServiceWorkerRegistration.readiness.test.tsx \
   components/pwa/sw.test.ts \
   components/shared/sidebar/SidebarVersion.test.tsx \
   components/dashboard/header/ProfileOptions.test.tsx \
