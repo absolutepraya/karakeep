@@ -263,7 +263,7 @@ describe("ServiceWorkerRegistration", () => {
     expect(installingWorker.onstatechange).toBeNull();
   });
 
-  it("does not mark a newer deployed worker ready because an older worker is waiting", async () => {
+  it("does not mark a later deployed worker ready because the previous deploy is waiting", async () => {
     const registrationModule = await import("./ServiceWorkerRegistration");
     const usePwaLifecycle = (
       registrationModule as typeof registrationModule & {
@@ -289,41 +289,54 @@ describe("ServiceWorkerRegistration", () => {
       onstatechange: null as (() => void) | null,
       scriptURL: "https://karakeep.test/sw.js?v=ccccccc",
     };
-    const targetRegistration = {
+    const buildBRegistration = {
+      active: mocks.messagePort,
+      waiting: waitingBuildB as unknown as ServiceWorker,
+    };
+    const buildCRegistration = {
       active: mocks.messagePort,
       installing: installingBuildC as unknown as ServiceWorker,
       waiting: waitingBuildB as unknown as ServiceWorker,
     };
 
-    mocks.getRegistration.mockResolvedValue({
-      active: mocks.messagePort,
-      waiting: waitingBuildB,
-    });
-    mocks.fetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ version: "ccccccc" }), {
-        headers: { "content-type": "application/json" },
-        status: 200,
-      }),
-    );
-    mocks.register.mockResolvedValueOnce(targetRegistration);
+    mocks.fetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ version: "bbbbbbb" }), {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ version: "ccccccc" }), {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      );
+    mocks.register
+      .mockResolvedValueOnce({ active: mocks.messagePort })
+      .mockResolvedValueOnce(buildBRegistration)
+      .mockResolvedValueOnce(buildCRegistration);
 
     renderRegistration(<Probe />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("update-status").textContent).toBe("ready");
+    });
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
 
     await waitFor(() => {
       expect(mocks.register).toHaveBeenCalledWith("/sw.js?v=ccccccc", {
         scope: "/",
         updateViaCache: "none",
       });
-    });
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
+      expect(screen.getByTestId("update-status").textContent).toBe("available");
+      expect(installingBuildC.onstatechange).toEqual(expect.any(Function));
     });
 
-    expect(screen.getByTestId("update-status").textContent).toBe("available");
-    expect(installingBuildC.onstatechange).toEqual(expect.any(Function));
-
-    targetRegistration.waiting = installingBuildC as unknown as ServiceWorker;
+    buildCRegistration.waiting = installingBuildC as unknown as ServiceWorker;
     installingBuildC.state = "installed";
     act(() => {
       installingBuildC.onstatechange?.();
