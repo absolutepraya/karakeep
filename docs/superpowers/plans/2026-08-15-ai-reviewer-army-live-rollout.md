@@ -88,6 +88,15 @@ Before calling the hosted-service rollout successful:
 - obvious duplicate/noisy behavior is documented and tuned only where the free plan supports it;
 - no application, database, deployment, CI, or runtime behavior is changed merely to satisfy a reviewer.
 
+## Current live-rollout status
+
+As of 2026-08-16, the maintainer confirmed that both hosted integrations are installed for the repository:
+
+- Sourcery is connected to `absolutepraya/karakeep`.
+- Graphite is connected to `absolutepraya/karakeep` with AI Reviews enabled on the free Hobby plan.
+- PR #41 remains the smoke-test target.
+- Installation is complete; reviewer-output smoke testing is still required before the hosted rollout is considered validated.
+
 ## Post-merge validation
 
 After an explicit maintainer merge:
