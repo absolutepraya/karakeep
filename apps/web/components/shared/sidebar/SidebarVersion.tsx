@@ -54,7 +54,7 @@ export default function SidebarVersion({
           href={`${FORK_REPO_URL}/commit/${appBuild}`}
           target="_blank"
           rel="noopener noreferrer"
-          title={`Fork build ${appBuild}`}
+          title={t("build_title", { build: appBuild })}
           className="flex min-w-0 items-center gap-1.5 font-mono text-muted-foreground transition-colors hover:text-foreground"
         >
           <GitBranch className="size-3.5 shrink-0" />
