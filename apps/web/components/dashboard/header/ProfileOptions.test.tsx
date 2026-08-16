@@ -68,6 +68,24 @@ vi.mock("@/components/shared/sidebar/SidebarVersion", () => ({
   ),
 }));
 
+vi.mock("@/components/ui/button", () => ({
+  Button: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
+}));
+
+vi.mock("@/components/ui/separator", () => ({
+  Separator: ({ className }: { className?: string }) => (
+    <div className={className} role="separator" />
+  ),
+}));
+
+vi.mock("@/components/ui/user-avatar", () => ({
+  UserAvatar: ({ name }: { name?: string | null }) => (
+    <div data-testid="user-avatar">{name}</div>
+  ),
+}));
+
 vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
