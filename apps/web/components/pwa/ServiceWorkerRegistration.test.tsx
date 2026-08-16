@@ -112,9 +112,13 @@ describe("ServiceWorkerRegistration", () => {
     renderRegistration();
 
     await waitFor(() => {
-      expect(mocks.fetch).toHaveBeenCalledWith("/api/version", {
-        cache: "no-store",
-      });
+      expect(mocks.fetch).toHaveBeenCalledWith(
+        "/api/version",
+        expect.objectContaining({
+          cache: "no-store",
+          signal: expect.any(AbortSignal),
+        }),
+      );
     });
 
     await waitFor(() => {
@@ -226,9 +230,13 @@ describe("ServiceWorkerRegistration", () => {
     });
 
     await waitFor(() => {
-      expect(mocks.fetch).toHaveBeenCalledWith("/api/version", {
-        cache: "no-store",
-      });
+      expect(mocks.fetch).toHaveBeenCalledWith(
+        "/api/version",
+        expect.objectContaining({
+          cache: "no-store",
+          signal: expect.any(AbortSignal),
+        }),
+      );
     });
   });
 
