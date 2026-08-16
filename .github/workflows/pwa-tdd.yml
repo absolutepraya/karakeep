@@ -5,7 +5,10 @@ on:
     branches: ["*"]
     paths:
       - "apps/web/components/pwa/**"
+      - "apps/web/components/shared/sidebar/SidebarVersion*"
+      - "apps/web/components/dashboard/header/ProfileOptions*"
       - "apps/web/public/sw.js"
+      - "apps/web/lib/i18n/locales/en/translation.json"
       - ".github/workflows/pwa-tdd.yml"
 
 jobs:
@@ -24,3 +27,5 @@ jobs:
           pnpm --filter @karakeep/web test --run
           components/pwa/ServiceWorkerRegistration.test.tsx
           components/pwa/sw.test.ts
+          components/shared/sidebar/SidebarVersion.test.tsx
+          components/dashboard/header/ProfileOptions.test.tsx
