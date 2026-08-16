@@ -120,7 +120,7 @@ After cleanup, verify:
 - no Sourcery/Graphite status is required by branch protection or rulesets;
 - CodeRabbit continues operating normally.
 
-Do not mark hosted cleanup complete solely because repository docs changed.
+Do not mark hosted cleanup complete solely because repository docs changed. At the time this record was updated, repository-side cleanup was complete but maintainer confirmation of App removal was still pending.
 
 ## Evaluation result
 
