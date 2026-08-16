@@ -59,7 +59,7 @@ function isWorkerForBuild(
     const workerUrl = new URL(worker.scriptURL);
     return (
       workerUrl.pathname.endsWith("/sw.js") &&
-      workerUrl.searchParams.get("v") === build
+      (workerUrl.searchParams.get("v") ?? "development") === build
     );
   } catch {
     return false;
@@ -247,25 +247,37 @@ export default function ServiceWorkerRegistration({
         const existingRegistration =
           await navigator.serviceWorker.getRegistration("/");
         let registration = existingRegistration;
+        const waitingMatchesCurrent = isWorkerForBuild(
+          existingRegistration?.waiting,
+          appBuild,
+        );
+        const installingMatchesCurrent = isWorkerForBuild(
+          existingRegistration?.installing,
+          appBuild,
+        );
+        const activeMatchesCurrent = isWorkerForBuild(
+          existingRegistration?.active,
+          appBuild,
+        );
+        const hasStalePendingWorker = Boolean(
+          (existingRegistration?.waiting && !waitingMatchesCurrent) ||
+            (existingRegistration?.installing && !installingMatchesCurrent),
+        );
 
-        if (existingRegistration?.waiting) {
+        if (waitingMatchesCurrent && existingRegistration?.waiting) {
           handoffArmedRef.current = true;
           existingRegistration.waiting.postMessage({
             type: "ACTIVATE_UPDATE",
           } satisfies WorkerMessage);
         }
 
-        const expectedCurrentWorkerUrl = new URL(
-          serviceWorkerUrl,
-          window.location.href,
-        ).href;
-        const hasPendingWorker = Boolean(
-          existingRegistration?.waiting ?? existingRegistration?.installing,
-        );
-        const activeMatchesCurrent =
-          existingRegistration?.active?.scriptURL === expectedCurrentWorkerUrl;
-
-        if (!registration || (!hasPendingWorker && !activeMatchesCurrent)) {
+        if (
+          !registration ||
+          hasStalePendingWorker ||
+          (!waitingMatchesCurrent &&
+            !installingMatchesCurrent &&
+            !activeMatchesCurrent)
+        ) {
           registration = await navigator.serviceWorker.register(
             serviceWorkerUrl,
             {
