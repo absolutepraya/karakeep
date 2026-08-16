@@ -1,6 +1,6 @@
 # Marka assistant context
 
-`absolutepraya/karakeep` is the Marka fork. The upstream Karakeep project is <https://github.com/karakeep-app/karakeep>.
+`absolutepraya/marka` is the Marka fork. The upstream Karakeep project is <https://github.com/karakeep-app/karakeep>.
 
 ## Authoritative documentation map
 
@@ -63,7 +63,7 @@ Main stack:
 The preferred portable setup for a new self-hosted instance is `scripts/install.sh`. The public one-line entry point is:
 
 ```bash
-curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/karakeep/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
+curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/marka/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
 ```
 
 Important installer facts:
@@ -72,7 +72,7 @@ Important installer facts:
 - the script never installs Docker, changes firewall rules, configures DNS, or provisions TLS/reverse-proxy infrastructure
 - default configuration directory is `~/karakeep`; default persistent data directory is `~/karakeep/data`
 - generated Compose project name is `karakeep`
-- generated app images are the paired `ghcr.io/absolutepraya/karakeep:web-main` and `ghcr.io/absolutepraya/karakeep:workers-main` tags
+- generated app images are the paired `ghcr.io/absolutepraya/marka:web-main` and `ghcr.io/absolutepraya/marka:workers-main` tags
 - the default web listener is `127.0.0.1:3000`, intended to sit behind an operator-managed reverse proxy for Internet-facing installs
 - search choices are managed Meilisearch, external Meilisearch, or disabled search
 - renderer choices are managed private Chrome, external token-protected Browserless, or disabled browser rendering
@@ -177,7 +177,7 @@ This fork uses a **pull-based** personal VPS deploy flow that is separate from t
 
 High-level flow:
 - CI passes on `main`
-- `.github/workflows/docker.yml` builds and pushes matching `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main` images from the same successful commit
+- `.github/workflows/docker.yml` builds and pushes matching `ghcr.io/<owner>/marka:web-main` and `ghcr.io/<owner>/marka:workers-main` images from the same successful commit
 - a Watchtower container on the VPS polls the paired GHCR tags and redeploys automatically
 
 Important notes:

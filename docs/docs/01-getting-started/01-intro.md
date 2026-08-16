@@ -8,7 +8,7 @@ Karakeep is a self-hostable bookmark-everything app for saving links, notes, ima
 
 > These docs primarily describe **Karakeep itself**. This repository is a personal fork of upstream Karakeep, so fork-specific development and deployment notes also live in the repo docs: `README.md`, `CONTRIBUTING.md`, and `docs/fork-setup.md`.
 
-![Screenshot](https://raw.githubusercontent.com/absolutepraya/karakeep/main/screenshots/homepage.png)
+![Screenshot](https://raw.githubusercontent.com/absolutepraya/marka/main/screenshots/homepage.png)
 
 ## What Karakeep can do
 

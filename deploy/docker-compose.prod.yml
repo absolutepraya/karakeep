@@ -8,7 +8,7 @@
 #   NEXTAUTH_SECRET, MEILI_MASTER_KEY, NEXTAUTH_URL, DISABLE_SIGNUPS, ...
 services:
   web:
-    image: ${KARAKEEP_WEB_IMAGE:-ghcr.io/absolutepraya/karakeep:web-main}
+    image: ${KARAKEEP_WEB_IMAGE:-ghcr.io/absolutepraya/marka:web-main}
     restart: unless-stopped
     mem_limit: 512m
     depends_on:
@@ -28,7 +28,7 @@ services:
       DATA_DIR: /data
 
   workers:
-    image: ${KARAKEEP_WORKERS_IMAGE:-ghcr.io/absolutepraya/karakeep:workers-main}
+    image: ${KARAKEEP_WORKERS_IMAGE:-ghcr.io/absolutepraya/marka:workers-main}
     restart: unless-stopped
     mem_limit: 512m
     depends_on:

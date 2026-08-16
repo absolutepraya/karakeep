@@ -131,8 +131,8 @@ bash "$INSTALLER" --non-interactive --no-start --yes \
   --install-dir "$managed/install" --data-dir "$managed/data" \
   --public-url https://keep.example.com --data-mode fresh \
   --search managed --renderer managed --ai deferred >/dev/null
-assert_contains "$managed/install/docker-compose.yml" "ghcr.io/absolutepraya/karakeep:web-main"
-assert_contains "$managed/install/docker-compose.yml" "ghcr.io/absolutepraya/karakeep:workers-main"
+assert_contains "$managed/install/docker-compose.yml" "ghcr.io/absolutepraya/marka:web-main"
+assert_contains "$managed/install/docker-compose.yml" "ghcr.io/absolutepraya/marka:workers-main"
 assert_contains "$managed/install/docker-compose.yml" "getmeili/meilisearch:v1.41.0"
 assert_contains "$managed/install/docker-compose.yml" "ghcr.io/karakeep-app/karakeep-chrome:release"
 assert_contains "$managed/install/docker-compose.yml" "init: true"

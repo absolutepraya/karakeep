@@ -1,6 +1,6 @@
 <div align="center">
-  <a href="https://github.com/absolutepraya/karakeep/actions/workflows/ci.yml">
-    <img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/absolutepraya/karakeep/ci.yml?branch=main&label=ci" />
+  <a href="https://github.com/absolutepraya/marka/actions/workflows/ci.yml">
+    <img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/absolutepraya/marka/ci.yml?branch=main&label=ci" />
   </a>
   <a href="https://github.com/karakeep-app/karakeep/releases">
     <img alt="Upstream release" src="https://img.shields.io/github/v/release/karakeep-app/karakeep?label=upstream%20release" />
@@ -19,7 +19,7 @@
 
 Marka is a self-hostable library for saving links, notes, images, PDFs, and web pages, then finding them again with fast search, lists, highlights, and optional AI tagging and summarization.
 
-> [`absolutepraya/karakeep`](https://github.com/absolutepraya/karakeep) is the Marka fork. The upstream Karakeep project is <https://github.com/karakeep-app/karakeep>.
+> [`absolutepraya/marka`](https://github.com/absolutepraya/marka) is the Marka fork. The upstream Karakeep project is <https://github.com/karakeep-app/karakeep>.
 
 ![Homepage screenshot](./screenshots/homepage.png)
 
@@ -27,7 +27,7 @@ Marka is a self-hostable library for saving links, notes, images, PDFs, and web 
 
 This fork keeps the upstream product intact in spirit, while presenting and operating it as Marka:
 
-- **Marka fork:** `absolutepraya/karakeep`
+- **Marka fork:** `absolutepraya/marka`
 - **Upstream project:** <https://github.com/karakeep-app/karakeep>
 - **Focus:** UX polish, quality-of-life improvements, and personal deployment ergonomics
 - **Local dev:** one-command workflow via `pnpm dev:start`
@@ -75,7 +75,7 @@ Marka can:
 For a Linux `amd64` host that already has Docker Engine, Docker Compose v2, and OpenSSL, run:
 
 ```bash
-curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/karakeep/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
+curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/marka/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
 ```
 
 The command downloads the script to a file before executing it. The guided flow asks for the install/data directories, public URL, search mode, browser-rendering mode, AI setup, and whether an existing compatible data directory should be reused. It generates a Docker Compose stack using the fork's paired `web-main` and `workers-main` images, writes secrets to restricted env files, validates the Compose config, and then starts the deployment.
@@ -85,7 +85,7 @@ The default listener is `127.0.0.1:3000`, so an Internet-facing deployment shoul
 For a reproducible setup, replace `main` with an immutable release tag or commit SHA after reviewing that revision:
 
 ```bash
-REF=<tag-or-commit-sha>; curl -fsSLo /tmp/karakeep-setup.sh "https://raw.githubusercontent.com/absolutepraya/karakeep/${REF}/scripts/install.sh" && bash /tmp/karakeep-setup.sh
+REF=<tag-or-commit-sha>; curl -fsSLo /tmp/karakeep-setup.sh "https://raw.githubusercontent.com/absolutepraya/marka/${REF}/scripts/install.sh" && bash /tmp/karakeep-setup.sh
 ```
 
 After setup, the copied helper supports safe operations without deleting persistent data:
