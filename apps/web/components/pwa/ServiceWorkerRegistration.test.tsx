@@ -40,6 +40,16 @@ function renderRegistration(children?: React.ReactNode) {
   return render(<Provider>{children}</Provider>);
 }
 
+function getServiceWorkerListener(type: string) {
+  const call = mocks.addEventListener.mock.calls.find(
+    ([eventType]) => eventType === type,
+  );
+  if (!call) {
+    throw new Error(`Missing service worker listener for ${type}`);
+  }
+  return call[1] as () => void;
+}
+
 describe("ServiceWorkerRegistration", () => {
   beforeEach(() => {
     installServiceWorkerMock();
@@ -66,6 +76,7 @@ describe("ServiceWorkerRegistration", () => {
     mocks.waitingWorker.postMessage.mockReset();
     mocks.addEventListener.mockReset();
     mocks.removeEventListener.mockReset();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -126,6 +137,45 @@ describe("ServiceWorkerRegistration", () => {
         type: "ACTIVATE_UPDATE",
       });
     });
+  });
+
+  it("reloads exactly once after an explicitly armed waiting-worker handoff", async () => {
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => {});
+    mocks.getRegistration.mockResolvedValue({
+      active: mocks.messagePort,
+      waiting: mocks.waitingWorker,
+    });
+
+    renderRegistration();
+    await waitFor(() => {
+      expect(mocks.waitingWorker.postMessage).toHaveBeenCalledWith({
+        type: "ACTIVATE_UPDATE",
+      });
+    });
+
+    const controllerChange = getServiceWorkerListener("controllerchange");
+    act(() => {
+      controllerChange();
+      controllerChange();
+    });
+
+    expect(go).toHaveBeenCalledTimes(1);
+    expect(go).toHaveBeenCalledWith(0);
+  });
+
+  it("does not reload for an ordinary controller change without an update handoff", async () => {
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => {});
+
+    renderRegistration();
+    await waitFor(() => {
+      expect(mocks.register).toHaveBeenCalled();
+    });
+
+    act(() => {
+      getServiceWorkerListener("controllerchange")();
+    });
+
+    expect(go).not.toHaveBeenCalled();
   });
 
   it("checks again when an existing document returns to the foreground", async () => {
