@@ -38,9 +38,9 @@ vi.mock("@/lib/i18n/client", () => ({
   useTranslation: () => ({
     t: (key: string, values?: { build?: string }) => {
       const translations: Record<string, string> = {
-        "profile_menu.build": `Build ${values?.build ?? ""}`,
-        "profile_menu.update_available": `Update available · ${values?.build ?? ""}`,
-        "profile_menu.update_ready": `Update ready · ${values?.build ?? ""}`,
+        build: `Build ${values?.build ?? ""}`,
+        update_available: `Update available · ${values?.build ?? ""}`,
+        update_ready: `Update ready · ${values?.build ?? ""}`,
       };
       return translations[key] ?? key;
     },
