@@ -30,8 +30,17 @@ jobs:
           components/shared/sidebar/SidebarVersion.test.tsx
           components/dashboard/header/ProfileOptions.test.tsx
 
+      - name: Full web tests
+        run: pnpm --filter @karakeep/web test --run
+
       - name: React Doctor diagnostics
         if: always()
         run: |
           pnpm exec react-doctor --project @karakeep/web --scope full --blocking none --json > /tmp/react-doctor.json || true
           cat /tmp/react-doctor.json
+
+      - name: Format diagnostics
+        if: always()
+        run: |
+          pnpm --filter @karakeep/web format:fix
+          git diff -- apps/web/components/dashboard/header/ProfileOptions.test.tsx apps/web/components/pwa/ServiceWorkerRegistration.tsx
