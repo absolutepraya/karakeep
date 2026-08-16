@@ -148,23 +148,28 @@ export default function ServiceWorkerRegistration({
       installing: ServiceWorker,
       targetBuild: string,
     ) => {
+      const markReadyIfWaiting = () => {
+        if (
+          installing.state !== "installed" ||
+          !isWorkerForBuild(registration.waiting, targetBuild)
+        ) {
+          return;
+        }
+
+        setUpdateStatus("ready");
+        installing.onstatechange = null;
+        if (installingWorker === installing) {
+          installingWorker = null;
+        }
+      };
+
       if (installingWorker) {
         installingWorker.onstatechange = null;
       }
 
       installingWorker = installing;
-      installing.onstatechange = () => {
-        if (
-          installing.state === "installed" &&
-          isWorkerForBuild(registration.waiting, targetBuild)
-        ) {
-          setUpdateStatus("ready");
-          installing.onstatechange = null;
-          if (installingWorker === installing) {
-            installingWorker = null;
-          }
-        }
-      };
+      installing.onstatechange = markReadyIfWaiting;
+      markReadyIfWaiting();
     };
 
     const runUpdateCheck = async () => {
