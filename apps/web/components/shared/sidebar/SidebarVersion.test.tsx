@@ -87,4 +87,15 @@ describe("SidebarVersion", () => {
     expect(container.textContent).not.toContain("Update available");
     expect(container.textContent).not.toContain("Update ready");
   });
+
+  it("renders a non-SHA build without a commit link", () => {
+    mocks.lifecycle.appBuild = "development";
+    mocks.lifecycle.deployedBuild = "development";
+    mocks.lifecycle.updateStatus = "current";
+
+    const { container } = render(<SidebarVersion />);
+
+    expect(container.textContent).toContain("Build development");
+    expect(container.querySelector('a[href*="/commit/"]')).toBeNull();
+  });
 });
