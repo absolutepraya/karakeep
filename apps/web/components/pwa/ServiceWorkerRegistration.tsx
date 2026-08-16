@@ -61,6 +61,8 @@ export default function ServiceWorkerRegistration({
   const sessionIdRef = useRef(session?.user?.id ?? null);
   const hasClearedUserCachesRef = useRef(false);
   const checkPromiseRef = useRef<Promise<void> | null>(null);
+  const handoffArmedRef = useRef(false);
+  const handoffReloadedRef = useRef(false);
 
   useEffect(() => {
     sessionStatusRef.current = status;
@@ -113,6 +115,11 @@ export default function ServiceWorkerRegistration({
       syncDocumentCacheSession();
       if (sessionStatusRef.current === "unauthenticated") {
         clearUserCaches();
+      }
+
+      if (handoffArmedRef.current && !handoffReloadedRef.current) {
+        handoffReloadedRef.current = true;
+        window.history.go(0);
       }
     };
 
@@ -194,9 +201,12 @@ export default function ServiceWorkerRegistration({
       try {
         const existingRegistration =
           await navigator.serviceWorker.getRegistration("/");
-        existingRegistration?.waiting?.postMessage({
-          type: "ACTIVATE_UPDATE",
-        } satisfies WorkerMessage);
+        if (existingRegistration?.waiting) {
+          handoffArmedRef.current = true;
+          existingRegistration.waiting.postMessage({
+            type: "ACTIVATE_UPDATE",
+          } satisfies WorkerMessage);
+        }
 
         const registration = await navigator.serviceWorker.register(
           serviceWorkerUrl,
