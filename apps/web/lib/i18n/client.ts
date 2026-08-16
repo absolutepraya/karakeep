@@ -39,7 +39,9 @@ export function useTranslation(ns: "translation"): ReturnType<
 export function useTranslation(ns: "profile_menu"): ReturnType<
   typeof useTranslationOrg<"profile_menu">
 >;
-export function useTranslation(ns: "translation" | "profile_menu" = "translation") {
+export function useTranslation(
+  ns: "translation" | "profile_menu" = "translation",
+) {
   return useTranslationOrg(ns);
 }
 
