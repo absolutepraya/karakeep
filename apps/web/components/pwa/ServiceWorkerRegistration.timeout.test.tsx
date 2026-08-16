@@ -1,0 +1,99 @@
+// @vitest-environment jsdom
+
+import React from "react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
+
+const mocks = vi.hoisted(() => ({
+  fetch: vi.fn(),
+  register: vi.fn(),
+  getRegistration: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  worker: { postMessage: vi.fn() },
+}));
+
+vi.mock("@/lib/auth/client", () => ({
+  useSession: () => ({ status: "unauthenticated" }),
+}));
+
+describe("ServiceWorkerRegistration version timeout", () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        addEventListener: mocks.addEventListener,
+        controller: mocks.worker,
+        getRegistration: mocks.getRegistration,
+        register: mocks.register,
+        removeEventListener: mocks.removeEventListener,
+      },
+    });
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+
+    mocks.getRegistration.mockResolvedValue(undefined);
+    mocks.register.mockResolvedValue({ active: mocks.worker });
+    mocks.fetch.mockResolvedValue(
+      new Response(JSON.stringify({ version: "development" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", mocks.fetch);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    for (const mock of Object.values(mocks)) {
+      if (typeof mock === "function" && "mockReset" in mock) {
+        mock.mockReset();
+      }
+    }
+    mocks.worker.postMessage.mockReset();
+  });
+
+  it("aborts a hung version check and allows the next foreground check", async () => {
+    const setTimeoutSpy = vi.spyOn(window, "setTimeout");
+    mocks.fetch.mockImplementationOnce(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        }),
+    );
+
+    render(<ServiceWorkerRegistration />);
+
+    await waitFor(() => {
+      expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    const timeoutCall = setTimeoutSpy.mock.calls.find(
+      ([, delay]) => delay === 10_000,
+    );
+    expect(timeoutCall).toBeDefined();
+
+    await act(async () => {
+      (timeoutCall?.[0] as () => void)();
+      await Promise.resolve();
+    });
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => {
+      expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    });
+  });
+});
