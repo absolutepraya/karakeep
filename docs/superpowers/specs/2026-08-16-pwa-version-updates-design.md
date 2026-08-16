@@ -33,7 +33,7 @@ Desktop currently shows the server build in `SidebarVersion`. Mobile has no equi
 
 The UI must distinguish the frontend build currently running in the browser from the build currently deployed on the server.
 
-The normal state shows the running frontend build. If the server has moved ahead, the UI may additionally show the newer deployed build and whether its worker is only available or already installed and waiting.
+The normal state shows the running frontend build. If the server has moved ahead, the UI must additionally show the newer deployed build and whether its worker is available or already installed and waiting.
 
 ### Mobile placement
 
