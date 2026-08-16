@@ -21,7 +21,7 @@ const initI18next = async (lng: string, ns: string | string[]) => {
 };
 
 export async function useTranslation<
-  Ns extends FlatNamespace,
+  Ns extends FlatNamespace = "translation",
   KPrefix extends KeyPrefix<FallbackNs<Ns>> = undefined,
 >(ns?: Ns, options: { keyPrefix?: KPrefix } = {}) {
   const lng = (await getUserLocalSettings()).lang;
