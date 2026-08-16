@@ -1,11 +1,17 @@
-name: PWA Readiness TDD
+name: PWA Web Verification
 
 on:
   pull_request:
     branches: ["*"]
     paths:
-      - "apps/web/components/pwa/ServiceWorkerRegistration.tsx"
-      - "apps/web/components/pwa/ServiceWorkerRegistration.readiness.test.tsx"
+      - "apps/web/components/pwa/**"
+      - "apps/web/components/shared/sidebar/SidebarVersion*"
+      - "apps/web/components/dashboard/header/ProfileOptions*"
+      - "apps/web/components/dashboard/header/Header*"
+      - "apps/web/lib/i18n/**"
+      - "apps/web/@types/i18next.d.ts"
+      - "apps/web/lib/providers.tsx"
+      - "apps/web/public/sw.js"
       - ".github/workflows/pwa-readiness-tdd.yml"
 
 permissions:
@@ -16,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  focused-readiness-test:
+  web-pwa-verification:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -28,5 +34,16 @@ jobs:
         with:
           node-version: "22.21.1"
 
-      - name: Reproduce installed-worker readiness race
-        run: pnpm --filter @karakeep/web test --run components/pwa/ServiceWorkerRegistration.readiness.test.tsx
+      - name: Focused PWA and profile regressions
+        run: |
+          pnpm --filter @karakeep/web test --run \
+            components/pwa/ServiceWorkerRegistration.test.tsx \
+            components/pwa/ServiceWorkerRegistration.timeout.test.tsx \
+            components/pwa/ServiceWorkerRegistration.readiness.test.tsx \
+            components/pwa/sw.test.ts \
+            components/shared/sidebar/SidebarVersion.test.tsx \
+            components/dashboard/header/ProfileOptions.test.tsx \
+            components/dashboard/header/Header.test.tsx
+
+      - name: Full web Vitest suite
+        run: pnpm --filter @karakeep/web test --run
