@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { useSession } from "@/lib/auth/client";
 import { recordThumbnailAccess } from "@/lib/offline-library/repository";
@@ -11,22 +18,49 @@ type WorkerMessage =
   | { type: "SET_DOCUMENT_CACHE_SESSION"; sessionId: string | null }
   | { type: "THUMBNAIL_USED"; url: string };
 
-const serviceWorkerBuildVersion =
+export type PwaUpdateStatus = "current" | "available" | "ready";
+
+export interface PwaLifecycleState {
+  appBuild: string;
+  deployedBuild: string | null;
+  updateStatus: PwaUpdateStatus;
+}
+
+const compiledServiceWorkerBuildVersion =
   process.env.NEXT_PUBLIC_SERVICE_WORKER_BUILD_VERSION;
-const serviceWorkerUrl = serviceWorkerBuildVersion
-  ? `/sw.js?v=${encodeURIComponent(serviceWorkerBuildVersion)}`
+const appBuild = compiledServiceWorkerBuildVersion ?? "development";
+const serviceWorkerUrl = compiledServiceWorkerBuildVersion
+  ? `/sw.js?v=${encodeURIComponent(compiledServiceWorkerBuildVersion)}`
   : "/sw.js";
+
+const PwaLifecycleContext = createContext<PwaLifecycleState>({
+  appBuild,
+  deployedBuild: null,
+  updateStatus: "current",
+});
+
+export function usePwaLifecycle() {
+  return useContext(PwaLifecycleContext);
+}
 
 function isDeployBuild(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{7,40}$/i.test(value);
 }
 
-export default function ServiceWorkerRegistration() {
+export default function ServiceWorkerRegistration({
+  children,
+}: {
+  children?: ReactNode;
+}) {
   const { data: session, status } = useSession();
+  const [deployedBuild, setDeployedBuild] = useState<string | null>(null);
+  const [updateStatus, setUpdateStatus] =
+    useState<PwaUpdateStatus>("current");
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const sessionStatusRef = useRef(status);
   const sessionIdRef = useRef(session?.user?.id ?? null);
   const hasClearedUserCachesRef = useRef(false);
+  const checkPromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     sessionStatusRef.current = status;
@@ -82,7 +116,7 @@ export default function ServiceWorkerRegistration() {
       }
     };
 
-    const checkForUpdate = async () => {
+    const runUpdateCheck = async () => {
       try {
         const response = await fetch("/api/version", { cache: "no-store" });
         if (!response.ok) {
@@ -90,22 +124,62 @@ export default function ServiceWorkerRegistration() {
         }
 
         const body = (await response.json()) as { version?: unknown };
-        if (
-          !isDeployBuild(body.version) ||
-          body.version === serviceWorkerBuildVersion
-        ) {
+        if (!isDeployBuild(body.version)) {
           return;
         }
 
-        await navigator.serviceWorker.register(
+        setDeployedBuild(body.version);
+        if (body.version === appBuild) {
+          setUpdateStatus("current");
+          return;
+        }
+
+        setUpdateStatus("available");
+        const registration = await navigator.serviceWorker.register(
           `/sw.js?v=${encodeURIComponent(body.version)}`,
           {
             scope: "/",
             updateViaCache: "none",
           },
         );
+
+        if (registration.waiting) {
+          setUpdateStatus("ready");
+          return;
+        }
+
+        const installing = registration.installing;
+        if (installing) {
+          const handleStateChange = () => {
+            if (installing.state === "installed" && registration.waiting) {
+              setUpdateStatus("ready");
+              installing.removeEventListener("statechange", handleStateChange);
+            }
+          };
+          installing.addEventListener("statechange", handleStateChange);
+        }
       } catch {
         // Update discovery is best-effort and must never block app startup.
+      }
+    };
+
+    const checkForUpdate = () => {
+      if (checkPromiseRef.current) {
+        return checkPromiseRef.current;
+      }
+
+      const promise = runUpdateCheck().finally(() => {
+        if (checkPromiseRef.current === promise) {
+          checkPromiseRef.current = null;
+        }
+      });
+      checkPromiseRef.current = promise;
+      return promise;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkForUpdate();
       }
     };
 
@@ -114,6 +188,7 @@ export default function ServiceWorkerRegistration() {
       "controllerchange",
       handleControllerChange,
     );
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     void (async () => {
       try {
@@ -151,6 +226,7 @@ export default function ServiceWorkerRegistration() {
         "controllerchange",
         handleControllerChange,
       );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -167,5 +243,11 @@ export default function ServiceWorkerRegistration() {
     }
   }, [session?.user?.id, status]);
 
-  return null;
+  return (
+    <PwaLifecycleContext.Provider
+      value={{ appBuild, deployedBuild, updateStatus }}
+    >
+      {children}
+    </PwaLifecycleContext.Provider>
+  );
 }
