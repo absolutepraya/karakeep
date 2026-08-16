@@ -47,6 +47,25 @@ function isDeployBuild(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{7,40}$/i.test(value);
 }
 
+function isWorkerForBuild(
+  worker: ServiceWorker | null | undefined,
+  build: string,
+) {
+  if (!worker?.scriptURL) {
+    return false;
+  }
+
+  try {
+    const workerUrl = new URL(worker.scriptURL);
+    return (
+      workerUrl.pathname.endsWith("/sw.js") &&
+      workerUrl.searchParams.get("v") === build
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function ServiceWorkerRegistration({
   children,
 }: {
@@ -54,8 +73,7 @@ export default function ServiceWorkerRegistration({
 }) {
   const { data: session, status } = useSession();
   const [deployedBuild, setDeployedBuild] = useState<string | null>(null);
-  const [updateStatus, setUpdateStatus] =
-    useState<PwaUpdateStatus>("current");
+  const [updateStatus, setUpdateStatus] = useState<PwaUpdateStatus>("current");
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const sessionStatusRef = useRef(status);
   const sessionIdRef = useRef(session?.user?.id ?? null);
@@ -128,6 +146,7 @@ export default function ServiceWorkerRegistration({
     const watchInstallingWorker = (
       registration: ServiceWorkerRegistration,
       installing: ServiceWorker,
+      targetBuild: string,
     ) => {
       if (installingWorker) {
         installingWorker.onstatechange = null;
@@ -135,7 +154,10 @@ export default function ServiceWorkerRegistration({
 
       installingWorker = installing;
       installing.onstatechange = () => {
-        if (installing.state === "installed" && registration.waiting) {
+        if (
+          installing.state === "installed" &&
+          isWorkerForBuild(registration.waiting, targetBuild)
+        ) {
           setUpdateStatus("ready");
           installing.onstatechange = null;
           if (installingWorker === installing) {
@@ -173,13 +195,20 @@ export default function ServiceWorkerRegistration({
         );
         registrationRef.current = registration;
 
-        if (registration.waiting) {
+        if (isWorkerForBuild(registration.waiting, body.version)) {
           setUpdateStatus("ready");
           return;
         }
 
-        if (registration.installing) {
-          watchInstallingWorker(registration, registration.installing);
+        if (
+          registration.installing &&
+          isWorkerForBuild(registration.installing, body.version)
+        ) {
+          watchInstallingWorker(
+            registration,
+            registration.installing,
+            body.version,
+          );
         }
       } catch {
         // Update discovery is best-effort and must never block app startup.
