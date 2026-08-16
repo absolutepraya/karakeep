@@ -128,9 +128,9 @@ The profile/build strings live in:
 apps/web/lib/i18n/locales/en/profile_menu.json
 ```
 
-`apps/web/@types/i18next.d.ts` registers `profile_menu` as a typed namespace. The client keeps the native `react-i18next` `useTranslation` export. On the server, `apps/web/lib/i18n/server.ts` defaults its namespace generic to `translation`, matching the configured `defaultNS`, while explicit namespace calls remain typed through the registered resources.
+`apps/web/@types/i18next.d.ts` registers `profile_menu` as a typed namespace for the client UI. The client keeps the native `react-i18next` `useTranslation` export. The server helper remains intentionally scoped to the configured `defaultNS` (`translation`), matching every current server call site; server code does not opt into `profile_menu`.
 
-This preserves the existing no-argument translation contract and prevents unrelated server callers from widening to a `translation | profile_menu` union.
+This preserves the existing server translation contract and prevents the additional client namespace from widening unrelated server `TFunction` types to `translation | profile_menu`.
 
 ## Files
 
