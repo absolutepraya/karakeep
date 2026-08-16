@@ -1,34 +1,35 @@
-# AI Reviewer Army Design
+# AI Reviewer Evaluation Design
 
 ## Goal
 
-Add Sourcery and Graphite Agent alongside the existing CodeRabbit setup so pull requests can receive three independent AI review signals without allowing any AI reviewer to modify the codebase autonomously or become an authoritative merge gate.
+Preserve the complete design and evaluation history from issue #40 and PR #41, while making the repository's final policy clear:
 
-This design implements issue #40 and records the decisions made during the design interview so future maintainers and coding agents do not need the original conversation to reconstruct intent.
+- CodeRabbit remains the only accepted active AI pull-request reviewer.
+- Additional reviewers are desirable only when they are free, useful, review-only, and least-privilege.
+- Qodo, Sourcery, and Graphite were evaluated and rejected for this rollout for different reasons.
 
-The operating principle is:
+This file intentionally records both the initial multi-reviewer design and the later live-rollout findings so future maintainers and coding agents do not need the original conversation to reconstruct why the repository did not keep the proposed reviewer army.
 
-> Three independent critics, zero autonomous fixers.
+## Initial motivation
 
-## Why three reviewers
+The original goal was to supplement CodeRabbit with independent review signals so different tools could catch different logic bugs, edge cases, regressions, maintainability issues, performance problems, security concerns, and issue/spec omissions.
 
-CodeRabbit is already enabled and trusted as the repository's broad, repository-aware AI reviewer. Additional independent reviewers can still catch different logic bugs, edge cases, regressions, maintainability issues, performance problems, security concerns, and issue/spec omissions.
-
-Some redundancy is expected and acceptable, but reviewer count is not itself a goal. The setup must stay free, low-friction, review-only, and useful. Qodo was explicitly removed from this rollout after confirming its permanent-zero-cost path requires qualifying/applying for its open-source program. That administrative dependency does not fit the desired "install and keep using the free plan" model.
-
-## Reviewer set and roles
+The proposed reviewer roles were:
 
 | Reviewer | Intended role |
 | --- | --- |
 | CodeRabbit | Broad repository-aware semantic review and trusted baseline |
+| Qodo | Correctness, issue/spec fulfillment, tests, authorization, and security |
 | Sourcery | Maintainability, design, code quality, performance, security, and issue/spec fulfillment |
-| Graphite Agent | Logic bugs, edge cases, regressions, performance, and security using free-tier defaults |
+| Graphite Agent | Logic bugs, edge cases, regressions, performance, and security |
 
-These are specialization goals, not exclusive ownership boundaries. Reviewers may overlap. Independent agreement increases investigation priority but never converts a claim into truth automatically.
+Qodo was removed before live rollout after confirming that its permanent zero-cost route required open-source qualification/application. The planned live set then became CodeRabbit + Sourcery + Graphite.
 
-## Authority model
+## Approved authority model
 
-AI review comments are evidence of a possible problem, not requirements and not instructions to change the implementation.
+The most important design decision survived the vendor evaluation unchanged:
+
+> AI reviewer comments are evidence of a possible problem, not requirements and not instructions to change the implementation.
 
 For every substantive finding, verify the claim against the strongest available sources of truth:
 
@@ -51,11 +52,11 @@ If a proposed fix would materially change any of the following and the issue/spe
 - deployment/runtime architecture or operator behavior;
 - intentionally selected edge-case behavior.
 
-When intent remains ambiguous after inspection, escalate to the repository owner instead of "fixing" the code to satisfy a reviewer.
+When intent remains ambiguous after inspection, escalate to the repository owner instead of changing behavior to satisfy a reviewer.
 
 ## Hard review-only safety rule
 
-All three reviewers are critics only.
+The approved reviewer model was always critics-only.
 
 The rollout must not add or enable:
 
@@ -69,31 +70,25 @@ The rollout must not add or enable:
 
 Inline review comments and GitHub suggestion blocks are acceptable because applying them remains a deliberate human/agent action.
 
-For Sourcery, use the pull-request review product only. Do not add CLI `--fix`, production-issue auto-fix, or another code-mutation flow.
+## Merge and CI policy
 
-For Graphite, enable AI Reviews only. Separate coding-agent functionality is outside this rollout.
+AI review is advisory.
 
-## Pull request scope
+There must be:
 
-The desired baseline behavior is:
+- no required AI-review status check;
+- no required minimum count of AI approvals;
+- no policy that every AI thread must mechanically be resolved before merging;
+- no reviewer quota or outage that can block a pull request;
+- no replacement of deterministic CI with AI judgment.
 
-- automatically review non-draft pull requests targeting `main`;
-- drafts are skipped until ready for review;
-- coding-agent-authored implementation PRs are normal PRs and should receive AI review;
-- pure dependency-bot PRs should not consume every reviewer;
-- deterministic GitHub Actions remain independent and authoritative for machine-checkable validation.
-
-CodeRabbit already follows the non-draft `main` behavior.
-
-Sourcery's current behavior aligns well with the design: drafts and dependency-bot PRs can be skipped, and its post-push re-reviews are lighter/capped rather than full fresh reviews on every small commit.
-
-Graphite Agent should use the native automatic AI review behavior available on its free Hobby plan.
+GitHub Actions remains authoritative for deterministic validation such as formatting, linting, typechecking, tests, generated-artifact checks, Knip, React Doctor, and other repository CI checks.
 
 ## Noise-control policy
 
-The reviewer army exists to find substantive engineering problems, not to duplicate formatters, linters, typecheckers, or deterministic tests.
+The reviewer experiment was intended to find substantive engineering problems, not duplicate formatters, linters, typecheckers, or deterministic tests.
 
-High-value categories include:
+High-value categories included:
 
 - correctness and logic bugs;
 - regressions and edge cases;
@@ -103,7 +98,7 @@ High-value categories include:
 - performance problems;
 - issue/spec requirements that appear unimplemented.
 
-Low-value categories should be minimized where controls exist:
+Low-value categories included:
 
 - formatting already handled by the repo formatter;
 - naming/style preferences already covered by linting or established conventions;
@@ -111,95 +106,25 @@ Low-value categories should be minimized where controls exist:
 - comments on generated artifacts whose sources are reviewed elsewhere;
 - duplicate PR summaries/decoration that add little review signal.
 
-The existing CodeRabbit generated-artifact exclusions remain the reference set:
+The existing CodeRabbit generated-artifact exclusions were the reference set:
 
 - `packages/open-api/karakeep-openapi-spec.json`
 - `packages/sdk/src/karakeep-api.d.ts`
 - `packages/db/drizzle/meta/**`
 
-Apply the same path filters in Sourcery. Graphite Hobby does not provide the customization needed to mirror them, so do not make paid customization a dependency.
+## Permission model
 
-## Sourcery design
+The design deliberately treated capability as part of the safety model, not just stated vendor behavior.
 
-Use Sourcery's hosted GitHub integration for automatic PR reviews on this public open-source repository.
-
-Use free open-source access only. No Sourcery CLI, pre-commit hook, GitHub Actions workflow, token, or auto-fix flow should be added.
-
-Configure Sourcery to focus on inline AI review findings. Disable redundant summary/reviewer-guide/sequence-diagram/tips output where the current dashboard allows it, because CodeRabbit already provides broad PR summaries.
-
-Keep draft reviews disabled. Keep dependency-bot skipping. Restrict the relevant base branch to `main` where supported.
-
-Add a small number of review rules focused on maintainability, design, performance, security, issue/spec fulfillment, and preservation of intended behavior. Do not copy the full CodeRabbit path-instruction set.
-
-Sourcery can use related GitHub Issues as review context; preserve that behavior.
-
-During calibration, use positive/negative feedback reactions consistently so useful comments are reinforced and incorrect/noisy comments are marked unhelpful.
-
-Accept Sourcery's native lightweight capped re-review behavior after pushes. Do not add another re-review automation.
-
-## Graphite design
-
-Use Graphite Agent AI Reviews through the Graphite GitHub App, scoped only to this personal repository.
-
-Use the free Hobby plan. Hobby supports limited AI reviews but not AI review customization, filters, or custom rules. Graphite is therefore a bonus independent reviewer using vendor defaults.
-
-Its limited quota must never become a dependency for merging. If the free quota becomes restrictive, separately investigate free OSS access/sponsorship or remove Graphite instead of silently converting this rollout into a paid dependency.
-
-Do not enable or depend on separate Graphite coding-agent functionality.
-
-## CodeRabbit relationship
-
-The existing `.coderabbit.yaml` remains intact and CodeRabbit remains the broad, trusted baseline reviewer.
-
-This rollout does not replace or weaken CodeRabbit. It also does not make CodeRabbit authoritative over issue/spec intent. The same evidence-not-authority rule applies to CodeRabbit even though it has already earned more practical trust in this repository.
-
-## Merge and CI policy
-
-All AI reviewers remain advisory.
-
-There must be:
-
-- no required AI-review status check solely because it is an AI reviewer;
-- no required minimum count of AI approvals;
-- no policy that every AI thread must mechanically be resolved before merging;
-- no reviewer quota that can block a pull request;
-- no replacement of deterministic CI with AI judgment.
-
-GitHub Actions remains authoritative for deterministic validation such as formatting, linting, typechecking, tests, generated-artifact checks, Knip, React Doctor, and other repository CI checks.
-
-Serious AI findings should still be investigated. Advisory means a bot cannot become authority by itself, not that findings should be ignored.
-
-## Finding classification during probation
-
-Sourcery and Graphite are new to this repository and should be treated as probationary for roughly 10 to 20 real pull requests.
-
-Classify substantive findings into one of these buckets:
-
-1. **Confirmed defect**: evidence shows the finding is real and within intended behavior; fix it.
-2. **Valid but optional**: technically reasonable but outside the requested scope; normally do not change the PR for it.
-3. **Intentional behavior**: reviewer misunderstood a deliberate semantic or product choice; reject it and provide negative feedback where supported.
-4. **False positive**: the factual claim does not hold after inspection; reject it and provide negative feedback where supported.
-5. **Ambiguous or behavior-changing**: implementing it could alter intended functionality and intent is not resolved by issue/spec/code/tests/docs; escalate to the owner.
-
-Two or more reviewers independently flagging the same concern increases priority for investigation but does not change the classification rules.
-
-After roughly 10 to 20 real PRs, compare reviewers by unique actionable findings, false-positive rate, redundant noise, operational friction, and free-plan limitations. Retune or remove reviewers that add little value.
-
-## Permission and installation policy
-
-Use vendor-hosted GitHub Apps rather than new repository GitHub Actions workflows, API keys, or AI secrets.
-
-Install each new App for `absolutepraya/karakeep` only rather than granting account-wide access to unrelated repositories.
-
-Reasonable permissions include:
+Reasonable GitHub App permissions for a reviewer are:
 
 - repository contents: read;
 - pull requests/reviews/comments: write when required to publish review feedback;
-- issues/comments: write only when required for supported review interaction;
+- issues/comments: write only when required for review interaction;
 - checks/statuses: read/write when required to publish review state;
 - metadata: read.
 
-Stop installation and require explicit maintainer review if an App requests any of these capabilities beyond what is necessary for review:
+The rollout must stop if a candidate requires:
 
 - repository contents: write;
 - GitHub Actions/workflows: write;
@@ -207,64 +132,113 @@ Stop installation and require explicit maintainer review if an App requests any 
 - secrets or environments;
 - broad code-mutation capability or equivalent privileges.
 
-If a reviewer cannot satisfy the review-only safety model or acceptable permissions on its free plan, skip that reviewer. A smaller safe reviewer set is preferable to weakening the policy.
+A vendor may use broad permissions for features outside AI review, but that does not make those permissions acceptable for this repository's review-only threat model.
+
+## Initial rollout design
+
+The approved sequence was:
+
+1. Add source-controlled policy, design, and rollout documentation.
+2. Open PR #41 against `main`.
+3. Inspect each candidate's pricing and permissions.
+4. Install only candidates that met the safety model.
+5. Use PR #41 as a live smoke test where possible.
+6. Inspect actual review quality before treating a reviewer as trusted.
+7. Keep the implementation PR open for explicit maintainer approval.
+8. Evaluate new reviewers over 10 to 20 real PRs before deciding whether to keep them.
+
+This design intentionally allowed the final reviewer count to shrink. Reviewer count was never the goal by itself.
+
+## Live evaluation outcome
+
+### Qodo
+
+**Result: rejected before installation.**
+
+Qodo's permanent zero-cost path required open-source qualification/application. The maintainer wanted a low-friction free tier that could be installed and retained without a separate approval process, so Qodo was removed from the rollout.
+
+This was a product/operational fit rejection, not a claim about Qodo review quality.
+
+### Sourcery
+
+**Result: rejected after live installation and smoke test.**
+
+The installation confirmed free open-source access and Sourcery successfully responded to a manual review request on PR #41.
+
+However, GitHub reported the Sourcery App with permissions including:
+
+- repository contents: write;
+- Actions: write;
+- workflows: write;
+- plus the expected review/check/comment permissions.
+
+Those capabilities exceed the approved least-privilege ceiling, so Sourcery fails the repository's safety model even if its PR-review product is configured not to auto-fix.
+
+The first Sourcery review also provided useful calibration evidence:
+
+1. it suggested reducing duplication between the canonical policy, design spec, and plans. That was a reasonable general maintainability preference but intentional for this PR because the maintainer explicitly requested complete durable design and execution knowledge;
+2. it claimed `2026-08-15-*` spec/plan filenames were future-dated. The review ran on 2026-08-16, so this was a clear factual false positive.
+
+The quality observations reinforced the evidence-not-authority rule but were not the primary rejection reason. The permission ceiling alone is sufficient.
+
+### Graphite Agent
+
+**Result: rejected during permission evaluation.**
+
+Graphite Hobby met the zero-cost requirement and offered limited AI Reviews, but Graphite's GitHub App permission model includes read/write access to repository contents and Actions/workflows as part of its broader pull-request product.
+
+Those capabilities exceed the approved review-only permission ceiling. The repository therefore does not keep Graphite installed merely because AI Reviews themselves can be operated in a non-mutating mode.
+
+A dedicated long-term review-quality probation was not warranted after the permission failure.
+
+## Final reviewer state
+
+CodeRabbit remains the only accepted active AI reviewer.
+
+The repository does not weaken the permission ceiling to preserve reviewer count.
+
+The operating principle after the experiment is:
+
+> One accepted reviewer is better than several reviewers with unnecessary code-mutation capability.
+
+Issue #40 remains open as research for a future additional reviewer that satisfies all four properties:
+
+> free + useful + review-only + least privilege
+
+## Finding classification for future candidates
+
+Any future candidate begins on probation. Classify substantive findings as:
+
+1. **Confirmed defect**: evidence shows the finding is real and within intended behavior; fix it.
+2. **Valid but optional**: technically reasonable but outside the requested scope; normally do not change the PR for it.
+3. **Intentional behavior**: reviewer misunderstood a deliberate semantic or product choice; reject it.
+4. **False positive**: the factual claim does not hold after inspection; reject it.
+5. **Ambiguous or behavior-changing**: implementing it could alter intended functionality and intent is not resolved by issue/spec/code/tests/docs; escalate to the owner.
+
+Two or more reviewers independently flagging the same concern increases investigation priority but does not change the classification rules.
 
 ## Documentation model
 
-`docs/ai-code-review.md` is the canonical long-lived operator and contributor policy for the multi-reviewer setup.
+`docs/ai-code-review.md` is the canonical long-lived policy.
 
-`CONTRIBUTING.md` contains a concise contributor-facing explanation and link to the canonical document.
+`CONTRIBUTING.md` contains concise contributor-facing expectations.
 
-`AGENTS.md` contains the agent-facing rule that AI review findings are advisory evidence and must be verified before implementation, especially when they could alter intended behavior.
+`AGENTS.md` contains the agent-facing evidence-not-authority and no-auto-fix rules.
 
-This design file preserves the rationale and trade-offs that produced the policy. The accompanying implementation and live-rollout plans preserve exact execution steps.
+This design file preserves rationale, rejected alternatives, live findings, and the final decision. The accompanying plans preserve the exact execution and rollback path.
 
-No ADR is required. The reviewer set is deliberately easy to retune or remove, so this decision is not sufficiently hard to reverse.
+No ADR is required. Reviewer integrations are deliberately easy to add/remove, and the decision does not meet the repository's bar for a hard-to-reverse architectural record.
 
-## Rollout sequence
+## Current validation requirements
 
-1. Add the source-controlled design, implementation plan, live-rollout plan, canonical review policy, and concise contributor/agent documentation.
-2. Open the implementation PR against `main` and link issue #40.
-3. Before installing each GitHub App, inspect its requested permissions against the permission ceiling.
-4. Install Sourcery and Graphite for this repository only when their permissions and free-plan behavior are acceptable.
-5. Use the implementation PR as the first live integration smoke test.
-6. Fix repository-side integration mistakes in the same PR if live review exposes them.
-7. Do not merge automatically. Leave the PR for explicit maintainer approval.
-8. After merge, begin the 10 to 20 PR probation period.
+Before PR #41 is considered complete:
 
-## Validation requirements
-
-Repository-side validation:
-
-- the branch contains no new AI API key or secret;
-- no new AI-review GitHub Actions workflow is added;
-- existing CodeRabbit configuration is preserved;
-- no Qodo configuration remains in the final diff;
-- documentation consistently states review-only, advisory behavior;
-- documentation makes issue/spec intent and established behavior authoritative over reviewer suggestions;
-- no reviewer is documented as a required merge gate;
-- the implementation diff does not alter application, database, deployment, or runtime behavior.
-
-Live integration validation:
-
-- Sourcery can review the implementation PR through free open-source access;
-- Graphite Agent can review the implementation PR through Hobby/free access;
-- CodeRabbit continues operating normally;
-- all new Apps are scoped only to this repository;
-- no App required a permission that violates the approved ceiling;
-- no service automatically commits, pushes, or applies code changes;
-- review output is inspected for obvious duplicate/noisy behavior.
-
-## Out of scope
-
-- Qodo;
-- replacing CodeRabbit;
-- self-hosted reviewers that require paid LLM API inference;
-- automatic AI fixes or coding agents;
-- changing branch protection to require AI checks;
-- AI-review GitHub Actions workflows;
-- vendor API tokens or LLM secrets;
-- deterministic CI changes;
-- application functionality changes made solely to satisfy reviewer opinions;
-- Graphite paid-plan review customization;
-- Sourcery production-issue auto-fix or CLI fix flows.
+- repository docs consistently describe CodeRabbit as the only accepted active reviewer;
+- Qodo, Sourcery, and Graphite appear only as evaluation history/rejected candidates rather than active setup instructions;
+- no new AI API key or secret exists;
+- no new AI-review GitHub Actions workflow exists;
+- `.coderabbit.yaml` remains unchanged;
+- no application, database, deployment, package, lockfile, or runtime behavior changes merely for this policy work;
+- issue #40 is repurposed to future least-privilege reviewer research;
+- Sourcery and Graphite are uninstalled from the repository by the maintainer;
+- current-head CI and repository-required documentation validation are green before merge.
