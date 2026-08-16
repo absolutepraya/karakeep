@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
@@ -69,6 +69,7 @@ describe("ServiceWorkerRegistration", () => {
   });
 
   afterEach(() => {
+    cleanup();
     mocks.register.mockReset();
     mocks.getRegistration.mockReset();
     mocks.fetch.mockReset();
