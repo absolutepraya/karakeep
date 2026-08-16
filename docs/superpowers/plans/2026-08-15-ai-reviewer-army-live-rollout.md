@@ -65,6 +65,14 @@ Qodo is intentionally excluded. Its permanent zero-cost route requires OSS quali
 - Keep `.coderabbit.yaml` unchanged unless a real integration conflict is discovered.
 - The same evidence-not-authority rule applies even though CodeRabbit has already earned more practical trust in this repository.
 
+## Branch protection / ruleset check
+
+Before installing either new reviewer, inspect the repository's `main` branch protection and rulesets and record that no AI-review status is required.
+
+After each installation, check again. In particular, `Sourcery review` and any Graphite reviewer status/check must remain advisory and must not be added as required merge checks.
+
+Treat the rollout as unsuccessful until any accidentally required AI-review status has been removed. Reviewer downtime, quota exhaustion, or a negative AI status must never mechanically block merge eligibility.
+
 ## Live smoke-test acceptance criteria
 
 Before calling the hosted-service rollout successful:
@@ -75,6 +83,7 @@ Before calling the hosted-service rollout successful:
 - each new App is scoped only to this repository;
 - no App required permissions above the approved ceiling;
 - none of the services automatically commits, pushes, applies fixes, or mutates the branch;
+- `main` branch protection/rulesets do not require any AI-review status, including `Sourcery review` or Graphite reviewer checks;
 - all reviewer status/check output remains advisory;
 - obvious duplicate/noisy behavior is documented and tuned only where the free plan supports it;
 - no application, database, deployment, CI, or runtime behavior is changed merely to satisfy a reviewer.
