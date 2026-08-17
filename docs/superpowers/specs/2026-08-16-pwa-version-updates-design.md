@@ -197,7 +197,7 @@ Both desktop and mobile consume the same PWA lifecycle state.
 Normal state:
 
 ```text
-absolutepraya/karakeep
+absolutepraya/marka
 Build b3f8690
 ```
 
@@ -225,7 +225,7 @@ Keep the existing bottom-left sidebar version area.
 
 Refactor `SidebarVersion` so the displayed build comes from the shared PWA lifecycle state rather than treating the current live server build as the browser build.
 
-The repository label and running build SHA remain linkable to `absolutepraya/karakeep` and the corresponding GitHub commit when the value is a valid SHA.
+The repository label and running build SHA remain linkable to `absolutepraya/marka` and the corresponding GitHub commit when the value is a valid SHA.
 
 ### Mobile
 

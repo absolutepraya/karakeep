@@ -72,11 +72,9 @@
 - Consumes: current `main`, planning branch `absolutepraya/marka-public-cutover-plan`, current production `.env` access available only at execution time.
 - Produces: a current classified list of old fork-identity references and a confirmed implementation worktree based on the latest `main`.
 
-- [ ] **Step 1: Create an isolated execution worktree using the repository's `wt` workflow**
+- [ ] **Step 1: Use the isolated execution worktree for this cutover**
 
-Use the `wt` skill and CLI. Base the execution worktree on the latest `origin/main`, then bring the three planning documents from `absolutepraya/marka-public-cutover-plan` into the implementation branch if they are not already merged.
-
-Do not edit a stale root worktree.
+Use the existing isolated execution worktree for this cutover. If starting this plan from a new checkout, use the repository's `wt` workflow and base it on the latest `origin/main`; do not edit a stale root worktree.
 
 - [ ] **Step 2: Re-read current repository guidance**
 
@@ -87,7 +85,7 @@ sed -n '1,220p' AGENTS.md
 sed -n '1,260p' docs/fork-setup.md
 ```
 
-Expected before the GitHub rename: `origin` still resolves to `absolutepraya/karakeep`; the worktree is clean except for intentionally carried planning commits.
+Expected in the current execution worktree: `origin` resolves to `git@github.com:absolutepraya/marka.git`; the worktree is clean except for the intentional cutover documentation changes.
 
 - [ ] **Step 3: Inventory old public identities in the current tree**
 
@@ -465,6 +463,8 @@ If no runtime source was changed, do not create an empty commit.
 pnpm format:fix
 pnpm lint
 pnpm typecheck
+pnpm --filter @karakeep/docs typecheck
+pnpm --filter @karakeep/docs build
 bash scripts/install.test.sh
 ```
 
@@ -598,7 +598,11 @@ The output may contain hostnames and paths but must not contain environment-vari
 - [ ] **Step 6: Generate a non-secret local manifest and verify readability**
 
 ```bash
-find "$BACKUP_ROOT" -type f -print0 | sort -z | xargs -0 shasum -a 256 > "$BACKUP_ROOT/SHA256SUMS"
+MANIFEST_TMP="$(mktemp "${TMPDIR:-/tmp}/marka-cutover-checksums.XXXXXX")"
+find "$BACKUP_ROOT" -type f ! -path "$BACKUP_ROOT/SHA256SUMS" \
+  -exec shasum -a 256 {} + \
+  | LC_ALL=C sort > "$MANIFEST_TMP"
+mv "$MANIFEST_TMP" "$BACKUP_ROOT/SHA256SUMS"
 du -sh "$BACKUP_ROOT"
 find "$BACKUP_ROOT" -maxdepth 3 -type f -print
 ```
@@ -613,7 +617,7 @@ Do not rename the repository, touch DNS, or change production until Task 6 is fu
 
 ---
 
-### Task 7: Rename the GitHub repository in place and update the execution remote
+### Task 7: Verify the in-place GitHub rename and execution remote
 
 **Files:**
 - External: GitHub repository metadata
@@ -624,44 +628,34 @@ Do not rename the repository, touch DNS, or change production until Task 6 is fu
 - Consumes: prepared, pushed branch and verified local backup.
 - Produces: live repository `absolutepraya/marka` with old-path redirect intact and a working new Git remote.
 
-- [ ] **Step 1: Re-confirm the repository is still named `absolutepraya/karakeep` and the prepared branch is pushed**
+The in-place repository rename is a completed prerequisite for this branch. This task is idempotent verification only and must never issue a second rename request or create the old repository name.
+
+- [ ] **Step 1: Confirm the repository is named `absolutepraya/marka` and the prepared branch is pushed**
 
 ```bash
-gh repo view absolutepraya/karakeep --json nameWithOwner,url,defaultBranchRef
+gh repo view absolutepraya/marka --json nameWithOwner,url,defaultBranchRef
 
 git status --short --branch
 git log -1 --oneline
 ```
 
-Expected: clean branch and repository still on old name.
+Expected: clean branch and repository name `absolutepraya/marka`.
 
-- [ ] **Step 2: Rename the existing repository in place**
+- [ ] **Step 2: Ensure the local execution remote uses the canonical repository**
 
-Using authenticated GitHub CLI from the MacBook:
-
-```bash
-gh api --method PATCH repos/absolutepraya/karakeep -f name=marka --jq '.full_name'
-```
-
-Expected output:
-
-```text
-absolutepraya/marka
-```
-
-Do not create a new repository at either path.
-
-- [ ] **Step 3: Update the local `origin` URL immediately**
+Update the remote only when it is not already canonical:
 
 ```bash
-git remote set-url origin git@github.com:absolutepraya/marka.git
+if [[ "$(git remote get-url origin)" != "git@github.com:absolutepraya/marka.git" ]]; then
+  git remote set-url origin git@github.com:absolutepraya/marka.git
+fi
 git remote -v
 git fetch origin
 ```
 
 Expected: fetch succeeds through the new canonical path.
 
-- [ ] **Step 4: Verify old and new repository behavior**
+- [ ] **Step 3: Verify old and new repository behavior**
 
 ```bash
 gh repo view absolutepraya/marka --json nameWithOwner,url
@@ -670,17 +664,19 @@ git ls-remote git@github.com:absolutepraya/marka.git HEAD
 
 Also verify the old web repository URL redirects to the new repository. Do **not** create `absolutepraya/karakeep` as a placeholder.
 
-- [ ] **Step 5: Update active planning-document links that still describe the current repo with the old path**
+- [ ] **Step 4: Update active planning-document links that still describe the current repo with the old path**
 
 Change current links in the ADR/spec/plan from `https://github.com/absolutepraya/karakeep/...` to the renamed repository when they are intended as current navigation. Preserve explicit historical examples describing the pre-cutover state.
 
-- [ ] **Step 6: Commit and push any post-rename documentation fixups**
+- [ ] **Step 5: Commit and push any post-rename documentation fixups**
 
 ```bash
 git add docs/adr/0001-marka-public-identity-cutover-boundary.md \
   docs/superpowers/specs/2026-08-15-marka-public-identity-cutover-design.md \
   docs/superpowers/plans/2026-08-15-marka-public-identity-cutover.md
-git commit -m "docs: point cutover records at renamed repository" || true
+if ! git diff --cached --quiet; then
+  git commit -m "docs: point cutover records at renamed repository"
+fi
 git push origin HEAD
 ```
 
@@ -878,10 +874,10 @@ Expected: both Marka images pull successfully before the running services are re
 
 ```bash
 docker compose up -d --no-deps --force-recreate web
-docker compose up -d --no-deps --force-recreate workers
+docker compose up -d --force-recreate workers
 ```
 
-If current dependency/health requirements demand the documented safer ordering, start web first, wait until healthy, then workers.
+The web recreation is intentionally separate. The workers command omits `--no-deps` so Compose enforces `workers.depends_on.web` with `condition: service_healthy` before starting workers.
 
 - [ ] **Step 5: Verify service health and actual image identity**
 
@@ -1122,6 +1118,8 @@ If a hit breaks because the repository/domain/GHCR resource moved, update that d
 pnpm format:fix
 pnpm lint
 pnpm typecheck
+pnpm --filter @karakeep/docs typecheck
+pnpm --filter @karakeep/docs build
 bash scripts/install.test.sh
 ```
 

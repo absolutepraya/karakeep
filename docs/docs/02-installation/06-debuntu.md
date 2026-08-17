@@ -13,9 +13,9 @@ The script will download and install all dependencies (except for Ollama), insta
 
 The script functions as an update script in addition to an installer. See **[Updating](#updating)**.
 
-### 1. Download the script from the [Karakeep repository](https://github.com/absolutepraya/marka/blob/main/karakeep-linux.sh)
+### 1. Download the script from the [Marka fork repository](https://github.com/absolutepraya/marka/blob/main/karakeep-linux.sh)
 
-```
+```bash
 wget https://raw.githubusercontent.com/absolutepraya/marka/main/karakeep-linux.sh
 ```
 

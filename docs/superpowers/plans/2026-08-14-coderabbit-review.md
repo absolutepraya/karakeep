@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a repository-controlled, advisory CodeRabbit review configuration for `absolutepraya/karakeep` and document the contributor workflow without changing existing CI or deployment behavior.
+**Goal:** Add a repository-controlled, advisory CodeRabbit review configuration for `absolutepraya/marka` and document the contributor workflow without changing existing CI or deployment behavior.
 
 **Architecture:** CodeRabbit behavior is configured entirely through a root `.coderabbit.yaml`; no GitHub Actions workflow is added. Review policy is split into global review settings, path filters for generated artifacts, path-specific instructions for the major monorepo surfaces, and warning-only built-in pre-merge checks. `CONTRIBUTING.md` documents the human-facing workflow and makes clear that GitHub Actions remains authoritative for deterministic validation.
 
@@ -381,12 +381,12 @@ Closes #29
 
 ## Rollout
 
-CodeRabbit remains advisory during the initial calibration period. Existing GitHub Actions checks remain authoritative for deterministic validation. After this PR is ready for review, the maintainer will install the CodeRabbit GitHub App only for `absolutepraya/karakeep` and use this PR as the first live review test.
+CodeRabbit remains advisory during the initial calibration period. Existing GitHub Actions checks remain authoritative for deterministic validation. After this PR is ready for review, the maintainer will install the CodeRabbit GitHub App only for `absolutepraya/marka` and use this PR as the first live review test.
 ```
 
 - [ ] **Step 4: Mark the PR ready for review**
 
-Expected result: PR is no longer a draft. At this exact point, tell the maintainer to authorize/install CodeRabbit for `absolutepraya/karakeep`, scoped to this repository only.
+Expected result: PR is no longer a draft. At this exact point, tell the maintainer to authorize/install CodeRabbit for `absolutepraya/marka`, scoped to this repository only.
 
 - [ ] **Step 5: After authorization, run the live CodeRabbit smoke test**
 

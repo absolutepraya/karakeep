@@ -19,7 +19,7 @@ mkdir karakeep-app
 
 ### 2. Download the compose file
 
-Download the docker compose file provided [here](https://github.com/absolutepraya/marka/blob/main/docker/docker-compose.yml) directly into your new directory.
+Download the [Docker Compose file](https://github.com/absolutepraya/marka/blob/main/docker/docker-compose.yml) directly into your new directory.
 
 ```
 wget https://raw.githubusercontent.com/absolutepraya/marka/main/docker/docker-compose.yml

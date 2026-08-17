@@ -395,6 +395,8 @@ Run the repository's normal checks appropriate to changed code:
 pnpm format:fix
 pnpm lint
 pnpm typecheck
+pnpm --filter @karakeep/docs typecheck
+pnpm --filter @karakeep/docs build
 bash scripts/install.test.sh
 ```
 
