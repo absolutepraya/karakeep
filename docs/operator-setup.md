@@ -60,7 +60,7 @@ Variants:
 The machine-level infrastructure is shared across all local worktrees:
 
 - `marka-dev-meilisearch` on `127.0.0.1:7700`
-- `marka-dev-chrome` on `127.0.0.1:9222`
+- `marka-dev-chrome` on `127.0.0.1:9223`
 
 The Chrome helper uses `ghcr.io/karakeep-app/karakeep-chrome:release`, which is published for both `linux/amd64` and `linux/arm64`. The Meilisearch container uses the named volume `marka-dev-meilisearch-data`, which survives `pnpm dev:infra:down`.
 
@@ -81,7 +81,7 @@ Every generated worktree points at the same local infrastructure endpoints:
 
 ```text
 MEILI_ADDR=http://localhost:7700
-BROWSER_WEB_URL=http://localhost:9222
+BROWSER_WEB_URL=http://localhost:9223
 ```
 
 The Meilisearch plugins prepend `MEILI_INDEX_PREFIX` to both index UIDs. For example, a worktree prefix `issue-123-7_` produces:
@@ -113,7 +113,7 @@ Direct commands do not synthesize a namespace for you. Leaving the prefix unset 
 Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
 - If `next dev` crashes with a stale Turbopack / `instrumentation.ts` parse issue, clear `apps/web/.next` and restart.
-- If port `7700` is occupied by something other than `marka-dev-meilisearch`, or port `9222` by something other than `marka-dev-chrome`, `pnpm dev:infra:up` fails instead of silently reusing an unknown service.
+- If port `7700` is occupied by something other than `marka-dev-meilisearch`, or port `9223` by something other than `marka-dev-chrome`, `pnpm dev:infra:up` fails instead of silently reusing an unknown service.
 
 ### Verify the offline iPhone PWA
 
@@ -136,7 +136,7 @@ The most important variables for local development are:
 - `NEXTAUTH_SECRET`
 - `MEILI_ADDR` (shared dev default: `http://localhost:7700`)
 - `MEILI_INDEX_PREFIX` (per-worktree search/vector namespace; empty remains backward-compatible outside the dev launcher)
-- `BROWSER_WEB_URL` (shared dev default: `http://localhost:9222`)
+- `BROWSER_WEB_URL` (shared dev default: `http://localhost:9223`)
 - `OPENAI_API_KEY` (if AI tagging/summarization should work)
 
 ### Pull production state into local development

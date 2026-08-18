@@ -7,12 +7,14 @@ LEGACY_MEILI_CONTAINER="karakeep-dev-meilisearch"
 LEGACY_CHROME_CONTAINER="karakeep-dev-chrome"
 MEILI_VOLUME="marka-dev-meilisearch-data"
 MEILI_PORT="7700"
-CHROME_PORT="9222"
+CHROME_PORT="${MARKA_DEV_CHROME_PORT:-9223}"
 MEILI_IMAGE="getmeili/meilisearch:v1.41.0"
 CHROME_IMAGE="ghcr.io/karakeep-app/karakeep-chrome:release"
 
 info() { printf '==> %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+[[ "$CHROME_PORT" =~ ^[0-9]+$ ]] || die "MARKA_DEV_CHROME_PORT must be a port number."
 
 require_docker() {
   command -v docker >/dev/null 2>&1 || die "Docker is not installed. Install Docker first."
