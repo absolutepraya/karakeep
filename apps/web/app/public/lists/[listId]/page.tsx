@@ -16,12 +16,12 @@ export async function generateMetadata(props: {
       listId: params.listId,
     });
     return {
-      title: `${resp.name} by ${resp.ownerName} - Karakeep`,
+      title: `${resp.name} by ${resp.ownerName} - Marka`,
       description:
         resp.description && resp.description.length > 0
-          ? `${resp.description} by ${resp.ownerName} on Karakeep`
+          ? `${resp.description} by ${resp.ownerName} on Marka`
           : undefined,
-      applicationName: "Karakeep",
+      applicationName: "Marka",
       authors: [
         {
           name: resp.ownerName,
@@ -34,7 +34,7 @@ export async function generateMetadata(props: {
     }
   }
   return {
-    title: "Karakeep",
+    title: "Marka",
   };
 }
 
