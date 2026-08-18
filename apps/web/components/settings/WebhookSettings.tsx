@@ -521,7 +521,7 @@ export default function WebhookSettings() {
     >
       <SettingsSection
         title="Configured webhooks"
-        description="Send events from Karakeep to downstream automations, sync jobs, or custom integrations."
+        description="Send events from Marka to downstream automations, sync jobs, or custom integrations."
         action={<WebhooksEditorDialog />}
       >
         {isLoading && (

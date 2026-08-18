@@ -186,7 +186,7 @@ function ExportCard() {
               <SelectValue placeholder="Format" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="json">JSON (Karakeep format)</SelectItem>
+              <SelectItem value="json">JSON (Marka format)</SelectItem>
               <SelectItem value="netscape">HTML (Netscape format)</SelectItem>
             </SelectContent>
           </Select>
@@ -236,7 +236,7 @@ export function ImportExportRow() {
             icon: <Chrome />,
           },
           {
-            title: "Karakeep",
+            title: "Legacy Karakeep export",
             description: t(
               "settings.import.import_bookmarks_from_karakeep_export",
             ),
@@ -402,7 +402,7 @@ export default function ImportExport() {
   return (
     <SettingsPage
       title={t("settings.import.import_export")}
-      description="Move your library in or out of Karakeep without losing structure, notes, or momentum."
+      description="Move your library in or out of Marka without losing structure, notes, or momentum."
       icon={<Download className="size-6 shrink-0 text-muted-foreground" />}
     >
       <SettingsSection
