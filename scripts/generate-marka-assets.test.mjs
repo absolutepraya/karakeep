@@ -195,17 +195,31 @@ test("generates favicon tiles with transparent backgrounds", async () => {
   const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
   await generateAssets({ outputRoot, writeIco: false });
 
-  for (const output of manifest.outputs.filter(
+  const faviconOutputs = manifest.outputs.filter(
     (output) =>
       output.path.endsWith("marka-favicon-light.png") ||
       output.path.endsWith("marka-favicon-dark.png"),
-  )) {
-    assert.equal(
-      manifest.sources.find((source) => source.source === output.source)
-        ?.padding,
-      0.16,
-      output.path,
-    );
+  );
+  assert.equal(faviconOutputs.length, 2);
+  assert.ok(faviconOutputs.every((output) => output.trim));
+  assert.equal(faviconOutputs[0].source, faviconOutputs[1].source);
+  assert.equal(faviconOutputs[0].foreground, "#03132F");
+  assert.equal(faviconOutputs[1].foreground, undefined);
+
+  const faviconSource = manifest.sources.find(
+    (source) => source.source === faviconOutputs[0].source,
+  );
+  assert.equal(faviconSource?.padding, 0.16);
+
+  const light = await pixelsIn(
+    join(outputRoot, "apps/web/public/brand/marka/marka-favicon-light.png"),
+  );
+  const dark = await pixelsIn(
+    join(outputRoot, "apps/web/public/brand/marka/marka-favicon-dark.png"),
+  );
+  assert.deepEqual(light.info, dark.info);
+  for (let index = 3; index < light.data.length; index += light.info.channels) {
+    assert.equal(light.data[index], dark.data[index], `alpha at ${index}`);
   }
 
   for (const name of ["marka-favicon-light.png", "marka-favicon-dark.png"]) {
