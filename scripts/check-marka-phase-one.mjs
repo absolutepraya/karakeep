@@ -29,7 +29,7 @@ const sourceFiles = [
   "AGENTS.md",
   "CLAUDE.md",
   "GEMINI.md",
-  "docs/fork-setup.md",
+  "docs/operator-setup.md",
   "docs/README.md",
   ".github/ISSUE_TEMPLATE/bug_report.yml",
   ".github/ISSUE_TEMPLATE/feature_request.yml",

@@ -1,6 +1,6 @@
 ---
-name: karakeep
-description: Official skill for how to use karakeep (the bookmark manager) and interact with it programmatically.
+name: marka
+description: Official skill for how to use Marka (the bookmark manager) and interact with it programmatically.
 metadata:
   tags: bookmarks, bookmark manager, 2nd brain, productivity
   openclaw:
@@ -29,20 +29,20 @@ metadata:
         bins: [karakeep]
 ---
 
-# Karakeep
+# Marka
 
-Karakeep is an open source self-hosted bookmark manager for collecting, organizing, and searching content. This skill covers the core concepts and how to interact with Karakeep via the CLI.
+Marka is an open source self-hosted bookmark manager for collecting, organizing, and searching content. This skill covers the core concepts and how to interact with Marka via the CLI.
 
 ## When to use
 
-Use this skill when the user wants to interact with their Karakeep instance (adding bookmarks, managing lists/tags, searching, etc.).
+Use this skill when the user wants to interact with their Marka instance (adding bookmarks, managing lists/tags, searching, etc.).
 
 ## Core Concepts
 
 ### Bookmarks
 
-- **Bookmarks**: Core entity in Karakeep. Can be one of links, text or media.
-  - **Links**: Save URLs — Karakeep auto-fetches title, description, image, screenshot, and full-page archive.
+- **Bookmarks**: A bookmark is the core entity in Marka. It can be a link, text, or media.
+  - **Links**: Save URLs — Marka auto-fetches title, description, image, screenshot, and full-page archive.
   - **Text**: Quick notes or text snippets stored as bookmarks.
   - **Media**: Images and PDFs uploaded directly.
 - **Favorites**: Star bookmarks for quick access.
@@ -62,7 +62,7 @@ Lightweight labels for any bookmark (topics, sources, workflow states). Multiple
 
 ### Search Query Language
 
-Karakeep has a powerful search query language for finding the right bookmarks. It supports full-text search, boolean logic, qualifiers, and more.
+Marka has a powerful search query language for finding the right bookmarks. It supports full-text search, boolean logic, qualifiers, and more.
 
 #### Basic Syntax
 
@@ -115,7 +115,7 @@ machine learning is:fav -is:archived
 
 ### RSS Feeds
 
-Karakeep can also be used to consume RSS feeds, but also can itself act as an RSS feed publisher.
+Marka can also be used to consume RSS feeds, but also can itself act as an RSS feed publisher.
 - **Publishing**: Export any list as an RSS feed with a unique token.
 - **Consuming**: Auto-monitor external RSS feeds and create bookmarks from new items (hourly, with duplicate detection).
 
@@ -124,7 +124,7 @@ Karakeep can also be used to consume RSS feeds, but also can itself act as an RS
 - **Rule Engine**: If-this-then-that rules to auto-tag, favorite, or route bookmarks to lists.
 - **Webhooks**: Subscribe to bookmark events (add/update/archive).
 
-## Interacting with Karakeep via the CLI
+## Interacting with Marka via the CLI
 
 ### Installation
 
@@ -140,7 +140,7 @@ docker run --rm ghcr.io/karakeep-app/karakeep-cli:release --help
 
 ### Authentication
 
-The CLI requires an API key and server address. Get the API key from your Karakeep instance's settings page.
+The CLI requires an API key and server address. Get the API key from your Marka instance's settings page.
 
 **Option 1 — Environment variables (recommended):**
 
@@ -148,7 +148,7 @@ The CLI requires an API key and server address. Get the API key from your Karake
 export KARAKEEP_API_KEY="your-api-key"
 
 # If self-hosted, pass the server address as well. It defaults to the cloud instance if not set:
-export KARAKEEP_SERVER_ADDR="https://cloud.karakeep.com"
+export KARAKEEP_SERVER_ADDR="https://marka.abhipraya.dev"
 ```
 
 **Option 2 — CLI flags:**

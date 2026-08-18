@@ -196,7 +196,7 @@ git commit -m "feat: reuse dev infrastructure across worktrees"
 ### Task 4: Documentation and assistant guidance
 
 **Files:**
-- Modify: `docs/fork-setup.md`
+- Modify: `docs/operator-setup.md`
 - Modify: `AGENTS.md`
 - Modify: PR description after implementation.
 
@@ -209,7 +209,7 @@ Document shared infra architecture, `dev:infra:*` commands, automatic infra star
 
 - [ ] **Step 2: Update AGENTS.md**
 
-Keep the assistant-facing local-dev summary aligned with `docs/fork-setup.md`; do not change production installer guidance.
+Keep the assistant-facing local-dev summary aligned with `docs/operator-setup.md`; do not change production installer guidance.
 
 - [ ] **Step 3: Check CLAUDE/GEMINI representation**
 
@@ -218,7 +218,7 @@ If they are references/symlinks to `AGENTS.md`, do not duplicate edits. If indep
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/fork-setup.md AGENTS.md
+git add docs/operator-setup.md AGENTS.md
 git commit -m "docs: explain shared worktree dev infrastructure"
 ```
 

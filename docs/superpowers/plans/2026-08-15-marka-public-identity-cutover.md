@@ -44,7 +44,7 @@
 - `README.md` - canonical public fork repository identity and install links.
 - `CONTRIBUTING.md` - active contribution/repository references.
 - `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` - assistant/operator repo identity and guided install references.
-- `docs/fork-setup.md` - canonical fork operator/deployment source of truth.
+- `docs/operator-setup.md` - canonical operator/deployment source of truth.
 - `docs/README.md` - docs development references if they point at the fork repository.
 - `docs/docs/02-installation/11-guided-docker-setup.md` - guided installer contract and image/repository examples.
 - `docs/docusaurus.config.ts` - update only fork-owned GitHub/repository metadata; preserve upstream-owned URLs.
@@ -62,7 +62,7 @@
 
 **Files:**
 - Read: `AGENTS.md`
-- Read: `docs/fork-setup.md`
+- Read: `docs/operator-setup.md`
 - Read: `docs/superpowers/specs/2026-08-15-marka-public-identity-cutover-design.md`
 - Read: `docs/adr/0001-marka-public-identity-cutover-boundary.md`
 - Read: issue #27 and issue #35 through GitHub
@@ -82,7 +82,7 @@ Use the existing isolated execution worktree for this cutover. If starting this 
 git status --short --branch
 git remote -v
 sed -n '1,220p' AGENTS.md
-sed -n '1,260p' docs/fork-setup.md
+sed -n '1,260p' docs/operator-setup.md
 ```
 
 Expected in the current execution worktree: `origin` resolves to `git@github.com:absolutepraya/marka.git`; the worktree is clean except for the intentional cutover documentation changes.
@@ -146,7 +146,7 @@ Expected: no runtime/external mutation yet.
 - Modify: `scripts/install.sh`
 - Modify: `scripts/install.test.sh`
 - Modify: `docs/docs/02-installation/11-guided-docker-setup.md`
-- Modify: `docs/fork-setup.md`
+- Modify: `docs/operator-setup.md`
 - Modify: `AGENTS.md`
 - Modify: `CLAUDE.md`
 - Modify: `GEMINI.md`
@@ -262,7 +262,7 @@ Expected: only historical records, if any. No current workflow/Compose/installer
 ```bash
 git add .github/workflows/docker.yml deploy/docker-compose.prod.yml \
   scripts/install.sh scripts/install.test.sh \
-  docs/docs/02-installation/11-guided-docker-setup.md docs/fork-setup.md \
+  docs/docs/02-installation/11-guided-docker-setup.md docs/operator-setup.md \
   AGENTS.md CLAUDE.md GEMINI.md
 git commit -m "chore: move fork images to Marka GHCR path"
 ```
@@ -278,7 +278,7 @@ git commit -m "chore: move fork images to Marka GHCR path"
 - Modify: `AGENTS.md`
 - Modify: `CLAUDE.md`
 - Modify: `GEMINI.md`
-- Modify: `docs/fork-setup.md`
+- Modify: `docs/operator-setup.md`
 - Modify: `docs/README.md` if it contains active fork repository links
 - Modify: `docs/docs/02-installation/11-guided-docker-setup.md`
 - Modify: active installation pages identified by Task 1
@@ -315,7 +315,7 @@ git@github.com:absolutepraya/marka.git
 https://raw.githubusercontent.com/absolutepraya/marka/main/scripts/install.sh
 ```
 
-Apply this to `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `docs/fork-setup.md`, `docs/README.md` if applicable, and `docs/docs/02-installation/11-guided-docker-setup.md`.
+Apply this to `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `docs/operator-setup.md`, `docs/README.md` if applicable, and `docs/docs/02-installation/11-guided-docker-setup.md`.
 
 Do **not** alter `https://github.com/karakeep-app/karakeep` or any other upstream attribution.
 
@@ -358,7 +358,7 @@ Expected: PASS, subject to an already-known repository baseline unrelated to thi
 ```bash
 git add apps/web/components/shared/sidebar/SidebarVersion.tsx \
   README.md CONTRIBUTING.md AGENTS.md CLAUDE.md GEMINI.md \
-  docs/fork-setup.md docs/README.md docs/docs docs/docusaurus.config.ts
+  docs/operator-setup.md docs/README.md docs/docs docs/docusaurus.config.ts
 git commit -m "chore: point public fork identity at absolutepraya/marka"
 ```
 
@@ -573,7 +573,7 @@ PY
 )" "$BACKUP_ROOT/data"
 ```
 
-If the repository helper's contract has changed, follow the current `docs/fork-setup.md` contract instead and update this plan before proceeding.
+If the repository helper's contract has changed, follow the current `docs/operator-setup.md` contract instead and update this plan before proceeding.
 
 - [ ] **Step 4: Copy deployed configuration files locally without printing contents**
 
@@ -778,7 +778,7 @@ Do not delete historical old-package images.
 
 - [ ] **Step 1: Inspect the current live hostname path before changing it**
 
-On the VPS, capture the existing `keep.abhipraya.dev` nginx server block and listener/port mapping. Confirm which local port proxies to the `web` service. Compare with `docs/fork-setup.md` rather than assuming a container name.
+On the VPS, capture the existing `keep.abhipraya.dev` nginx server block and listener/port mapping. Confirm which local port proxies to the `web` service. Compare with `docs/operator-setup.md` rather than assuming a container name.
 
 - [ ] **Step 2: Create the Marka DNS record using the same target/proxy mode proven by the current deployment**
 
@@ -1044,7 +1044,7 @@ Expected: application response, not a redirect to the old host.
 ### Task 13: Finish GitHub-side presentation and active documentation cleanup
 
 **Files:**
-- Modify as needed: `README.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `docs/fork-setup.md`, guided installer docs, planning docs
+- Modify as needed: `README.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `docs/operator-setup.md`, guided installer docs, planning docs
 - External: GitHub repository description/homepage/topics/social preview/package linkage/settings
 
 **Interfaces:**

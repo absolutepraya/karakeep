@@ -18,7 +18,7 @@
 - Use 3 documentation buckets:
   1. **Public / repo-facing docs** — `README.md`, `CONTRIBUTING.md`, `docs/README.md`, selected docs-site pages.
   2. **Agent / assistant docs** — `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and any similar root-level instruction docs that should not drift.
-  3. **Fork / operator docs** — `docs/fork-setup.md`, deploy docs, setup docs, and troubleshooting docs that must reflect the real local/dev/prod workflow of this fork.
+  3. **Operator docs** — `docs/operator-setup.md`, deploy docs, setup docs, and troubleshooting docs that must reflect the real local/dev/prod workflow of this repository.
 - Public docs should remain explicit that this repo is a fork of upstream Karakeep, but the writing should be rewritten strongly enough that readers are not bounced between “real upstream docs” and “small fork notes”.
 - Prefer **one source of truth** for project/fork/dev/deploy/tooling facts, then align derivative docs around it instead of keeping parallel hand-maintained summaries.
 - Execute this in phases:
@@ -36,7 +36,7 @@
   - `CLAUDE.md`
   - `GEMINI.md`
 - Highest priority fork/operator docs:
-  - `docs/fork-setup.md`
+  - `docs/operator-setup.md`
 - Highest priority docs-site pages:
   - `docs/docs/01-getting-started/01-intro.md`
   - `docs/docs/08-development/01-setup.md`
@@ -59,7 +59,7 @@
 
 ## Reuse
 - Existing fork-specific factual source:
-  - `docs/fork-setup.md`
+  - `docs/operator-setup.md`
 - Existing project/fork/dev/deploy summary already reused in multiple places:
   - `AGENTS.md`
   - `CLAUDE.md`

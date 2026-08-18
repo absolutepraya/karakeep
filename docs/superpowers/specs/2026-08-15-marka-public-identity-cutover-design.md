@@ -67,7 +67,7 @@ The internal machine-facing migration is owned by #35.
 
 ## Current repository facts that drive the plan
 
-The current repository explicitly treats `docs/fork-setup.md` as the production/operator source of truth and `deploy/docker-compose.prod.yml` as the canonical personal VPS Compose file. Production uses split `web` and `workers` images and Watchtower polls mutable release tags.
+The current repository explicitly treats `docs/operator-setup.md` as the production/operator source of truth and `deploy/docker-compose.prod.yml` as the canonical personal VPS Compose file. Production uses split `web` and `workers` images and Watchtower polls mutable release tags.
 
 The current Docker workflow constructs `image_name="ghcr.io/${{ github.repository_owner }}/karakeep"`, so renaming the GitHub repository alone will **not** rename the GHCR package. `.github/workflows/docker.yml` must be changed deliberately.
 
@@ -80,7 +80,7 @@ The new `ghcr.io/absolutepraya/marka` package must be proven pullable by the VPS
 
 The guided installer also hardcodes the fork's old repository/raw URL and old GHCR path. Its shell-level contract is covered by `bash scripts/install.test.sh`.
 
-Current-tree searches also show the old GitHub identity in the README, assistant docs, installation docs, `docs/fork-setup.md`, `apps/web/components/shared/sidebar/SidebarVersion.tsx`, and other repository-facing documentation. Those hits must be classified, not blindly replaced: some old Karakeep references are intentional upstream attribution or historical specs.
+Current-tree searches also show the old GitHub identity in the README, assistant docs, installation docs, `docs/operator-setup.md`, `apps/web/components/shared/sidebar/SidebarVersion.tsx`, and other repository-facing documentation. Those hits must be classified, not blindly replaced: some old Karakeep references are intentional upstream attribution or historical specs.
 
 ## Public identity rules
 
@@ -192,7 +192,7 @@ The implementation must inspect and update, where the classification says they a
 - `AGENTS.md`
 - `CLAUDE.md`
 - `GEMINI.md`
-- `docs/fork-setup.md`
+- `docs/operator-setup.md`
 - `docs/README.md`
 - `docs/docs/02-installation/11-guided-docker-setup.md`
 - other current installation pages returned by repository search
@@ -249,7 +249,7 @@ The migration uses checkpoints with a bounded service-recovery path. The reposit
 Before implementation:
 
 - update the implementation worktree/branch from current `main`;
-- read `AGENTS.md` and `docs/fork-setup.md` again because they may have changed since this design was written;
+- read `AGENTS.md` and `docs/operator-setup.md` again because they may have changed since this design was written;
 - inspect issue #27 and #35 for newer decisions;
 - inventory the exact current-tree references and current live configuration;
 - do not mutate external systems yet.

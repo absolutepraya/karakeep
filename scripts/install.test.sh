@@ -111,8 +111,8 @@ recommended_output="$(printf '\n%.0s' {1..12} | HOME="$recommended_home" bash "$
 assert_contains "$recommended_output" "Press Enter to accept the recommended value shown in [brackets]."
 # Bash read -p only emits its prompt for terminal input, so verify the prompt itself in the script
 # and the resulting configuration behavior separately when stdin is piped for this automated test.
-assert_contains "$INSTALLER" "Use the recommended Karakeep setup?"
-assert_contains "$recommended_home/karakeep/docker-compose.yml" "ghcr.io/karakeep-app/karakeep-chrome:release"
+assert_contains "$INSTALLER" "Use the recommended Marka setup?"
+assert_contains "$recommended_home/marka/docker-compose.yml" "ghcr.io/karakeep-app/karakeep-chrome:release"
 
 # Dry run must not write configuration or disclose secrets.
 dry_dir="$root/dry"
@@ -145,6 +145,14 @@ assert_contains "$managed/install/workers.env" 'BROWSER_WEB_URL="http://chrome:9
 [[ "$(stat -c '%a' "$managed/install/app.env")" == "600" ]] || fail "app.env permissions are not 600"
 [[ "$(stat -c '%a' "$managed/install/workers.env")" == "600" ]] || fail "workers.env permissions are not 600"
 [[ "$(stat -c '%a' "$managed/install/install.sh")" == "700" ]] || fail "installed helper permissions are not 700"
+
+# Existing guided installs remain manageable after the default moves to Marka.
+legacy_home="$root/legacy-home"
+mkdir -p "$legacy_home/karakeep"
+touch "$legacy_home/karakeep/docker-compose.yml"
+: >"$FAKE_DOCKER_LOG"
+HOME="$legacy_home" bash "$INSTALLER" status >/dev/null
+assert_contains "$FAKE_DOCKER_LOG" "compose ps"
 
 # A rerun must refuse to overwrite generated configuration unless explicitly requested.
 before_hash="$(sha256sum "$managed/install/app.env" | awk '{print $1}')"
@@ -216,7 +224,7 @@ fi
 # Backup uses the persisted data directory and never removes it.
 backup_root="$root/backups"
 bash "$external/install/install.sh" backup --install-dir "$external/install" --backup-dir "$backup_root" >/dev/null
-archive="$(find "$backup_root" -maxdepth 1 -name 'karakeep-data-*.tar.gz' -print -quit)"
+archive="$(find "$backup_root" -maxdepth 1 -name 'marka-data-*.tar.gz' -print -quit)"
 [[ -n "$archive" && -f "$archive" ]] || fail "Backup archive was not created"
 [[ -f "$external/data/marker" ]] || fail "Backup removed persistent data"
 

@@ -2,33 +2,24 @@
 
 Thanks for taking the time to improve Marka.
 
-This repository is the **Marka fork** of the upstream project, so contribution flow here is a little different from the main project.
+This repository maintains Marka's product, operator workflow, and repository-specific development practices.
 
 ## Which repo should you contribute to?
 
-### Contribute upstream if...
-- your change is generally useful to the main project
-- it is not specific to this fork’s UX/QoL direction
-- it affects the broader community-facing product, install flow, or platform support
-
-Start here:
-- Upstream repo: <https://github.com/karakeep-app/karakeep>
-- Upstream docs: <https://docs.karakeep.app>
-
-### Contribute to this fork if...
-- the change is specific to this fork’s UX, operator workflow, or repo-specific maintenance model
-- it depends on this fork’s pull-based deploy flow or local-dev scripts
-- it intentionally diverges from upstream behavior or presentation
+### Contribute here if...
+- the change improves Marka's UX, operator workflow, or repository-specific maintenance model
+- it depends on Marka's pull-based deploy flow or local-dev scripts
+- it improves a product behavior or presentation maintained in this repository
 
 ## Before you start
 
 - Open an issue or discussion first if the change is large, behavioral, or opinionated.
-- If the change probably belongs upstream, prefer proposing it there instead of here.
-- Read the fork-specific setup guide: [`docs/fork-setup.md`](docs/fork-setup.md)
+- If the change belongs to a different project, propose it there instead of here.
+- Read the operator setup guide: [`docs/operator-setup.md`](docs/operator-setup.md)
 
 ## Local setup
 
-This fork uses:
+Marka uses:
 - Node 24.18.1 (`.nvmrc`; temporarily pinned to avoid the Node 24.19 native-addon cleanup regression)
 - `pnpm@11.2.1` via corepack
 - root `.env` symlinked into `apps/web`, `apps/workers`, and `packages/db`
@@ -50,7 +41,7 @@ pnpm db:migrate
 ```
 
 For the full workflow, detached mode, and production deploy notes, use:
-- [`docs/fork-setup.md`](docs/fork-setup.md)
+- [`docs/operator-setup.md`](docs/operator-setup.md)
 
 ## What to run before opening a PR
 
@@ -80,19 +71,19 @@ Notes:
 
 ### UI / UX changes
 - Include screenshots or a short screen recording.
-- Explain why the change fits this fork specifically.
+- Explain why the change fits Marka specifically.
 - Keep the design language consistent with the current app rather than introducing a second style system.
 
 ### Schema / backend changes
 - Add migrations when needed.
 - Call out any deploy or operator impact clearly.
-- Mention if a change would make upstream sync harder.
+- Mention any compatibility or migration implications.
 
 ### Documentation changes
-If you touch fork, development, or deployment facts, follow the authoritative documentation map:
-- `README.md` provides public fork framing.
+If you touch development or deployment facts, follow the authoritative documentation map:
+- `README.md` provides public product framing.
 - `CONTRIBUTING.md` provides contribution rules.
-- `docs/fork-setup.md` provides fork operation.
+- `docs/operator-setup.md` provides operator setup.
 - `docs/README.md` provides docs-site development.
 - `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` provide concise assistant operations context.
 - Relevant docs-site pages under `docs/docs/**` must stay aligned when their content changes.
@@ -101,10 +92,10 @@ If you touch fork, development, or deployment facts, follow the authoritative do
 
 A good PR for this repo should include:
 - a clear summary of the change
-- why it belongs in this fork
+- why it belongs in Marka
 - screenshots for UI changes
 - commands run for validation
-- any deploy, migration, or sync-with-upstream implications
+- any deploy, migration, or compatibility implications
 
 ## Review expectations
 
@@ -119,6 +110,4 @@ AI review is advisory:
 
 See [`docs/ai-code-review.md`](docs/ai-code-review.md) for the current reviewer policy, rejected-candidate history, permissions ceiling, and future evaluation criteria.
 
-This is a personal fork, so human review cadence is best-effort rather than community-SLA driven.
-
-If you need a guaranteed path to merge for a generally useful change, the upstream Karakeep project is usually the better place to propose it.
+Human review cadence is best-effort rather than community-SLA driven.

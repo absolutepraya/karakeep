@@ -14,9 +14,9 @@ Before deploying, review and update the local configuration inputs such as `.env
 
 ## Note
 
-This fork’s day-to-day operator flow is centered around Docker image builds plus pull-based deployment (`docs/fork-setup.md`), not Kubernetes-first operations.
+Marka’s day-to-day operator flow is centered around Docker image builds plus pull-based deployment (`docs/operator-setup.md`), not Kubernetes-first operations.
 
 If you are looking for the main self-hosting path, start with:
 - `README.md`
-- `docs/fork-setup.md`
+- `docs/operator-setup.md`
 - upstream docs at <https://docs.karakeep.app>

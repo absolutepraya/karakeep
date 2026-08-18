@@ -82,6 +82,11 @@ case "${1:-}" in
     name="${@: -1}"
     rm -f "$state_dir/$name"
     ;;
+  rename)
+    old="${2:?}"
+    new="${3:?}"
+    mv "$state_dir/$old" "$state_dir/$new"
+    ;;
   ps)
     for file in "$state_dir"/*; do
       [[ -e "$file" ]] || continue
@@ -126,10 +131,10 @@ done
 
 # Shared infra starts exactly one stable Meilisearch and Chrome container.
 bash "$INFRA" up >/dev/null
-assert_contains "$FAKE_DOCKER_LOG" "karakeep-dev-meilisearch"
+assert_contains "$FAKE_DOCKER_LOG" "marka-dev-meilisearch"
 assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:7700:7700"
 assert_contains "$FAKE_DOCKER_LOG" "getmeili/meilisearch:v1.41.0"
-assert_contains "$FAKE_DOCKER_LOG" "karakeep-dev-chrome"
+assert_contains "$FAKE_DOCKER_LOG" "marka-dev-chrome"
 assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9222:9222"
 assert_contains "$FAKE_DOCKER_LOG" "ghcr.io/karakeep-app/karakeep-chrome:release"
 
@@ -139,12 +144,24 @@ second_run_count="$(grep -c '^run ' "$FAKE_DOCKER_LOG" || true)"
 [[ "$first_run_count" == "$second_run_count" ]] || fail "Repeated infra up created duplicate containers"
 
 # A foreign listener blocks creation instead of being silently reused.
-rm -f "$state_dir/karakeep-dev-meilisearch" "$state_dir/karakeep-dev-chrome"
+rm -f "$state_dir/marka-dev-meilisearch" "$state_dir/marka-dev-chrome"
 : >"$FAKE_DOCKER_LOG"
 if FAKE_BUSY_PORTS=7700 bash "$INFRA" up >"$root/foreign.out" 2>&1; then
   fail "Shared infra unexpectedly reused a foreign listener on port 7700"
 fi
 assert_contains "$root/foreign.out" "Port 7700 is already in use"
+
+# Existing pre-Marka containers are adopted without treating their ports as foreign.
+: >"$FAKE_DOCKER_LOG"
+printf 'true\n' >"$state_dir/karakeep-dev-meilisearch"
+printf 'true\n' >"$state_dir/karakeep-dev-chrome"
+bash "$INFRA" up >/dev/null
+assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-meilisearch marka-dev-meilisearch"
+assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-chrome marka-dev-chrome"
+[[ -e "$state_dir/marka-dev-meilisearch" ]] || fail "Meilisearch state was not renamed"
+[[ -e "$state_dir/marka-dev-chrome" ]] || fail "Chrome state was not renamed"
+[[ ! -e "$state_dir/karakeep-dev-meilisearch" ]] || fail "Legacy Meilisearch state remains"
+[[ ! -e "$state_dir/karakeep-dev-chrome" ]] || fail "Legacy Chrome state remains"
 
 # Worktrees share infra endpoints but retain unique web/data state and a Meilisearch-safe namespace.
 main_root="$root/main"
@@ -202,10 +219,10 @@ assert_contains "$PACKAGE_JSON" '"dev:infra:down": "bash scripts/dev-infra.sh do
 
 # Explicit down owns only the shared infra containers.
 : >"$FAKE_DOCKER_LOG"
-printf 'true\n' >"$state_dir/karakeep-dev-meilisearch"
-printf 'true\n' >"$state_dir/karakeep-dev-chrome"
+printf 'true\n' >"$state_dir/marka-dev-meilisearch"
+printf 'true\n' >"$state_dir/marka-dev-chrome"
 bash "$INFRA" down >/dev/null
-assert_contains "$FAKE_DOCKER_LOG" "rm -f karakeep-dev-meilisearch"
-assert_contains "$FAKE_DOCKER_LOG" "rm -f karakeep-dev-chrome"
+assert_contains "$FAKE_DOCKER_LOG" "rm -f marka-dev-meilisearch"
+assert_contains "$FAKE_DOCKER_LOG" "rm -f marka-dev-chrome"
 
 printf 'Shared dev infrastructure tests passed.\n'

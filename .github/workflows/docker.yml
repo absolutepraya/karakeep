@@ -2,7 +2,7 @@ name: Build and Push image
 
 # Pull-based deploy: this workflow builds + pushes version-compatible web and
 # workers images to GHCR. The VPS runs Watchtower, which polls those tags and
-# redeploys both Karakeep services without an inbound SSH deploy step.
+# redeploys both Marka services without an inbound SSH deploy step.
 
 on:
   workflow_run:

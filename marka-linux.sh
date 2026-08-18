@@ -37,7 +37,8 @@ EOF
 }
 
 header() {
-  t_width=$(tput cols 2>/dev/null)
+  t_width="$(tput cols 2>/dev/null || printf '0')"
+  t_width="${t_width:-0}"
   if [[ "$t_width" -gt 115 ]]; then
     echo -e "$(
       cat <<EOF
@@ -88,7 +89,7 @@ setup_colours
 
 # Flash and bling
 app() {
-  echo -e "${CLR}${PURPLE}Karakeep${CLR}"
+  echo -e "${CLR}${PURPLE}Marka${CLR}"
 }
 
 spinner() {
@@ -150,7 +151,7 @@ parse_params() {
     case "${1-}" in
     -h | --help) usage ;;
     -v | --verbose) verbose=1 && set_verbosity ;;
-    --no-color) NO_COLOR=1 ;;
+    --no-color) NO_COLOR=1; setup_colours ;;
     -?*) die "Unknown flag: $1. Use -h|--help for help" ;;
     *) break ;;
     esac
@@ -163,6 +164,7 @@ parse_params() {
 }
 
 parse_params "$@"
+setup_colours
 
 OS="$(awk -F'=' '/^VERSION_CODENAME=/{ print $NF }' /etc/os-release)"
 INSTALL_DIR=/opt/karakeep

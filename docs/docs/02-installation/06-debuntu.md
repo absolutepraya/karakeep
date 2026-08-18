@@ -13,10 +13,10 @@ The script will download and install all dependencies (except for Ollama), insta
 
 The script functions as an update script in addition to an installer. See **[Updating](#updating)**.
 
-### 1. Download the script from the [Marka fork repository](https://github.com/absolutepraya/marka/blob/main/karakeep-linux.sh)
+### 1. Download the script from the [Marka repository](https://github.com/absolutepraya/marka/blob/main/marka-linux.sh)
 
 ```bash
-wget https://raw.githubusercontent.com/absolutepraya/marka/main/karakeep-linux.sh
+wget https://raw.githubusercontent.com/absolutepraya/marka/main/marka-linux.sh
 ```
 
 ### 2. Run the script
@@ -26,7 +26,7 @@ wget https://raw.githubusercontent.com/absolutepraya/marka/main/karakeep-linux.s
     If this is a fresh install, then run the installer by using the following command:
 
     ```shell
-    bash karakeep-linux.sh install
+    bash marka-linux.sh install
     ```
 
 ### 3. Create an account/sign in
@@ -40,7 +40,7 @@ wget https://raw.githubusercontent.com/absolutepraya/marka/main/karakeep-linux.s
     If Karakeep has previously been installed using this script, then run the updater like so:
 
     ```shell
-     bash karakeep-linux.sh update
+     bash marka-linux.sh update
     ```
 
 ## Services and Ports

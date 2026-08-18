@@ -1,5 +1,11 @@
 # Domain Context
 
+## Product identity
+
+- **Marka**: The public product identity for this repository and its operator-facing surfaces.
+- **Operator-facing name**: A human-visible repository, guide, installer, skill, path, or service label that can change without changing persisted data, protocols, package scopes, or environment-variable contracts.
+- **Compatibility identifier**: A retained Karakeep-era name used by code, packages, environment variables, persisted data, export formats, mobile schemes, or external distribution contracts.
+
 ## List collaboration
 
 - **List owner**: the user who owns a list. Ownership is not a collaborator membership and is never inherited.

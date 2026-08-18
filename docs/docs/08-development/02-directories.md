@@ -45,7 +45,7 @@ This repository is a pnpm workspace / Turborepo monorepo.
 | `README.md` | Public repo overview for this fork |
 | `CONTRIBUTING.md` | Contribution guidance for this repo |
 | `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` | Internal assistant-facing repo context |
-| `docs/fork-setup.md` | Canonical fork-specific local dev / deploy notes |
+| `docs/operator-setup.md` | Canonical local dev / deploy notes |
 | `docs/docs/**` | Docs-site content |
 
 ## Tooling
@@ -64,4 +64,4 @@ This repository is a pnpm workspace / Turborepo monorepo.
 - background job behavior usually lives across `apps/workers` + `packages/trpc`
 - schema changes start in `packages/db`
 - shared types/config/helpers usually live in `packages/shared`
-- repo-specific dev/deploy behavior is documented in `docs/fork-setup.md`
+- repo-specific dev/deploy behavior is documented in `docs/operator-setup.md`

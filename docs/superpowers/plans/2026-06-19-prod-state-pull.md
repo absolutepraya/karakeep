@@ -23,7 +23,7 @@
   - Adds user-facing operator command docs.
 - Modify: `AGENTS.md`
   - Adds assistant-facing operator guidance and safety constraints.
-- Modify: `docs/fork-setup.md`
+- Modify: `docs/operator-setup.md`
   - Keeps the canonical fork operator guide aligned with the new command.
 
 ## Task 1: Add Script
@@ -125,7 +125,7 @@ KARAKEEP_PROD_EXPORT_IMAGE=alpine:3.20
 **Files:**
 - Modify: `README.md`
 - Modify: `AGENTS.md`
-- Modify: `docs/fork-setup.md`
+- Modify: `docs/operator-setup.md`
 
 - [ ] **Step 1: Update README**
 
@@ -148,9 +148,9 @@ Add assistant guidance:
 - Do not overwrite local state without `--yes`.
 - Default to full `/data`; use `--db-only` only when explicitly requested.
 
-- [ ] **Step 3: Update docs/fork-setup.md**
+- [ ] **Step 3: Update docs/operator-setup.md**
 
-Add the same operator command, required `.env` keys, backup warning, full-state default, and DB-only caveat to the canonical fork setup guide.
+Add the same operator command, required `.env` keys, backup warning, full-state default, and DB-only caveat to the canonical operator setup guide.
 
 ## Task 4: Verify And Commit
 
@@ -176,7 +176,7 @@ Expected:
 Run:
 
 ```bash
-pnpm exec oxfmt --check scripts/pull-prod-state.sh package.json README.md AGENTS.md docs/fork-setup.md .env.sample docs/superpowers/plans/2026-06-19-prod-state-pull.md
+pnpm exec oxfmt --check scripts/pull-prod-state.sh package.json README.md AGENTS.md docs/operator-setup.md .env.sample docs/superpowers/plans/2026-06-19-prod-state-pull.md
 ```
 
 Expected: all checked files use the correct format.
@@ -197,6 +197,6 @@ Expected: no whitespace errors and only intended files changed.
 Run:
 
 ```bash
-git add scripts/pull-prod-state.sh package.json .env.sample README.md AGENTS.md docs/fork-setup.md docs/superpowers/plans/2026-06-19-prod-state-pull.md
+git add scripts/pull-prod-state.sh package.json .env.sample README.md AGENTS.md docs/operator-setup.md docs/superpowers/plans/2026-06-19-prod-state-pull.md
 git commit -m "Add prod state pull script"
 ```

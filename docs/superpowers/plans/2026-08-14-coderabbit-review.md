@@ -192,7 +192,7 @@ Add a reusable documentation instruction for the fork's canonical guidance files
       instructions: *fork-docs-review
     - path: "GEMINI.md"
       instructions: *fork-docs-review
-    - path: "docs/fork-setup.md"
+    - path: "docs/operator-setup.md"
       instructions: *fork-docs-review
     - path: "docs/docs/**"
       instructions: *fork-docs-review
