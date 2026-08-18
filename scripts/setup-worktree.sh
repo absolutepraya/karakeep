@@ -25,12 +25,14 @@ case "$WT_PORT_BASE" in
     ;;
 esac
 
-case "$chrome_port" in
-  '' | *[!0-9]*)
-    echo "error: MARKA_DEV_CHROME_PORT must be a non-negative integer" >&2
-    exit 1
-    ;;
-esac
+if ! [[ "$chrome_port" =~ ^[0-9]+$ ]]; then
+  echo "error: MARKA_DEV_CHROME_PORT must be between 1 and 65535" >&2
+  exit 1
+fi
+if ((10#$chrome_port < 1 || 10#$chrome_port > 65535)); then
+  echo "error: MARKA_DEV_CHROME_PORT must be between 1 and 65535" >&2
+  exit 1
+fi
 
 workspace_slug="$(printf '%s' "$workspace_name" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_-' '-' | sed 's/^-*//; s/-*$//')"
 [[ -n "$workspace_slug" ]] || workspace_slug="worktree"

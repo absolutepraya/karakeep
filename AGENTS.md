@@ -16,7 +16,7 @@
 - Runtime: Node 24 through `mise exec node@24 --`; pnpm 11.2.1 through Corepack.
 - Install with `pnpm install`, create the documented `.env` symlinks, then run `pnpm db:migrate`.
 - Start local development with `pnpm dev:start`. Use `pnpm dev:start -d` for detached mode and `pnpm dev:stop` to stop only that workspace.
-- Shared local infrastructure is machine-level: one Meilisearch at `http://localhost:7700` and one Chrome/CDP at `http://localhost:9250`. Manage it explicitly with `pnpm dev:infra:up`, `pnpm dev:infra:status`, and `pnpm dev:infra:down`.
+- Shared local infrastructure is machine-level: one Meilisearch at `http://localhost:7700` and one Chrome/CDP at the configured development port, `9250` by default. Override it with `MARKA_DEV_CHROME_PORT`.
 - Parallel worktrees keep separate SQLite/assets data and unique web ports. `scripts/setup-worktree.sh` assigns each worktree a unique `MEILI_INDEX_PREFIX`; both `bookmarks` and `bookmarks_vectors` use that namespace on the shared Meilisearch server.
 - `pnpm dev:start` defaults the main workspace namespace to `main_`. An unset `MEILI_INDEX_PREFIX` is a compatibility fallback for the original `bookmarks` and `bookmarks_vectors` names; manual `web` or `workers` starts outside `pnpm dev:start` must set an explicit unique prefix.
 - Run focused checks before broad checks when practical. Standard checks are `pnpm format:fix`, `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
@@ -126,7 +126,7 @@ Useful variants:
 Local-dev ownership model:
 - `web` + `workers` run natively per workspace
 - one machine-level Meilisearch container is shared at `http://localhost:7700`
-- one machine-level Chrome container is shared at `http://localhost:9250`
+- one machine-level Chrome container is shared at `http://localhost:9250` by default; `MARKA_DEV_CHROME_PORT` changes this endpoint.
 - `pnpm dev:start` automatically ensures those shared containers exist
 - `pnpm dev:stop` never stops shared infrastructure because other worktrees may still use it
 - the shared Chrome image is `ghcr.io/karakeep-app/karakeep-chrome:release`
@@ -152,7 +152,7 @@ pnpm workers
 
 Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
-- shared infra binds only to localhost; if ports `7700` or `9250` are occupied by something else, the helper fails rather than silently reusing an unknown service
+- shared infra binds only to localhost; if the configured ports `7700` or `MARKA_DEV_CHROME_PORT` are occupied by something else, the helper fails rather than silently reusing an unknown service
 - If `next dev` crashes with a stale Turbopack/instrumentation issue, clear `apps/web/.next`.
 
 ### Pull prod state to local dev

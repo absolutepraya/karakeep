@@ -14,7 +14,12 @@ CHROME_IMAGE="ghcr.io/karakeep-app/karakeep-chrome:release"
 info() { printf '==> %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-[[ "$CHROME_PORT" =~ ^[0-9]+$ ]] || die "MARKA_DEV_CHROME_PORT must be a port number."
+if ! [[ "$CHROME_PORT" =~ ^[0-9]+$ ]]; then
+  die "MARKA_DEV_CHROME_PORT must be between 1 and 65535."
+fi
+if ((10#$CHROME_PORT < 1 || 10#$CHROME_PORT > 65535)); then
+  die "MARKA_DEV_CHROME_PORT must be between 1 and 65535."
+fi
 
 require_docker() {
   command -v docker >/dev/null 2>&1 || die "Docker is not installed. Install Docker first."
@@ -57,6 +62,10 @@ ensure_available_port() {
   fi
 }
 
+chrome_host_port() {
+  docker inspect -f '{{range $p, $bindings := .HostConfig.PortBindings}}{{if eq $p "9222/tcp"}}{{(index $bindings 0).HostPort}}{{end}}{{end}}' "$CHROME_CONTAINER" 2>/dev/null || true
+}
+
 ensure_meilisearch() {
   adopt_legacy_container "$LEGACY_MEILI_CONTAINER" "$MEILI_CONTAINER"
   if container_exists "$MEILI_CONTAINER"; then
@@ -84,6 +93,9 @@ ensure_meilisearch() {
 ensure_chrome() {
   adopt_legacy_container "$LEGACY_CHROME_CONTAINER" "$CHROME_CONTAINER"
   if container_exists "$CHROME_CONTAINER"; then
+    local existing_port
+    existing_port="$(chrome_host_port)"
+    [[ "$existing_port" == "$CHROME_PORT" ]] || die "Existing $CHROME_CONTAINER is mapped to host port ${existing_port:-unknown}, but port $CHROME_PORT is configured. Run pnpm dev:infra:down before changing MARKA_DEV_CHROME_PORT."
     if container_running "$CHROME_CONTAINER"; then
       info "Reusing shared Chrome on http://localhost:$CHROME_PORT"
       return

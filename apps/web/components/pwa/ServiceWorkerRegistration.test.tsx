@@ -91,6 +91,8 @@ describe("ServiceWorkerRegistration", () => {
 
   it("does not register a service worker during development", async () => {
     vi.stubEnv("NODE_ENV", "development");
+    const unregister = vi.fn().mockResolvedValue(true);
+    mocks.getRegistrations.mockResolvedValue([{ unregister }]);
     Object.defineProperty(navigator.serviceWorker, "controller", {
       configurable: true,
       value: null,
@@ -100,6 +102,7 @@ describe("ServiceWorkerRegistration", () => {
 
     await waitFor(() => {
       expect(mocks.getRegistrations).toHaveBeenCalled();
+      expect(unregister).toHaveBeenCalledOnce();
     });
     expect(mocks.register).not.toHaveBeenCalled();
   });
