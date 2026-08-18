@@ -9,7 +9,7 @@ Use it for:
 
 ## Repo identity
 
-- **Origin:** `git@github.com:absolutepraya/karakeep.git`
+- **Origin:** `git@github.com:absolutepraya/marka.git`
 - **Upstream project:** `git@github.com:karakeep-app/karakeep.git`
 - **Branch model:** `main` is the active integration/deploy branch for this fork
 
@@ -196,7 +196,7 @@ This fork deploys with a **pull-based split Docker flow**.
 ### Build path
 - `.github/workflows/docker.yml` builds the `web` and `workers` targets from the same successful `main` commit
 - the workflow first pushes matching immutable `:web-sha-<sha>` and `:workers-sha-<sha>` tags, then promotes both mutable release tags only after both builds succeed
-- the mutable release tags are `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main`
+- the mutable release tags are `ghcr.io/<owner>/marka:web-main` and `ghcr.io/<owner>/marka:workers-main`
 - `web` runs Next.js and owns database migrations
 - `workers` runs background work with `WORKER_PROFILE=screenshot-first`
 

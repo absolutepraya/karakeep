@@ -6,7 +6,7 @@ import { usePwaLifecycle } from "@/components/pwa/ServiceWorkerRegistration";
 import { useTranslation } from "@/lib/i18n/client";
 import { GitBranch, Github } from "lucide-react";
 
-const FORK_REPO = "absolutepraya/karakeep";
+const FORK_REPO = "absolutepraya/marka";
 const FORK_REPO_URL = `https://github.com/${FORK_REPO}`;
 
 function isCommitSha(value?: string): value is string {

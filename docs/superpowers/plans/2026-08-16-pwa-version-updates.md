@@ -90,7 +90,7 @@ Desktop keeps the existing sidebar location. Mobile reuses the same presentation
 Normal state:
 
 ```text
-absolutepraya/karakeep
+absolutepraya/marka
 Build abc1234
 ```
 
@@ -108,7 +108,7 @@ Build abc1234
 Update ready · def5678
 ```
 
-Valid running-build SHAs link to the matching commit in `absolutepraya/karakeep`. Non-SHA values such as `development` render as plain build text without a commit link.
+Valid running-build SHAs link to the matching commit in `absolutepraya/marka`. Non-SHA values such as `development` render as plain build text without a commit link.
 
 ### Profile cleanup
 

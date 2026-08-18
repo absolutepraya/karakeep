@@ -45,7 +45,7 @@ const config: Config = {
               (item) => !(item.type == "category" && item.label === "API"),
             );
           },
-          editUrl: "https://github.com/absolutepraya/karakeep/tree/main/docs/",
+          editUrl: "https://github.com/absolutepraya/marka/tree/main/docs/",
           routeBasePath: "/",
           docItemComponent: "@theme/ApiItem",
         },

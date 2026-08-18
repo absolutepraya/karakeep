@@ -104,7 +104,7 @@ A future reviewer must satisfy all of the following before it is approved for on
 
 ### Repository scope
 
-- install only for `absolutepraya/karakeep`, not all repositories on the account;
+- install only for `absolutepraya/marka`, not all repositories on the account;
 - review non-draft pull requests targeting `main` where the service supports scope controls;
 - avoid wasting review quota on generated output and pure dependency-bot PRs where controls exist.
 
@@ -184,7 +184,7 @@ Current accepted example:
 For any future candidate:
 
 1. Confirm current official pricing/free-tier terms.
-2. Confirm the App can be scoped only to `absolutepraya/karakeep`.
+2. Confirm the App can be scoped only to `absolutepraya/marka`.
 3. Inspect the exact GitHub App permissions before treating the integration as accepted.
 4. Reject contents-write, Actions/workflows-write, administration, secrets/environment, or equivalent mutation capability.
 5. Enable review-only behavior only.

@@ -57,12 +57,12 @@ describe("SidebarVersion", () => {
   it("shows the running app build and a ready deployed update", () => {
     const { container } = render(<SidebarVersion />);
 
-    expect(container.textContent).toContain("absolutepraya/karakeep");
+    expect(container.textContent).toContain("absolutepraya/marka");
     expect(container.textContent).toContain("Build aaaaaaa");
     expect(container.textContent).toContain("Update ready · bbbbbbb");
 
     const buildLink = container.querySelector(
-      'a[href="https://github.com/absolutepraya/karakeep/commit/aaaaaaa"]',
+      'a[href="https://github.com/absolutepraya/marka/commit/aaaaaaa"]',
     );
     expect(buildLink).not.toBeNull();
   });

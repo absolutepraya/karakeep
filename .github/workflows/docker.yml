@@ -45,7 +45,7 @@ jobs:
         id: meta
         run: |
           set -euo pipefail
-          image_name="ghcr.io/${{ github.repository_owner }}/karakeep"
+          image_name="ghcr.io/${{ github.repository_owner }}/marka"
           short_sha="$(git rev-parse --short=12 HEAD)"
           {
             echo "image_name=${image_name}"

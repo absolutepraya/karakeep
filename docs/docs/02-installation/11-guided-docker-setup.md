@@ -1,7 +1,7 @@
 # Guided Docker Setup for This Fork
 
 :::info Fork-specific setup
-This page documents the guided setup shipped by `absolutepraya/karakeep`. It is not the upstream Karakeep setup flow.
+This page documents the guided setup shipped by `absolutepraya/marka`. It is not the upstream Karakeep setup flow.
 :::
 
 The guided script creates a Docker Compose deployment without installing system packages, changing firewall rules, configuring DNS, or provisioning TLS. Docker Engine, Docker Compose v2, and OpenSSL must already be installed on a Linux `amd64` host.
@@ -11,7 +11,7 @@ The guided script creates a Docker Compose deployment without installing system 
 Run the latest guided script from this fork:
 
 ```bash
-curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/karakeep/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
+curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/marka/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
 ```
 
 The script is downloaded to a file before execution rather than piped directly into a shell. During setup it copies itself into the selected configuration directory, which defaults to `~/karakeep`.
@@ -19,7 +19,7 @@ The script is downloaded to a file before execution rather than piped directly i
 For a reproducible setup, pin the download to an immutable release tag or commit SHA after reviewing that revision:
 
 ```bash
-REF=<tag-or-commit-sha>; curl -fsSLo /tmp/karakeep-setup.sh "https://raw.githubusercontent.com/absolutepraya/karakeep/${REF}/scripts/install.sh" && bash /tmp/karakeep-setup.sh
+REF=<tag-or-commit-sha>; curl -fsSLo /tmp/karakeep-setup.sh "https://raw.githubusercontent.com/absolutepraya/marka/${REF}/scripts/install.sh" && bash /tmp/karakeep-setup.sh
 ```
 
 ## Preflight checks
@@ -69,8 +69,8 @@ Fresh deployments always start with signups enabled so the first administrator a
 
 The script uses the stable Compose project name `karakeep` and the paired fork images:
 
-- `ghcr.io/absolutepraya/karakeep:web-main`
-- `ghcr.io/absolutepraya/karakeep:workers-main`
+- `ghcr.io/absolutepraya/marka:web-main`
+- `ghcr.io/absolutepraya/marka:workers-main`
 
 A default fully featured installation runs four containers:
 

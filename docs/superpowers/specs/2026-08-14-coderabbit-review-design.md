@@ -2,7 +2,7 @@
 
 ## Goal
 
-Enable CodeRabbit as an advisory automated pull request reviewer for `absolutepraya/karakeep` without changing the role of the existing GitHub Actions CI or the fork's deployment chain.
+Enable CodeRabbit as an advisory automated pull request reviewer for `absolutepraya/marka` without changing the role of the existing GitHub Actions CI or the fork's deployment chain.
 
 CodeRabbit will add semantic review, PR summaries, repository-specific guidance, and GitHub review/check context. Existing CI remains authoritative for deterministic validation such as linting, formatting, typechecking, tests, OpenAPI generation checks, Knip, and React Doctor.
 
@@ -91,7 +91,7 @@ Before opening the PR:
 - confirm generated-file filters do not suppress source files that should remain reviewable
 - confirm `CONTRIBUTING.md` accurately describes advisory behavior
 
-After the PR is opened and the GitHub App is installed for `absolutepraya/karakeep`:
+After the PR is opened and the GitHub App is installed for `absolutepraya/marka`:
 
 - confirm CodeRabbit recognizes the branch configuration
 - trigger `@coderabbitai review` if an automatic review does not start for the already-open PR
