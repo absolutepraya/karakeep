@@ -146,6 +146,14 @@ assert_contains "$managed/install/workers.env" 'BROWSER_WEB_URL="http://chrome:9
 [[ "$(stat -c '%a' "$managed/install/workers.env")" == "600" ]] || fail "workers.env permissions are not 600"
 [[ "$(stat -c '%a' "$managed/install/install.sh")" == "700" ]] || fail "installed helper permissions are not 700"
 
+# Existing guided installs remain manageable after the default moves to Marka.
+legacy_home="$root/legacy-home"
+mkdir -p "$legacy_home/karakeep"
+touch "$legacy_home/karakeep/docker-compose.yml"
+: >"$FAKE_DOCKER_LOG"
+HOME="$legacy_home" bash "$INSTALLER" status >/dev/null
+assert_contains "$FAKE_DOCKER_LOG" "compose ps"
+
 # A rerun must refuse to overwrite generated configuration unless explicitly requested.
 before_hash="$(sha256sum "$managed/install/app.env" | awk '{print $1}')"
 if bash "$INSTALLER" --non-interactive --no-start --yes \

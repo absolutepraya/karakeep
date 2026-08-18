@@ -82,6 +82,11 @@ case "${1:-}" in
     name="${@: -1}"
     rm -f "$state_dir/$name"
     ;;
+  rename)
+    old="${2:?}"
+    new="${3:?}"
+    mv "$state_dir/$old" "$state_dir/$new"
+    ;;
   ps)
     for file in "$state_dir"/*; do
       [[ -e "$file" ]] || continue
@@ -145,6 +150,14 @@ if FAKE_BUSY_PORTS=7700 bash "$INFRA" up >"$root/foreign.out" 2>&1; then
   fail "Shared infra unexpectedly reused a foreign listener on port 7700"
 fi
 assert_contains "$root/foreign.out" "Port 7700 is already in use"
+
+# Existing pre-Marka containers are adopted without treating their ports as foreign.
+: >"$FAKE_DOCKER_LOG"
+printf 'true\n' >"$state_dir/karakeep-dev-meilisearch"
+printf 'true\n' >"$state_dir/karakeep-dev-chrome"
+bash "$INFRA" up >/dev/null
+assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-meilisearch marka-dev-meilisearch"
+assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-chrome marka-dev-chrome"
 
 # Worktrees share infra endpoints but retain unique web/data state and a Meilisearch-safe namespace.
 main_root="$root/main"

@@ -3,6 +3,8 @@ set -Eeuo pipefail
 
 MEILI_CONTAINER="marka-dev-meilisearch"
 CHROME_CONTAINER="marka-dev-chrome"
+LEGACY_MEILI_CONTAINER="karakeep-dev-meilisearch"
+LEGACY_CHROME_CONTAINER="karakeep-dev-chrome"
 MEILI_VOLUME="marka-dev-meilisearch-data"
 MEILI_PORT="7700"
 CHROME_PORT="9222"
@@ -23,6 +25,14 @@ container_exists() {
 
 container_running() {
   [[ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null || true)" == "true" ]]
+}
+
+adopt_legacy_container() {
+  local legacy="$1" current="$2"
+  if container_exists "$legacy" && ! container_exists "$current"; then
+    docker rename "$legacy" "$current" >/dev/null || die "Failed to rename legacy $legacy container to $current."
+    info "Renamed legacy $legacy container to $current"
+  fi
 }
 
 port_in_use() {
@@ -46,6 +56,7 @@ ensure_available_port() {
 }
 
 ensure_meilisearch() {
+  adopt_legacy_container "$LEGACY_MEILI_CONTAINER" "$MEILI_CONTAINER"
   if container_exists "$MEILI_CONTAINER"; then
     if container_running "$MEILI_CONTAINER"; then
       info "Reusing shared Meilisearch on http://localhost:$MEILI_PORT"
@@ -69,6 +80,7 @@ ensure_meilisearch() {
 }
 
 ensure_chrome() {
+  adopt_legacy_container "$LEGACY_CHROME_CONTAINER" "$CHROME_CONTAINER"
   if container_exists "$CHROME_CONTAINER"; then
     if container_running "$CHROME_CONTAINER"; then
       info "Reusing shared Chrome on http://localhost:$CHROME_PORT"

@@ -780,7 +780,15 @@ install_command() {
 }
 
 management_install_dir() {
-  INSTALL_DIR="$(expand_path "${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}")"
+  if [[ -z "$INSTALL_DIR" && -f "$HOME/marka/docker-compose.yml" ]]; then
+    INSTALL_DIR="$HOME/marka"
+  elif [[ -z "$INSTALL_DIR" && -f "$HOME/karakeep/docker-compose.yml" ]]; then
+    # Keep existing guided installations manageable after the default moves to Marka.
+    INSTALL_DIR="$HOME/karakeep"
+  else
+    INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+  fi
+  INSTALL_DIR="$(expand_path "$INSTALL_DIR")"
   validate_path "Install directory" "$INSTALL_DIR"
   [[ -f "$INSTALL_DIR/docker-compose.yml" ]] || die "No guided Marka installation found at $INSTALL_DIR"
 }

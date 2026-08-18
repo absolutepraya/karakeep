@@ -241,7 +241,7 @@ Do not publish a Browserless port. The external `karakeep-renderer` Docker netwo
 
 The stale-embedding migration is safe only as a controlled rollout. An empty-queue preflight by itself is not sufficient: pause automatic updates, capture a fresh successful read-only check immediately before the controlled `web` start that applies the migration, then resume automatic updates.
 
-From the directory containing the production compose file:
+From the repository root, where the canonical production Compose file is `deploy/docker-compose.prod.yml`:
 
 1. Pause Watchtower so it cannot recreate `web` during the gate:
 
@@ -252,7 +252,7 @@ From the directory containing the production compose file:
 2. Immediately before the controlled application start, run this read-only check and record the command's `Embedding queue is empty` output with the deployment timestamp. A non-empty result blocks the cleanup. Do not reuse an earlier successful check or start `web` if this command fails:
 
    ```bash
-   docker compose exec -T web node <<'NODE'
+   docker compose -f deploy/docker-compose.prod.yml exec -T web node <<'NODE'
    const Database = require("better-sqlite3");
    const db = new Database("/data/queue.db", { readonly: true });
    const rows = db.prepare(
