@@ -24,6 +24,7 @@ export interface PwaLifecycleState {
   appBuild: string;
   deployedBuild: string | null;
   updateStatus: PwaUpdateStatus;
+  activateUpdate: () => void;
 }
 
 const compiledServiceWorkerBuildVersion =
@@ -37,6 +38,7 @@ const PwaLifecycleContext = createContext<PwaLifecycleState>({
   appBuild,
   deployedBuild: null,
   updateStatus: "current",
+  activateUpdate: () => undefined,
 });
 
 export function usePwaLifecycle() {
@@ -81,6 +83,22 @@ export default function ServiceWorkerRegistration({
   const checkPromiseRef = useRef<Promise<void> | null>(null);
   const handoffArmedRef = useRef(false);
   const handoffReloadedRef = useRef(false);
+
+  const activateUpdate = () => {
+    const waitingWorker = registrationRef.current?.waiting;
+    if (
+      !waitingWorker ||
+      !deployedBuild ||
+      !isWorkerForBuild(waitingWorker, deployedBuild)
+    ) {
+      return;
+    }
+
+    handoffArmedRef.current = true;
+    waitingWorker.postMessage({
+      type: "ACTIVATE_UPDATE",
+    } satisfies WorkerMessage);
+  };
 
   useEffect(() => {
     sessionStatusRef.current = status;
@@ -343,7 +361,7 @@ export default function ServiceWorkerRegistration({
 
   return (
     <PwaLifecycleContext.Provider
-      value={{ appBuild, deployedBuild, updateStatus }}
+      value={{ appBuild, deployedBuild, updateStatus, activateUpdate }}
     >
       {children}
     </PwaLifecycleContext.Provider>

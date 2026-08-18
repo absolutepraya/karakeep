@@ -138,7 +138,7 @@ export const dumpCmd = new Command()
 
     try {
       line("");
-      line(`${chalk.bold("Karakeep Dump")}`);
+      line(`${chalk.bold("Marka Dump")}`);
       line(`${chalk.gray("Server:")} ${globals.serverAddr}`);
       line(`${chalk.gray("Output:")} ${outFile}`);
       line("");

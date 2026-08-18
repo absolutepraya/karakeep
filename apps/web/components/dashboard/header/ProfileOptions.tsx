@@ -121,6 +121,8 @@ export default function SidebarProfileOptions() {
           </div>
         </div>
         <Separator className="my-2" />
+        <SidebarVersion placement="profile" />
+        <Separator className="my-2" />
         <DropdownMenuItem asChild>
           <Link href="/settings">
             <Settings className="mr-2 size-4" />
@@ -160,10 +162,6 @@ export default function SidebarProfileOptions() {
           comingSoon={tProfile("coming_soon")}
         />
         <Separator className="my-2" />
-        <div className="sm:hidden">
-          <SidebarVersion placement="profile" />
-        </div>
-        <Separator className="my-2 sm:hidden" />
         <DropdownMenuItem onClick={() => router.push("/logout")}>
           <LogOut className="mr-2 size-4" />
           <span>{t("actions.sign_out")}</span>

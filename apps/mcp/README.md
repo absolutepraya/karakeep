@@ -1,6 +1,6 @@
-# Karakeep MCP server
+# Marka MCP server
 
-This package contains the MCP server for Karakeep.
+This package contains the MCP server for Marka.
 
 It exposes bookmark/list/tag operations for external MCP-compatible tools and agents.
 

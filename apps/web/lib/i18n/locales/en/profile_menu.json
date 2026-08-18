@@ -3,7 +3,8 @@
   "documentation": "Documentation",
   "coming_soon": "Coming soon",
   "build": "Build {{build}}",
-  "build_title": "Fork build {{build}}",
+  "build_title": "Marka build {{build}}",
   "update_available": "Update available · {{build}}",
-  "update_ready": "Update ready · {{build}}"
+  "update_ready": "Update ready · {{build}}",
+  "update_now": "Update now"
 }
