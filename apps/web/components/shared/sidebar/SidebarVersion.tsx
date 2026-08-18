@@ -37,6 +37,11 @@ export default function SidebarVersion({
     placement === "profile"
       ? "flex min-w-0 flex-col items-end gap-0.5 px-2 py-1 text-xs leading-tight"
       : "flex min-w-0 flex-col gap-0.5 text-xs leading-tight";
+  const buildClassName =
+    placement === "profile"
+      ? "flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground opacity-50 transition-colors hover:text-foreground"
+      : "flex min-w-0 items-center gap-1.5 font-mono text-muted-foreground transition-colors hover:text-foreground";
+  const buildIconClassName = placement === "profile" ? "size-3" : "size-3.5";
 
   const buildLabel = t("build", { build: visibleBuild });
 
@@ -48,14 +53,14 @@ export default function SidebarVersion({
           target="_blank"
           rel="noopener noreferrer"
           title={t("build_title", { build: appBuild })}
-          className="flex min-w-0 items-center gap-1.5 font-mono text-muted-foreground transition-colors hover:text-foreground"
+          className={buildClassName}
         >
-          <GitBranch className="size-3.5 shrink-0" />
+          <GitBranch className={`${buildIconClassName} shrink-0`} />
           <span className="truncate">{buildLabel}</span>
         </Link>
       ) : (
-        <span className="flex min-w-0 items-center gap-1.5 font-mono text-muted-foreground">
-          <GitBranch className="size-3.5 shrink-0" />
+        <span className={buildClassName}>
+          <GitBranch className={`${buildIconClassName} shrink-0`} />
           <span className="truncate">{buildLabel}</span>
         </span>
       )}
@@ -71,7 +76,7 @@ export default function SidebarVersion({
         </Button>
       ) : (
         newerBuild && (
-          <span className="truncate pl-5 font-mono text-muted-foreground">
+          <span className="truncate pl-5 font-mono text-xs text-muted-foreground opacity-50">
             {t("update_available", { build: newerBuild })}
           </span>
         )

@@ -110,4 +110,15 @@ describe("SidebarVersion", () => {
     expect(container.textContent).toContain("Build development");
     expect(container.querySelector('a[href*="/commit/"]')).toBeNull();
   });
+
+  it("keeps the profile build footer small and subdued", () => {
+    const { container } = render(<SidebarVersion placement="profile" />);
+
+    const buildLink = container.querySelector('a[href*="/commit/"]');
+    expect(buildLink?.className).toContain("text-xs");
+    expect(buildLink?.className).toContain("opacity-50");
+    expect(buildLink?.querySelector("svg")?.className.baseVal).toContain(
+      "size-3",
+    );
+  });
 });
