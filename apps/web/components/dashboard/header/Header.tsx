@@ -27,9 +27,11 @@ export default async function Header() {
         <div className="min-w-0 flex-1">
           <SearchInput className="w-full" />
         </div>
-        <div className="ml-3 flex shrink-0 items-center gap-2 sm:ml-4">
+        <div className="relative ml-3 flex h-10 shrink-0 items-center pr-5 sm:ml-4">
           <ProcessingStatusIndicator />
-          <ProfileOptions />
+          <div className="absolute right-0 top-1/2 z-10 size-10 -translate-y-1/2">
+            <ProfileOptions />
+          </div>
         </div>
       </div>
     </header>
