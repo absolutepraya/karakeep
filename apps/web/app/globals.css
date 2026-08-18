@@ -387,6 +387,7 @@
 @media (max-width: 639px) {
   /* Leave a quiet strip below bottom sheets for the phone gesture handle. */
   .dialog-vv-bottom-safe-area {
+    background-color: var(--card) !important;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem) !important;
   }
 }

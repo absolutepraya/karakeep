@@ -42,12 +42,18 @@ describe("Header", () => {
   it("uses a left-aligned Marka wordmark in the original reserved logo slot", async () => {
     render(await Header());
 
+    const header = screen.getByRole("banner");
     const link = screen.getByRole("link", { name: "Marka" });
+    const search = screen.getByRole("textbox", { name: "Search" });
     expect(link.getAttribute("href")).toBe("/dashboard/bookmarks");
     expect(link.classList.contains("justify-start")).toBe(true);
     expect(link.classList.contains("w-56")).toBe(true);
     expect(link.classList.contains("pl-2")).toBe(true);
     expect(screen.getByAltText("Marka").getAttribute("height")).toBe("30");
+    expect(header.firstElementChild?.className).toContain(
+      "lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]",
+    );
+    expect(search.parentElement?.className).toContain("lg:col-start-2");
   });
 
   it("groups the status rectangle and profile avatar with the avatar on top", async () => {

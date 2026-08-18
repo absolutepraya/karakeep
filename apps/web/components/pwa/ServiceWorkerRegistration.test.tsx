@@ -9,6 +9,7 @@ import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
 const mocks = vi.hoisted(() => ({
   register: vi.fn(),
   getRegistration: vi.fn(),
+  getRegistrations: vi.fn(),
   fetch: vi.fn(),
   messagePort: { postMessage: vi.fn() },
   waitingWorker: {
@@ -30,6 +31,7 @@ function installServiceWorkerMock() {
       addEventListener: mocks.addEventListener,
       controller: mocks.messagePort,
       getRegistration: mocks.getRegistration,
+      getRegistrations: mocks.getRegistrations,
       register: mocks.register,
       removeEventListener: mocks.removeEventListener,
     },
@@ -58,6 +60,7 @@ describe("ServiceWorkerRegistration", () => {
     installServiceWorkerMock();
     vi.stubGlobal("fetch", mocks.fetch);
     mocks.getRegistration.mockResolvedValue(undefined);
+    mocks.getRegistrations.mockResolvedValue([]);
     mocks.register.mockResolvedValue({ active: mocks.messagePort });
     mocks.fetch.mockResolvedValue(
       new Response(JSON.stringify({ version: "development" }), {
@@ -75,6 +78,7 @@ describe("ServiceWorkerRegistration", () => {
     cleanup();
     mocks.register.mockReset();
     mocks.getRegistration.mockReset();
+    mocks.getRegistrations.mockReset();
     mocks.fetch.mockReset();
     mocks.messagePort.postMessage.mockReset();
     mocks.waitingWorker.postMessage.mockReset();
@@ -82,6 +86,22 @@ describe("ServiceWorkerRegistration", () => {
     mocks.removeEventListener.mockReset();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("does not register a service worker during development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    Object.defineProperty(navigator.serviceWorker, "controller", {
+      configurable: true,
+      value: null,
+    });
+
+    renderRegistration();
+
+    await waitFor(() => {
+      expect(mocks.getRegistrations).toHaveBeenCalled();
+    });
+    expect(mocks.register).not.toHaveBeenCalled();
   });
 
   it("registers the worker without caching updates and clears user caches when unauthenticated", async () => {

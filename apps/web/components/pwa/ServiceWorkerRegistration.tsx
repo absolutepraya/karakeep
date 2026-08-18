@@ -33,6 +33,7 @@ const appBuild = compiledServiceWorkerBuildVersion ?? "development";
 const serviceWorkerUrl = compiledServiceWorkerBuildVersion
   ? `/sw.js?v=${encodeURIComponent(compiledServiceWorkerBuildVersion)}`
   : "/sw.js";
+const developmentResetKey = "marka-dev-service-worker-reset";
 
 const PwaLifecycleContext = createContext<PwaLifecycleState>({
   appBuild,
@@ -135,6 +136,33 @@ export default function ServiceWorkerRegistration({
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) {
+      return;
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      void (async () => {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(
+          registrations.map((registration) => registration.unregister()),
+        );
+
+        if ("caches" in window) {
+          const cacheNames = await window.caches.keys();
+          await Promise.all(
+            cacheNames.map((cacheName) => window.caches.delete(cacheName)),
+          );
+        }
+
+        const hasResetThisSession =
+          window.sessionStorage.getItem(developmentResetKey) === "1";
+        if (hadController && !hasResetThisSession) {
+          window.sessionStorage.setItem(developmentResetKey, "1");
+          window.location.reload();
+        } else if (!hadController) {
+          window.sessionStorage.removeItem(developmentResetKey);
+        }
+      })();
       return;
     }
 
