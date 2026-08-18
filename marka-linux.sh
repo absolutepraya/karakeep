@@ -38,6 +38,7 @@ EOF
 
 header() {
   t_width="$(tput cols 2>/dev/null || printf '0')"
+  t_width="${t_width:-0}"
   if [[ "$t_width" -gt 115 ]]; then
     echo -e "$(
       cat <<EOF

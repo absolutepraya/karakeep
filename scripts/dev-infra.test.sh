@@ -158,6 +158,10 @@ printf 'true\n' >"$state_dir/karakeep-dev-chrome"
 bash "$INFRA" up >/dev/null
 assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-meilisearch marka-dev-meilisearch"
 assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-chrome marka-dev-chrome"
+[[ -e "$state_dir/marka-dev-meilisearch" ]] || fail "Meilisearch state was not renamed"
+[[ -e "$state_dir/marka-dev-chrome" ]] || fail "Chrome state was not renamed"
+[[ ! -e "$state_dir/karakeep-dev-meilisearch" ]] || fail "Legacy Meilisearch state remains"
+[[ ! -e "$state_dir/karakeep-dev-chrome" ]] || fail "Legacy Chrome state remains"
 
 # Worktrees share infra endpoints but retain unique web/data state and a Meilisearch-safe namespace.
 main_root="$root/main"

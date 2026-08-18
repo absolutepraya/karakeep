@@ -41,7 +41,7 @@ Use this skill when the user wants to interact with their Marka instance (adding
 
 ### Bookmarks
 
-- **Bookmarks**: Core entity in Marka. Can be one of links, text or media.
+- **Bookmarks**: A bookmark is the core entity in Marka. It can be a link, text, or media.
   - **Links**: Save URLs — Marka auto-fetches title, description, image, screenshot, and full-page archive.
   - **Text**: Quick notes or text snippets stored as bookmarks.
   - **Media**: Images and PDFs uploaded directly.
