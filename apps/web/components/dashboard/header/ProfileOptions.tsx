@@ -121,8 +121,6 @@ export default function SidebarProfileOptions() {
           </div>
         </div>
         <Separator className="my-2" />
-        <SidebarVersion placement="profile" />
-        <Separator className="my-2" />
         <DropdownMenuItem asChild>
           <Link href="/settings">
             <Settings className="mr-2 size-4" />
@@ -166,6 +164,7 @@ export default function SidebarProfileOptions() {
           <LogOut className="mr-2 size-4" />
           <span>{t("actions.sign_out")}</span>
         </DropdownMenuItem>
+        <SidebarVersion placement="profile" />
       </DropdownMenuContent>
     </DropdownMenu>
   );

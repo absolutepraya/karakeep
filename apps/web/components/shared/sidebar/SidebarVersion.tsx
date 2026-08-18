@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePwaLifecycle } from "@/components/pwa/ServiceWorkerRegistration";
 import { useTranslation } from "@/lib/i18n/client";
-import { GitBranch, Github, RefreshCw } from "lucide-react";
+import { GitBranch, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const FORK_REPO = "absolutepraya/marka";
@@ -35,22 +35,13 @@ export default function SidebarVersion({
       : null;
   const containerClassName =
     placement === "profile"
-      ? "flex min-w-0 flex-col gap-0.5 px-2 py-1 text-xs leading-tight"
+      ? "flex min-w-0 flex-col items-end gap-0.5 px-2 py-1 text-xs leading-tight"
       : "flex min-w-0 flex-col gap-0.5 text-xs leading-tight";
 
   const buildLabel = t("build", { build: visibleBuild });
 
   return (
     <div className={containerClassName}>
-      <Link
-        href={FORK_REPO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex min-w-0 items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <Github className="size-3.5 shrink-0" />
-        <span className="truncate">{FORK_REPO}</span>
-      </Link>
       {isCommitSha(appBuild) ? (
         <Link
           href={`${FORK_REPO_URL}/commit/${appBuild}`}
