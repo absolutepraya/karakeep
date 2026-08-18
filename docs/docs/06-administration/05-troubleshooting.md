@@ -116,7 +116,7 @@ Use this carefully: deleting `data.ms` wipes the search index, so only do it if 
 For this fork’s current VPS workflow, a Cloudflare orange-cloud proxy can cause redirect-loop behavior depending on SSL mode and nginx redirects.
 
 If you hit that while following this repo’s operator workflow, check the notes in:
-- `docs/fork-setup.md`
+- `docs/operator-setup.md`
 
 ## Still stuck?
 
@@ -126,4 +126,4 @@ If you are debugging the product generically, upstream docs and community channe
 
 If you are debugging this fork’s local/dev/deploy workflow specifically, prefer the repo docs first:
 - `README.md`
-- `docs/fork-setup.md`
+- `docs/operator-setup.md`

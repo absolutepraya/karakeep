@@ -1,17 +1,16 @@
-# Fork setup and deploy notes
+# Operator setup and deploy notes
 
-This is the canonical operator and developer guide for the **Marka fork**.
+This is the canonical operator and developer guide for Marka.
 
 Use it for:
 - local development in this repository
 - CI and image-build behavior
-- production deployment notes specific to this fork
+- production deployment notes specific to this repository
 
 ## Repo identity
 
 - **Origin:** `git@github.com:absolutepraya/marka.git`
-- **Upstream project:** `git@github.com:karakeep-app/karakeep.git`
-- **Branch model:** `main` is the active integration/deploy branch for this fork
+- **Branch model:** `main` is the active integration/deploy branch for this repository
 
 ## Local development
 
@@ -60,10 +59,10 @@ Variants:
 
 The machine-level infrastructure is shared across all local worktrees:
 
-- `karakeep-dev-meilisearch` on `127.0.0.1:7700`
-- `karakeep-dev-chrome` on `127.0.0.1:9222`
+- `marka-dev-meilisearch` on `127.0.0.1:7700`
+- `marka-dev-chrome` on `127.0.0.1:9222`
 
-The Chrome helper uses `ghcr.io/karakeep-app/karakeep-chrome:release`, which is published for both `linux/amd64` and `linux/arm64`. The Meilisearch container uses the named volume `karakeep-dev-meilisearch-data`, which survives `pnpm dev:infra:down`.
+The Chrome helper uses `ghcr.io/karakeep-app/karakeep-chrome:release`, which is published for both `linux/amd64` and `linux/arm64`. The Meilisearch container uses the named volume `marka-dev-meilisearch-data`, which survives `pnpm dev:infra:down`.
 
 `pnpm dev:stop` never stops the shared containers. This is intentional: another worktree may still be using them.
 
@@ -114,7 +113,7 @@ Direct commands do not synthesize a namespace for you. Leaving the prefix unset 
 Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
 - If `next dev` crashes with a stale Turbopack / `instrumentation.ts` parse issue, clear `apps/web/.next` and restart.
-- If port `7700` is occupied by something other than `karakeep-dev-meilisearch`, or port `9222` by something other than `karakeep-dev-chrome`, `pnpm dev:infra:up` fails instead of silently reusing an unknown service.
+- If port `7700` is occupied by something other than `marka-dev-meilisearch`, or port `9222` by something other than `marka-dev-chrome`, `pnpm dev:infra:up` fails instead of silently reusing an unknown service.
 
 ### Verify the offline iPhone PWA
 
@@ -175,8 +174,8 @@ It runs:
 - tests
 - open-api-spec
 
-Fork-specific notes:
-- this fork does **not** use Turbo remote cache
+Repository-specific notes:
+- this repository does **not** use Turbo remote cache
 - some CI jobs reclaim disk space before heavy steps because typecheck/tests can otherwise exhaust hosted-runner storage
 - local development and production use Node 24.18.1 from `.nvmrc`; the combined CI `tests` job temporarily overrides setup to Node 22.21.1 because Vitest + `better-sqlite3` can abort during Node 24 worker teardown; remove that override once the Node fix tracked in [nodejs/node#65042](https://github.com/nodejs/node/pull/65042) ships in a usable Node 24 release
 - `knip` and `react-doctor` run as **non-blocking** report jobs
@@ -191,7 +190,7 @@ Fork-specific notes:
 
 ## Build and deploy model
 
-This fork deploys with a **pull-based split Docker flow**.
+This repository deploys with a **pull-based split Docker flow**.
 
 ### Build path
 - `.github/workflows/docker.yml` builds the `web` and `workers` targets from the same successful `main` commit
@@ -253,7 +252,7 @@ From the directory containing the production compose file:
 2. Immediately before the controlled application start, run this read-only check and record the command's `Embedding queue is empty` output with the deployment timestamp. A non-empty result blocks the cleanup. Do not reuse an earlier successful check or start `web` if this command fails:
 
    ```bash
-   docker exec -i karakeep-fork-web-1 node <<'NODE'
+   docker compose exec -T web node <<'NODE'
    const Database = require("better-sqlite3");
    const db = new Database("/data/queue.db", { readonly: true });
    const rows = db.prepare(
@@ -320,13 +319,13 @@ docker compose up -d
 
 Notes:
 - create the relevant DNS record before expecting nginx/HTTPS to work
-- this fork’s current operator notes assume the service is fronted by nginx
+- current operator notes assume the service is fronted by nginx
 - depending on SSL/proxy mode, a Cloudflare orange-cloud proxy can cause redirect loops; DNS-only/grey-cloud has been the safer path for this setup
 
 ## Related docs
 
-- Public fork framing: `README.md`
+- Public product framing: `README.md`
 - Contribution rules: `CONTRIBUTING.md`
-- Fork operation: `docs/fork-setup.md`
+- Operator operation: `docs/operator-setup.md`
 - Docs-site development: `docs/README.md`
 - Assistant operations context: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`

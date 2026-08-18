@@ -39,7 +39,7 @@ Useful variants:
 - `./stop-dev.sh` — stop detached services
 
 If you want the full operator-oriented notes for this fork’s local dev and deploy flow, see the repository guide at:
-- `docs/fork-setup.md`
+- `docs/operator-setup.md`
 
 ## Runtime requirements
 

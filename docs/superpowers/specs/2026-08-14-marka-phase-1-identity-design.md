@@ -68,7 +68,7 @@ The documentation ownership model is:
 | --- | --- |
 | Public fork overview and repository presentation | `README.md` |
 | Contributions | `CONTRIBUTING.md` |
-| Local development and fork operation | `docs/fork-setup.md` |
+| Local development and operator operation | `docs/operator-setup.md` |
 | Docs-site development | `docs/README.md` |
 | Assistant operating context | `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` |
 

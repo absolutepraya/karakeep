@@ -789,7 +789,7 @@ git commit -m "feat: show offline library activity"
 ## Task 9: Run device acceptance and publish the operator procedure
 
 **Files:**
-- Modify: `docs/fork-setup.md`
+- Modify: `docs/operator-setup.md`
 
 **Interfaces:**
 - Consumes the completed app, service worker, and automated test suites from Tasks 1 through 8.
@@ -797,7 +797,7 @@ git commit -m "feat: show offline library activity"
 
 - [ ] **Step 1: Add the iPhone PWA acceptance procedure**
 
-Add this exact subsection to `docs/fork-setup.md`:
+Add this exact subsection to `docs/operator-setup.md`:
 
 ```md
 ### Verify the offline iPhone PWA
@@ -834,6 +834,6 @@ Use an iPhone Safari Home Screen installation and execute each numbered check ad
 - [ ] **Step 4: Commit verification instructions**
 
 ```bash
-git add docs/fork-setup.md
+git add docs/operator-setup.md
 git commit -m "docs: verify offline PWA workflow"
 ```

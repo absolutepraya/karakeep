@@ -1,7 +1,7 @@
 # Guided Docker Setup for This Fork
 
 :::info Fork-specific setup
-This page documents the guided setup shipped by `absolutepraya/marka`. It is not the upstream Karakeep setup flow.
+This page documents the guided setup shipped by Marka.
 :::
 
 The guided script creates a Docker Compose deployment without installing system packages, changing firewall rules, configuring DNS, or provisioning TLS. Docker Engine, Docker Compose v2, and OpenSSL must already be installed on a Linux `amd64` host.
@@ -11,15 +11,15 @@ The guided script creates a Docker Compose deployment without installing system 
 Run the latest guided script from this fork:
 
 ```bash
-curl -fsSLo /tmp/karakeep-setup.sh https://raw.githubusercontent.com/absolutepraya/marka/main/scripts/install.sh && bash /tmp/karakeep-setup.sh
+curl -fsSLo /tmp/marka-setup.sh https://raw.githubusercontent.com/absolutepraya/marka/main/scripts/install.sh && bash /tmp/marka-setup.sh
 ```
 
-The script is downloaded to a file before execution rather than piped directly into a shell. During setup it copies itself into the selected configuration directory, which defaults to `~/karakeep`.
+The script is downloaded to a file before execution rather than piped directly into a shell. During setup it copies itself into the selected configuration directory, which defaults to `~/marka`.
 
 For a reproducible setup, pin the download to an immutable release tag or commit SHA after reviewing that revision:
 
 ```bash
-REF=<tag-or-commit-sha>; curl -fsSLo /tmp/karakeep-setup.sh "https://raw.githubusercontent.com/absolutepraya/marka/${REF}/scripts/install.sh" && bash /tmp/karakeep-setup.sh
+REF=<tag-or-commit-sha>; curl -fsSLo /tmp/marka-setup.sh "https://raw.githubusercontent.com/absolutepraya/marka/${REF}/scripts/install.sh" && bash /tmp/marka-setup.sh
 ```
 
 ## Preflight checks
@@ -35,7 +35,7 @@ Before asking configuration questions, the installer checks that the host can ac
 
 If a required prerequisite is missing or unusable, setup stops immediately with an actionable error and does not write installation files. The installer deliberately does not install Docker or other host packages for you.
 
-Node.js is **not** a host prerequisite. The Karakeep web application and workers run Node.js inside their Docker images.
+Node.js is **not** a host prerequisite. The Marka web application and workers run Node.js inside their Docker images.
 
 `curl` is only needed to use the one-line download command. `tar` is checked later when the `backup` command is actually used.
 
@@ -46,7 +46,7 @@ The interactive installer tells you that values shown in square brackets are def
 It then starts with:
 
 ```text
-Use the recommended Karakeep setup? [Y/n]:
+Use the recommended Marka setup? [Y/n]:
 ```
 
 Pressing Enter selects the simple, dedicated deployment path. The installer asks only for the configuration directory, persistent data directory, and public application URL, while using these defaults:
@@ -59,7 +59,7 @@ Pressing Enter selects the simple, dedicated deployment path. The installer asks
 - AI configuration deferred
 - signups enabled for a fresh deployment so the first administrator can be created
 
-If the chosen data directory is already non-empty, the installer does not silently treat it as fresh data. It asks whether it is an existing compatible Karakeep data directory.
+If the chosen data directory is already non-empty, the installer does not silently treat it as fresh data. It asks whether it is an existing compatible Marka data directory.
 
 Choose **No** at the recommended-setup prompt to enter advanced configuration. Advanced mode exposes the host port and bind address plus managed, external, or disabled search and browser-rendering choices, AI configuration, and the signup policy for an existing deployment.
 
@@ -67,7 +67,7 @@ Fresh deployments always start with signups enabled so the first administrator a
 
 ## Generated deployment
 
-The script uses the stable Compose project name `karakeep` and the paired fork images:
+The script uses the stable Compose project name `karakeep` for compatibility and the paired Marka images:
 
 - `ghcr.io/absolutepraya/marka:web-main`
 - `ghcr.io/absolutepraya/marka:workers-main`
@@ -79,7 +79,7 @@ A default fully featured installation runs four containers:
 - `meilisearch` for full-text search
 - `chrome` for browser rendering and screenshots
 
-SQLite is not a separate service. The database and local assets live in the persistent Karakeep data directory shared by `web` and `workers`.
+SQLite is not a separate service. The database and local assets live in the persistent Marka data directory shared by `web` and `workers`.
 
 The generated files are stored in the selected configuration directory:
 
@@ -95,17 +95,17 @@ The default bind address is `127.0.0.1`. For an Internet-facing deployment, keep
 
 ## Search choices
 
-`managed` is the recommended mode. It starts a dedicated Meilisearch container inside this Karakeep Compose project. The service is not published to the host network.
+`managed` is the recommended mode. It starts a dedicated Meilisearch container inside this Marka Compose deployment. The service is not published to the host network.
 
 `external` is an advanced option for connecting to an externally managed Meilisearch service dedicated to this Karakeep deployment. In non-interactive mode, provide its key through `KARAKEEP_MEILI_MASTER_KEY`.
 
-Do not point multiple independent Karakeep deployments at the same Meilisearch index. Karakeep uses a fixed `bookmarks` index name, so the guided installer does not support a shared Meilisearch index between Karakeep instances.
+Do not point multiple independent Marka deployments at the same Meilisearch index. The application uses a fixed `bookmarks` index name, so the guided installer does not support a shared Meilisearch index between Marka instances.
 
 `disabled` omits Meilisearch entirely. Full-text search will not be available.
 
 ## Browser-rendering choices
 
-`managed` is the recommended mode. It starts Karakeep's maintained Chrome image as a private container and connects the workers through the internal Compose network. The Chrome debugging port is not published to the host.
+`managed` is the recommended mode. It starts the maintained Chrome image as a private container and connects the workers through the internal Compose network. The Chrome debugging port is not published to the host.
 
 `external` is an advanced option that connects workers on demand to an existing Browserless endpoint. In non-interactive mode, provide the token through `KARAKEEP_BROWSERLESS_TOKEN`. Keep the endpoint private or protect it with TLS, authentication, and suitable capacity limits.
 
@@ -124,7 +124,7 @@ Do not point multiple independent Karakeep deployments at the same Meilisearch i
 Explicit deployment choices are required in non-interactive mode. Secrets are supplied through environment variables, not flags:
 
 ```bash
-KARAKEEP_OPENAI_API_KEY='...' bash /tmp/karakeep-setup.sh \
+KARAKEEP_OPENAI_API_KEY='...' bash /tmp/marka-setup.sh \
   --non-interactive \
   --public-url https://keep.example.com \
   --data-mode fresh \
@@ -146,12 +146,12 @@ The persistent data directory is never overwritten or deleted by the script. A n
 The script copy in the configuration directory also acts as the management helper:
 
 ```bash
-~/karakeep/install.sh status
-~/karakeep/install.sh backup
-~/karakeep/install.sh update
-~/karakeep/install.sh stop
-~/karakeep/install.sh start
-~/karakeep/install.sh uninstall
+~/marka/install.sh status
+~/marka/install.sh backup
+~/marka/install.sh update
+~/marka/install.sh stop
+~/marka/install.sh start
+~/marka/install.sh uninstall
 ```
 
 `backup` briefly stops the web and worker services, archives the authoritative SQLite/assets data directory, then restores them if they were running. Meilisearch is not included because it is a derived search index. The backup command checks for `tar` when it is invoked.

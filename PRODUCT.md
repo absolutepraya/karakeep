@@ -6,7 +6,7 @@ product
 
 ## Users
 
-A single owner of a self-hosted Karakeep instance (this is a personal fork, not an upstream contribution). The primary user is the operator-owner who lives in the app daily on desktop and mobile. Their context: they come across a link, image, or note and want it **saved in one or two actions, with zero ceremony**, then come back days or weeks later to **find that thing again fast** when they actually need it.
+A single owner of a self-hosted Marka instance. The primary user is the operator-owner who lives in the app daily on desktop and mobile. Their context: they come across a link, image, or note and want it **saved in one or two actions, with zero ceremony**, then come back days or weeks later to **find that thing again fast** when they actually need it.
 
 The job to be done is two-sided and asymmetric:
 - **Capture** (high frequency, must be instant): save a bookmark and move on. AI tagging/summarization happens in the background; the user does not babysit it.
@@ -16,7 +16,7 @@ In-app long-form reading is explicitly **not** the primary workflow. The app is 
 
 ## Product Purpose
 
-Karakeep is a self-hostable "bookmark-everything" app: links, notes, images, and PDFs, with background AI tagging and summarization, full-text search, lists, and rule-based organization. This fork serves one person's collection and runs on their own infrastructure.
+Marka is a self-hostable bookmark library for links, notes, images, and PDFs, with background AI tagging and summarization, full-text search, lists, and rule-based organization. It serves one person's collection and runs on their own infrastructure.
 
 Success looks like: saving is so frictionless it becomes reflexive, and retrieval is so reliable the user trusts the app as the place their information lives. The interface should make a large collection feel navigable rather than overwhelming, and make the act of saving feel instant and certain.
 

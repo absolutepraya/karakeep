@@ -231,7 +231,7 @@ Where existing test structure makes direct shell invocation awkward, extract sma
 
 Update the canonical fork-development documentation:
 
-- `docs/fork-setup.md`
+- `docs/operator-setup.md`
 - `AGENTS.md`
 
 Document:

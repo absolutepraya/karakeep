@@ -131,7 +131,7 @@ reviews:
         - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.
         - Flag contradictory setup, contributor, deployment, or operator instructions.
 
-    - path: "docs/fork-setup.md"
+    - path: "docs/operator-setup.md"
       instructions: |
         - Keep fork, development, and deployment facts aligned with the other canonical repository guidance when those facts change.
         - Do not treat upstream Karakeep behavior as authoritative when this fork intentionally diverges.

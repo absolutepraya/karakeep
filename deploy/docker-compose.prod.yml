@@ -1,4 +1,4 @@
-# Karakeep fork production compose, pull-based deploy via Watchtower.
+# Marka production Compose, pull-based deploy via Watchtower.
 # GitHub Actions first pushes immutable version-matched web and workers images,
 # then promotes their mutable release tags after both builds succeed. Watchtower
 # rolls each service independently, so adjacent releases must remain compatible.

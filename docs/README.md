@@ -1,6 +1,6 @@
 # Docs site
 
-This directory contains the Docusaurus docs site for Marka as maintained in this fork.
+This directory contains the Docusaurus docs site for Marka.
 
 ## What lives here
 
@@ -16,9 +16,9 @@ This directory contains the Docusaurus docs site for Marka as maintained in this
 This repository keeps two related but distinct documentation layers:
 
 1. **Repository documentation map**
-   - `README.md` is the public fork framing.
+   - `README.md` is the public product framing.
    - `CONTRIBUTING.md` contains contribution rules.
-   - `docs/fork-setup.md` contains fork operation.
+   - `docs/operator-setup.md` contains Marka operator setup.
    - `docs/README.md` contains docs-site development.
    - `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` provide concise assistant operations context.
 
@@ -26,7 +26,7 @@ This repository keeps two related but distinct documentation layers:
    - end-user and developer docs under `docs/docs/**`
    - generated API docs under `docs/api/**`
 
-The docs-site configuration and hosted presentation remain owned by deferred docs work. Keep its current upstream product context intact while documenting fork-specific development and operator workflow where relevant.
+The docs-site configuration and hosted presentation remain owned by deferred docs work. Keep historical and upstream product context intact while documenting Marka development and operator workflow where relevant.
 
 ## Install
 
@@ -73,12 +73,12 @@ and writes to:
 
 ## When editing docs
 
-If you change fork/dev/deploy facts, keep the repo docs and docs-site pages aligned.
+If you change Marka development or deployment facts, keep the repo docs and docs-site pages aligned.
 
 At minimum, check:
 - `README.md`
 - `CONTRIBUTING.md`
-- `docs/fork-setup.md`
+- `docs/operator-setup.md`
 - `AGENTS.md`
 - `CLAUDE.md`
 - `GEMINI.md`

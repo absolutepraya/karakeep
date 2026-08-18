@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-MEILI_CONTAINER="karakeep-dev-meilisearch"
-CHROME_CONTAINER="karakeep-dev-chrome"
-MEILI_VOLUME="karakeep-dev-meilisearch-data"
+MEILI_CONTAINER="marka-dev-meilisearch"
+CHROME_CONTAINER="marka-dev-chrome"
+MEILI_VOLUME="marka-dev-meilisearch-data"
 MEILI_PORT="7700"
 CHROME_PORT="9222"
 MEILI_IMAGE="getmeili/meilisearch:v1.41.0"
@@ -41,7 +41,7 @@ port_in_use() {
 ensure_available_port() {
   local port="$1" owner="$2"
   if port_in_use "$port"; then
-    die "Port $port is already in use by something other than $owner. Stop the conflicting service before starting shared Karakeep dev infrastructure."
+    die "Port $port is already in use by something other than $owner. Stop the conflicting service before starting shared Marka dev infrastructure."
   fi
 }
 
@@ -130,9 +130,9 @@ down() {
     removed=1
   fi
   if ((removed)); then
-    info "Stopped shared Karakeep dev infrastructure. Meilisearch data volume $MEILI_VOLUME was preserved."
+    info "Stopped shared Marka dev infrastructure. Meilisearch data volume $MEILI_VOLUME was preserved."
   else
-    info "Shared Karakeep dev infrastructure is not running."
+    info "Shared Marka dev infrastructure is not running."
   fi
 }
 

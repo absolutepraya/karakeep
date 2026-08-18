@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 SCRIPT_VERSION="1"
-DEFAULT_INSTALL_DIR="${HOME}/karakeep"
+DEFAULT_INSTALL_DIR="${HOME}/marka"
 DEFAULT_PUBLIC_URL="http://localhost:3000"
 DEFAULT_PORT="3000"
 DEFAULT_BIND_ADDRESS="127.0.0.1"
@@ -49,7 +49,7 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<'EOF_USAGE'
-Karakeep guided Docker Compose installer
+Marka guided Docker Compose installer
 
 Usage:
   bash install.sh [install] [options]
@@ -59,8 +59,8 @@ Usage:
   bash install.sh uninstall [--install-dir PATH]
 
 Install options:
-  --install-dir PATH             Configuration directory (default: ~/karakeep)
-  --data-dir PATH                Persistent Karakeep data directory (default: <install-dir>/data)
+  --install-dir PATH             Configuration directory (default: ~/marka)
+  --data-dir PATH                Persistent Marka data directory (default: <install-dir>/data)
   --public-url URL               Public application URL, for example https://keep.example.com
   --port PORT                    Host port mapped to container port 3000 (default: 3000)
   --bind-address IP              Host bind address (default: 127.0.0.1)
@@ -99,8 +99,8 @@ Examples:
     --public-url https://keep.example.com \
     --data-mode fresh --search managed --renderer managed --ai openai
 
-  bash install.sh update --install-dir /opt/karakeep
-  bash install.sh backup --install-dir /opt/karakeep
+  bash install.sh update --install-dir /opt/marka
+  bash install.sh backup --install-dir /opt/marka
 
 The installer never installs Docker, edits firewall rules, configures DNS, or provisions TLS/reverse proxies.
 EOF_USAGE
@@ -162,7 +162,7 @@ check_platform() {
   [[ "$(uname -s)" == "Linux" ]] || die "This guided installer currently supports Linux hosts only."
   case "$(uname -m)" in
     x86_64|amd64) ;;
-    *) die "This fork currently publishes linux/amd64 images only; unsupported architecture: $(uname -m)" ;;
+    *) die "This repository currently publishes linux/amd64 images only; unsupported architecture: $(uname -m)" ;;
   esac
 }
 
@@ -173,7 +173,7 @@ check_docker() {
 }
 
 preflight_install() {
-  say "Karakeep Guided Setup"
+  say "Marka Guided Setup"
   say ""
   say "Checking host prerequisites..."
 
@@ -191,7 +191,7 @@ preflight_install() {
 
   case "$(uname -m)" in
     x86_64|amd64) say "  [ok] amd64 architecture" ;;
-    *) die "This fork currently publishes linux/amd64 images only; unsupported architecture: $(uname -m)" ;;
+    *) die "This repository currently publishes linux/amd64 images only; unsupported architecture: $(uname -m)" ;;
   esac
 
   require_command openssl
@@ -199,7 +199,7 @@ preflight_install() {
 
   say ""
   say "All required host prerequisites are available."
-  say "Node.js is not required on the host; it runs inside the Karakeep containers."
+  say "Node.js is not required on the host; it runs inside the Marka containers."
   say ""
 }
 
@@ -325,15 +325,15 @@ interactive_configure() {
   local recommended=0
 
   say "Press Enter to accept the recommended value shown in [brackets]."
-  say "Choose the recommended setup for a dedicated Karakeep deployment, or advanced setup for external/disabled services."
+  say "Choose the recommended setup for a dedicated Marka deployment, or advanced setup for external/disabled services."
   say ""
 
-  if prompt_yes_no "Use the recommended Karakeep setup?" "yes"; then
+  if prompt_yes_no "Use the recommended Marka setup?" "yes"; then
     recommended=1
   else
     say ""
     say "Advanced configuration selected."
-    say "External Meilisearch should be dedicated to this Karakeep instance; sharing one Meilisearch index across multiple Karakeep deployments is not supported by this installer."
+    say "External Meilisearch should be dedicated to this Marka instance; sharing one Meilisearch index across multiple Marka deployments is not supported by this installer."
     say ""
   fi
 
@@ -341,7 +341,7 @@ interactive_configure() {
   DATA_DIR="$(expand_path "$(prompt_text "Persistent data directory" "${DATA_DIR:-$INSTALL_DIR/data}")")"
 
   if [[ -d "$DATA_DIR" && -n "$(find "$DATA_DIR" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null || true)" ]]; then
-    DATA_MODE="$(prompt_choice "The data directory is not empty. Treat it as an existing compatible Karakeep data directory?" "existing fresh" "existing")"
+    DATA_MODE="$(prompt_choice "The data directory is not empty. Treat it as an existing compatible Marka data directory?" "existing fresh" "existing")"
   elif ((recommended)); then
     DATA_MODE="fresh"
   else
@@ -376,7 +376,7 @@ interactive_configure() {
     SEARCH_MODE="$(prompt_choice "Full-text search" "managed external disabled" "${SEARCH_MODE:-$DEFAULT_SEARCH_MODE}")"
     SEARCH_MODE_SET=1
     if [[ "$SEARCH_MODE" == "external" ]]; then
-      warn "Use a Meilisearch service dedicated to this Karakeep deployment; sharing the fixed bookmarks index with another Karakeep deployment is unsupported."
+      warn "Use a Meilisearch service dedicated to this Marka deployment; sharing the fixed bookmarks index with another Marka deployment is unsupported."
       MEILI_URL="$(prompt_text "External dedicated Meilisearch URL" "$MEILI_URL")"
       if [[ -z "${KARAKEEP_MEILI_MASTER_KEY:-}" ]]; then
         KARAKEEP_MEILI_MASTER_KEY="$(prompt_secret "External Meilisearch master key")"
@@ -464,7 +464,7 @@ validate_install_config() {
 
 print_plan() {
   cat <<EOF_PLAN
-Karakeep installation plan
+Marka installation plan
   Install directory: $INSTALL_DIR
   Data directory:    $DATA_DIR ($DATA_MODE)
   Public URL:        $PUBLIC_URL
@@ -488,7 +488,7 @@ EOF_PLAN
 
   case "$SEARCH_MODE" in
     managed) say "Managed Meilisearch will run privately in the same Compose project." ;;
-    external) say "The installer will connect Karakeep to the supplied external dedicated Meilisearch URL." ;;
+    external) say "The installer will connect Marka to the supplied external dedicated Meilisearch URL." ;;
     disabled) say "Full-text search will be disabled." ;;
   esac
 
@@ -715,7 +715,7 @@ install_command() {
 
   if [[ "$DATA_MODE" == "fresh" ]]; then
     if [[ -d "$DATA_DIR" && -n "$(find "$DATA_DIR" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null || true)" ]]; then
-      die "Fresh data mode refuses to use non-empty directory $DATA_DIR. Use --data-mode existing only for a compatible Karakeep data directory."
+      die "Fresh data mode refuses to use non-empty directory $DATA_DIR. Use --data-mode existing only for a compatible Marka data directory."
     fi
   else
     [[ -d "$DATA_DIR" ]] || die "Existing data mode requires the data directory to already exist: $DATA_DIR"
@@ -761,7 +761,7 @@ install_command() {
       docker compose pull
       docker compose up -d --remove-orphans
     )
-    info "Karakeep is starting. Check status with: $INSTALL_DIR/install.sh status"
+    info "Marka is starting. Check status with: $INSTALL_DIR/install.sh status"
   fi
 
   say ""
@@ -782,7 +782,7 @@ install_command() {
 management_install_dir() {
   INSTALL_DIR="$(expand_path "${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}")"
   validate_path "Install directory" "$INSTALL_DIR"
-  [[ -f "$INSTALL_DIR/docker-compose.yml" ]] || die "No guided Karakeep installation found at $INSTALL_DIR"
+  [[ -f "$INSTALL_DIR/docker-compose.yml" ]] || die "No guided Marka installation found at $INSTALL_DIR"
 }
 
 compose_in_install_dir() {
@@ -820,7 +820,7 @@ backup_command() {
 
   local stamp archive web_was_running workers_was_running
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-  archive="$BACKUP_DIR/karakeep-data-$stamp.tar.gz"
+  archive="$BACKUP_DIR/marka-data-$stamp.tar.gz"
   web_was_running="$(compose_in_install_dir ps --status running -q web || true)"
   workers_was_running="$(compose_in_install_dir ps --status running -q workers || true)"
 

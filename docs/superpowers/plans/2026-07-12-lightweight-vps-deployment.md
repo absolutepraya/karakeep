@@ -45,7 +45,7 @@
 | `.gitignore` | Prevent the worker-only production secret file from being committed. |
 | `deploy/docker-compose.prod.yml` | Define split web and worker services; remove dedicated Chrome; keep private Meilisearch and Watchtower updates. |
 | `.github/workflows/docker.yml` | Publish version-compatible web and worker image tags from the same commit. |
-| `docs/fork-setup.md` | Record the new production topology, private renderer requirements, and safe migration procedure. |
+| `docs/operator-setup.md` | Record the new production topology, private renderer requirements, and safe migration procedure. |
 
 ## Task 1: Make processing status reflect actual enabled work
 
@@ -441,7 +441,7 @@
 - Modify: `.env.sample:1-12`
 - Create: `.workers.env.sample`
 - Modify: `.gitignore:34-36`
-- Modify: `docs/fork-setup.md:140-157`
+- Modify: `docs/operator-setup.md:140-157`
 
 **Interfaces:**
 - Consumes: queue preflight proving no `embeddings` jobs exist.
@@ -450,7 +450,7 @@
 
 - [ ] **Step 1: Record the queue-safety preflight in the operator documentation**
 
-  Add this exact preflight under the production deployment procedure in `docs/fork-setup.md`:
+  Add this exact preflight under the production deployment procedure in `docs/operator-setup.md`:
 
   ```bash
   docker exec -i karakeep-fork-web-1 node <<'NODE'
@@ -542,7 +542,7 @@
 - [ ] **Step 6: Commit explicit policy and cleanup migration**
 
   ```bash
-  git add packages/db/drizzle .env.sample .workers.env.sample .gitignore docs/fork-setup.md
+  git add packages/db/drizzle .env.sample .workers.env.sample .gitignore docs/operator-setup.md
   git commit -m "fix: clear stale disabled embedding status"
   ```
 ## Task 5: Publish split images and deploy split Karakeep services
@@ -550,7 +550,7 @@
 **Files:**
 - Modify: `.github/workflows/docker.yml:45-71`
 - Modify: `deploy/docker-compose.prod.yml:9-74`
-- Modify: `docs/fork-setup.md:121-157`
+- Modify: `docs/operator-setup.md:121-157`
 
 **Interfaces:**
 - Produces: `ghcr.io/<owner>/karakeep:web-main` and `ghcr.io/<owner>/karakeep:workers-main` from the same CI commit.
@@ -656,7 +656,7 @@
 
 - [ ] **Step 5: Update fork operator documentation**
 
-  In `docs/fork-setup.md`, replace the AIO-only image language with the split target names and document:
+  In `docs/operator-setup.md`, replace the AIO-only image language with the split target names and document:
 
   - web runs Next.js plus migrations
   - workers run `WORKER_PROFILE=screenshot-first`
@@ -681,7 +681,7 @@
 - [ ] **Step 7: Commit split deployment support**
 
   ```bash
-  git add .github/workflows/docker.yml deploy/docker-compose.prod.yml docs/fork-setup.md
+  git add .github/workflows/docker.yml deploy/docker-compose.prod.yml docs/operator-setup.md
   git commit -m "feat: deploy lightweight split karakeep services"
   ```
 
@@ -777,7 +777,7 @@
   Do not commit VPS `.env` files, `.workers.env` files, Compose copies containing secrets, or deployment backups. If the guarded cutover uncovered a source-level documentation correction, commit only that repository change:
 
   ```bash
-  git add docs/fork-setup.md
+  git add docs/operator-setup.md
   git commit -m "docs: record shared renderer rollout"
   ```
 

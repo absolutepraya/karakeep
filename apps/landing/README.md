@@ -24,4 +24,4 @@ pnpm --filter @karakeep/landing typecheck
 
 - This package is separate from the main web app in `apps/web`.
 - It is mostly relevant when changing marketing pages, homepage copy, or public brand assets.
-- For product/docs/deploy workflow of this fork, start from the root `README.md` and `docs/fork-setup.md` instead.
+- For product/docs/deploy workflow of this repository, start from the root `README.md` and `docs/operator-setup.md` instead.
