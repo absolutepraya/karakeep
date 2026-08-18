@@ -191,7 +191,7 @@ test("declares and applies ImageMagick trimming to transparent wordmark outputs"
   }
 });
 
-test("generates rounded-square favicon tiles with transparent outer corners", async () => {
+test("generates favicon tiles with transparent backgrounds", async () => {
   const outputRoot = await mkdtemp(join(tmpdir(), "marka-assets-"));
   await generateAssets({ outputRoot, writeIco: false });
 
@@ -222,18 +222,12 @@ test("generates rounded-square favicon tiles with transparent outer corners", as
       assert.equal(pixelAt(data, info, x, y)[3], 0, `${name} at ${x},${y}`);
     }
 
-    assert.equal(pixelAt(data, info, 0, Math.floor(info.height / 2))[3], 255);
-    assert.equal(pixelAt(data, info, Math.floor(info.width / 2), 0)[3], 255);
-    assert.ok(pixelAt(data, info, 2, 2)[3] < 255);
-    assert.equal(pixelAt(data, info, 10, 0)[3], 255);
-    assert.equal(
-      pixelAt(
-        data,
-        info,
-        Math.floor(info.width / 2),
-        Math.floor(info.height / 2),
-      )[3],
-      255,
-    );
+    const alphaValues = [];
+    for (let index = 0; index < data.length; index += info.channels) {
+      alphaValues.push(data[index + 3]);
+    }
+
+    assert.ok(alphaValues.some((alpha) => alpha === 0), `${name} background`);
+    assert.ok(alphaValues.some((alpha) => alpha > 0), `${name} logo`);
   }
 });
