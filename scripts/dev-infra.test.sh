@@ -143,7 +143,7 @@ for script in "$INFRA" "$SETUP_WORKTREE" "$START_DEV" "$STOP_DEV"; do
 done
 
 # Invalid Chrome ports are rejected before Docker startup.
-for invalid_port in 0 65536; do
+for invalid_port in 0 65536 abc; do
   if MARKA_DEV_CHROME_PORT="$invalid_port" bash "$INFRA" up >"$root/invalid-$invalid_port.out" 2>&1; then
     fail "Invalid Chrome port $invalid_port was accepted"
   fi
@@ -189,10 +189,12 @@ assert_contains "$root/foreign.out" "Port 7700 is already in use"
 # Existing pre-Marka containers are adopted without treating their ports as foreign.
 : >"$FAKE_DOCKER_LOG"
 printf 'true\n' >"$state_dir/karakeep-dev-meilisearch"
-printf 'true\n9250\n' >"$state_dir/karakeep-dev-chrome"
+printf 'true\n9222\n' >"$state_dir/karakeep-dev-chrome"
 bash "$INFRA" up >/dev/null
 assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-meilisearch marka-dev-meilisearch"
 assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-chrome marka-dev-chrome"
+assert_contains "$FAKE_DOCKER_LOG" "rm -f marka-dev-chrome"
+assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9250:9222"
 [[ -e "$state_dir/marka-dev-meilisearch" ]] || fail "Meilisearch state was not renamed"
 [[ -e "$state_dir/marka-dev-chrome" ]] || fail "Chrome state was not renamed"
 [[ ! -e "$state_dir/karakeep-dev-meilisearch" ]] || fail "Legacy Meilisearch state remains"
@@ -215,7 +217,7 @@ BROWSERLESS_TOKEN=old-browserless-secret
 BROWSER_CONNECT_ONDEMAND=true
 EOF_ROOT_ENV
 
-for invalid_port in 0 65536; do
+for invalid_port in 0 65536 abc; do
   if MARKA_DEV_CHROME_PORT="$invalid_port" \
     WT_ROOT_PATH="$main_root" \
     WT_WORKSPACE_PATH="$workspace" \

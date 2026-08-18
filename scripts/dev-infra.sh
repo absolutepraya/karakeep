@@ -10,6 +10,7 @@ MEILI_PORT="7700"
 CHROME_PORT="${MARKA_DEV_CHROME_PORT:-9250}"
 MEILI_IMAGE="getmeili/meilisearch:v1.41.0"
 CHROME_IMAGE="ghcr.io/karakeep-app/karakeep-chrome:release"
+CHROME_CONTAINER_WAS_ADOPTED=false
 
 info() { printf '==> %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -38,6 +39,9 @@ adopt_legacy_container() {
   local legacy="$1" current="$2"
   if container_exists "$legacy" && ! container_exists "$current"; then
     docker rename "$legacy" "$current" >/dev/null || die "Failed to rename legacy $legacy container to $current."
+    if [[ "$legacy" == "$LEGACY_CHROME_CONTAINER" ]]; then
+      CHROME_CONTAINER_WAS_ADOPTED=true
+    fi
     info "Renamed legacy $legacy container to $current"
   fi
 }
@@ -95,15 +99,25 @@ ensure_chrome() {
   if container_exists "$CHROME_CONTAINER"; then
     local existing_port
     existing_port="$(chrome_host_port)"
-    [[ "$existing_port" == "$CHROME_PORT" ]] || die "Existing $CHROME_CONTAINER is mapped to host port ${existing_port:-unknown}, but port $CHROME_PORT is configured. Run pnpm dev:infra:down before changing MARKA_DEV_CHROME_PORT."
-    if container_running "$CHROME_CONTAINER"; then
+    if [[ "$existing_port" != "$CHROME_PORT" ]]; then
+      if [[ "$CHROME_CONTAINER_WAS_ADOPTED" != true ]]; then
+        die "Existing $CHROME_CONTAINER is mapped to host port ${existing_port:-unknown}, but port $CHROME_PORT is configured. Run pnpm dev:infra:down before changing MARKA_DEV_CHROME_PORT."
+      fi
+      info "Migrating legacy $CHROME_CONTAINER from host port ${existing_port:-unknown} to $CHROME_PORT"
+      docker rm -f "$CHROME_CONTAINER" >/dev/null || die "Failed to remove legacy $CHROME_CONTAINER container."
+    fi
+
+    if ! container_exists "$CHROME_CONTAINER"; then
+      :
+    elif container_running "$CHROME_CONTAINER"; then
       info "Reusing shared Chrome on http://localhost:$CHROME_PORT"
       return
+    else
+      ensure_available_port "$CHROME_PORT" "$CHROME_CONTAINER"
+      docker start "$CHROME_CONTAINER" >/dev/null || die "Failed to start existing $CHROME_CONTAINER container."
+      info "Started existing shared Chrome on http://localhost:$CHROME_PORT"
+      return
     fi
-    ensure_available_port "$CHROME_PORT" "$CHROME_CONTAINER"
-    docker start "$CHROME_CONTAINER" >/dev/null || die "Failed to start existing $CHROME_CONTAINER container."
-    info "Started existing shared Chrome on http://localhost:$CHROME_PORT"
-    return
   fi
 
   ensure_available_port "$CHROME_PORT" "$CHROME_CONTAINER"
