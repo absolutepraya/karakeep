@@ -135,15 +135,15 @@ assert_contains "$FAKE_DOCKER_LOG" "marka-dev-meilisearch"
 assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:7700:7700"
 assert_contains "$FAKE_DOCKER_LOG" "getmeili/meilisearch:v1.41.0"
 assert_contains "$FAKE_DOCKER_LOG" "marka-dev-chrome"
-assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9223:9222"
+assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9250:9222"
 assert_contains "$FAKE_DOCKER_LOG" "ghcr.io/karakeep-app/karakeep-chrome:release"
 
 # A worktree can move Chrome to a different host port when another local
 # browser debugger owns the default port.
 bash "$INFRA" down >/dev/null
 : >"$FAKE_DOCKER_LOG"
-MARKA_DEV_CHROME_PORT=9224 bash "$INFRA" up >/dev/null
-assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9224:9222"
+MARKA_DEV_CHROME_PORT=9251 bash "$INFRA" up >/dev/null
+assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9251:9222"
 
 first_run_count="$(grep -c '^run ' "$FAKE_DOCKER_LOG" || true)"
 bash "$INFRA" up >/dev/null
@@ -190,14 +190,14 @@ WT_ROOT_PATH="$main_root" \
 WT_WORKSPACE_PATH="$workspace" \
 WT_WORKSPACE_NAME='Issue/ABC.weird' \
 WT_PORT_BASE=7 \
-MARKA_DEV_CHROME_PORT=9223 \
+MARKA_DEV_CHROME_PORT=9250 \
 "$SETUP_WORKTREE" >/dev/null
 assert_contains "$workspace/.env" "KARAKEEP_PORT=3007"
 assert_contains "$workspace/.env" "DATA_DIR=$workspace/.data/local"
 assert_contains "$workspace/.env" "MEILI_ADDR=http://localhost:7700"
 assert_contains "$workspace/.env" "MEILI_MASTER_KEY="
-assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9223"
-assert_contains "$workspace/.env" "MARKA_DEV_CHROME_PORT=9223"
+assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9250"
+assert_contains "$workspace/.env" "MARKA_DEV_CHROME_PORT=9250"
 assert_contains "$workspace/.env" "BROWSER_CONNECT_ONDEMAND=false"
 assert_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc-weird-7_"
 assert_not_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc.weird-7_"
