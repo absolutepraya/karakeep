@@ -3,10 +3,13 @@ import Image from "next/image";
 import MarkaLogo from "@/components/MarkaLogo";
 import SignInForm from "@/components/signin/SignInForm";
 import { MARKA } from "@/lib/brand";
+import { useTranslation } from "@/lib/i18n/server";
 import { getServerAuthSession } from "@/server/auth";
 
 export default async function SignInPage() {
   const session = await getServerAuthSession();
+  // oxlint-disable-next-line rules-of-hooks
+  const { t } = await useTranslation();
   if (session) {
     redirect("/");
   }
@@ -80,19 +83,18 @@ export default async function SignInPage() {
 
         <div className="relative max-w-lg pb-4 xl:pb-8">
           <p className="mb-5 text-sm font-medium text-primary-foreground/65">
-            Your personal library
+            {t("signin.eyebrow")}
           </p>
           <h1 className="max-w-md text-balance text-4xl font-semibold leading-[1.08] tracking-[-0.035em] xl:text-5xl">
-            Keep the things worth finding.
+            {t("signin.title")}
           </h1>
           <p className="mt-6 max-w-md text-base leading-7 text-primary-foreground/70">
-            Save links, notes, images, and pages in one private place, then get
-            back to them when you need them.
+            {t("signin.description")}
           </p>
         </div>
 
         <p className="relative text-xs text-primary-foreground/45">
-          Self-hosted. Built for your collection.
+          {t("signin.footer")}
         </p>
       </section>
 
@@ -103,7 +105,7 @@ export default async function SignInPage() {
           </div>
           <SignInForm />
           <p className="text-center text-xs text-muted-foreground">
-            Private by design, ready when you are.
+            {t("signin.privacy_note")}
           </p>
         </div>
       </section>

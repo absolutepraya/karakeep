@@ -45,6 +45,13 @@
     "bookmarks": "Bookmarks",
     "storage": "Storage"
   },
+  "signin": {
+    "eyebrow": "Your personal library",
+    "title": "Keep the things worth finding.",
+    "description": "Save links, notes, images, and pages in one private place, then get back to them when you need them.",
+    "footer": "Self-hosted. Built for your collection.",
+    "privacy_note": "Private by design, ready when you are."
+  },
   "layouts": {
     "masonry": "Masonry",
     "grid": "Grid",
