@@ -32,16 +32,16 @@ export default async function SignInForm() {
       {providerValues && providerValues.length > 0 && (
         <OAuthAutoRedirect oauthProviderId={providerValues[0].id} />
       )}
-      <Card className="w-full rounded-2xl border-border/70 bg-card/95 shadow-xl backdrop-blur">
-        <CardHeader className="space-y-2 px-5 pb-3 pt-6 text-center sm:px-7 sm:pt-7">
-          <CardTitle className="text-2xl font-semibold tracking-tight">
+      <Card className="w-full rounded-xl border-border/80 bg-card shadow-sm">
+        <CardHeader className="space-y-2 px-5 pb-4 pt-6 sm:px-8 sm:pt-8">
+          <CardTitle className="text-2xl font-semibold tracking-[-0.025em]">
             Welcome back
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-left leading-6">
             Sign in to continue to {MARKA.name}.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5 px-5 pb-6 sm:px-7 sm:pb-7">
+        <CardContent className="space-y-5 px-5 pb-6 sm:px-8 sm:pb-8">
           {serverConfig.demoMode && (
             <Alert>
               <Info className="h-4 w-4" />
@@ -61,7 +61,7 @@ export default async function SignInForm() {
             <>
               <div className="flex w-full items-center gap-3">
                 <div className="flex-1 border-t border-border" />
-                <span className="bg-card px-1 text-xs font-medium text-muted-foreground">
+                <span className="bg-card px-2 text-xs font-medium text-muted-foreground">
                   Or continue with
                 </span>
                 <div className="flex-1 border-t border-border" />
