@@ -7,12 +7,20 @@ LEGACY_MEILI_CONTAINER="karakeep-dev-meilisearch"
 LEGACY_CHROME_CONTAINER="karakeep-dev-chrome"
 MEILI_VOLUME="marka-dev-meilisearch-data"
 MEILI_PORT="7700"
-CHROME_PORT="9222"
+CHROME_PORT="${MARKA_DEV_CHROME_PORT:-9250}"
 MEILI_IMAGE="getmeili/meilisearch:v1.41.0"
 CHROME_IMAGE="ghcr.io/karakeep-app/karakeep-chrome:release"
+CHROME_CONTAINER_WAS_ADOPTED=false
 
 info() { printf '==> %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+if ! [[ "$CHROME_PORT" =~ ^[0-9]+$ ]]; then
+  die "MARKA_DEV_CHROME_PORT must be between 1 and 65535."
+fi
+if ((10#$CHROME_PORT < 1 || 10#$CHROME_PORT > 65535)); then
+  die "MARKA_DEV_CHROME_PORT must be between 1 and 65535."
+fi
 
 require_docker() {
   command -v docker >/dev/null 2>&1 || die "Docker is not installed. Install Docker first."
@@ -31,6 +39,9 @@ adopt_legacy_container() {
   local legacy="$1" current="$2"
   if container_exists "$legacy" && ! container_exists "$current"; then
     docker rename "$legacy" "$current" >/dev/null || die "Failed to rename legacy $legacy container to $current."
+    if [[ "$legacy" == "$LEGACY_CHROME_CONTAINER" ]]; then
+      CHROME_CONTAINER_WAS_ADOPTED=true
+    fi
     info "Renamed legacy $legacy container to $current"
   fi
 }
@@ -53,6 +64,10 @@ ensure_available_port() {
   if port_in_use "$port"; then
     die "Port $port is already in use by something other than $owner. Stop the conflicting service before starting shared Marka dev infrastructure."
   fi
+}
+
+chrome_host_port() {
+  docker inspect -f '{{range $p, $bindings := .HostConfig.PortBindings}}{{if eq $p "9222/tcp"}}{{(index $bindings 0).HostPort}}{{end}}{{end}}' "$CHROME_CONTAINER" 2>/dev/null || true
 }
 
 ensure_meilisearch() {
@@ -82,14 +97,27 @@ ensure_meilisearch() {
 ensure_chrome() {
   adopt_legacy_container "$LEGACY_CHROME_CONTAINER" "$CHROME_CONTAINER"
   if container_exists "$CHROME_CONTAINER"; then
-    if container_running "$CHROME_CONTAINER"; then
+    local existing_port
+    existing_port="$(chrome_host_port)"
+    if [[ "$existing_port" != "$CHROME_PORT" ]]; then
+      if [[ "$CHROME_CONTAINER_WAS_ADOPTED" != true ]]; then
+        die "Existing $CHROME_CONTAINER is mapped to host port ${existing_port:-unknown}, but port $CHROME_PORT is configured. Run pnpm dev:infra:down before changing MARKA_DEV_CHROME_PORT."
+      fi
+      info "Migrating legacy $CHROME_CONTAINER from host port ${existing_port:-unknown} to $CHROME_PORT"
+      docker rm -f "$CHROME_CONTAINER" >/dev/null || die "Failed to remove legacy $CHROME_CONTAINER container."
+    fi
+
+    if ! container_exists "$CHROME_CONTAINER"; then
+      :
+    elif container_running "$CHROME_CONTAINER"; then
       info "Reusing shared Chrome on http://localhost:$CHROME_PORT"
       return
+    else
+      ensure_available_port "$CHROME_PORT" "$CHROME_CONTAINER"
+      docker start "$CHROME_CONTAINER" >/dev/null || die "Failed to start existing $CHROME_CONTAINER container."
+      info "Started existing shared Chrome on http://localhost:$CHROME_PORT"
+      return
     fi
-    ensure_available_port "$CHROME_PORT" "$CHROME_CONTAINER"
-    docker start "$CHROME_CONTAINER" >/dev/null || die "Failed to start existing $CHROME_CONTAINER container."
-    info "Started existing shared Chrome on http://localhost:$CHROME_PORT"
-    return
   fi
 
   ensure_available_port "$CHROME_PORT" "$CHROME_CONTAINER"

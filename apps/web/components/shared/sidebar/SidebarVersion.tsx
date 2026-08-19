@@ -4,7 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { usePwaLifecycle } from "@/components/pwa/ServiceWorkerRegistration";
 import { useTranslation } from "@/lib/i18n/client";
-import { GitBranch, Github } from "lucide-react";
+import { GitBranch, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const FORK_REPO = "absolutepraya/marka";
 const FORK_REPO_URL = `https://github.com/${FORK_REPO}`;
@@ -25,7 +26,8 @@ export default function SidebarVersion({
   placement = "sidebar",
 }: SidebarVersionProps) {
   const { t } = useTranslation("profile_menu");
-  const { appBuild, deployedBuild, updateStatus } = usePwaLifecycle();
+  const { appBuild, deployedBuild, updateStatus, activateUpdate } =
+    usePwaLifecycle();
   const visibleBuild = displayBuild(appBuild);
   const newerBuild =
     deployedBuild && deployedBuild !== appBuild
@@ -33,45 +35,51 @@ export default function SidebarVersion({
       : null;
   const containerClassName =
     placement === "profile"
-      ? "flex min-w-0 flex-col gap-0.5 px-2 py-1 text-xs leading-tight"
-      : "mt-auto flex min-w-0 flex-col gap-0.5 border-t pt-4 text-xs leading-tight";
+      ? "flex min-w-0 flex-col items-end gap-0.5 px-2 py-1 text-xs leading-tight"
+      : "flex min-w-0 flex-col gap-0.5 text-xs leading-tight";
+  const buildClassName =
+    placement === "profile"
+      ? "flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground opacity-50 transition-colors hover:text-foreground"
+      : "flex min-w-0 items-center gap-1.5 font-mono text-muted-foreground transition-colors hover:text-foreground";
+  const buildIconClassName = placement === "profile" ? "size-3" : "size-3.5";
 
   const buildLabel = t("build", { build: visibleBuild });
 
   return (
     <div className={containerClassName}>
-      <Link
-        href={FORK_REPO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex min-w-0 items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <Github className="size-3.5 shrink-0" />
-        <span className="truncate">{FORK_REPO}</span>
-      </Link>
       {isCommitSha(appBuild) ? (
         <Link
           href={`${FORK_REPO_URL}/commit/${appBuild}`}
           target="_blank"
           rel="noopener noreferrer"
           title={t("build_title", { build: appBuild })}
-          className="flex min-w-0 items-center gap-1.5 font-mono text-muted-foreground transition-colors hover:text-foreground"
+          className={buildClassName}
         >
-          <GitBranch className="size-3.5 shrink-0" />
+          <GitBranch className={`${buildIconClassName} shrink-0`} />
           <span className="truncate">{buildLabel}</span>
         </Link>
       ) : (
-        <span className="flex min-w-0 items-center gap-1.5 font-mono text-muted-foreground">
-          <GitBranch className="size-3.5 shrink-0" />
+        <span className={buildClassName}>
+          <GitBranch className={`${buildIconClassName} shrink-0`} />
           <span className="truncate">{buildLabel}</span>
         </span>
       )}
-      {newerBuild && (
-        <span className="truncate pl-5 font-mono text-muted-foreground">
-          {updateStatus === "ready"
-            ? t("update_ready", { build: newerBuild })
-            : t("update_available", { build: newerBuild })}
-        </span>
+      {newerBuild && updateStatus === "ready" ? (
+        <Button
+          type="button"
+          size="sm"
+          onClick={activateUpdate}
+          className="mt-1 h-7 w-full justify-start gap-1.5 bg-emerald-600 px-2 text-xs text-white hover:bg-emerald-700"
+        >
+          <RefreshCw className="size-3.5" />
+          {t("update_now")}
+        </Button>
+      ) : (
+        newerBuild && (
+          <span className="truncate pl-5 font-mono text-xs text-muted-foreground opacity-50">
+            {t("update_available", { build: newerBuild })}
+          </span>
+        )
       )}
     </div>
   );

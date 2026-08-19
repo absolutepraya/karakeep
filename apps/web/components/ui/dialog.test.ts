@@ -184,3 +184,28 @@ describe("revealFocusedTextEntry", () => {
     expect(dialog.scrollTop).toBe(0);
   });
 });
+
+describe("DialogContent bottom sheets", () => {
+  it("marks bottom sheets for gesture-handle safe space", () => {
+    const view = render(
+      React.createElement(
+        Dialog,
+        { open: true },
+        React.createElement(
+          DialogContent,
+          { position: "bottom" },
+          React.createElement(DialogTitle, null, "Bottom sheet"),
+          React.createElement(
+            DialogDescription,
+            null,
+            "Bottom sheet description",
+          ),
+        ),
+      ),
+    );
+
+    expect(view.getByRole("dialog").className).toContain(
+      "dialog-vv-bottom-safe-area",
+    );
+  });
+});

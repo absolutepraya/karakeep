@@ -49,15 +49,7 @@ export default function TabLayout() {
         <Label>Tags</Label>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(highlights)">
-        <Icon
-          sf="highlighter"
-          androidSrc={
-            <VectorIcon family={MaterialCommunityIcons} name="marker" />
-          }
-        />
-        <Label>Highlights</Label>
-      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="(highlights)" hidden />
 
       <NativeTabs.Trigger
         name="(search)"

@@ -27,7 +27,7 @@ export const karakeepClient = createKarakeepClient({
 });
 
 export const mcpServer = new McpServer({
-  name: "Karakeep",
+  name: "Marka",
   version: "0.23.0",
 });
 

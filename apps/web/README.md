@@ -1,6 +1,6 @@
 # `@karakeep/web`
 
-This is the main Next.js web application for Karakeep.
+This is the main Next.js web application for Marka.
 
 ## What lives here
 

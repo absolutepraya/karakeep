@@ -15,7 +15,7 @@ export default async function Header() {
 
   return (
     <header className="bg-sidebar/95 sticky left-0 right-0 top-0 z-50">
-      <div className="flex h-16 items-center gap-3 overflow-x-auto overflow-y-hidden px-3 sm:px-4">
+      <div className="flex h-16 items-center gap-3 overflow-x-auto overflow-y-hidden px-3 sm:px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
         <div className="hidden shrink-0 items-center sm:flex">
           <Link
             href={"/dashboard/bookmarks"}
@@ -24,12 +24,14 @@ export default async function Header() {
             <MarkaLogo height={30} />
           </Link>
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 lg:col-start-2 lg:row-start-1">
           <SearchInput className="w-full" />
         </div>
-        <div className="ml-3 flex shrink-0 items-center gap-2 sm:ml-4">
+        <div className="relative ml-3 flex h-10 shrink-0 items-center pr-5 sm:ml-4 lg:col-start-3 lg:row-start-1 lg:justify-self-end">
           <ProcessingStatusIndicator />
-          <ProfileOptions />
+          <div className="absolute right-0 top-1/2 z-10 size-10 -translate-y-1/2">
+            <ProfileOptions />
+          </div>
         </div>
       </div>
     </header>

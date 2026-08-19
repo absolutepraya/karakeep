@@ -48,6 +48,7 @@ vi.mock("@/lib/i18n/client", () => ({
           apps_extensions: "Apps & extensions",
           coming_soon: "Coming soon",
           documentation: "Documentation",
+          update_now: "Update now",
         };
         return profileTranslations[key] ?? key;
       }
@@ -142,11 +143,10 @@ describe("ProfileOptions", () => {
     expect(disabledItems).toHaveLength(2);
   });
 
-  it("shows the shared build footer only in the mobile profile layout", () => {
+  it("shows the shared build footer in the profile menu", () => {
     render(<ProfileOptions />);
 
     const version = screen.getByTestId("sidebar-version");
     expect(version.getAttribute("data-placement")).toBe("profile");
-    expect(version.parentElement?.className).toContain("sm:hidden");
   });
 });

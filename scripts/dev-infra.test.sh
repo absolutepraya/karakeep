@@ -54,7 +54,11 @@ case "${1:-}" in
     if [[ "${2:-}" == "-f" ]]; then
       name="${4:-}"
       [[ -f "$state_dir/$name" ]] || exit 1
-      printf '%s\n' "$(cat "$state_dir/$name")"
+      if [[ "$3" == *"HostConfig.PortBindings"* || "$3" == *"9222/tcp"* ]]; then
+        printf '%s\n' "$(sed -n '2p' "$state_dir/$name")"
+      else
+        printf '%s\n' "$(head -n 1 "$state_dir/$name")"
+      fi
       exit 0
     fi
     name="${2:-}"
@@ -63,7 +67,8 @@ case "${1:-}" in
   start)
     name="${2:?}"
     [[ -f "$state_dir/$name" ]] || exit 1
-    printf 'true\n' >"$state_dir/$name"
+    port="$(sed -n '2p' "$state_dir/$name")"
+    printf 'true\n%s\n' "$port" >"$state_dir/$name"
     ;;
   run)
     name=""
@@ -75,7 +80,15 @@ case "${1:-}" in
       fi
     done
     [[ -n "$name" ]] || exit 2
-    printf 'true\n' >"$state_dir/$name"
+    port=""
+    for ((i = 1; i < ${#args[@]}; i++)); do
+      if [[ "${args[$i]}" == "-p" ]]; then
+        port="${args[$((i + 1))]#*:}"
+        port="${port%%:*}"
+        break
+      fi
+    done
+    printf 'true\n%s\n' "$port" >"$state_dir/$name"
     printf 'fake-container-id\n'
     ;;
   rm)
@@ -129,17 +142,39 @@ for script in "$INFRA" "$SETUP_WORKTREE" "$START_DEV" "$STOP_DEV"; do
   bash -n "$script"
 done
 
+# Invalid Chrome ports are rejected before Docker startup.
+for invalid_port in 0 65536 abc; do
+  if MARKA_DEV_CHROME_PORT="$invalid_port" bash "$INFRA" up >"$root/invalid-$invalid_port.out" 2>&1; then
+    fail "Invalid Chrome port $invalid_port was accepted"
+  fi
+  assert_contains "$root/invalid-$invalid_port.out" "between 1 and 65535"
+done
+
 # Shared infra starts exactly one stable Meilisearch and Chrome container.
 bash "$INFRA" up >/dev/null
 assert_contains "$FAKE_DOCKER_LOG" "marka-dev-meilisearch"
 assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:7700:7700"
 assert_contains "$FAKE_DOCKER_LOG" "getmeili/meilisearch:v1.41.0"
 assert_contains "$FAKE_DOCKER_LOG" "marka-dev-chrome"
-assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9222:9222"
+assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9250:9222"
 assert_contains "$FAKE_DOCKER_LOG" "ghcr.io/karakeep-app/karakeep-chrome:release"
 
+# A worktree can move Chrome to a different host port when another local
+# browser debugger owns the default port.
+bash "$INFRA" down >/dev/null
+: >"$FAKE_DOCKER_LOG"
+MARKA_DEV_CHROME_PORT=9251 bash "$INFRA" up >/dev/null
+assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9251:9222"
+
+# Changing the configured port without explicitly recreating shared Chrome
+# fails instead of reporting an endpoint that does not match Docker.
+if MARKA_DEV_CHROME_PORT=9252 bash "$INFRA" up >"$root/mismatch.out" 2>&1; then
+  fail "Shared infra unexpectedly reused Chrome with a mismatched port mapping"
+fi
+assert_contains "$root/mismatch.out" "mapped to host port 9251"
+
 first_run_count="$(grep -c '^run ' "$FAKE_DOCKER_LOG" || true)"
-bash "$INFRA" up >/dev/null
+MARKA_DEV_CHROME_PORT=9251 bash "$INFRA" up >/dev/null
 second_run_count="$(grep -c '^run ' "$FAKE_DOCKER_LOG" || true)"
 [[ "$first_run_count" == "$second_run_count" ]] || fail "Repeated infra up created duplicate containers"
 
@@ -154,10 +189,12 @@ assert_contains "$root/foreign.out" "Port 7700 is already in use"
 # Existing pre-Marka containers are adopted without treating their ports as foreign.
 : >"$FAKE_DOCKER_LOG"
 printf 'true\n' >"$state_dir/karakeep-dev-meilisearch"
-printf 'true\n' >"$state_dir/karakeep-dev-chrome"
+printf 'true\n9222\n' >"$state_dir/karakeep-dev-chrome"
 bash "$INFRA" up >/dev/null
 assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-meilisearch marka-dev-meilisearch"
 assert_contains "$FAKE_DOCKER_LOG" "rename karakeep-dev-chrome marka-dev-chrome"
+assert_contains "$FAKE_DOCKER_LOG" "rm -f marka-dev-chrome"
+assert_contains "$FAKE_DOCKER_LOG" "127.0.0.1:9250:9222"
 [[ -e "$state_dir/marka-dev-meilisearch" ]] || fail "Meilisearch state was not renamed"
 [[ -e "$state_dir/marka-dev-chrome" ]] || fail "Chrome state was not renamed"
 [[ ! -e "$state_dir/karakeep-dev-meilisearch" ]] || fail "Legacy Meilisearch state remains"
@@ -179,16 +216,31 @@ BROWSERLESS_URL=https://old-browserless.example
 BROWSERLESS_TOKEN=old-browserless-secret
 BROWSER_CONNECT_ONDEMAND=true
 EOF_ROOT_ENV
+
+for invalid_port in 0 65536 abc; do
+  if MARKA_DEV_CHROME_PORT="$invalid_port" \
+    WT_ROOT_PATH="$main_root" \
+    WT_WORKSPACE_PATH="$workspace" \
+    WT_WORKSPACE_NAME='InvalidPort' \
+    WT_PORT_BASE=7 \
+    "$SETUP_WORKTREE" >"$root/setup-invalid-$invalid_port.out" 2>&1; then
+    fail "Worktree setup accepted invalid Chrome port $invalid_port"
+  fi
+  assert_contains "$root/setup-invalid-$invalid_port.out" "between 1 and 65535"
+done
+
 WT_ROOT_PATH="$main_root" \
 WT_WORKSPACE_PATH="$workspace" \
 WT_WORKSPACE_NAME='Issue/ABC.weird' \
 WT_PORT_BASE=7 \
+MARKA_DEV_CHROME_PORT=9250 \
 "$SETUP_WORKTREE" >/dev/null
 assert_contains "$workspace/.env" "KARAKEEP_PORT=3007"
 assert_contains "$workspace/.env" "DATA_DIR=$workspace/.data/local"
 assert_contains "$workspace/.env" "MEILI_ADDR=http://localhost:7700"
 assert_contains "$workspace/.env" "MEILI_MASTER_KEY="
-assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9222"
+assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9250"
+assert_contains "$workspace/.env" "MARKA_DEV_CHROME_PORT=9250"
 assert_contains "$workspace/.env" "BROWSER_CONNECT_ONDEMAND=false"
 assert_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc-weird-7_"
 assert_not_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc.weird-7_"

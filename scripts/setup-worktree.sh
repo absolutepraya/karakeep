@@ -11,6 +11,7 @@ workspace_data_dir="$WT_WORKSPACE_PATH/.data/local"
 refresh_data="${WT_REFRESH_DATA:-false}"
 data_source="${WT_DATA_SOURCE:-main}"
 workspace_name="${WT_WORKSPACE_NAME:-$(basename "$WT_WORKSPACE_PATH")}"
+chrome_port="${MARKA_DEV_CHROME_PORT:-9250}"
 
 [[ -f "$root_env" ]] || {
   echo "error: missing root environment file: $root_env" >&2
@@ -24,6 +25,15 @@ case "$WT_PORT_BASE" in
     ;;
 esac
 
+if ! [[ "$chrome_port" =~ ^[0-9]+$ ]]; then
+  echo "error: MARKA_DEV_CHROME_PORT must be between 1 and 65535" >&2
+  exit 1
+fi
+if ((10#$chrome_port < 1 || 10#$chrome_port > 65535)); then
+  echo "error: MARKA_DEV_CHROME_PORT must be between 1 and 65535" >&2
+  exit 1
+fi
+
 workspace_slug="$(printf '%s' "$workspace_name" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_-' '-' | sed 's/^-*//; s/-*$//')"
 [[ -n "$workspace_slug" ]] || workspace_slug="worktree"
 web_port=$((3000 + WT_PORT_BASE))
@@ -33,7 +43,7 @@ trap 'rm -f "$tmp_env"' EXIT
 
 while IFS= read -r line || [[ -n "$line" ]]; do
   case "$line" in
-    DATA_DIR=* | KARAKEEP_PORT=* | API_URL=* | NEXTAUTH_URL=* | MEILI_ADDR=* | MEILI_MASTER_KEY=* | MEILI_VECTOR_ADDR=* | MEILI_VECTOR_MASTER_KEY=* | MEILI_INDEX_PREFIX=* | BROWSER_WEB_URL=* | BROWSER_WEBSOCKET_URL=* | BROWSERLESS_URL=* | BROWSERLESS_TOKEN=* | BROWSER_CONNECT_ONDEMAND=*)
+    DATA_DIR=* | KARAKEEP_PORT=* | API_URL=* | NEXTAUTH_URL=* | MEILI_ADDR=* | MEILI_MASTER_KEY=* | MEILI_VECTOR_ADDR=* | MEILI_VECTOR_MASTER_KEY=* | MEILI_INDEX_PREFIX=* | BROWSER_WEB_URL=* | BROWSER_WEBSOCKET_URL=* | BROWSERLESS_URL=* | BROWSERLESS_TOKEN=* | BROWSER_CONNECT_ONDEMAND=* | MARKA_DEV_CHROME_PORT=*)
       ;;
     *)
       printf '%s\n' "$line" >>"$tmp_env"
@@ -49,7 +59,8 @@ NEXTAUTH_URL=http://localhost:$web_port
 MEILI_ADDR=http://localhost:7700
 MEILI_MASTER_KEY=
 MEILI_INDEX_PREFIX=$meili_index_prefix
-BROWSER_WEB_URL=http://localhost:9222
+BROWSER_WEB_URL=http://localhost:$chrome_port
+MARKA_DEV_CHROME_PORT=$chrome_port
 BROWSER_CONNECT_ONDEMAND=false
 ENV
 
@@ -90,4 +101,4 @@ case "$data_source" in
     ;;
 esac
 
-echo "Configured worktree: web $web_port, shared Meilisearch 7700, shared Chrome 9222, Meilisearch prefix $meili_index_prefix"
+echo "Configured worktree: web $web_port, shared Meilisearch 7700, shared Chrome $chrome_port, Meilisearch prefix $meili_index_prefix"

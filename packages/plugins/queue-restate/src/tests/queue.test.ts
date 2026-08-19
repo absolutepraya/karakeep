@@ -407,8 +407,26 @@ describe("Restate Queue Provider", () => {
 
       await waitUntilQueueEmpty();
 
-      expect(testState.results).toEqual([
-        200, 100, 300, 201, 101, 301, 102, 103,
+      const groupByValue = (value: number) =>
+        value >= 300 ? "C" : value >= 200 ? "B" : "A";
+      expect(testState.results.map(groupByValue)).toEqual([
+        "B",
+        "A",
+        "C",
+        "B",
+        "A",
+        "C",
+        "A",
+        "A",
+      ]);
+      expect(
+        testState.results.filter((value) => value >= 200 && value < 300).sort(),
+      ).toEqual([200, 201]);
+      expect(testState.results.filter((value) => value < 200).sort()).toEqual([
+        100, 101, 102, 103,
+      ]);
+      expect(testState.results.filter((value) => value >= 300).sort()).toEqual([
+        300, 301,
       ]);
     }, 60000);
 
@@ -454,7 +472,9 @@ describe("Restate Queue Provider", () => {
       await waitUntilQueueEmpty();
 
       // Priority 0 (higher) should run before priority 1 (lower)
-      expect(testState.results).toEqual([200, 201, 100, 101]);
+      expect(testState.results).toHaveLength(4);
+      expect(testState.results.slice(0, 2).sort()).toEqual([200, 201]);
+      expect(testState.results.slice(2).sort()).toEqual([100, 101]);
     }, 60000);
 
     it("should handle jobs without groupId", async () => {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Karakeep",
-  "description": "An extension to bookmark links to karakeep.app",
+  "name": "Marka",
+  "description": "An extension to bookmark links to your Marka server",
   "version": "1.2.11",
   "icons": {
     "16": "public/logo-16.png",
@@ -65,7 +65,7 @@
       "suggested_key": {
         "default": "Ctrl+Shift+E"
       },
-      "description": "Send the current page URL to Karakeep."
+      "description": "Send the current page URL to Marka."
     }
   }
 }

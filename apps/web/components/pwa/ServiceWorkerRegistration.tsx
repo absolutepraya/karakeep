@@ -24,6 +24,7 @@ export interface PwaLifecycleState {
   appBuild: string;
   deployedBuild: string | null;
   updateStatus: PwaUpdateStatus;
+  activateUpdate: () => void;
 }
 
 const compiledServiceWorkerBuildVersion =
@@ -32,11 +33,13 @@ const appBuild = compiledServiceWorkerBuildVersion ?? "development";
 const serviceWorkerUrl = compiledServiceWorkerBuildVersion
   ? `/sw.js?v=${encodeURIComponent(compiledServiceWorkerBuildVersion)}`
   : "/sw.js";
+const developmentResetKey = "marka-dev-service-worker-reset";
 
 const PwaLifecycleContext = createContext<PwaLifecycleState>({
   appBuild,
   deployedBuild: null,
   updateStatus: "current",
+  activateUpdate: () => undefined,
 });
 
 export function usePwaLifecycle() {
@@ -82,6 +85,22 @@ export default function ServiceWorkerRegistration({
   const handoffArmedRef = useRef(false);
   const handoffReloadedRef = useRef(false);
 
+  const activateUpdate = () => {
+    const waitingWorker = registrationRef.current?.waiting;
+    if (
+      !waitingWorker ||
+      !deployedBuild ||
+      !isWorkerForBuild(waitingWorker, deployedBuild)
+    ) {
+      return;
+    }
+
+    handoffArmedRef.current = true;
+    waitingWorker.postMessage({
+      type: "ACTIVATE_UPDATE",
+    } satisfies WorkerMessage);
+  };
+
   useEffect(() => {
     sessionStatusRef.current = status;
     sessionIdRef.current = session?.user?.id ?? null;
@@ -117,6 +136,33 @@ export default function ServiceWorkerRegistration({
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) {
+      return;
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      void (async () => {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(
+          registrations.map((registration) => registration.unregister()),
+        );
+
+        if ("caches" in window) {
+          const cacheNames = await window.caches.keys();
+          await Promise.all(
+            cacheNames.map((cacheName) => window.caches.delete(cacheName)),
+          );
+        }
+
+        const hasResetThisSession =
+          window.sessionStorage.getItem(developmentResetKey) === "1";
+        if (hadController && !hasResetThisSession) {
+          window.sessionStorage.setItem(developmentResetKey, "1");
+          window.location.reload();
+        } else if (!hadController) {
+          window.sessionStorage.removeItem(developmentResetKey);
+        }
+      })();
       return;
     }
 
@@ -343,7 +389,7 @@ export default function ServiceWorkerRegistration({
 
   return (
     <PwaLifecycleContext.Provider
-      value={{ appBuild, deployedBuild, updateStatus }}
+      value={{ appBuild, deployedBuild, updateStatus, activateUpdate }}
     >
       {children}
     </PwaLifecycleContext.Provider>

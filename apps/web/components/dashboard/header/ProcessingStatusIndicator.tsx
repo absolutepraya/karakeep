@@ -481,7 +481,7 @@ export default function ProcessingStatusIndicator() {
           <Button
             type="button"
             variant="ghost"
-            className="shadow-xs ease-(--ease-out) h-10 gap-1.5 rounded-xl border border-border/70 bg-background px-2.5 text-foreground transition-[background-color,border-color,box-shadow] duration-150 hover:bg-accent/70"
+            className="shadow-xs ease-(--ease-out) h-10 min-w-16 justify-start gap-1.5 rounded-l-xl rounded-r-none border border-border/70 bg-background px-2.5 text-foreground transition-[background-color,border-color,box-shadow] duration-150 hover:bg-accent/70"
             aria-label={buttonLabel}
           >
             <Icon

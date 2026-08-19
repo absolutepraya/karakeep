@@ -110,7 +110,7 @@ export default function ServerAddress() {
         </Text>
         <View className="w-full gap-3 rounded-lg bg-card px-4 py-4">
           <Text className="text-sm text-muted-foreground">
-            Enter the URL of your Karakeep server
+            Enter the URL of your Marka server
           </Text>
           <Input
             placeholder="https://cloud.karakeep.app"
