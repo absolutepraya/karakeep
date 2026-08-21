@@ -6,6 +6,16 @@
 - **Operator-facing name**: A human-visible repository, guide, installer, skill, path, or service label that can change without changing persisted data, protocols, package scopes, or environment-variable contracts.
 - **Compatibility identifier**: A retained Karakeep-era name used by code, packages, environment variables, persisted data, export formats, mobile schemes, or external distribution contracts.
 
+## PWA update lifecycle
+
+- **Running build**: the frontend build currently executing in the browser, identified by the value compiled into that frontend bundle.
+- **Deployed build**: the frontend build currently served by the live application server.
+- **Update available**: a valid deployed build differs from the running build and the replacement frontend has not finished staging.
+- **Update ready**: the replacement frontend is staged and waiting to become active.
+- **Manual update**: an explicit user action that activates an update-ready frontend and reloads after the new worker takes control.
+- **Automatic update check**: a best-effort build check on initial load and foreground return. It may stage a replacement but must not interrupt the document that discovered it.
+- **Update blocked**: activation was refused because another relevant browser window or installed PWA client is still using the old frontend.
+
 ## List collaboration
 
 - **List owner**: the user who owns a list. Ownership is not a collaborator membership and is never inherited.

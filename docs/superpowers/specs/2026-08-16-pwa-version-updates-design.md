@@ -1,7 +1,7 @@
 # PWA Version Visibility and Safe Auto-Update Design
 
 **Date:** 2026-08-16  
-**Status:** Approved design, pending implementation plan
+**Status:** Approved design, manual-update extension implemented
 
 ## Goal
 
@@ -49,8 +49,8 @@ Marka uses a hybrid update policy:
 2. Check again whenever an existing document returns to the foreground.
 3. Download and install a newer worker silently when one is available.
 4. Never reload the document merely because an update was discovered or finished installing during that document's lifetime.
-5. Activate a waiting update on the next safe fresh load or refresh, or allow the browser to activate it naturally after all old clients close.
-6. Do not show a modal, toast, confirmation prompt, or manual `Update now` button.
+5. Activate a waiting update on the next safe fresh load or refresh, through an explicit `Update now` action, or allow the browser to activate it naturally after all old clients close.
+6. The profile build row exposes compact manual refresh and `Update now` actions. No modal or toast is required for the normal update path.
 
 A running session must not be replaced mid-edit.
 
@@ -218,6 +218,23 @@ Update ready · b3f8690
 If activation is temporarily blocked by another open client, keep the user-facing state as `Update ready`. Multi-client blocking is an implementation detail and does not need a warning unless it becomes a persistent usability problem in real usage.
 
 Version-check failures do not show a scary error state. The user keeps the current build display and the app retries at the next normal lifecycle trigger.
+
+### Manual update extension
+
+The build row is a horizontal space-between status control:
+
+```text
+Build abc1234  [git icon]                         Up to date  [refresh icon]
+Build abc1234  [git icon]                         Update now  [download icon]
+```
+
+The refresh action performs an immediate no-store `/api/version` check and service-worker update attempt. It shows `Checking...` while active and `Check failed` when the request cannot complete.
+
+The `Update now` action appears only when a valid newer deployed build has a matching waiting worker. It activates that worker and reloads after `controllerchange`. If another window blocks activation, the status becomes `Close other tabs to update` and remains retryable.
+
+Invalid or missing build identities show `Build unknown` with `Update unavailable`; they never produce an update action or notification dot.
+
+The green update dot appears on the profile avatar whenever a valid newer deployed build is known, including while the replacement worker is installing or waiting.
 
 ### Desktop
 

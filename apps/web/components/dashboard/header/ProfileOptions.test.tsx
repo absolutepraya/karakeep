@@ -75,6 +75,10 @@ vi.mock("@/components/shared/sidebar/SidebarVersion", () => ({
   ),
 }));
 
+vi.mock("@/components/pwa/ServiceWorkerRegistration", () => ({
+  usePwaLifecycle: () => ({ updateAvailable: true }),
+}));
+
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children }: { children: React.ReactNode }) => (
     <button type="button">{children}</button>
@@ -148,5 +152,6 @@ describe("ProfileOptions", () => {
 
     const version = screen.getByTestId("sidebar-version");
     expect(version.getAttribute("data-placement")).toBe("profile");
+    expect(screen.getByLabelText("Update available")).toBeTruthy();
   });
 });

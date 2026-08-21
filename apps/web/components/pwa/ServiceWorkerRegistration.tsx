@@ -14,16 +14,28 @@ import { recordThumbnailAccess } from "@/lib/offline-library/repository";
 
 type WorkerMessage =
   | { type: "ACTIVATE_UPDATE" }
+  | { type: "UPDATE_ACTIVATION_BLOCKED" }
   | { type: "CLEAR_USER_CACHES" }
   | { type: "SET_DOCUMENT_CACHE_SESSION"; sessionId: string | null }
   | { type: "THUMBNAIL_USED"; url: string };
 
-export type PwaUpdateStatus = "current" | "available" | "ready";
+export type PwaUpdateStatus =
+  | "current"
+  | "checking"
+  | "available"
+  | "installing"
+  | "ready"
+  | "blocked"
+  | "error"
+  | "updating"
+  | "unavailable";
 
 export interface PwaLifecycleState {
   appBuild: string;
   deployedBuild: string | null;
   updateStatus: PwaUpdateStatus;
+  updateAvailable: boolean;
+  checkForUpdate: () => Promise<void>;
   activateUpdate: () => void;
 }
 
@@ -39,6 +51,8 @@ const PwaLifecycleContext = createContext<PwaLifecycleState>({
   appBuild,
   deployedBuild: null,
   updateStatus: "current",
+  updateAvailable: false,
+  checkForUpdate: async () => undefined,
   activateUpdate: () => undefined,
 });
 
@@ -48,6 +62,13 @@ export function usePwaLifecycle() {
 
 function isDeployBuild(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{7,40}$/i.test(value);
+}
+
+function isValidBuild(value: string) {
+  return (
+    isDeployBuild(value) ||
+    (value === "development" && process.env.NODE_ENV !== "production")
+  );
 }
 
 function isWorkerForBuild(
@@ -82,8 +103,14 @@ export default function ServiceWorkerRegistration({
   const sessionIdRef = useRef(session?.user?.id ?? null);
   const hasClearedUserCachesRef = useRef(false);
   const checkPromiseRef = useRef<Promise<void> | null>(null);
+  const checkForUpdateRef = useRef<(() => Promise<void>) | null>(null);
   const handoffArmedRef = useRef(false);
   const handoffReloadedRef = useRef(false);
+  const updateAvailable =
+    isValidBuild(appBuild) &&
+    deployedBuild !== null &&
+    isValidBuild(deployedBuild) &&
+    deployedBuild !== appBuild;
 
   const activateUpdate = () => {
     const waitingWorker = registrationRef.current?.waiting;
@@ -92,9 +119,12 @@ export default function ServiceWorkerRegistration({
       !deployedBuild ||
       !isWorkerForBuild(waitingWorker, deployedBuild)
     ) {
+      setUpdateStatus("checking");
+      void checkForUpdateRef.current?.();
       return;
     }
 
+    setUpdateStatus("updating");
     handoffArmedRef.current = true;
     waitingWorker.postMessage({
       type: "ACTIVATE_UPDATE",
@@ -169,6 +199,11 @@ export default function ServiceWorkerRegistration({
     let installingWorker: ServiceWorker | null = null;
 
     const receiveWorkerMessage = (event: MessageEvent<WorkerMessage>) => {
+      if (event.data?.type === "UPDATE_ACTIVATION_BLOCKED") {
+        handoffArmedRef.current = false;
+        setUpdateStatus("blocked");
+        return;
+      }
       if (
         event.data?.type === "THUMBNAIL_USED" &&
         typeof event.data.url === "string"
@@ -214,11 +249,13 @@ export default function ServiceWorkerRegistration({
       }
 
       installingWorker = installing;
+      setUpdateStatus("installing");
       installing.onstatechange = markReadyIfWaiting;
       markReadyIfWaiting();
     };
 
     const runUpdateCheck = async () => {
+      setUpdateStatus("checking");
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 10_000);
 
@@ -228,15 +265,23 @@ export default function ServiceWorkerRegistration({
           signal: controller.signal,
         });
         if (!response.ok) {
+          setUpdateStatus("error");
           return;
         }
 
         const body = (await response.json()) as { version?: unknown };
-        if (!isDeployBuild(body.version)) {
+        if (!isValidBuild(appBuild) || !isDeployBuild(body.version)) {
+          setUpdateStatus("unavailable");
           return;
         }
 
         setDeployedBuild(body.version);
+        if (
+          registrationRef.current &&
+          typeof registrationRef.current.update === "function"
+        ) {
+          await registrationRef.current.update().catch(() => undefined);
+        }
         if (body.version === appBuild) {
           setUpdateStatus("current");
           return;
@@ -251,6 +296,9 @@ export default function ServiceWorkerRegistration({
           },
         );
         registrationRef.current = registration;
+        if (typeof registration.update === "function") {
+          await registration.update().catch(() => undefined);
+        }
 
         if (isWorkerForBuild(registration.waiting, body.version)) {
           setUpdateStatus("ready");
@@ -266,9 +314,11 @@ export default function ServiceWorkerRegistration({
             registration.installing,
             body.version,
           );
+        } else {
+          setUpdateStatus("available");
         }
       } catch {
-        // Update discovery is best-effort and must never block app startup.
+        setUpdateStatus("error");
       } finally {
         window.clearTimeout(timeoutId);
       }
@@ -287,6 +337,7 @@ export default function ServiceWorkerRegistration({
       checkPromiseRef.current = promise;
       return promise;
     };
+    checkForUpdateRef.current = checkForUpdate;
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -324,10 +375,7 @@ export default function ServiceWorkerRegistration({
         );
 
         if (waitingMatchesCurrent && existingRegistration?.waiting) {
-          handoffArmedRef.current = true;
-          existingRegistration.waiting.postMessage({
-            type: "ACTIVATE_UPDATE",
-          } satisfies WorkerMessage);
+          setUpdateStatus("ready");
         }
 
         if (
@@ -371,6 +419,7 @@ export default function ServiceWorkerRegistration({
         handleControllerChange,
       );
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      checkForUpdateRef.current = null;
     };
   }, []);
 
@@ -389,7 +438,16 @@ export default function ServiceWorkerRegistration({
 
   return (
     <PwaLifecycleContext.Provider
-      value={{ appBuild, deployedBuild, updateStatus, activateUpdate }}
+      value={{
+        appBuild,
+        deployedBuild,
+        updateStatus,
+        updateAvailable,
+        checkForUpdate: async () => {
+          await checkForUpdateRef.current?.();
+        },
+        activateUpdate,
+      }}
     >
       {children}
     </PwaLifecycleContext.Provider>

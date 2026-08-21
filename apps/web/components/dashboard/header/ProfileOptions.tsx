@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import Link from "next/link";
 import { redirect, useRouter } from "next/navigation";
 import SidebarVersion from "@/components/shared/sidebar/SidebarVersion";
+import { usePwaLifecycle } from "@/components/pwa/ServiceWorkerRegistration";
 import { useToggleTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,6 +83,7 @@ export default function SidebarProfileOptions() {
   const { data: session } = useSession();
   const { data: whoami } = useWhoAmI();
   const router = useRouter();
+  const { updateAvailable } = usePwaLifecycle();
 
   const avatarImage = whoami?.image ?? null;
   const avatarUrl = useMemo(() => avatarImage ?? null, [avatarImage]);
@@ -95,11 +97,19 @@ export default function SidebarProfileOptions() {
           className="shadow-xs ease-(--ease-out) flex size-10 shrink-0 rounded-full border border-border/70 bg-background p-0 text-foreground transition-[background-color,border-color,box-shadow] duration-150 hover:bg-accent/70"
           variant="ghost"
         >
-          <UserAvatar
-            image={avatarUrl}
-            name={session.user.name}
-            className="size-full rounded-full border border-border/70"
-          />
+          <span className="relative size-full">
+            <UserAvatar
+              image={avatarUrl}
+              name={session.user.name}
+              className="size-full rounded-full border border-border/70"
+            />
+            {updateAvailable && (
+              <span
+                aria-label="Update available"
+                className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500"
+              />
+            )}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="mr-2 w-72 rounded-xl p-2">

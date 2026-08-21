@@ -55,6 +55,9 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+ARG SERVER_VERSION=development
+ENV SERVER_VERSION=${SERVER_VERSION}
+
 # Build the db migration script
 RUN cd packages/db && \
     pnpm exec ncc build migrate.ts -o /db_migrations && \

@@ -44,6 +44,7 @@ function installServiceWorkerMock() {
 
 describe("ServiceWorkerRegistration readiness", () => {
   beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "test");
     installServiceWorkerMock();
     vi.stubGlobal("fetch", mocks.fetch);
     mocks.getRegistration.mockResolvedValue(undefined);

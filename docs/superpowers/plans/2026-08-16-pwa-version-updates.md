@@ -1,7 +1,7 @@
 # PWA Version Visibility and Safe Auto-Update Implementation Plan
 
 **Date:** 2026-08-16  
-**Status:** Implemented on `feat/pwa-version-updates`; final validation in progress  
+**Status:** Implemented on `absolutepraya/manual-update`; validation complete
 **Design:** `docs/superpowers/specs/2026-08-16-pwa-version-updates-design.md`
 
 ## Goal
@@ -18,7 +18,7 @@ The same change removes upstream-oriented profile actions, removes the social ro
 - Multiple open tabs or installed-PWA windows must block forced takeover.
 - API and RSC requests remain network-only in the worker.
 - Logout cache clearing, document-cache session scoping, thumbnail tracking, IndexedDB ownership, and offline mutation state remain unchanged.
-- No update modal, toast, prompt, or manual `Update now` button.
+- No update modal or confirmation prompt. The profile build row may expose compact manual refresh and `Update now` actions.
 - Native Expo and browser-extension update behavior remain out of scope.
 
 ## Final implementation shape
@@ -30,12 +30,24 @@ The same change removes upstream-oriented profile actions, removes the social ro
 It exports:
 
 ```ts
-export type PwaUpdateStatus = "current" | "available" | "ready";
+export type PwaUpdateStatus =
+  | "current"
+  | "checking"
+  | "available"
+  | "installing"
+  | "ready"
+  | "blocked"
+  | "error"
+  | "updating"
+  | "unavailable";
 
 export interface PwaLifecycleState {
   appBuild: string;
   deployedBuild: string | null;
   updateStatus: PwaUpdateStatus;
+  updateAvailable: boolean;
+  checkForUpdate: () => Promise<void>;
+  activateUpdate: () => void;
 }
 
 export function usePwaLifecycle(): PwaLifecycleState;
@@ -206,7 +218,23 @@ This preserves the existing server translation contract and prevents the additio
 - [x] Documentation is disabled and marked Coming soon.
 - [x] New profile/build strings use the typed `profile_menu` namespace.
 
+### Manual update extension
+
+- [x] Production Docker builds embed the full `SERVER_VERSION` into the frontend build.
+- [x] Invalid build identities suppress update actions and show `Update unavailable`.
+- [x] The profile build row exposes `Up to date` plus a manual refresh action.
+- [x] The profile build row exposes compact `Update now` only for a matching waiting worker.
+- [x] Blocked activation exposes a retryable `Close other tabs to update` state.
+- [x] The profile avatar shows a green update dot when a valid newer deployed build is known.
+
 ### Automated validation
+
+Validation completed in the `absolutepraya/manual-update` worktree on 2026-08-21:
+
+- Focused PWA and profile suites: 6 files, 30 tests passed.
+- Full web suite: 42 files, 187 tests passed.
+- Web typecheck and lint passed with zero errors and warnings.
+- `git diff --check` passed.
 
 Run focused web tests:
 

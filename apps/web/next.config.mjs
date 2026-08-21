@@ -6,7 +6,7 @@ import { execSync } from "node:child_process";
 // arg; locally we derive it from git (no-op when git isn't available).
 if (!process.env.SERVER_VERSION) {
   try {
-    process.env.SERVER_VERSION = execSync("git rev-parse --short HEAD", {
+    process.env.SERVER_VERSION = execSync("git rev-parse HEAD", {
       stdio: ["ignore", "pipe", "ignore"],
     })
       .toString()

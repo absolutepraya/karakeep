@@ -6,5 +6,12 @@
   "build_title": "Marka build {{build}}",
   "update_available": "Update available · {{build}}",
   "update_ready": "Update ready · {{build}}",
-  "update_now": "Update now"
+  "update_now": "Update now",
+  "up_to_date": "Up to date",
+  "checking": "Checking...",
+  "preparing_update": "Preparing update...",
+  "updating": "Updating...",
+  "close_other_tabs": "Close other tabs to update",
+  "check_failed": "Check failed",
+  "update_unavailable": "Update unavailable"
 }

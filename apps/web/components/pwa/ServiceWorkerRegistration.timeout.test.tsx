@@ -21,6 +21,7 @@ vi.mock("@/lib/auth/client", () => ({
 
 describe("ServiceWorkerRegistration version timeout", () => {
   beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "test");
     Object.defineProperty(navigator, "serviceWorker", {
       configurable: true,
       value: {
