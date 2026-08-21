@@ -105,7 +105,8 @@ export default function SidebarProfileOptions() {
             />
             {updateAvailable && (
               <span
-                aria-label="Update available"
+                role="status"
+                aria-label={tProfile("update_available_status")}
                 className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500"
               />
             )}

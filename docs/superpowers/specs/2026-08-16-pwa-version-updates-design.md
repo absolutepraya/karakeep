@@ -167,7 +167,7 @@ Before honoring `ACTIVATE_UPDATE`, the waiting worker checks same-origin window 
 
 Force-activation is allowed only when the requesting document is the sole relevant window client using the old app lifecycle.
 
-If other browser tabs, windows, or installed-PWA clients remain open, the worker does not call `skipWaiting()`. It reports that activation is blocked, and the UI remains in an `Update ready` state rather than forcing another client onto a new worker underneath an old document.
+If other browser tabs, windows, or installed-PWA clients remain open, the worker does not call `skipWaiting()`. It reports that activation is blocked, and the UI changes to `Close other tabs to update` with a retry action rather than forcing another client onto a new worker underneath an old document.
 
 Once the other clients close, one of two things happens:
 
@@ -215,7 +215,7 @@ Build a81d211
 Update ready · b3f8690
 ```
 
-If activation is temporarily blocked by another open client, keep the user-facing state as `Update ready`. Multi-client blocking is an implementation detail and does not need a warning unless it becomes a persistent usability problem in real usage.
+If activation is temporarily blocked by another open client, show `Close other tabs to update` with a retry action. This makes the blocking condition actionable without forcing another client onto a new worker underneath an old document.
 
 Version-check failures do not show a scary error state. The user keeps the current build display and the app retries at the next normal lifecycle trigger.
 

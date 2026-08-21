@@ -5,6 +5,7 @@
   "build": "Build {{build}}",
   "build_title": "Marka build {{build}}",
   "update_available": "Update available · {{build}}",
+  "update_available_status": "Update available",
   "update_ready": "Update ready · {{build}}",
   "update_now": "Update now",
   "up_to_date": "Up to date",

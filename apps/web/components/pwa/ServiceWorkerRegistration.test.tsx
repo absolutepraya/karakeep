@@ -156,10 +156,15 @@ describe("ServiceWorkerRegistration", () => {
   });
 
   it("refreshes the registered worker during a manual version check", async () => {
-    const update = vi.fn().mockResolvedValue(undefined);
+    const initialUpdate = vi.fn().mockResolvedValue(undefined);
+    const registeredUpdate = vi.fn().mockResolvedValue(undefined);
     mocks.register.mockResolvedValueOnce({
       active: mocks.messagePort,
-      update,
+      update: initialUpdate,
+    });
+    mocks.register.mockResolvedValueOnce({
+      active: mocks.messagePort,
+      update: registeredUpdate,
     });
     mocks.fetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ version: "bbbbbbb" }), {
@@ -177,11 +182,20 @@ describe("ServiceWorkerRegistration", () => {
     await waitFor(() => {
       expect(mocks.fetch).toHaveBeenCalledTimes(1);
       expect(mocks.getRegistration).toHaveBeenCalledWith("/");
+      expect(initialUpdate).toHaveBeenCalled();
+      expect(registeredUpdate).toHaveBeenCalled();
     });
+    registeredUpdate.mockClear();
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "bbbbbbb" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
     act(() => screen.getByRole("button", { name: "Check" }).click());
 
     await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(update).toHaveBeenCalled());
+    await waitFor(() => expect(registeredUpdate).toHaveBeenCalledTimes(1));
   });
 
   it("keeps a pre-existing waiting worker ready for manual activation", async () => {
