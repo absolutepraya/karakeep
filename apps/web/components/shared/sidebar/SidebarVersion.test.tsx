@@ -122,6 +122,11 @@ describe("SidebarVersion", () => {
     expect(container.textContent).toContain("Build development");
     expect(container.textContent).toContain("Update unavailable");
     expect(container.querySelector("button")).toBeNull();
+
+    const unavailable = [...container.querySelectorAll("span")].find(
+      (span) => span.textContent === "Update unavailable",
+    );
+    expect(unavailable?.className).toBe("text-muted-foreground");
   });
 
   it("does not show an update line when the deployed build matches", () => {

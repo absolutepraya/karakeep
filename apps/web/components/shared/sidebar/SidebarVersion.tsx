@@ -48,6 +48,10 @@ export default function SidebarVersion({
     placement === "profile"
       ? "flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground opacity-50 transition-colors hover:text-foreground"
       : "flex min-w-0 items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground";
+  const buildColorClassName =
+    placement === "profile"
+      ? "text-muted-foreground opacity-50"
+      : "text-muted-foreground";
   const buildIconClassName = placement === "profile" ? "size-3" : "size-3.5";
 
   const buildLabel = t("build", { build: visibleBuild });
@@ -73,7 +77,7 @@ export default function SidebarVersion({
       )}
       <div className="flex shrink-0 items-center justify-end gap-1 font-mono text-xs text-muted-foreground">
         {!validAppBuild || !deployedBuild || updateStatus === "unavailable" ? (
-          <span>{t("update_unavailable")}</span>
+          <span className={buildColorClassName}>{t("update_unavailable")}</span>
         ) : updateStatus === "checking" ? (
           <span>{t("checking")}</span>
         ) : updateStatus === "installing" ? (
