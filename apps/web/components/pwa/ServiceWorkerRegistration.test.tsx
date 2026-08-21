@@ -4,7 +4,9 @@ import React from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
+import ServiceWorkerRegistration, {
+  usePwaLifecycle,
+} from "./ServiceWorkerRegistration";
 
 const mocks = vi.hoisted(() => ({
   register: vi.fn(),
@@ -57,6 +59,7 @@ function getServiceWorkerListener(type: string) {
 
 describe("ServiceWorkerRegistration", () => {
   beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "test");
     installServiceWorkerMock();
     vi.stubGlobal("fetch", mocks.fetch);
     mocks.getRegistration.mockResolvedValue(undefined);
@@ -152,7 +155,50 @@ describe("ServiceWorkerRegistration", () => {
     });
   });
 
-  it("requests activation from a waiting worker that matches the running app build", async () => {
+  it("refreshes the registered worker during a manual version check", async () => {
+    const initialUpdate = vi.fn().mockResolvedValue(undefined);
+    const registeredUpdate = vi.fn().mockResolvedValue(undefined);
+    mocks.register.mockResolvedValueOnce({
+      active: mocks.messagePort,
+      update: initialUpdate,
+    });
+    mocks.register.mockResolvedValueOnce({
+      active: mocks.messagePort,
+      update: registeredUpdate,
+    });
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "bbbbbbb" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    function Probe() {
+      const { checkForUpdate } = usePwaLifecycle();
+      return <button onClick={() => void checkForUpdate()}>Check</button>;
+    }
+
+    renderRegistration(<Probe />);
+    await waitFor(() => {
+      expect(mocks.fetch).toHaveBeenCalledTimes(1);
+      expect(mocks.getRegistration).toHaveBeenCalledWith("/");
+      expect(initialUpdate).toHaveBeenCalled();
+      expect(registeredUpdate).toHaveBeenCalled();
+    });
+    registeredUpdate.mockClear();
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "bbbbbbb" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+    act(() => screen.getByRole("button", { name: "Check" }).click());
+
+    await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(registeredUpdate).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps a pre-existing waiting worker ready for manual activation", async () => {
     mocks.getRegistration.mockResolvedValue({
       active: mocks.messagePort,
       waiting: mocks.waitingWorker,
@@ -163,15 +209,10 @@ describe("ServiceWorkerRegistration", () => {
     await waitFor(() => {
       expect(mocks.getRegistration).toHaveBeenCalledWith("/");
     });
-    await waitFor(() => {
-      expect(mocks.waitingWorker.postMessage).toHaveBeenCalledWith({
-        type: "ACTIVATE_UPDATE",
-      });
-    });
-    expect(mocks.register).not.toHaveBeenCalledWith("/sw.js", {
-      scope: "/",
-      updateViaCache: "none",
-    });
+    await waitFor(() =>
+      expect(mocks.getRegistration).toHaveBeenCalledWith("/"),
+    );
+    expect(mocks.waitingWorker.postMessage).not.toHaveBeenCalled();
   });
 
   it("does not activate a stale waiting worker and registers the running app build instead", async () => {
@@ -197,20 +238,42 @@ describe("ServiceWorkerRegistration", () => {
     });
   });
 
-  it("reloads exactly once after an explicitly armed waiting-worker handoff", async () => {
+  it("reloads exactly once after a manual waiting-worker handoff", async () => {
     const go = vi
       .spyOn(window.history, "go")
       .mockImplementation(() => undefined);
+    const currentWorker = {
+      ...mocks.messagePort,
+      scriptURL: "https://karakeep.test/sw.js",
+    };
     mocks.getRegistration.mockResolvedValue({
-      active: mocks.messagePort,
+      active: currentWorker,
       waiting: mocks.waitingWorker,
     });
-
-    renderRegistration();
-    await waitFor(() => {
-      expect(mocks.waitingWorker.postMessage).toHaveBeenCalledWith({
-        type: "ACTIVATE_UPDATE",
+    mocks.register
+      .mockResolvedValueOnce({ active: currentWorker })
+      .mockResolvedValueOnce({
+        active: currentWorker,
+        waiting: mocks.waitingWorker,
       });
+    mocks.waitingWorker.scriptURL = "https://karakeep.test/sw.js?v=bbbbbbb";
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "bbbbbbb" }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    function Probe() {
+      const { activateUpdate } = usePwaLifecycle();
+      return <button onClick={activateUpdate}>Update</button>;
+    }
+
+    renderRegistration(<Probe />);
+    await waitFor(() => expect(mocks.register).toHaveBeenCalledTimes(2));
+    act(() => screen.getByRole("button", { name: "Update" }).click());
+    expect(mocks.waitingWorker.postMessage).toHaveBeenCalledWith({
+      type: "ACTIVATE_UPDATE",
     });
 
     const controllerChange = getServiceWorkerListener("controllerchange");
@@ -363,7 +426,9 @@ describe("ServiceWorkerRegistration", () => {
         scope: "/",
         updateViaCache: "none",
       });
-      expect(screen.getByTestId("update-status").textContent).toBe("available");
+      expect(screen.getByTestId("update-status").textContent).toBe(
+        "installing",
+      );
       expect(installingBuildC.onstatechange).toEqual(expect.any(Function));
     });
 

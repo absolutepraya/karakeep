@@ -49,6 +49,7 @@ vi.mock("@/lib/i18n/client", () => ({
           coming_soon: "Coming soon",
           documentation: "Documentation",
           update_now: "Update now",
+          update_available_status: "Update available",
         };
         return profileTranslations[key] ?? key;
       }
@@ -73,6 +74,10 @@ vi.mock("@/components/shared/sidebar/SidebarVersion", () => ({
   default: ({ placement }: { placement?: string }) => (
     <div data-placement={placement} data-testid="sidebar-version" />
   ),
+}));
+
+vi.mock("@/components/pwa/ServiceWorkerRegistration", () => ({
+  usePwaLifecycle: () => ({ updateAvailable: true }),
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -148,5 +153,8 @@ describe("ProfileOptions", () => {
 
     const version = screen.getByTestId("sidebar-version");
     expect(version.getAttribute("data-placement")).toBe("profile");
+    expect(
+      screen.getByRole("status", { name: "Update available" }),
+    ).toBeTruthy();
   });
 });

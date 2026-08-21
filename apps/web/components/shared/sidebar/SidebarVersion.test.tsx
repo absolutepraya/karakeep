@@ -5,12 +5,15 @@ import { fireEvent, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SidebarVersion from "./SidebarVersion";
+import type { PwaUpdateStatus } from "@/components/pwa/ServiceWorkerRegistration";
 
 const mocks = vi.hoisted(() => ({
   lifecycle: {
     appBuild: "aaaaaaa",
     deployedBuild: "bbbbbbb" as string | null,
-    updateStatus: "ready" as "current" | "available" | "ready",
+    updateStatus: "ready" as PwaUpdateStatus,
+    updateAvailable: true,
+    checkForUpdate: vi.fn(),
     activateUpdate: vi.fn(),
   },
 }));
@@ -43,6 +46,13 @@ vi.mock("@/lib/i18n/client", () => ({
         update_available: `Update available · ${values?.build ?? ""}`,
         update_ready: `Update ready · ${values?.build ?? ""}`,
         update_now: "Update now",
+        up_to_date: "Up to date",
+        checking: "Checking...",
+        preparing_update: "Preparing update...",
+        updating: "Updating...",
+        close_other_tabs: "Close other tabs to update",
+        check_failed: "Check failed",
+        update_unavailable: "Update unavailable",
       };
       return translations[key] ?? key;
     },
@@ -54,7 +64,9 @@ describe("SidebarVersion", () => {
     mocks.lifecycle.appBuild = "aaaaaaa";
     mocks.lifecycle.deployedBuild = "bbbbbbb";
     mocks.lifecycle.updateStatus = "ready";
+    mocks.lifecycle.updateAvailable = true;
     mocks.lifecycle.activateUpdate.mockReset();
+    mocks.lifecycle.checkForUpdate.mockReset();
   });
 
   it("shows the running app build and a ready deployed update", () => {
@@ -79,31 +91,62 @@ describe("SidebarVersion", () => {
 
   it("shows an available update before its worker is ready", () => {
     mocks.lifecycle.updateStatus = "available";
+    mocks.lifecycle.updateAvailable = true;
 
     const { container } = render(<SidebarVersion />);
 
     expect(container.textContent).toContain("Build aaaaaaa");
-    expect(container.textContent).toContain("Update available · bbbbbbb");
+    expect(container.textContent).toContain("Preparing update...");
     expect(container.textContent).not.toContain("Update ready");
     expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("shows a checking state while manually refreshing", () => {
+    mocks.lifecycle.updateStatus = "checking";
+    mocks.lifecycle.updateAvailable = false;
+
+    const { container } = render(<SidebarVersion />);
+
+    expect(container.textContent).toContain("Checking...");
+    expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("shows unavailable for an invalid running build", () => {
+    mocks.lifecycle.appBuild = "development";
+    mocks.lifecycle.deployedBuild = "bbbbbbb";
+    mocks.lifecycle.updateStatus = "unavailable";
+    mocks.lifecycle.updateAvailable = false;
+
+    const { container } = render(<SidebarVersion />);
+
+    expect(container.textContent).toContain("Build development");
+    expect(container.textContent).toContain("Update unavailable");
+    expect(container.querySelector("button")).toBeNull();
+
+    const unavailable = [...container.querySelectorAll("span")].find(
+      (span) => span.textContent === "Update unavailable",
+    );
+    expect(unavailable?.className).toBe("text-muted-foreground");
   });
 
   it("does not show an update line when the deployed build matches", () => {
     mocks.lifecycle.deployedBuild = "aaaaaaa";
     mocks.lifecycle.updateStatus = "current";
+    mocks.lifecycle.updateAvailable = false;
 
     const { container } = render(<SidebarVersion />);
 
     expect(container.textContent).toContain("Build aaaaaaa");
     expect(container.textContent).not.toContain("Update available");
     expect(container.textContent).not.toContain("Update ready");
-    expect(container.querySelector("button")).toBeNull();
+    expect(container.querySelector("button")).not.toBeNull();
   });
 
   it("renders a non-SHA build without a commit link", () => {
     mocks.lifecycle.appBuild = "development";
     mocks.lifecycle.deployedBuild = "development";
     mocks.lifecycle.updateStatus = "current";
+    mocks.lifecycle.updateAvailable = false;
 
     const { container } = render(<SidebarVersion />);
 
