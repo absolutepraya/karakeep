@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="558" src="./screenshots/marka-logo-readme.png" alt="Marka" />
+  <img width="279" src="./screenshots/marka-logo-readme.png" alt="Marka" />
 </div>
 
 <p align="center">
