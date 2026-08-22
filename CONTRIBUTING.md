@@ -22,6 +22,8 @@ This repository maintains Marka's product, operator workflow, and repository-spe
 Marka uses:
 - Node 24.18.1 (`.nvmrc`; temporarily pinned to avoid the Node 24.19 native-addon cleanup regression)
 - `pnpm@11.2.1` via corepack
+- Docker-compatible local runtime, such as OrbStack on macOS
+- [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees
 - root `.env` symlinked into `apps/web`, `apps/workers`, and `packages/db`
 
 Quick start:
@@ -37,8 +39,10 @@ ln -sf ../../.env apps/workers/.env
 ln -sf ../../.env packages/db/.env
 
 pnpm db:migrate
-./start-dev.sh
+pnpm dev:start
 ```
+
+This repository supports [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees. Use `wt new <name>` before making a parallel change; the project configuration prepares separate local data and web ports while sharing the machine-level Chrome and Meilisearch services.
 
 For the full workflow, detached mode, and production deploy notes, use:
 - [`docs/operator-setup.md`](docs/operator-setup.md)

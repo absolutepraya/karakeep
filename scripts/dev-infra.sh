@@ -74,12 +74,12 @@ ensure_meilisearch() {
   adopt_legacy_container "$LEGACY_MEILI_CONTAINER" "$MEILI_CONTAINER"
   if container_exists "$MEILI_CONTAINER"; then
     if container_running "$MEILI_CONTAINER"; then
-      info "Reusing shared Meilisearch on http://localhost:$MEILI_PORT"
+      info "Reusing shared Meilisearch on http://127.0.0.1:$MEILI_PORT"
       return
     fi
     ensure_available_port "$MEILI_PORT" "$MEILI_CONTAINER"
     docker start "$MEILI_CONTAINER" >/dev/null || die "Failed to start existing $MEILI_CONTAINER container."
-    info "Started existing shared Meilisearch on http://localhost:$MEILI_PORT"
+    info "Started existing shared Meilisearch on http://127.0.0.1:$MEILI_PORT"
     return
   fi
 
@@ -91,7 +91,7 @@ ensure_meilisearch() {
     -e MEILI_NO_ANALYTICS=true \
     -v "$MEILI_VOLUME:/meili_data" \
     "$MEILI_IMAGE" >/dev/null || die "Failed to start shared Meilisearch. Check whether port $MEILI_PORT became occupied and retry."
-  info "Started shared Meilisearch on http://localhost:$MEILI_PORT"
+  info "Started shared Meilisearch on http://127.0.0.1:$MEILI_PORT"
 }
 
 ensure_chrome() {
@@ -110,12 +110,12 @@ ensure_chrome() {
     if ! container_exists "$CHROME_CONTAINER"; then
       :
     elif container_running "$CHROME_CONTAINER"; then
-      info "Reusing shared Chrome on http://localhost:$CHROME_PORT"
+      info "Reusing shared Chrome on http://127.0.0.1:$CHROME_PORT"
       return
     else
       ensure_available_port "$CHROME_PORT" "$CHROME_CONTAINER"
       docker start "$CHROME_CONTAINER" >/dev/null || die "Failed to start existing $CHROME_CONTAINER container."
-      info "Started existing shared Chrome on http://localhost:$CHROME_PORT"
+      info "Started existing shared Chrome on http://127.0.0.1:$CHROME_PORT"
       return
     fi
   fi
@@ -132,7 +132,7 @@ ensure_chrome() {
     --hide-scrollbars \
     --disable-blink-features=AutomationControlled \
     --window-size=1440,900 >/dev/null || die "Failed to start shared Chrome. Check whether port $CHROME_PORT became occupied and retry."
-  info "Started shared Chrome on http://localhost:$CHROME_PORT"
+  info "Started shared Chrome on http://127.0.0.1:$CHROME_PORT"
 }
 
 up() {
@@ -154,8 +154,8 @@ status_one() {
 
 status() {
   require_docker
-  status_one "$MEILI_CONTAINER" "http://localhost:$MEILI_PORT"
-  status_one "$CHROME_CONTAINER" "http://localhost:$CHROME_PORT"
+  status_one "$MEILI_CONTAINER" "http://127.0.0.1:$MEILI_PORT"
+  status_one "$CHROME_CONTAINER" "http://127.0.0.1:$CHROME_PORT"
 }
 
 down() {

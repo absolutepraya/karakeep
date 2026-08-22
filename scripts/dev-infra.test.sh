@@ -237,9 +237,10 @@ MARKA_DEV_CHROME_PORT=9250 \
 "$SETUP_WORKTREE" >/dev/null
 assert_contains "$workspace/.env" "KARAKEEP_PORT=3007"
 assert_contains "$workspace/.env" "DATA_DIR=$workspace/.data/local"
-assert_contains "$workspace/.env" "MEILI_ADDR=http://localhost:7700"
+assert_contains "$workspace/.env" "MEILI_ADDR=http://127.0.0.1:7700"
 assert_contains "$workspace/.env" "MEILI_MASTER_KEY="
-assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9250"
+assert_contains "$workspace/.env" "BROWSER_WEB_URL=http://127.0.0.1:9250"
+assert_not_contains "$workspace/.env" "BROWSER_WEB_URL=http://localhost:9250"
 assert_contains "$workspace/.env" "MARKA_DEV_CHROME_PORT=9250"
 assert_contains "$workspace/.env" "BROWSER_CONNECT_ONDEMAND=false"
 assert_contains "$workspace/.env" "MEILI_INDEX_PREFIX=issue-abc-weird-7_"

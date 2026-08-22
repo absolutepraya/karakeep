@@ -1,10 +1,12 @@
 # Setup
 
-This page explains how to run Karakeep locally from this repository.
+This page explains how to run Marka locally from this repository.
 
 It reflects the workflow used in this fork:
 - Node 24.18.1 (temporary pin; see `.nvmrc`)
 - `pnpm` via corepack
+- Docker-compatible local runtime, such as OrbStack on macOS
+- [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees
 - a root `.env` file symlinked into the apps that read it
 - `web` + `workers` running locally
 - Meilisearch + headless Chrome typically provided by Docker in development
@@ -24,19 +26,21 @@ ln -sf ../../.env apps/workers/.env
 ln -sf ../../.env packages/db/.env
 
 pnpm db:migrate
-./start-dev.sh
+pnpm dev:start
 ```
 
 This starts:
-- the web app on `http://localhost:3000`
+- the web app on the current worktree's web port, `http://localhost:3000` in the main workspace
 - the workers
-- Meilisearch in Docker
-- headless Chrome in Docker
+- the shared Meilisearch service on `http://127.0.0.1:7700`
+- the shared headless Chrome/CDP service on `http://127.0.0.1:9250`
 
 Useful variants:
-- `./start-dev.sh` — foreground mode
-- `./start-dev.sh -d` — detached mode
-- `./stop-dev.sh` — stop detached services
+- `pnpm dev:start` - foreground mode
+- `pnpm dev:start -d` - detached mode
+- `pnpm dev:stop` - stop detached services for this worktree
+- `pnpm dev:infra:status` - inspect shared Chrome and Meilisearch
+- `pnpm dev:infra:down` - explicitly remove shared containers while preserving Meilisearch data
 
 If you want the full operator-oriented notes for this fork’s local dev and deploy flow, see the repository guide at:
 - `docs/operator-setup.md`
@@ -82,6 +86,8 @@ At minimum, configure:
 Commonly useful in local development:
 
 - `MEILI_ADDR=http://127.0.0.1:7700`
+- `BROWSER_WEB_URL=http://127.0.0.1:9250`
+- `MARKA_DEV_CHROME_PORT=9250`
 - `OPENAI_API_KEY=...` if you want AI tagging/summarization enabled
 
 After the env file is ready, initialize the database:
@@ -114,25 +120,25 @@ pnpm workers
 - The web app can boot without every dependency running.
 - Search requires Meilisearch.
 - Crawling and background processing require workers.
-- The easiest way to get Chrome + Meilisearch right in this fork is still `./start-dev.sh`.
+- The easiest way to get Chrome + Meilisearch right in this fork is `pnpm dev:start`.
 
 ## Meilisearch
 
-Karakeep uses Meilisearch for search.
+Marka uses Meilisearch for search.
 
 A quick local container:
 
 ```bash
-docker run -p 7700:7700 getmeili/meilisearch:v1.41.0
+pnpm dev:infra:up
 ```
 
 Then point `MEILI_ADDR` at `http://127.0.0.1:7700`.
 
 ## Headless Chrome
 
-Karakeep uses headless Chrome for crawling and page capture workflows.
+Marka uses headless Chrome for crawling and page capture workflows.
 
-In this fork, the preferred dev path is to let `./start-dev.sh` or the Docker dev stack bring Chrome up for you. If you are troubleshooting crawling, make sure the workers can actually reach the configured Chrome service.
+In this fork, the preferred dev path is to let `pnpm dev:start` bring Chrome up for you. If you are troubleshooting crawling, make sure the workers can reach `BROWSER_WEB_URL`, which defaults to IPv4 loopback at `127.0.0.1:9250`.
 
 ## Browser extension
 

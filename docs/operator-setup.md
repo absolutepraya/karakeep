@@ -17,6 +17,8 @@ Use it for:
 ### Runtime
 - Node 24.18.1 (`.nvmrc`; temporarily pinned to avoid the Node 24.19 native-addon cleanup regression)
 - `pnpm@11.2.1` via corepack
+- Docker-compatible local runtime, such as OrbStack on macOS
+- [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees
 
 ### First-time setup
 
@@ -66,6 +68,8 @@ The Chrome helper uses `ghcr.io/karakeep-app/karakeep-chrome:release`, which is 
 
 `pnpm dev:stop` never stops the shared containers. This is intentional: another worktree may still be using them.
 
+There is no local SMTP or mail container in this workflow. Email behavior uses the external SMTP settings configured in `.env`, when present.
+
 ### Parallel worktrees
 
 Worktrees share the physical Chrome and Meilisearch containers, but application state stays isolated.
@@ -80,9 +84,11 @@ Worktrees share the physical Chrome and Meilisearch containers, but application 
 Every generated worktree points at the same local infrastructure endpoints:
 
 ```text
-MEILI_ADDR=http://localhost:7700
-BROWSER_WEB_URL=http://localhost:9250 # default; follows MARKA_DEV_CHROME_PORT when overridden
+MEILI_ADDR=http://127.0.0.1:7700
+BROWSER_WEB_URL=http://127.0.0.1:9250 # default; follows MARKA_DEV_CHROME_PORT when overridden
 ```
+
+The `wt` slot controls only worktree-owned state. `WT_PORT_BASE` is added to the base web port `3000`, so slot 1 uses `3100`; shared Chrome and Meilisearch keep their stable machine-level ports.
 
 The Meilisearch plugins prepend `MEILI_INDEX_PREFIX` to both index UIDs. For example, a worktree prefix `issue-123-7_` produces:
 
@@ -134,9 +140,9 @@ The root `.env` is the source of truth, but several processes load `.env` from t
 The most important variables for local development are:
 - `DATA_DIR`
 - `NEXTAUTH_SECRET`
-- `MEILI_ADDR` (shared dev default: `http://localhost:7700`)
+- `MEILI_ADDR` (shared dev default: `http://127.0.0.1:7700`)
 - `MEILI_INDEX_PREFIX` (per-worktree search/vector namespace; empty remains backward-compatible outside the dev launcher)
-- `BROWSER_WEB_URL` (shared dev default: `http://localhost:9250`)
+- `BROWSER_WEB_URL` (shared dev default: `http://127.0.0.1:9250`)
 - `MARKA_DEV_CHROME_PORT` (shared dev Chrome host port, default: `9250`)
 - `OPENAI_API_KEY` (if AI tagging/summarization should work)
 
@@ -160,6 +166,8 @@ Optional root `.env` keys:
 - `KARAKEEP_PROD_SSH_USER`
 - `KARAKEEP_PROD_COMPOSE_SERVICE`
 - `KARAKEEP_PROD_EXPORT_IMAGE`
+
+For the personal VPS, set `KARAKEEP_PROD_COMPOSE_DIR=/home/praya/marka`. The root `/marka` path and the retired `/home/praya/karakeep` path are not the production compose directory.
 
 A production-state pull still populates only that workspace's SQLite/assets state. Its local search/vector data belongs to the workspace's own `MEILI_INDEX_PREFIX` namespace in the shared local Meilisearch container.
 
