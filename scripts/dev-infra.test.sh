@@ -8,6 +8,7 @@ SETUP_WORKTREE="$SCRIPT_DIR/setup-worktree.sh"
 START_DEV="$REPO_ROOT/start-dev.sh"
 STOP_DEV="$REPO_ROOT/stop-dev.sh"
 PACKAGE_JSON="$REPO_ROOT/package.json"
+DEV_COMPOSE="$REPO_ROOT/docker/docker-compose.dev.yml"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -258,6 +259,9 @@ assert_not_contains "$workspace/.env" "http://localhost:9229"
 
 # Workspace lifecycle delegates shared infra startup, pins service selection, and never tears it down implicitly.
 assert_contains "$START_DEV" 'scripts/dev-infra.sh" up'
+assert_contains "$START_DEV" "DEFAULT_CHROME_PORT=9250"
+assert_contains "$START_DEV" 'BASH_REMATCH[2]'
+assert_contains "$START_DEV" 'BROWSER_WEB_URL="http://127.0.0.1:${MARKA_DEV_CHROME_PORT}"'
 assert_contains "$START_DEV" "unset MEILI_VECTOR_ADDR MEILI_VECTOR_MASTER_KEY"
 assert_contains "$START_DEV" "unset BROWSER_WEBSOCKET_URL BROWSERLESS_URL BROWSERLESS_TOKEN"
 assert_contains "$START_DEV" "export BROWSER_CONNECT_ONDEMAND=false"
@@ -266,6 +270,8 @@ assert_not_contains "$STOP_DEV" 'docker stop "$MEILI_CONTAINER"'
 assert_not_contains "$STOP_DEV" 'docker stop "$CHROME_CONTAINER"'
 assert_not_contains "$STOP_DEV" 'docker rm "$MEILI_CONTAINER"'
 assert_not_contains "$STOP_DEV" 'docker rm "$CHROME_CONTAINER"'
+assert_contains "$DEV_COMPOSE" "127.0.0.1:9222:9222"
+assert_not_contains "$DEV_COMPOSE" "- 9222:9222"
 assert_contains "$PACKAGE_JSON" '"dev:infra:up": "bash scripts/dev-infra.sh up"'
 assert_contains "$PACKAGE_JSON" '"dev:infra:status": "bash scripts/dev-infra.sh status"'
 assert_contains "$PACKAGE_JSON" '"dev:infra:down": "bash scripts/dev-infra.sh down"'

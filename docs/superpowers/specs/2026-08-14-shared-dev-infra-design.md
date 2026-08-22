@@ -145,6 +145,8 @@ It starts:
 
 Chrome must use the maintained Karakeep image/configuration rather than the retired `gcr.io/zenika-hub/alpine-chrome:124` image.
 
+The legacy Docker Compose development stack in `docker/docker-compose.dev.yml` keeps its container-local `chrome:9222` endpoint, but publishes host port `9222` on `127.0.0.1` only. The machine-level shared helper remains the preferred workflow and uses host port `9250`.
+
 The shared Meilisearch container keeps one machine-level Docker volume so index state survives restarts. Individual worktree indexes remain logically isolated within it.
 
 `dev:infra:down` is an explicit machine-level action. Individual worktree stop commands must never call it automatically.

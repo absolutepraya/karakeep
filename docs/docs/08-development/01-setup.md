@@ -134,6 +134,17 @@ pnpm dev:infra:up
 
 Then point `MEILI_ADDR` at `http://127.0.0.1:7700`.
 
+When bypassing `pnpm dev:start`, set an explicit Meilisearch namespace before starting `web` or `workers`. Use `main_` only in the main workspace; parallel worktrees need distinct prefixes. The `wt` setup flow generates a unique prefix for each worktree.
+
+```bash
+export MEILI_INDEX_PREFIX=main_
+pnpm dev:infra:up
+pnpm web
+pnpm workers
+```
+
+See the [operator guide](../../operator-setup.md#directmanual-start) for the parallel-worktree details.
+
 ## Headless Chrome
 
 Marka uses headless Chrome for crawling and page capture workflows.

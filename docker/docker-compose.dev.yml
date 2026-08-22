@@ -45,7 +45,7 @@ services:
     image: gcr.io/zenika-hub/alpine-chrome:124
     restart: unless-stopped
     ports:
-      - 9222:9222
+      - 127.0.0.1:9222:9222
     command:
       - --no-sandbox
       - --disable-gpu

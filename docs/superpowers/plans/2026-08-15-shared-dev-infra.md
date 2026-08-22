@@ -92,7 +92,7 @@ git commit -m "feat: namespace Meilisearch indexes"
 
 **Interfaces:**
 - Produces: `scripts/dev-infra.sh up|status|down`
-- Owns containers `karakeep-dev-meilisearch` and `karakeep-dev-chrome`.
+- Owns containers `marka-dev-meilisearch` and `marka-dev-chrome`.
 
 - [ ] **Step 1: Write failing shell tests**
 
