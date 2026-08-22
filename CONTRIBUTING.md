@@ -111,6 +111,7 @@ AI review is advisory:
 - Reviewer comments are claims to verify, not instructions to change intended behavior. Check them against the issue/spec, surrounding code, tests, docs, and actual semantics before implementing a suggested fix.
 - This repository's reviewer setup must not automatically commit, push, apply suggestions, or run autonomous fixer agents.
 - Additional AI reviewers may be evaluated only if they satisfy the least-privilege and review-only requirements in [`docs/ai-code-review.md`](docs/ai-code-review.md).
+- Contributors may use the project-local [`address-pr-reviews`](.agents/skills/address-pr-reviews/SKILL.md) skill to verify findings and close addressed threads with explicit authorization and remote-state proof.
 
 See [`docs/ai-code-review.md`](docs/ai-code-review.md) for the current reviewer policy, rejected-candidate history, permissions ceiling, and future evaluation criteria.
 

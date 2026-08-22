@@ -1,0 +1,298 @@
+#!/bin/bash
+# pr-reviews - PR/MR review thread management via GitHub GraphQL API or GitLab REST API
+# Requires: gh or glab CLI (authenticated), jq
+
+set -euo pipefail
+
+detect_platform() {
+  local remote_url
+  remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+  if echo "$remote_url" | grep -q "github.com"; then
+    echo "github"
+  else
+    echo "gitlab"
+  fi
+}
+
+PLATFORM=$(detect_platform)
+
+usage() {
+  cat <<'EOF'
+pr-reviews - Manage GitHub PR / GitLab MR review threads
+
+Usage:
+  pr-reviews list <owner> <repo> <pr> [user]   List unresolved threads
+  pr-reviews resolve <thread-id>                Resolve a single thread
+  pr-reviews resolve-all <owner> <repo> <pr>    Resolve ALL unresolved threads
+  pr-reviews unresolve <thread-id>              Unresolve a thread
+  pr-reviews reply <thread-id> <message>        Reply to a thread
+  pr-reviews react <comment-id> <emoji>         React to a comment (eyes|rocket|confused|+1|-1|heart|hooray|laugh)
+
+Platform auto-detected from git remote (github.com → GitHub, otherwise → GitLab).
+
+For GitLab, <owner>/<repo> args are ignored (project path is resolved from git remote).
+The <pr> arg is the MR IID (the number shown in the GitLab UI).
+Thread IDs are discussion IDs (hex strings from the GitLab API).
+EOF
+}
+
+# ── GitHub commands ──────────────────────────────────────────────────
+
+gh_list() {
+  local owner="$1" repo="$2" pr_number="$3" user_filter="${4:-}"
+
+  gh api graphql -f query="query { repository(owner: \"$owner\", name: \"$repo\") { pullRequest(number: $pr_number) { reviewThreads(first: 100) { nodes { id isResolved path startLine line comments(first: 10) { nodes { id author { login } body } } } } } } }" \
+    | jq --arg user "$user_filter" '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | select(if $user != "" then .comments.nodes[0].author.login == $user else true end) | {id: .id, comment_id: .comments.nodes[0].id, path: .path, lines: (if .startLine then "\(.startLine)-\(.line)" else "\(.line)" end), user: .comments.nodes[0].author.login, body: (if .comments.nodes[0].author.login == "coderabbitai" then .comments.nodes[0].body | gsub("(?s)<details>\\s*<summary>🤖 Prompt for AI Agents</summary>.*?</details>"; "") | gsub("(?s)<!--.*?-->"; "") | gsub("\\s+$"; "") else .comments.nodes[0].body end)}]'
+}
+
+gh_resolve() {
+  local thread_id="$1"
+  gh api graphql -f query="mutation { resolveReviewThread(input: {threadId: \"$thread_id\"}) { thread { isResolved } } }" > /dev/null \
+    && echo "✓ Resolved thread $thread_id" \
+    || echo "✗ Failed to resolve thread"
+}
+
+gh_resolve_all() {
+  local owner="$1" repo="$2" pr_number="$3"
+  local thread_ids
+  thread_ids=$(gh api graphql -f query="query { repository(owner: \"$owner\", name: \"$repo\") { pullRequest(number: $pr_number) { reviewThreads(first: 100) { nodes { id isResolved } } } } }" \
+    | jq -r '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | .id')
+
+  if [ -z "$thread_ids" ]; then
+    echo "No unresolved threads found."
+    exit 0
+  fi
+
+  echo "$thread_ids" | while read -r id; do
+    gh api graphql -f query="mutation { resolveReviewThread(input: {threadId: \"$id\"}) { thread { isResolved } } }" > /dev/null
+    echo "✓ Resolved thread $id"
+  done
+  echo "Done!"
+}
+
+gh_unresolve() {
+  local thread_id="$1"
+  gh api graphql -f query="mutation { unresolveReviewThread(input: {threadId: \"$thread_id\"}) { thread { isResolved } } }" > /dev/null \
+    && echo "✓ Unresolved thread $thread_id" \
+    || echo "✗ Failed to unresolve thread"
+}
+
+gh_reply() {
+  local thread_id="$1" body="$2"
+  gh api graphql \
+    -f query='mutation($threadId: ID!, $body: String!) { addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) { comment { id } } }' \
+    -F threadId="$thread_id" \
+    -f body="$body" > /dev/null \
+    && echo "✓ Replied to thread $thread_id" \
+    || echo "✗ Failed to reply to thread"
+}
+
+gh_react() {
+  local comment_id="$1" emoji="$2"
+  local content
+  case "$emoji" in
+    eyes)     content="EYES" ;;
+    rocket)   content="ROCKET" ;;
+    confused) content="CONFUSED" ;;
+    +1)       content="THUMBS_UP" ;;
+    -1)       content="THUMBS_DOWN" ;;
+    heart)    content="HEART" ;;
+    hooray)   content="HOORAY" ;;
+    laugh)    content="LAUGH" ;;
+    *) echo "✗ Unknown emoji: $emoji (use eyes|rocket|confused|+1|-1|heart|hooray|laugh)"; exit 1 ;;
+  esac
+  gh api graphql -f query="mutation { addReaction(input: {subjectId: \"$comment_id\", content: $content}) { reaction { content } } }" > /dev/null \
+    && echo "✓ Reacted $emoji to comment $comment_id" \
+    || echo "✗ Failed to react to comment"
+}
+
+# ── GitLab commands ──────────────────────────────────────────────────
+
+gl_list() {
+  local mr_iid="$3" user_filter="${4:-}"
+
+  glab api "projects/:fullpath/merge_requests/$mr_iid/discussions" \
+    | jq --arg user "$user_filter" '
+      [.[] |
+        select(.notes | length > 0) |
+        select(.notes[0].resolvable == true) |
+        select(.notes[0].resolved == false) |
+        select(if $user != "" then .notes[0].author.username == $user else true end) |
+        {
+          id: .id,
+          note_id: .notes[0].id,
+          path: (.notes[0].position.new_path // .notes[0].position.old_path // null),
+          lines: (
+            if .notes[0].position.new_line then
+              "\(.notes[0].position.new_line)"
+            elif .notes[0].position.old_line then
+              "\(.notes[0].position.old_line)"
+            else
+              null
+            end
+          ),
+          user: .notes[0].author.username,
+          body: .notes[0].body
+        }
+      ]'
+}
+
+gl_resolve() {
+  # GitLab resolve requires MR IID. Format: <mr_iid>:<discussion_id>
+  local combined="$1"
+  local mr_iid="${combined%%:*}"
+  local discussion_id="${combined#*:}"
+
+  if [ "$mr_iid" = "$discussion_id" ]; then
+    echo "✗ For GitLab, thread ID must be <mr_iid>:<discussion_id>"
+    exit 1
+  fi
+
+  glab api --method PUT "projects/:fullpath/merge_requests/$mr_iid/discussions/$discussion_id" -f resolved=true > /dev/null \
+    && echo "✓ Resolved discussion $discussion_id" \
+    || echo "✗ Failed to resolve discussion"
+}
+
+gl_resolve_all() {
+  local mr_iid="$3"
+  local discussion_ids
+  discussion_ids=$(glab api "projects/:fullpath/merge_requests/$mr_iid/discussions" \
+    | jq -r '.[] | select(.notes | length > 0) | select(.notes[0].resolvable == true) | select(.notes[0].resolved == false) | .id')
+
+  if [ -z "$discussion_ids" ]; then
+    echo "No unresolved discussions found."
+    exit 0
+  fi
+
+  echo "$discussion_ids" | while read -r id; do
+    glab api --method PUT "projects/:fullpath/merge_requests/$mr_iid/discussions/$id" -f resolved=true > /dev/null
+    echo "✓ Resolved discussion $id"
+  done
+  echo "Done!"
+}
+
+gl_unresolve() {
+  local combined="$1"
+  local mr_iid="${combined%%:*}"
+  local discussion_id="${combined#*:}"
+
+  if [ "$mr_iid" = "$discussion_id" ]; then
+    echo "✗ For GitLab, thread ID must be <mr_iid>:<discussion_id>"
+    exit 1
+  fi
+
+  glab api --method PUT "projects/:fullpath/merge_requests/$mr_iid/discussions/$discussion_id" -f resolved=false > /dev/null \
+    && echo "✓ Unresolved discussion $discussion_id" \
+    || echo "✗ Failed to unresolve discussion"
+}
+
+gl_reply() {
+  # Format: <mr_iid>:<discussion_id>
+  local combined="$1" body="$2"
+  local mr_iid="${combined%%:*}"
+  local discussion_id="${combined#*:}"
+
+  if [ "$mr_iid" = "$discussion_id" ]; then
+    echo "✗ For GitLab, thread ID must be <mr_iid>:<discussion_id>"
+    exit 1
+  fi
+
+  glab api --method POST "projects/:fullpath/merge_requests/$mr_iid/discussions/$discussion_id/notes" -f body="$body" > /dev/null \
+    && echo "✓ Replied to discussion $discussion_id" \
+    || echo "✗ Failed to reply to discussion"
+}
+
+gl_react() {
+  # GitLab award emoji on a note. Format: <mr_iid>:<note_id>
+  local combined="$1" emoji="$2"
+  local mr_iid="${combined%%:*}"
+  local note_id="${combined#*:}"
+
+  if [ "$mr_iid" = "$note_id" ]; then
+    echo "✗ For GitLab, comment ID must be <mr_iid>:<note_id>"
+    exit 1
+  fi
+
+  # Map our common names to GitLab emoji slugs
+  local name
+  case "$emoji" in
+    eyes)     name="eyes" ;;
+    rocket)   name="rocket" ;;
+    confused) name="confused" ;;
+    +1)       name="thumbsup" ;;
+    -1)       name="thumbsdown" ;;
+    heart)    name="heart" ;;
+    hooray)   name="tada" ;;
+    laugh)    name="laughing" ;;
+    *) echo "✗ Unknown emoji: $emoji"; exit 1 ;;
+  esac
+
+  glab api --method POST "projects/:fullpath/merge_requests/$mr_iid/notes/$note_id/award_emoji" -f name="$name" > /dev/null \
+    && echo "✓ Reacted $emoji to note $note_id" \
+    || echo "✗ Failed to react to note"
+}
+
+# ── Dispatch ─────────────────────────────────────────────────────────
+
+cmd_list() {
+  if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ -z "${3:-}" ]; then
+    echo "Usage: pr-reviews list <owner> <repo> <pr-number> [user]"
+    exit 1
+  fi
+  if [ "$PLATFORM" = "github" ]; then gh_list "$@"; else gl_list "$@"; fi
+}
+
+cmd_resolve() {
+  if [ -z "${1:-}" ]; then
+    echo "Usage: pr-reviews resolve <thread-id>"
+    [ "$PLATFORM" = "gitlab" ] && echo "  GitLab format: <mr_iid>:<discussion_id>"
+    exit 1
+  fi
+  if [ "$PLATFORM" = "github" ]; then gh_resolve "$@"; else gl_resolve "$@"; fi
+}
+
+cmd_resolve_all() {
+  if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ -z "${3:-}" ]; then
+    echo "Usage: pr-reviews resolve-all <owner> <repo> <pr-number>"
+    exit 1
+  fi
+  if [ "$PLATFORM" = "github" ]; then gh_resolve_all "$@"; else gl_resolve_all "$@"; fi
+}
+
+cmd_unresolve() {
+  if [ -z "${1:-}" ]; then
+    echo "Usage: pr-reviews unresolve <thread-id>"
+    [ "$PLATFORM" = "gitlab" ] && echo "  GitLab format: <mr_iid>:<discussion_id>"
+    exit 1
+  fi
+  if [ "$PLATFORM" = "github" ]; then gh_unresolve "$@"; else gl_unresolve "$@"; fi
+}
+
+cmd_reply() {
+  if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+    echo "Usage: pr-reviews reply <thread-id> <message>"
+    [ "$PLATFORM" = "gitlab" ] && echo "  GitLab format: <mr_iid>:<discussion_id>"
+    exit 1
+  fi
+  if [ "$PLATFORM" = "github" ]; then gh_reply "$@"; else gl_reply "$@"; fi
+}
+
+cmd_react() {
+  if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+    echo "Usage: pr-reviews react <comment-id> <emoji>"
+    echo "  Emojis: eyes|rocket|confused|+1|-1|heart|hooray|laugh"
+    [ "$PLATFORM" = "gitlab" ] && echo "  GitLab format: <mr_iid>:<note_id>"
+    exit 1
+  fi
+  if [ "$PLATFORM" = "github" ]; then gh_react "$@"; else gl_react "$@"; fi
+}
+
+case "${1:-}" in
+  list)        shift; cmd_list "$@" ;;
+  resolve)     shift; cmd_resolve "$@" ;;
+  resolve-all) shift; cmd_resolve_all "$@" ;;
+  unresolve)   shift; cmd_unresolve "$@" ;;
+  reply)       shift; cmd_reply "$@" ;;
+  react)       shift; cmd_react "$@" ;;
+  *)           usage ;;
+esac
