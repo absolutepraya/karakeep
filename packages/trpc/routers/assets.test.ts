@@ -170,4 +170,65 @@ describe("Asset Routes", () => {
       bookmarkId: bookmark.id,
     });
   });
+
+  test<CustomTestContext>("protects and deletes unattached assets through the owner-only mutation", async ({
+    apiCallers,
+    db,
+  }) => {
+    const owner = apiCallers[0];
+    const ownerUser = await owner.users.whoami();
+    const otherUser = await apiCallers[1].users.whoami();
+
+    await db.insert(assets).values({
+      id: "other-users-asset",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId: otherUser.id,
+    });
+
+    await expect(
+      owner.assets.deleteUnattachedAsset({ assetId: "other-users-asset" }),
+    ).rejects.toThrow(/Asset not found/);
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "other-users-asset"),
+      }),
+    ).resolves.toBeDefined();
+
+    const bookmark = await owner.bookmarks.createBookmark({
+      url: "https://attached-asset.example",
+      type: BookmarkTypes.LINK,
+    });
+    await db.insert(assets).values({
+      id: "attached-asset",
+      assetType: AssetTypes.BOOKMARK_ASSET,
+      bookmarkId: bookmark.id,
+      userId: ownerUser.id,
+    });
+
+    await expect(
+      owner.assets.deleteUnattachedAsset({ assetId: "attached-asset" }),
+    ).rejects.toThrow(/Asset is already attached/);
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "attached-asset"),
+      }),
+    ).resolves.toBeDefined();
+
+    await db.insert(assets).values({
+      id: "owned-unattached-asset",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId: ownerUser.id,
+    });
+
+    await owner.assets.deleteUnattachedAsset({
+      assetId: "owned-unattached-asset",
+    });
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "owned-unattached-asset"),
+      }),
+    ).resolves.toBeUndefined();
+  });
 });

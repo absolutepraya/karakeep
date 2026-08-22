@@ -1,5 +1,5 @@
 import { experimental_trpcMiddleware, TRPCError } from "@trpc/server";
-import { and, count, eq, gt, inArray, like, lt, or } from "drizzle-orm";
+import { and, count, eq, gt, inArray, isNull, like, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -351,6 +351,33 @@ export const bookmarksAppRouter = router({
               break;
             }
             case BookmarkTypes.ASSET: {
+              const [uploadedAsset] = await tx
+                .update(assets)
+                .set({
+                  bookmarkId: bookmark.id,
+                  assetType: AssetTypes.BOOKMARK_ASSET,
+                })
+                .where(
+                  and(
+                    eq(assets.id, input.assetId),
+                    eq(assets.userId, ctx.user.id),
+                    isNull(assets.bookmarkId),
+                    eq(assets.assetType, AssetTypes.UNKNOWN),
+                  ),
+                )
+                .returning({ contentType: assets.contentType });
+              if (
+                !uploadedAsset ||
+                getBookmarkAssetTypeForMimeType(
+                  uploadedAsset.contentType ?? "",
+                ) !== input.assetType
+              ) {
+                throw new TRPCError({
+                  code: "BAD_REQUEST",
+                  message: "Unsupported asset type",
+                });
+              }
+
               const [asset] = await tx
                 .insert(bookmarkAssets)
                 .values({
@@ -363,30 +390,6 @@ export const bookmarksAppRouter = router({
                   sourceUrl: input.sourceUrl ?? null,
                 })
                 .returning();
-              const uploadedAsset = await Asset.fromId(ctx, input.assetId);
-              uploadedAsset.ensureOwnership();
-              if (
-                getBookmarkAssetTypeForMimeType(
-                  uploadedAsset.asset.contentType ?? "",
-                ) !== input.assetType
-              ) {
-                throw new TRPCError({
-                  code: "BAD_REQUEST",
-                  message: "Unsupported asset type",
-                });
-              }
-              await tx
-                .update(assets)
-                .set({
-                  bookmarkId: bookmark.id,
-                  assetType: AssetTypes.BOOKMARK_ASSET,
-                })
-                .where(
-                  and(
-                    eq(assets.id, input.assetId),
-                    eq(assets.userId, ctx.user.id),
-                  ),
-                );
               content = {
                 type: BookmarkTypes.ASSET,
                 assetType: asset.assetType,

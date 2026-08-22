@@ -4,6 +4,7 @@ import React, { useCallback, useState } from "react";
 import { toast } from "@/components/ui/sonner";
 import { BOOKMARK_DRAG_MIME } from "@/lib/bookmark-drag";
 import useUpload from "@/lib/hooks/upload-file";
+import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { TRPCClientError } from "@trpc/client";
 import DropZone from "react-dropzone";
@@ -126,6 +127,7 @@ export default function UploadDropzone({
 }) {
   const [numUploading, setNumUploading] = useState(0);
   const [numUploaded, setNumUploaded] = useState(0);
+  const { t } = useTranslation();
   const uploadAssets = useUploadAssets({
     onFileUpload: () => {
       setNumUploaded((c) => c + 1);
@@ -155,7 +157,7 @@ export default function UploadDropzone({
       onDropRejected={(fileRejections) => {
         fileRejections.forEach(({ file }) => {
           toast({
-            description: `${file.name}: Only images, PDF, and Markdown files can become top-level bookmarks.`,
+            description: `${file.name}: ${t("common.only_images_pdf_markdown_top_level")}`,
             variant: "destructive",
           });
         });

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { assets, AssetTypes } from "@karakeep/db/schema";
@@ -145,20 +145,45 @@ export class Asset {
       });
     }
 
-    const deleted = await ctx.db
-      .delete(assets)
-      .where(
-        and(
-          eq(assets.id, assetId),
-          eq(assets.userId, ctx.user.id),
-          eq(assets.assetType, AssetTypes.UNKNOWN),
-        ),
-      );
-    if (deleted.changes === 0) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
-    }
+    await ctx.db.transaction(async (tx) => {
+      const [unattachedAsset] = await tx
+        .select({ id: assets.id })
+        .from(assets)
+        .where(
+          and(
+            eq(assets.id, assetId),
+            eq(assets.userId, ctx.user.id),
+            isNull(assets.bookmarkId),
+            eq(assets.assetType, AssetTypes.UNKNOWN),
+          ),
+        )
+        .limit(1);
+      if (!unattachedAsset) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Asset not found",
+        });
+      }
 
-    await deleteAsset({ userId: ctx.user.id, assetId }).catch(() => undefined);
+      // Keep the unknown asset row as a cleanup tombstone until storage deletion
+      // succeeds. A failed storage call rolls back the transaction and leaves a
+      // retryable row instead of creating an untracked private file.
+      await deleteAsset({ userId: ctx.user.id, assetId });
+
+      const deleted = await tx
+        .delete(assets)
+        .where(
+          and(
+            eq(assets.id, assetId),
+            eq(assets.userId, ctx.user.id),
+            isNull(assets.bookmarkId),
+            eq(assets.assetType, AssetTypes.UNKNOWN),
+          ),
+        );
+      if (deleted.changes === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+      }
+    });
   }
 
   static async replaceAsset(
