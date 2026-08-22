@@ -1,10 +1,18 @@
 <div align="center">
-  <img width="558" src="./screenshots/marka-logo-readme.png" alt="Marka" />
+  <img width="279" src="./screenshots/marka-logo-readme.png" alt="Marka" />
 </div>
 
 <p align="center">
   <strong>A private library for everything worth keeping.</strong><br />
   Save links, notes, images, PDFs, and web pages, then find them again when they matter.
+</p>
+
+<p align="center">
+  <a href="https://github.com/absolutepraya/marka/actions/workflows/ci.yml"><img src="https://github.com/absolutepraya/marka/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/absolutepraya/marka?label=CodeRabbit%20Reviews&labelColor=171717&color=FF570A" alt="CodeRabbit Reviews" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/absolutepraya/marka" alt="License" /></a>
+  <a href="./.nvmrc"><img src="https://img.shields.io/badge/Node.js-24.18.1-339933?logo=nodedotjs&logoColor=white" alt="Node.js 24.18.1" /></a>
+  <a href="./package.json"><img src="https://img.shields.io/badge/pnpm-11.2.1-F69220?logo=pnpm&logoColor=white" alt="pnpm 11.2.1" /></a>
 </p>
 
 Marka is a self-hostable bookmark library built for people who want their saved knowledge close, searchable, and under their control.
