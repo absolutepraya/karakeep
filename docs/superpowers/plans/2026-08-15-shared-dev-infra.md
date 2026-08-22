@@ -2,15 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Run one shared Chrome container and one shared Meilisearch container for all local Karakeep worktrees while keeping SQLite/assets and Meilisearch indexes isolated per worktree.
+**Goal:** Run one shared Chrome container and one shared Meilisearch container for all local Marka worktrees while keeping SQLite/assets and Meilisearch indexes isolated per worktree.
 
-**Architecture:** Add an optional `MEILI_INDEX_PREFIX` consumed by both Meilisearch plugins, then move Chrome/Meilisearch ownership from each workspace into a machine-level `scripts/dev-infra.sh` helper. Worktree setup keeps unique web/data state but points every workspace to localhost ports 7700/9222 and generates a stable per-worktree index prefix. `pnpm dev:start` ensures shared infra exists; `pnpm dev:stop` stops only current workspace processes.
+**Architecture:** Add an optional `MEILI_INDEX_PREFIX` consumed by both Meilisearch plugins, then move Chrome/Meilisearch ownership from each workspace into a machine-level `scripts/dev-infra.sh` helper. Worktree setup keeps unique web/data state but points every workspace to IPv4 loopback ports 7700/9250 and generates a stable per-worktree index prefix. `pnpm dev:start` ensures shared infra exists; `pnpm dev:stop` stops only current workspace processes.
 
 **Tech Stack:** Bash, pnpm, Docker, Meilisearch, Karakeep Chrome, TypeScript, Zod, Vitest, GitHub Actions.
 
 ## Global Constraints
 
-- Shared dev endpoints are `http://localhost:7700` for Meilisearch and `http://localhost:9222` for Chrome/CDP.
+- Shared dev endpoints are `http://127.0.0.1:7700` for Meilisearch and `http://127.0.0.1:9250` for Chrome/CDP.
 - Shared containers are machine-level and must not be stopped by an individual worktree.
 - SQLite/assets remain isolated in each workspace's `.data/local`.
 - `MEILI_INDEX_PREFIX` defaults to an empty string so production/installer/E2E behavior remains unchanged.
@@ -92,12 +92,12 @@ git commit -m "feat: namespace Meilisearch indexes"
 
 **Interfaces:**
 - Produces: `scripts/dev-infra.sh up|status|down`
-- Owns containers `karakeep-dev-meilisearch` and `karakeep-dev-chrome`.
+- Owns containers `marka-dev-meilisearch` and `marka-dev-chrome`.
 
 - [ ] **Step 1: Write failing shell tests**
 
 Tests use a fake `docker`/port probe and assert:
-- `up` creates the two stable containers with Meili on 7700 and Chrome on 9222;
+- `up` creates the two stable containers with Meili on 7700 and Chrome on 9250;
 - repeated `up` reuses owned containers;
 - foreign occupancy of either port fails with an actionable error;
 - `down` removes only the two shared infra containers;
@@ -113,7 +113,7 @@ Expected: FAIL because `scripts/dev-infra.sh` does not exist.
 
 The helper must:
 - require Docker and daemon access;
-- bind only localhost (`127.0.0.1:7700:7700`, `127.0.0.1:9222:9222`);
+- bind only IPv4 loopback (`127.0.0.1:7700:7700`, `127.0.0.1:9250:9222`);
 - use one persistent named Meili volume;
 - recognize only its stable container names as owned endpoints;
 - fail rather than assume compatibility when a port is occupied by anything else;
@@ -153,8 +153,8 @@ git commit -m "feat: add shared local dev infrastructure"
 Assert generated worktree `.env` contains:
 
 ```text
-MEILI_ADDR=http://localhost:7700
-BROWSER_WEB_URL=http://localhost:9222
+MEILI_ADDR=http://127.0.0.1:7700
+BROWSER_WEB_URL=http://127.0.0.1:9250
 MEILI_INDEX_PREFIX=<safe-workspace>-<WT_PORT_BASE>_
 ```
 

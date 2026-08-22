@@ -1,8 +1,8 @@
-# Shared Local Dev Infrastructure Across Worktrees
+# Shared Local Dev Infrastructure Across Marka Worktrees
 
 ## Goal
 
-Reduce duplicated local development infrastructure when multiple Karakeep worktrees run at the same time, while preserving per-worktree application/data isolation.
+Reduce duplicated local development infrastructure when multiple Marka worktrees run at the same time, while preserving per-worktree application/data isolation.
 
 The desired local model is:
 
@@ -15,7 +15,7 @@ This design is local-development-specific. It does not change the guided product
 
 ## Current behavior
 
-`start-dev.sh` currently starts a worktree-specific Meilisearch container and Chrome container, with ports derived from the worktree environment. `scripts/setup-worktree.sh` assigns unique web, Meilisearch, and Chrome ports to each worktree. `stop-dev.sh` stops and removes the worktree-specific infrastructure containers.
+The selected implementation uses one machine-level Meilisearch container and one machine-level Chrome container. `scripts/setup-worktree.sh` assigns a unique web port and Meilisearch namespace to each worktree. `stop-dev.sh` stops only the current worktree's web and workers processes.
 
 Application data is already isolated per worktree through `.data/local`.
 
@@ -46,14 +46,14 @@ This gives the resource benefit of shared infrastructure without mixing applicat
 
 The machine-level infrastructure owns two stable endpoints:
 
-- Chrome/CDP: `http://localhost:9222`
-- Meilisearch: `http://localhost:7700`
+- Chrome/CDP: `http://127.0.0.1:9250`
+- Meilisearch: `http://127.0.0.1:7700`
 
 Each worktree receives:
 
 - a unique web port, as today
-- `BROWSER_WEB_URL=http://localhost:9222`
-- `MEILI_ADDR=http://localhost:7700`
+- `BROWSER_WEB_URL=http://127.0.0.1:9250`
+- `MEILI_ADDR=http://127.0.0.1:7700`
 - a unique `MEILI_INDEX_PREFIX`
 - its own `.data/local` directory
 
@@ -61,7 +61,7 @@ Example:
 
 ```text
 shared dev infra
-├── Chrome :9222
+├── Chrome :9250
 └── Meilisearch :7700
     ├── main_bookmarks
     ├── main_bookmarks_vectors
@@ -134,16 +134,18 @@ pnpm dev:infra:down
 The helper owns stable container names:
 
 ```text
-karakeep-dev-meilisearch
-karakeep-dev-chrome
+marka-dev-meilisearch
+marka-dev-chrome
 ```
 
 It starts:
 
 - `getmeili/meilisearch:v1.41.0` on host port `7700`
-- `ghcr.io/karakeep-app/karakeep-chrome:release` on host port `9222`
+- `ghcr.io/karakeep-app/karakeep-chrome:release` on host port `9250`, forwarding to the container's CDP port `9222`
 
 Chrome must use the maintained Karakeep image/configuration rather than the retired `gcr.io/zenika-hub/alpine-chrome:124` image.
+
+The legacy Docker Compose development stack in `docker/docker-compose.dev.yml` keeps its container-local `chrome:9222` endpoint, but publishes host port `9222` on `127.0.0.1` only. The machine-level shared helper remains the preferred workflow and uses host port `9250`.
 
 The shared Meilisearch container keeps one machine-level Docker volume so index state survives restarts. Individual worktree indexes remain logically isolated within it.
 
@@ -164,7 +166,7 @@ Before starting web/workers, it should:
 
 It must not create worktree-specific Chrome or Meilisearch containers.
 
-The shared endpoints default to `localhost:7700` and `localhost:9222`. Explicit `.env` overrides remain possible, but when the default shared endpoints are used they must be owned by the shared-infra helper rather than an unrelated process.
+The shared endpoints default to `127.0.0.1:7700` and `127.0.0.1:9250`. Explicit `.env` overrides remain possible, but when the default shared endpoints are used they must be owned by the shared-infra helper rather than an unrelated process. IPv4 loopback is intentional because the container publishes on `127.0.0.1` and the worker connects over CDP.
 
 ## `stop-dev.sh` behavior
 
@@ -190,8 +192,8 @@ pnpm dev:infra:down
 It no longer allocates per-worktree Meilisearch or Chrome ports. Every generated worktree `.env` points to:
 
 ```text
-MEILI_ADDR=http://localhost:7700
-BROWSER_WEB_URL=http://localhost:9222
+MEILI_ADDR=http://127.0.0.1:7700
+BROWSER_WEB_URL=http://127.0.0.1:9250
 MEILI_INDEX_PREFIX=<workspace-slug>-<port-base>_
 ```
 
@@ -199,7 +201,7 @@ Production-state pulls remain per-worktree because the SQLite/assets directory r
 
 ## Port/conflict handling
 
-The shared infra helper must fail clearly if ports `7700` or `9222` are already occupied by a process/container it does not own instead of silently assuming compatibility.
+The shared infra helper must fail clearly if ports `7700` or `9250` are already occupied by a process/container it does not own instead of silently assuming compatibility.
 
 If the expected Karakeep shared container already owns the port, `up` is idempotent and reuses it.
 
@@ -250,7 +252,7 @@ Update `CLAUDE.md` / `GEMINI.md` only if they are independent copies rather than
 - sharing one un-namespaced Meilisearch index between worktrees
 - changing production or guided-installer service ownership
 - introducing automatic garbage collection of old worktree indexes in this PR
-- exposing Chrome/Meilisearch beyond localhost
+- exposing Chrome/Meilisearch beyond loopback
 - adding orchestration beyond the existing Bash/pnpm developer workflow
 
 ## Success criteria

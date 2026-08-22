@@ -13,11 +13,12 @@
 ## Repository operations
 
 - Monorepo: Next.js, React, TypeScript, Hono, tRPC, Drizzle, SQLite, Meilisearch, pnpm, and Turborepo.
-- Runtime: Node 24 through `mise exec node@24 --`; pnpm 11.2.1 through Corepack.
+- Runtime: Node.js 24.18.1 from `.nvmrc`, normally selected through Mise; pnpm 11.2.1 through Corepack.
 - Install with `pnpm install`, create the documented `.env` symlinks, then run `pnpm db:migrate`.
 - Start local development with `pnpm dev:start`. Use `pnpm dev:start -d` for detached mode and `pnpm dev:stop` to stop only that workspace.
-- Shared local infrastructure is machine-level: one Meilisearch at `http://localhost:7700` and one Chrome/CDP at the configured development port, `9250` by default. Override it with `MARKA_DEV_CHROME_PORT`.
+- Shared local infrastructure is machine-level: one Meilisearch at `http://127.0.0.1:7700` and one Chrome/CDP at `http://127.0.0.1:9250` by default. Override the Chrome host port with `MARKA_DEV_CHROME_PORT`.
 - Parallel worktrees keep separate SQLite/assets data and unique web ports. `scripts/setup-worktree.sh` assigns each worktree a unique `MEILI_INDEX_PREFIX`; both `bookmarks` and `bookmarks_vectors` use that namespace on the shared Meilisearch server.
+- This repository supports [`wt`](https://github.com/absolutepraya/wt) for worktree creation and lifecycle. Use `wt new <name>` and `wt ls`; `.wt/config.toml` owns the setup, slot, and port-offset rules.
 - `pnpm dev:start` defaults the main workspace namespace to `main_`. An unset `MEILI_INDEX_PREFIX` is a compatibility fallback for the original `bookmarks` and `bookmarks_vectors` names; manual `web` or `workers` starts outside `pnpm dev:start` must set an explicit unique prefix.
 - Run focused checks before broad checks when practical. Standard checks are `pnpm format:fix`, `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
 - Validate shared-dev shell behavior with `bash scripts/dev-infra.test.sh`.
@@ -94,8 +95,10 @@ bash scripts/install.test.sh
 ## Local development
 
 ### Runtime
-- Node 24 (`.nvmrc`)
+- Node.js 24.18.1 (`.nvmrc`)
 - `pnpm@11.2.1` via corepack
+- Docker-compatible local runtime, such as OrbStack on macOS
+- [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees
 
 ### First-time setup
 
@@ -125,15 +128,18 @@ Useful variants:
 
 Local-dev ownership model:
 - `web` + `workers` run natively per workspace
-- one machine-level Meilisearch container is shared at `http://localhost:7700`
-- one machine-level Chrome container is shared at `http://localhost:9250` by default; `MARKA_DEV_CHROME_PORT` changes this endpoint.
+- one machine-level Meilisearch container is shared at `http://127.0.0.1:7700`
+- one machine-level Chrome container is shared at `http://127.0.0.1:9250` by default; `MARKA_DEV_CHROME_PORT` changes this endpoint
 - `pnpm dev:start` automatically ensures those shared containers exist
 - `pnpm dev:stop` never stops shared infrastructure because other worktrees may still use it
 - the shared Chrome image is `ghcr.io/karakeep-app/karakeep-chrome:release`
+- no local SMTP or mail container is started by this workflow; email behavior uses the configured external SMTP settings when present
 
 Parallel-worktree isolation:
 - every worktree keeps its own `.data/local` SQLite/assets state and unique web port
 - `scripts/setup-worktree.sh` points all worktrees at shared Meilisearch/Chrome endpoints
+- `WT_PORT_BASE` comes from the `wt` slot and is added to the base web port `3000`; slot 1 therefore uses `3100`
+- worktree offsets do not apply to shared Chrome or Meilisearch, which intentionally keep stable machine-level endpoints
 - every worktree receives a safe unique `MEILI_INDEX_PREFIX` derived from its normalized workspace name plus `WT_PORT_BASE`
 - both `bookmarks` and `bookmarks_vectors` use that prefix, so separate SQLite states never share Meilisearch documents
 - `pnpm dev:start` defaults the main workspace prefix to `main_`
@@ -152,7 +158,7 @@ pnpm workers
 
 Notes:
 - Meilisearch and headless Chrome are optional for booting the app, but required for full search/crawling behavior.
-- shared infra binds only to localhost; if the configured ports `7700` or `MARKA_DEV_CHROME_PORT` are occupied by something else, the helper fails rather than silently reusing an unknown service
+- shared infra binds only to IPv4 loopback; if the configured ports `7700` or `MARKA_DEV_CHROME_PORT` are occupied by something else, the helper fails rather than silently reusing an unknown service
 - If `next dev` crashes with a stale Turbopack/instrumentation issue, clear `apps/web/.next`.
 
 ### Pull prod state to local dev
@@ -163,6 +169,8 @@ Required root `.env` keys:
 - `DATA_DIR`
 - `KARAKEEP_PROD_SSH_HOST`
 - `KARAKEEP_PROD_COMPOSE_DIR`
+
+The personal VPS compose directory is `/home/praya/marka`, not `/marka` or the retired `/home/praya/karakeep` path. Keep this machine-specific value in `.env`; `.env.sample` contains the non-secret placeholder.
 
 Optional root `.env` keys:
 - `KARAKEEP_PROD_SSH_USER`
@@ -217,6 +225,7 @@ CodeRabbit is currently the only accepted active AI pull-request reviewer. Read 
 - Never enable reviewer-driven automatic commits, pushes, applied fixes, or autonomous fixer agents.
 - Do not approve an additional reviewer that requires repository-content write, Actions/workflow write, administration, secrets/environments, or equivalent broad mutation privileges.
 - Deterministic GitHub Actions remain authoritative for machine-checkable validation.
+- Contributors can use the project-local `.agents/skills/address-pr-reviews/SKILL.md` for evidence-based triage and thread closure. It requires explicit authorization for code changes, commits, pushes, replies, and resolution, and verifies the remote PR ref before closure.
 
 ## Documentation guidance
 

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a safe local command that pulls production Karakeep persisted state from the VPS into local development.
+**Goal:** Build a safe local command that pulls production Marka persisted state from the VPS into local development.
 
 **Architecture:** A Bash operator script reads root `.env`, validates local and VPS configuration, exports the production Docker `/data` volume over SSH as a tar stream, backs up local data, and restores it locally. Package and docs changes expose the command and document required configuration without committing secrets.
 
@@ -14,7 +14,7 @@
 
 - Create: `scripts/pull-prod-state.sh`
   - Owns all prod-to-local state pull behavior.
-  - Supports dry-run default, `--yes`, `--db-only`, and `--skip-migrate`.
+  - Supports an opt-in `--dry-run` and `--skip-migrate`.
 - Modify: `package.json`
   - Adds `prod:pull-state` as the stable local command.
 - Modify: `.env.sample`
@@ -41,13 +41,12 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: pnpm prod:pull-state [--yes] [--db-only] [--skip-migrate]
+Usage: pnpm prod:pull-state [--dry-run] [--skip-migrate]
 
-Pull production Karakeep persisted state from the VPS into local development.
+Pull production Marka persisted state from the VPS into local development.
 
 Options:
-  --yes           Replace local state. Without this, only print the plan.
-  --db-only       Pull only db.db, db.db-wal, and db.db-shm.
+  --dry-run       Print the replacement plan without changing local state.
   --skip-migrate  Do not run pnpm db:migrate after restore.
   -h, --help      Show this help.
 USAGE
@@ -71,14 +70,11 @@ docker run --rm --volumes-from "$container_id":ro "$export_image" \
 docker compose unpause "$service"
 ```
 
-For `--db-only`, tar only `db.db`, `db.db-wal`, and `db.db-shm` when present.
-
 - [ ] **Step 4: Add local backup and restore**
 
 Download the remote tar into a temp directory, validate it with `tar -tf`, extract into a temp restore directory, then:
 
-- full mode: move existing `DATA_DIR` to `DATA_DIR.backups/prod-pull-<timestamp>` and replace it.
-- db-only mode: back up `DATA_DIR`, remove local `db.db*`, and overlay the downloaded SQLite files.
+- move existing `DATA_DIR` to `DATA_DIR.backups/prod-pull-<timestamp>` and replace it with the restored full `/data` volume.
 
 - [ ] **Step 5: Add migration**
 
@@ -115,7 +111,7 @@ Add placeholder keys:
 ```dotenv
 KARAKEEP_PROD_SSH_HOST=vps
 KARAKEEP_PROD_SSH_USER=
-KARAKEEP_PROD_COMPOSE_DIR=/home/praya/karakeep
+KARAKEEP_PROD_COMPOSE_DIR=/home/praya/marka
 KARAKEEP_PROD_COMPOSE_SERVICE=web
 KARAKEEP_PROD_EXPORT_IMAGE=alpine:3.20
 ```
@@ -132,12 +128,11 @@ KARAKEEP_PROD_EXPORT_IMAGE=alpine:3.20
 Add an operator section showing:
 
 ```bash
+pnpm prod:pull-state --dry-run
 pnpm prod:pull-state
-pnpm prod:pull-state --yes
-pnpm prod:pull-state --yes --db-only
 ```
 
-Include the warning that `--yes` replaces local development state and creates a backup.
+Review the dry-run plan before running the live command. Running without `--dry-run` replaces local development state and creates a backup.
 
 - [ ] **Step 2: Update AGENTS.md**
 
@@ -145,12 +140,12 @@ Add assistant guidance:
 
 - Use `pnpm prod:pull-state` for prod-to-local state pulls.
 - Do not print `.env` secrets.
-- Do not overwrite local state without `--yes`.
-- Default to full `/data`; use `--db-only` only when explicitly requested.
+- Use `--dry-run` to inspect the plan without overwriting local state.
+- The command restores the full `/data` volume.
 
 - [ ] **Step 3: Update docs/operator-setup.md**
 
-Add the same operator command, required `.env` keys, backup warning, full-state default, and DB-only caveat to the canonical operator setup guide.
+Add the same operator command, required `.env` keys, backup warning, and full-state behavior to the canonical operator setup guide.
 
 ## Task 4: Verify And Commit
 
@@ -163,13 +158,13 @@ Run:
 
 ```bash
 bash -n scripts/pull-prod-state.sh
-pnpm prod:pull-state
+pnpm prod:pull-state --dry-run
 ```
 
 Expected:
 
 - Shell syntax passes.
-- Dry run reports missing prod env vars clearly if they are absent.
+- Dry run reports the replacement plan and missing prod env vars clearly if they are absent.
 
 - [ ] **Step 2: Run formatting checks**
 

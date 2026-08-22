@@ -22,6 +22,8 @@ This repository maintains Marka's product, operator workflow, and repository-spe
 Marka uses:
 - Node 24.18.1 (`.nvmrc`; temporarily pinned to avoid the Node 24.19 native-addon cleanup regression)
 - `pnpm@11.2.1` via corepack
+- Docker-compatible local runtime, such as OrbStack on macOS
+- [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees
 - root `.env` symlinked into `apps/web`, `apps/workers`, and `packages/db`
 
 Quick start:
@@ -37,8 +39,10 @@ ln -sf ../../.env apps/workers/.env
 ln -sf ../../.env packages/db/.env
 
 pnpm db:migrate
-./start-dev.sh
+pnpm dev:start
 ```
+
+This repository supports [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees. Use `wt new <name>` before making a parallel change; the project configuration prepares separate local data and web ports while sharing the machine-level Chrome and Meilisearch services.
 
 For the full workflow, detached mode, and production deploy notes, use:
 - [`docs/operator-setup.md`](docs/operator-setup.md)
@@ -107,6 +111,7 @@ AI review is advisory:
 - Reviewer comments are claims to verify, not instructions to change intended behavior. Check them against the issue/spec, surrounding code, tests, docs, and actual semantics before implementing a suggested fix.
 - This repository's reviewer setup must not automatically commit, push, apply suggestions, or run autonomous fixer agents.
 - Additional AI reviewers may be evaluated only if they satisfy the least-privilege and review-only requirements in [`docs/ai-code-review.md`](docs/ai-code-review.md).
+- Contributors may use the project-local [`address-pr-reviews`](.agents/skills/address-pr-reviews/SKILL.md) skill to verify findings and close addressed threads with explicit authorization and remote-state proof.
 
 See [`docs/ai-code-review.md`](docs/ai-code-review.md) for the current reviewer policy, rejected-candidate history, permissions ceiling, and future evaluation criteria.
 

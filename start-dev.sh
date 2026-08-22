@@ -54,15 +54,31 @@ case "$WEB_PORT" in
 esac
 
 MEILI_ADDR="${MEILI_ADDR:-$(env_value MEILI_ADDR)}"
-MEILI_ADDR="${MEILI_ADDR:-http://localhost:7700}"
+MEILI_ADDR="${MEILI_ADDR:-http://127.0.0.1:7700}"
+DEFAULT_CHROME_PORT=9250
 MARKA_DEV_CHROME_PORT="${MARKA_DEV_CHROME_PORT:-$(env_value MARKA_DEV_CHROME_PORT)}"
 BROWSER_WEB_URL="${BROWSER_WEB_URL:-$(env_value BROWSER_WEB_URL)}"
-if [ -z "$BROWSER_WEB_URL" ]; then
-    BROWSER_WEB_URL="http://localhost:${MARKA_DEV_CHROME_PORT:-9250}"
-fi
+
+# MARKA_DEV_CHROME_PORT is the source of truth for local loopback Chrome. A
+# custom non-loopback BROWSER_WEB_URL remains supported for external browser
+# services, but local URLs must follow the effective host port.
 if [ -z "$MARKA_DEV_CHROME_PORT" ]; then
-    MARKA_DEV_CHROME_PORT="${BROWSER_WEB_URL##*:}"
-    MARKA_DEV_CHROME_PORT="${MARKA_DEV_CHROME_PORT%%/*}"
+    if [[ "$BROWSER_WEB_URL" =~ ^http://(127\.0\.0\.1|localhost):([0-9]+)/?$ ]]; then
+        MARKA_DEV_CHROME_PORT="${BASH_REMATCH[2]}"
+    else
+        MARKA_DEV_CHROME_PORT="$DEFAULT_CHROME_PORT"
+    fi
+fi
+if ! [[ "$MARKA_DEV_CHROME_PORT" =~ ^[0-9]+$ ]]; then
+    echo "Error: MARKA_DEV_CHROME_PORT must be between 1 and 65535." >&2
+    exit 1
+fi
+if ((10#$MARKA_DEV_CHROME_PORT < 1 || 10#$MARKA_DEV_CHROME_PORT > 65535)); then
+    echo "Error: MARKA_DEV_CHROME_PORT must be between 1 and 65535." >&2
+    exit 1
+fi
+if [ -z "$BROWSER_WEB_URL" ] || [[ "$BROWSER_WEB_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+/?$ ]]; then
+    BROWSER_WEB_URL="http://127.0.0.1:${MARKA_DEV_CHROME_PORT}"
 fi
 MEILI_INDEX_PREFIX="${MEILI_INDEX_PREFIX:-$(env_value MEILI_INDEX_PREFIX)}"
 MEILI_INDEX_PREFIX="${MEILI_INDEX_PREFIX:-main_}"

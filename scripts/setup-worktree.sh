@@ -56,10 +56,10 @@ DATA_DIR=$workspace_data_dir
 KARAKEEP_PORT=$web_port
 API_URL=http://localhost:$web_port
 NEXTAUTH_URL=http://localhost:$web_port
-MEILI_ADDR=http://localhost:7700
+MEILI_ADDR=http://127.0.0.1:7700
 MEILI_MASTER_KEY=
 MEILI_INDEX_PREFIX=$meili_index_prefix
-BROWSER_WEB_URL=http://localhost:$chrome_port
+BROWSER_WEB_URL=http://127.0.0.1:$chrome_port
 MARKA_DEV_CHROME_PORT=$chrome_port
 BROWSER_CONNECT_ONDEMAND=false
 ENV
@@ -101,4 +101,4 @@ case "$data_source" in
     ;;
 esac
 
-echo "Configured worktree: web $web_port, shared Meilisearch 7700, shared Chrome $chrome_port, Meilisearch prefix $meili_index_prefix"
+echo "Configured worktree: web $web_port, shared Meilisearch 127.0.0.1:7700, shared Chrome 127.0.0.1:$chrome_port, Meilisearch prefix $meili_index_prefix"

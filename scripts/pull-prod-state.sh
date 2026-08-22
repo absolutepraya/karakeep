@@ -5,7 +5,7 @@ usage() {
   cat <<'USAGE'
 Usage: pnpm prod:pull-state [--dry-run] [--skip-migrate]
 
-Pull production Karakeep persisted state, including all assets, into local development.
+Pull production Marka persisted state, including all assets, into local development.
 
 Options:
   --dry-run       Print the replacement plan without changing local state.

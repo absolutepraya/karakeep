@@ -43,6 +43,44 @@ Read the [guided installation guide](docs/docs/02-installation/11-guided-docker-
 
 Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution rules and [`docs/operator-setup.md`](docs/operator-setup.md) for local development and deployment workflows.
 
+### Runtime prerequisites
+
+The supported local development runtime is:
+
+- Node.js 24.18.1 from [`.nvmrc`](.nvmrc)
+- pnpm 11.2.1 through Corepack, as pinned in [`package.json`](package.json)
+- Git and a Docker-compatible runtime, such as OrbStack on macOS
+- [`wt`](https://github.com/absolutepraya/wt) for isolated worktrees
+
+After the repository is configured, the normal development command is:
+
+```bash
+pnpm dev:start
+```
+
+`pnpm dev:start` runs the current worktree's web and workers processes. It reuses one machine-level Chrome/CDP service at `127.0.0.1:9250` and one Meilisearch service at `127.0.0.1:7700`. Each worktree keeps its own SQLite/assets directory, web port, and Meilisearch index namespace. Worktree slot 1 uses web port `3100`, slot 2 uses `3200`, and so on. Shared Chrome can be moved with `MARKA_DEV_CHROME_PORT` when the default port is occupied.
+
+The repository is supported by [`wt`](https://github.com/absolutepraya/wt):
+
+```bash
+wt new ui-polish
+wt ls
+```
+
+The project configuration in [`.wt/config.toml`](.wt/config.toml) prepares isolated dependencies, data, ports, and Meilisearch namespaces for each worktree.
+
+### Pull production state into local development
+
+Use the safe dry run first:
+
+```bash
+pnpm prod:pull-state --dry-run
+```
+
+The command reads the root `.env`, connects to the personal VPS, and replaces the current worktree's local data only when run without `--dry-run`. It backs up the existing `DATA_DIR` before restoring the full production `/data` volume.
+
+The personal VPS compose project is `/home/praya/marka`, configured through `KARAKEEP_PROD_COMPOSE_DIR`. The service and export image have documented defaults in the script, while machine-specific values belong in `.env` and must not be committed.
+
 ## License
 
 Marka is licensed under [AGPL-3.0](LICENSE).
