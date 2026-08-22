@@ -205,6 +205,7 @@ test("generates favicon tiles with transparent backgrounds", async () => {
   assert.equal(faviconOutputs[0].source, faviconOutputs[1].source);
   assert.equal(faviconOutputs[0].foreground, "#03132F");
   assert.equal(faviconOutputs[1].foreground, undefined);
+  assert.ok(faviconOutputs.every((output) => output.padToSquare));
 
   const faviconSource = manifest.sources.find(
     (source) => source.source === faviconOutputs[0].source,
@@ -227,6 +228,8 @@ test("generates favicon tiles with transparent backgrounds", async () => {
       join(outputRoot, "apps/web/public/brand/marka", name),
     );
 
+    assert.equal(info.width, info.height, `${name} must be square`);
+
     for (const [x, y] of [
       [0, 0],
       [info.width - 1, 0],
@@ -234,6 +237,12 @@ test("generates favicon tiles with transparent backgrounds", async () => {
       [info.width - 1, info.height - 1],
     ]) {
       assert.equal(pixelAt(data, info, x, y)[3], 0, `${name} at ${x},${y}`);
+    }
+
+    for (const x of [0, info.width - 1]) {
+      for (let y = 0; y < info.height; y += 1) {
+        assert.equal(pixelAt(data, info, x, y)[3], 0, `${name} edge at ${x},${y}`);
+      }
     }
 
     const alphaValues = [];
