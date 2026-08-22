@@ -122,8 +122,20 @@ export class Asset {
         assetType: mapSchemaAssetTypeToDB(input.asset.assetType),
         bookmarkId: input.bookmarkId,
       })
-      .where(and(eq(assets.id, input.asset.id), eq(assets.userId, ctx.user.id)))
+      .where(
+        and(
+          eq(assets.id, input.asset.id),
+          eq(assets.userId, ctx.user.id),
+          eq(assets.cleanupPending, false),
+        ),
+      )
       .returning();
+    if (!updatedAsset) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Asset is unavailable for attachment",
+      });
+    }
 
     return {
       id: updatedAsset.id,
@@ -145,45 +157,39 @@ export class Asset {
       });
     }
 
-    await ctx.db.transaction(async (tx) => {
-      const [unattachedAsset] = await tx
-        .select({ id: assets.id })
-        .from(assets)
-        .where(
-          and(
-            eq(assets.id, assetId),
-            eq(assets.userId, ctx.user.id),
-            isNull(assets.bookmarkId),
-            eq(assets.assetType, AssetTypes.UNKNOWN),
-          ),
-        )
-        .limit(1);
-      if (!unattachedAsset) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Asset not found",
-        });
-      }
+    const marked = await ctx.db
+      .update(assets)
+      .set({ cleanupPending: true })
+      .where(
+        and(
+          eq(assets.id, assetId),
+          eq(assets.userId, ctx.user.id),
+          isNull(assets.bookmarkId),
+          eq(assets.assetType, AssetTypes.UNKNOWN),
+        ),
+      );
+    if (marked.changes === 0) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+    }
 
-      // Keep the unknown asset row as a cleanup tombstone until storage deletion
-      // succeeds. A failed storage call rolls back the transaction and leaves a
-      // retryable row instead of creating an untracked private file.
-      await deleteAsset({ userId: ctx.user.id, assetId });
+    // Keep the cleanup state committed while storage deletion is in flight. This
+    // blocks attachment mutations and leaves a retryable row on storage failure.
+    await deleteAsset({ userId: ctx.user.id, assetId });
 
-      const deleted = await tx
-        .delete(assets)
-        .where(
-          and(
-            eq(assets.id, assetId),
-            eq(assets.userId, ctx.user.id),
-            isNull(assets.bookmarkId),
-            eq(assets.assetType, AssetTypes.UNKNOWN),
-          ),
-        );
-      if (deleted.changes === 0) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
-      }
-    });
+    const deleted = await ctx.db
+      .delete(assets)
+      .where(
+        and(
+          eq(assets.id, assetId),
+          eq(assets.userId, ctx.user.id),
+          isNull(assets.bookmarkId),
+          eq(assets.assetType, AssetTypes.UNKNOWN),
+          eq(assets.cleanupPending, true),
+        ),
+      );
+    if (deleted.changes === 0) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+    }
   }
 
   static async replaceAsset(

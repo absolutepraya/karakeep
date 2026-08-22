@@ -231,4 +231,52 @@ describe("Asset Routes", () => {
       }),
     ).resolves.toBeUndefined();
   });
+
+  test<CustomTestContext>("blocks attachment while an asset is pending cleanup and allows retrying cleanup", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].assets;
+    const userId = await apiCallers[0].users.whoami().then((u) => u.id);
+    const bookmark = await apiCallers[0].bookmarks.createBookmark({
+      url: "https://pending-cleanup.example",
+      type: BookmarkTypes.LINK,
+    });
+
+    await db.insert(assets).values({
+      id: "pending-cleanup-asset",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId,
+      contentType: "image/png",
+      cleanupPending: true,
+    });
+
+    await expect(
+      api.attachAsset({
+        bookmarkId: bookmark.id,
+        asset: {
+          id: "pending-cleanup-asset",
+          assetType: "screenshot",
+        },
+      }),
+    ).rejects.toThrow(/unavailable for attachment/);
+
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "pending-cleanup-asset"),
+      }),
+    ).resolves.toMatchObject({
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      cleanupPending: true,
+    });
+
+    await api.deleteUnattachedAsset({ assetId: "pending-cleanup-asset" });
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "pending-cleanup-asset"),
+      }),
+    ).resolves.toBeUndefined();
+  });
 });

@@ -324,6 +324,9 @@ export const assets = sqliteTable(
     bookmarkId: text("bookmarkId").references(() => bookmarks.id, {
       onDelete: "cascade",
     }),
+    cleanupPending: integer("cleanupPending", { mode: "boolean" })
+      .notNull()
+      .default(false),
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

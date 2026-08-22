@@ -624,6 +624,13 @@
       "when": 1786788000000,
       "tag": "0088_list_collaboration_scopes",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "6",
+      "when": 1787422279248,
+      "tag": "0089_add_asset_cleanup_pending",
+      "breakpoints": true
     }
   ]
 }
