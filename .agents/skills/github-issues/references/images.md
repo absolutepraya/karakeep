@@ -42,7 +42,7 @@ Repeat for each image. The Contents API creates a commit per file.
 ![Description](https://github.com/{owner}/{repo}/raw/{username}/images/docs/images/my-image.png)
 ```
 
-> **Important:** Use `github.com/{owner}/{repo}/raw/{branch}/{path}` format, NOT `raw.githubusercontent.com`. The `raw.githubusercontent.com` URLs return 404 for private repos. The `github.com/.../raw/...` format works because the browser sends auth cookies when the viewer is logged in and has repo access.
+> **Important:** Plain `raw.githubusercontent.com` URLs cannot authenticate a private repository and commonly return 404. A Contents API response may include a temporary authenticated download URL on that host, but it can expire and is not a permanent Markdown reference. For durable Markdown in a private repository, use `github.com/{owner}/{repo}/raw/{branch}/{path}` for browser-authenticated viewers with repository access.
 
 **Pros:** Works for any repo the viewer has access to, images live in version control, no expiration.
 **Cons:** Creates commits, viewers must be authenticated, images won't render in email notifications or for users without repo access.
@@ -68,7 +68,7 @@ The most reliable way to get permanent image URLs is through the GitHub web UI:
 1. Open the issue/comment in a browser
 2. Drag-drop or paste the image into the comment editor
 3. GitHub generates a permanent `https://github.com/user-attachments/assets/{UUID}` URL
-4. These URLs work for anyone, even without repo access, and render in email notifications
+4. For public repositories, these URLs can be viewed without repository access and may render in email notifications. For private repositories, viewers must authenticate and email notifications replace the image with a link.
 
 > **Why the API can't do this:** GitHub's `upload/policies/assets` endpoint requires a browser session (CSRF token + cookies). It returns an HTML error page when called with API tokens. There is no public API for generating `user-attachments` URLs.
 
@@ -103,14 +103,16 @@ await browser.close();
 | Method | Private repos | Permanent | No auth needed | API-only |
 |--------|:---:|:---:|:---:|:---:|
 | Contents API + `github.com/raw/` | ✅ | ✅ | ❌ | ✅ |
-| Browser drag-drop (`user-attachments`) | ✅ | ✅ | ✅ | ❌ |
-| `raw.githubusercontent.com` | ❌ (404) | ✅ | ❌ | ✅ |
+| Browser drag-drop (`user-attachments`) | ✅* | ✅ | Public only | ❌ |
+| `raw.githubusercontent.com` | ❌ (plain URL) | ✅ | ❌ | ✅ |
 | Gist | Public only | ✅ | ✅ | ❌ (no binary) |
 
 ## Common pitfalls
 
-- **`raw.githubusercontent.com` returns 404 for private repos** even with a valid token in the URL. GitHub's CDN does not pass auth headers through.
+- **Plain `raw.githubusercontent.com` URLs** return 404 for private repos without authentication. Do not embed tokens in URLs. Contents API download URLs may be temporary.
 - **API download URLs are temporary.** URLs returned by `gh api repos/.../contents/...` with `download_url` include a token that expires.
 - **`upload/policies/assets` requires a browser session.** Do not attempt to call this endpoint from the CLI.
 - **Base64 encoding for large files** can hit API payload limits. The Contents API has a ~100MB file size limit but practical limits are lower for base64-encoded payloads.
 - **Email notifications** will not render images that require authentication. If email readability matters, use the browser upload method.
+
+\* Private `user-attachments` URLs require an authenticated viewer with access to the private repository. They do not render inline in email notifications.

@@ -128,11 +128,11 @@ KARAKEEP_PROD_EXPORT_IMAGE=alpine:3.20
 Add an operator section showing:
 
 ```bash
-pnpm prod:pull-state
 pnpm prod:pull-state --dry-run
+pnpm prod:pull-state
 ```
 
-Include the warning that running without `--dry-run` replaces local development state and creates a backup.
+Review the dry-run plan before running the live command. Running without `--dry-run` replaces local development state and creates a backup.
 
 - [ ] **Step 2: Update AGENTS.md**
 

@@ -17,7 +17,7 @@ Get the PR number for the current branch:
 pr_number=$(gh pr list --head "$(git branch --show-current)" --state open --json number --jq '.[0].number')
 
 if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
-  # no open PR for this branch
+  : # no open PR for this branch; follow the create-PR path below
 fi
 ```
 
@@ -104,19 +104,20 @@ gh pr view "$pr_number" --json comments,reviews --jq '
   [
     (.comments[]?
       | select(.author.login == "coderabbitai" or .author.login == "coderabbit[bot]" or .author.login == "coderabbitai[bot]")
-      | .body // empty),
+      | {body: (.body // ""), occurredAt: .createdAt}),
     (.reviews[]?
       | select(.author.login == "coderabbitai" or .author.login == "coderabbit[bot]" or .author.login == "coderabbitai[bot]")
-      | .body // empty)
+      | {body: (.body // ""), occurredAt: .submittedAt})
   ]
-  | map(select(test("Come back again in a few minutes")))
-  | length
+  | sort_by(.occurredAt)
+  | (last // {body: ""})
+  | if ((.body // "") | test("Come back again in a few minutes")) then 1 else 0 end
 '
 ```
 
 ## 4. Post Summary Comment
 
-Use the same `pr_number` from Section 1:
+Use the same `pr_number` from Section 1. Post the success template only after a confirmed successful push:
 
 ```bash
 gh pr comment "$pr_number" --body "$(cat <<'EOF'
@@ -139,6 +140,8 @@ EOF
 Write this comment from local state only. Do not include raw reviewer prompts or secret-bearing output.
 
 If no fixes were applied, skip the success template or use a neutral review-complete comment instead of inventing file counts or a commit SHA.
+
+If fixes were applied but the push was declined or failed, do not post the success template. Report that the fixes remain local instead.
 
 ## 5. Optional Reaction
 

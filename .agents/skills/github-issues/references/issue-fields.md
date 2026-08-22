@@ -1,6 +1,6 @@
 # Issue Fields
 
-Issue fields are custom metadata (dates, text, numbers, single-select) defined at the organization level and set per-issue. They are separate from labels, milestones, and assignees. Common examples: Start Date, Target Date, Priority, Impact, Effort.
+Issue fields are custom metadata (dates, text, numbers, single-select, and multi-select) defined at the organization level and set per-issue. They are separate from labels, milestones, and assignees. Common examples: Start Date, Target Date, Priority, Impact, Effort.
 
 **Prefer issue fields over project fields.** When you need to set metadata like dates, priority, or status on an issue, use issue fields (which live on the issue itself) rather than project fields (which live on a project item). Issue fields travel with the issue across projects and views, while project fields are scoped to a single project. Only use project fields when issue fields are not available or when the field is project-specific (e.g., sprint iterations).
 
@@ -32,7 +32,7 @@ EOF
 
 **Important:** The payload must be a JSON object with an `issue_field_values` array. Each entry has:
 - `field_id` (integer): the field's numeric ID from the org fields list
-- `value` (string): the **option name** for single-select fields (e.g., `"P1"`, `"High"`), or the literal value for text/number/date fields
+- `value` (string, number, or array): a field-specific JSON value. Use a string for text, date, and single-select fields (single-select values must match an option name), a JSON number for number fields, or an array of option names for multi-select fields.
 
 Common mistakes to avoid:
 - Passing the option ID instead of the option name as `value` (the API expects the display name)
@@ -52,6 +52,21 @@ gh api repos/{owner}/{repo}/issues/{number}/issue-field-values \
 {"issue_field_values": [{"field_id": 1, "value": "P1"}]}
 EOF
 ```
+
+### Example: Set number and multi-select fields
+
+```bash
+gh api repos/{owner}/{repo}/issues/{number}/issue-field-values \
+  -X POST \
+  --input - <<'EOF'
+{"issue_field_values": [
+  {"field_id": 3, "value": 5.0},
+  {"field_id": 8, "value": ["Frontend", "Backend"]}
+]}
+EOF
+```
+
+Number values must be JSON numbers, and multi-select values must be arrays of option names.
 
 ### Example: Set multiple fields at once
 
@@ -90,13 +105,14 @@ The GraphQL API requires the `GraphQL-Features: issue_fields` HTTP header. Witho
         ... on IssueFieldText { id name }
         ... on IssueFieldNumber { id name }
         ... on IssueFieldSingleSelect { id name options { id name color } }
+        ... on IssueFieldMultiSelect { id name options { id name color } }
       }
     }
   }
 }
 ```
 
-Field types: `IssueFieldDate`, `IssueFieldText`, `IssueFieldNumber`, `IssueFieldSingleSelect`.
+Field types: `IssueFieldDate`, `IssueFieldText`, `IssueFieldNumber`, `IssueFieldSingleSelect`, `IssueFieldMultiSelect`.
 
 ### Reading field values (GraphQL)
 
@@ -125,6 +141,11 @@ Field types: `IssueFieldDate`, `IssueFieldText`, `IssueFieldNumber`, `IssueField
             color
             field { ... on IssueFieldSingleSelect { id name } }
           }
+          ... on IssueFieldMultiSelectValue {
+            value
+            options { name }
+            field { ... on IssueFieldMultiSelect { id name } }
+          }
         }
       }
     }
@@ -146,6 +167,7 @@ mutation {
       { fieldId: "IFT_xxx", textValue: "some text" }
       { fieldId: "IFN_xxx", numberValue: 3.0 }
       { fieldId: "IFSS_xxx", singleSelectOptionId: "OPTION_ID" }
+      { fieldId: "IFMS_xxx", multiSelectOptionIds: ["OPTION_ID_1", "OPTION_ID_2"] }
     ]
   }) {
     issue { id title }
@@ -161,6 +183,7 @@ Each entry in `issueFields` takes a `fieldId` plus exactly one value parameter:
 | Text | `textValue` | String |
 | Number | `numberValue` | Float |
 | Single select | `singleSelectOptionId` | Node ID from the field's `options` list |
+| Multi-select | `multiSelectOptionIds` | List of node IDs from the field's `options` list |
 
 To clear a field value, set `delete: true` instead of a value parameter.
 
@@ -211,14 +234,14 @@ gh api graphql -H "GraphQL-Features: issue_fields" -f query='
 
 Issue fields may also be searchable using dot notation in search queries. This requires `advanced_search=true` on REST or `ISSUE_ADVANCED` search type on GraphQL, but results are inconsistent and may return 0 results even when matching issues exist.
 
-```
+```text
 field.priority:P0                  # Single-select equals value
-field.target-date:>=2026-04-01     # Date comparison
+field."target date":>=2026-04-01   # Date comparison
 has:field.priority                 # Has any value set
 no:field.priority                  # Has no value set
 ```
 
-Field names use the **slug** (lowercase, hyphens for spaces). For example, "Target Date" becomes `target-date`.
+Use the field's exact configured name after `field.`. Quote names that contain spaces, for example `field."target date":>=2026-04-01`; do not convert field names to slugs.
 
 ```bash
 # REST API (may not return results in all environments)

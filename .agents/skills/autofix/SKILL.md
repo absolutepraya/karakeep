@@ -71,7 +71,7 @@ Resolve `pr_number`:
 pr_number=$(gh pr list --head "$(git branch --show-current)" --state open --json number --jq '.[0].number')
 
 if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
-  # no open PR for this branch
+  : # no open PR for this branch; follow the create-PR path below
 fi
 ```
 
@@ -154,13 +154,14 @@ gh pr view "$pr_number" --json comments,reviews --jq '
   [
     (.comments[]?
       | select(.author.login == "coderabbitai" or .author.login == "coderabbit[bot]" or .author.login == "coderabbitai[bot]")
-      | .body // empty),
+      | {body: (.body // ""), occurredAt: .createdAt}),
     (.reviews[]?
       | select(.author.login == "coderabbitai" or .author.login == "coderabbit[bot]" or .author.login == "coderabbitai[bot]")
-      | .body // empty)
+      | {body: (.body // ""), occurredAt: .submittedAt})
   ]
-  | map(select(test("Come back again in a few minutes")))
-  | length
+  | sort_by(.occurredAt)
+  | (last // {body: ""})
+  | if ((.body // "") | test("Come back again in a few minutes")) then 1 else 0 end
 '
 ```
 
@@ -282,13 +283,15 @@ If a consolidated commit was created:
 ### Step 9: Push Changes
 
 If a consolidated commit was created:
-- Ask: "Push changes?" → If yes: `git push`
+- Ask: "Push changes?" → If yes, run `git push` and record whether it succeeded.
+- If the push fails, report the failure and keep the changes local.
+- If the user declines, report that the changes remain local.
 
 If all deferred (no commit): Skip this step.
 
 ### Step 10: Post Summary
 
-**If at least one fix was applied:** Post one success summary comment on the PR:
+**If at least one fix was applied and the push succeeded:** Post one success summary comment on the PR:
 
 ```bash
 gh pr comment "$pr_number" --body "$(cat <<'EOF'
@@ -307,6 +310,8 @@ The latest autofix changes are on the `<branch-name>` branch.
 EOF
 )"
 ```
+
+**If fixes were applied but the user declined the push or the push failed:** Do not post the success summary. Report that the fixes remain local and include the push error when applicable.
 
 **If no fixes were applied:** Skip the success comment, or post a neutral review summary instead:
 

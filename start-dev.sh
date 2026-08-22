@@ -69,6 +69,14 @@ if [ -z "$MARKA_DEV_CHROME_PORT" ]; then
         MARKA_DEV_CHROME_PORT="$DEFAULT_CHROME_PORT"
     fi
 fi
+if ! [[ "$MARKA_DEV_CHROME_PORT" =~ ^[0-9]+$ ]]; then
+    echo "Error: MARKA_DEV_CHROME_PORT must be between 1 and 65535." >&2
+    exit 1
+fi
+if ((10#$MARKA_DEV_CHROME_PORT < 1 || 10#$MARKA_DEV_CHROME_PORT > 65535)); then
+    echo "Error: MARKA_DEV_CHROME_PORT must be between 1 and 65535." >&2
+    exit 1
+fi
 if [ -z "$BROWSER_WEB_URL" ] || [[ "$BROWSER_WEB_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+/?$ ]]; then
     BROWSER_WEB_URL="http://127.0.0.1:${MARKA_DEV_CHROME_PORT}"
 fi

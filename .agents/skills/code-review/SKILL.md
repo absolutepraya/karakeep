@@ -7,7 +7,7 @@ metadata:
 
 # CodeRabbit Code Review
 
-AI-powered code review using CodeRabbit. Enables developers to implement features, review code, and fix issues in autonomous cycles without manual intervention.
+AI-powered code review using CodeRabbit. Enables developers to implement features, review code, and fix verified findings through an approval-gated workflow.
 
 ## Capabilities
 
@@ -37,7 +37,7 @@ coderabbit auth status 2>&1
 
 If the CLI is already installed, confirm it is an expected version from an official source before proceeding.
 
-> **Note:** The `--agent` flag requires CodeRabbit CLI v0.4.0 or later. If the installed version is older, ask the user to upgrade.
+> **Note:** The `--agent` flag requires CodeRabbit CLI v0.3.11 or later. CodeRabbit CLI v0.4.0 or later is required for the browser-based `coderabbit auth login --agent` flow. If the installed version is too old for the requested operation, ask the user to upgrade.
 
 **If CLI not installed**, tell user:
 
@@ -103,16 +103,17 @@ Group findings by severity:
 
 Create a task list for issues found that need to be addressed.
 
-### 4. Fix Issues (Autonomous Workflow)
+### 4. Fix Issues (Approval-Gated Workflow)
 
 When user requests implementation + review:
 
 1. Implement the requested feature
 2. Run `coderabbit review --agent` with any requested scope flags (`-t`, `--base`, `--base-commit`, `--dir`)
-3. Create task list from findings
-4. Fix critical and warning issues systematically
-5. Re-run review to verify fixes
-6. Repeat until clean or only info-level issues remain
+3. Create a task list from the findings
+4. For each finding, verify it against the current code, show the proposed diff, and wait for explicit approval before applying that fix
+5. Run validation after approved fixes
+6. Re-run the review to verify fixes
+7. Repeat until clean or only info-level issues remain
 
 ### 5. Review Specific Changes
 

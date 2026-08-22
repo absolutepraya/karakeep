@@ -11,7 +11,7 @@ There are three ways to find issues, each with different capabilities:
 | **Scope** | Single repo only | Cross-repo, cross-org | Cross-repo, cross-org |
 | **Issue field filters** (`field.priority:P0`) | No | No | **Yes** (dot notation) |
 | **Issue type filter** (`type:Bug`) | No | Yes | Yes |
-| **Boolean logic** (AND/OR/NOT, nesting) | No | Yes (implicit AND only) | **Yes** (explicit AND/OR/NOT) |
+| **Boolean logic** (AND/OR/NOT, nesting) | No | Implicit AND only | **Yes** (explicit AND/OR/NOT) |
 | **Label/state/date filters** | Yes | Yes | Yes |
 | **Assignee/author/mentions** | No | Yes | Yes |
 | **Negation** (`-label:x`, `no:label`) | No | Yes | Yes |
@@ -31,7 +31,7 @@ The `query` parameter is a string of search terms and qualifiers. A space betwee
 
 ### Scoping
 
-```
+```text
 repo:owner/repo       # Single repo (auto-added if you pass owner+repo params)
 org:github            # All repos in an org
 user:octocat          # All repos owned by user
@@ -42,7 +42,7 @@ in:comments           # Search only in comments
 
 ### State & Close Reason
 
-```
+```text
 is:open               # Open issues (auto-added: is:issue)
 is:closed             # Closed issues
 reason:completed      # Closed as completed
@@ -51,7 +51,7 @@ reason:"not planned"  # Closed as not planned
 
 ### People
 
-```
+```text
 author:username       # Created by
 assignee:username     # Assigned to
 mentions:username     # Mentions user
@@ -63,7 +63,7 @@ team:org/team         # Team mentioned
 
 ### Labels, Milestones, Projects, Types
 
-```
+```text
 label:"bug"                 # Has label (quote multi-word labels)
 label:bug label:priority    # Has BOTH labels (AND)
 label:bug,enhancement       # Has EITHER label (OR)
@@ -75,7 +75,7 @@ type:"Bug"                  # Issue type
 
 ### Missing Metadata
 
-```
+```text
 no:label              # No labels assigned
 no:milestone          # No milestone
 no:assignee           # Unassigned
@@ -86,7 +86,7 @@ no:project            # Not in any project
 
 All date qualifiers support `>`, `<`, `>=`, `<=`, and range (`..`) operators with ISO 8601 format:
 
-```
+```text
 created:>2026-01-01              # Created after Jan 1
 updated:>=2026-03-01             # Updated since Mar 1
 closed:2026-01-01..2026-02-01   # Closed in January
@@ -95,7 +95,7 @@ created:<2026-01-01              # Created before Jan 1
 
 ### Linked Content
 
-```
+```text
 linked:pr             # Issue has a linked PR
 -linked:pr            # Issues not yet linked to any PR
 linked:issue          # PR is linked to an issue
@@ -103,18 +103,18 @@ linked:issue          # PR is linked to an issue
 
 ### Numeric Filters
 
-```
+```text
 comments:>10          # More than 10 comments
 comments:0            # No comments
 interactions:>100     # Reactions + comments > 100
 reactions:>50         # More than 50 reactions
 ```
 
-### Boolean Logic & Nesting
+### Boolean Logic & Nesting (Advanced Search Only)
 
-Use `AND`, `OR`, and parentheses (up to 5 levels deep, max 5 operators):
+Use `AND`, `OR`, and parentheses only with REST or GraphQL advanced search (up to 5 levels deep, max 5 operators). The `search_issues` MCP tool supports implicit AND but not these explicit operators:
 
-```
+```text
 label:bug AND assignee:octocat
 assignee:octocat OR assignee:hubot
 (type:"Bug" AND label:P1) OR (type:"Feature" AND label:P1)
@@ -126,37 +126,37 @@ A space between terms without an explicit operator is treated as AND.
 ## Common Query Patterns
 
 **Unassigned bugs:**
-```
+```text
 repo:owner/repo type:"Bug" no:assignee is:open
 ```
 
 **Issues closed this week:**
-```
+```text
 repo:owner/repo is:closed closed:>=2026-03-01
 ```
 
 **Stale open issues (no updates in 90 days):**
-```
+```text
 repo:owner/repo is:open updated:<2026-01-01
 ```
 
 **Open issues without a linked PR (needs work):**
-```
+```text
 repo:owner/repo is:open -linked:pr
 ```
 
 **Issues I'm involved in across an org:**
-```
+```text
 org:github involves:@me is:open
 ```
 
 **High-activity issues:**
-```
+```text
 repo:owner/repo is:open comments:>20
 ```
 
 **Issues by type and priority label:**
-```
+```text
 repo:owner/repo type:"Epic" label:P1 is:open
 ```
 
@@ -192,12 +192,12 @@ Use `type: ISSUE_ADVANCED` instead of `type: ISSUE`:
 
 ### Issue Field Qualifiers
 
-The syntax uses **dot notation** with the field's slug name (lowercase, hyphens for spaces):
+The syntax uses **dot notation** with the field's exact configured name. Quote names containing spaces rather than converting them to slugs:
 
-```
+```text
 field.priority:P0                  # Single-select field equals value
 field.priority:P1                  # Different option value
-field.target-date:>=2026-04-01     # Date comparison
+field."target date":>=2026-04-01   # Date comparison
 has:field.priority                 # Has any value set
 no:field.priority                  # Has no value set
 ```
@@ -207,17 +207,17 @@ no:field.priority                  # Has no value set
 ### Common Field Search Patterns
 
 **P0 epics across an org:**
-```
+```text
 org:github field.priority:P0 type:Epic is:open
 ```
 
 **Issues with a target date this quarter:**
-```
-org:github field.target-date:>=2026-04-01 field.target-date:<=2026-06-30 is:open
+```text
+org:github field."target date":>=2026-04-01 field."target date":<=2026-06-30 is:open
 ```
 
 **Open bugs missing priority:**
-```
+```text
 org:github no:field.priority type:Bug is:open
 ```
 

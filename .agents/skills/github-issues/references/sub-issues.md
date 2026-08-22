@@ -72,7 +72,7 @@ Use `after_id` or `before_id` to position the sub-issue relative to another.
   repository(owner: "OWNER", name: "REPO") {
     issue(number: 123) {
       parent { number title }
-      subIssues(first: 50) {
+      subIssues(first: 100) {
         nodes { number title state }
       }
       subIssuesSummary { total completed percentCompleted }

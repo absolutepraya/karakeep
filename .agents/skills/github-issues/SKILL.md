@@ -18,6 +18,11 @@ Manage GitHub issues using the `@modelcontextprotocol/server-github` MCP server.
 | `mcp__github__search_issues` | Search issues across repos using GitHub search syntax |
 | `mcp__github__projects_list` | List projects, project fields, project items, status updates |
 | `mcp__github__projects_get` | Get details of a project, field, item, or status update |
+
+### MCP Tools (write operations)
+
+| Tool | Purpose |
+|------|---------|
 | `mcp__github__projects_write` | Add/update/delete project items, create status updates |
 
 ### CLI / REST API (write operations)
@@ -30,9 +35,9 @@ The MCP server does not currently support creating, updating, or commenting on i
 | Update issue | `gh api repos/{owner}/{repo}/issues/{number} -X PATCH -f title=... -f state=...` |
 | Add comment | `gh api repos/{owner}/{repo}/issues/{number}/comments -X POST -f body=...` |
 | Close issue | `gh api repos/{owner}/{repo}/issues/{number} -X PATCH -f state=closed` |
-| Set issue type | Include `-f type=Bug` in the create call (REST API only, not supported by `gh issue create` CLI) |
+| Set issue type on create | Use `gh issue create --type Bug` or include `-f type=Bug` in a `gh api` create call |
 
-**Note:** `gh issue create` works for basic issue creation but does **not** support the `--type` flag. Use `gh api` when you need to set issue types.
+**Note:** `gh issue create` supports the `--type` flag for simple issue creation. Use `gh api` for issue-type updates and other operations the CLI does not expose.
 
 ## Workflow
 
@@ -59,7 +64,7 @@ gh api repos/{owner}/{repo}/issues \
 
 Add any of these flags to the `gh api` call:
 
-```
+```bash
 -f type="Bug"                    # Issue type (Bug, Feature, Task, Epic, etc.)
 -f labels[]="bug"                # Labels (repeat for multiple)
 -f assignees[]="username"        # Assignees (repeat for multiple)
@@ -105,7 +110,7 @@ gh api repos/{owner}/{repo}/issues/{number} \
   --jq '{number, html_url}'
 ```
 
-Only include fields you want to change. Available fields: `title`, `body`, `state` (open/closed), `labels`, `assignees`, `milestone`.
+Only include fields you want to change. Common fields include `title`, `body`, `state` (open/closed), `labels`, `assignees`, `milestone`, `type`, and `issue_field_values`.
 
 ## Examples
 
@@ -196,7 +201,7 @@ The following features require REST or GraphQL APIs beyond the basic MCP tools. 
 | Sub-issues & parent issues | Breaking work into hierarchical tasks | [references/sub-issues.md](references/sub-issues.md) |
 | Milestones | Create, read, update, close, reopen, delete milestones and manage milestone issues | [references/milestones.md](references/milestones.md) |
 | Issue dependencies | Tracking blocked-by / blocking relationships | [references/dependencies.md](references/dependencies.md) |
-| Issue types (advanced) | GraphQL operations beyond MCP `list_issue_types` / `type` param | [references/issue-types.md](references/issue-types.md) |
+| Issue types (advanced) | GraphQL operations beyond the CLI `--type` option and REST `type` parameter | [references/issue-types.md](references/issue-types.md) |
 | Projects V2 | Project boards, progress reports, field management | [references/projects.md](references/projects.md) |
 | Issue fields | Custom metadata: dates, priority, text, numbers (private preview) | [references/issue-fields.md](references/issue-fields.md) |
 | Images in issues | Embedding images in issue bodies and comments via CLI | [references/images.md](references/images.md) |

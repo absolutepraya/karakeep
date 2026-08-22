@@ -5,12 +5,12 @@ Dependencies let you mark that an issue is blocked by another issue. This create
 ## Using REST API
 
 **List issues blocking this issue:**
-```
+```text
 GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by
 ```
 
 **Add a blocking dependency:**
-```
+```text
 POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by
 Body: { "issue_id": 12345 }
 ```
@@ -18,7 +18,7 @@ Body: { "issue_id": 12345 }
 The `issue_id` is the numeric issue **ID** (not the issue number).
 
 **Remove a blocking dependency:**
-```
+```text
 DELETE /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by/{issue_id}
 ```
 
