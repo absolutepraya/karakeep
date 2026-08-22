@@ -129,4 +129,45 @@ describe("Asset Routes", () => {
         }),
     ).rejects.toThrow(/You can't attach this type of asset/);
   });
+
+  test<CustomTestContext>("rejects attachment roles that do not match the asset MIME type", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].assets;
+    const userId = await apiCallers[0].users.whoami().then((u) => u.id);
+    const bookmark = await apiCallers[0].bookmarks.createBookmark({
+      url: "https://attachment-types.example",
+      type: BookmarkTypes.LINK,
+    });
+
+    await db.insert(assets).values({
+      id: "video-attachment",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId,
+      contentType: "video/mp4",
+    });
+
+    await expect(
+      api.attachAsset({
+        bookmarkId: bookmark.id,
+        asset: { id: "video-attachment", assetType: "bannerImage" },
+      }),
+    ).rejects.toThrow(/does not match the attachment type/);
+
+    await api.attachAsset({
+      bookmarkId: bookmark.id,
+      asset: { id: "video-attachment", assetType: "userUploaded" },
+    });
+
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "video-attachment"),
+      }),
+    ).resolves.toMatchObject({
+      assetType: AssetTypes.USER_UPLOADED,
+      bookmarkId: bookmark.id,
+    });
+  });
 });

@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { assert, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
+  assets,
+  AssetTypes,
   bookmarkLinks,
   bookmarks,
   rssFeedImportsTable,
@@ -75,6 +77,72 @@ describe("Bookmark Routes", () => {
     expect(res.favourited).toEqual(false);
     expect(res.archived).toEqual(false);
     expect(res.content.type).toEqual(BookmarkTypes.LINK);
+  });
+
+  test<CustomTestContext>("rejects a top-level bookmark when the asset MIME type is not renderable and cleans it up", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].bookmarks;
+    const user = await apiCallers[0].users.whoami();
+
+    await db.insert(assets).values({
+      id: "video-as-image",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId: user.id,
+      contentType: "video/mp4",
+      size: 12,
+    });
+
+    await expect(
+      api.createBookmark({
+        type: BookmarkTypes.ASSET,
+        assetType: "image",
+        assetId: "video-as-image",
+      }),
+    ).rejects.toThrow(/Unsupported or already attached asset/);
+
+    await expect(
+      db.query.assets.findFirst({
+        where: eq(assets.id, "video-as-image"),
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  test<CustomTestContext>("cleans an uploaded asset when bookmark creation fails after validation", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].bookmarks;
+    const user = await apiCallers[0].users.whoami();
+
+    await db
+      .update(users)
+      .set({ bookmarkQuota: 0 })
+      .where(eq(users.id, user.id));
+    await db.insert(assets).values({
+      id: "quota-blocked-image",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId: user.id,
+      contentType: "image/png",
+      size: 12,
+    });
+
+    await expect(
+      api.createBookmark({
+        type: BookmarkTypes.ASSET,
+        assetType: "image",
+        assetId: "quota-blocked-image",
+      }),
+    ).rejects.toThrow(/Bookmark quota exceeded/);
+
+    await expect(
+      db.query.assets.findFirst({
+        where: eq(assets.id, "quota-blocked-image"),
+      }),
+    ).resolves.toBeUndefined();
   });
 
   test<CustomTestContext>("returns only the current account's active processing work", async ({

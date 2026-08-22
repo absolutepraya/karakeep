@@ -1,0 +1,183 @@
+import { ASSET_TYPES } from "./asset-types";
+
+export const BOOKMARK_ASSET_TYPES = ["image", "pdf"] as const;
+export type BookmarkAssetType = (typeof BOOKMARK_ASSET_TYPES)[number];
+
+export type ContentSupportCapability =
+  | "upload"
+  | "topLevel"
+  | "attachment"
+  | "banner"
+  | "rawDownload";
+
+interface ContentSupportDefinition {
+  id: "image" | "pdf" | "video" | "html" | "markdown" | "zip";
+  mimeTypes: readonly string[];
+  extensions: readonly string[];
+  capabilities: readonly ContentSupportCapability[];
+  bookmarkAssetType?: BookmarkAssetType;
+}
+
+export const CONTENT_SUPPORT_REGISTRY: readonly ContentSupportDefinition[] = [
+  {
+    id: "image",
+    mimeTypes: [
+      ASSET_TYPES.IMAGE_GIF,
+      ASSET_TYPES.IMAGE_JPEG,
+      ASSET_TYPES.IMAGE_PNG,
+      ASSET_TYPES.IMAGE_WEBP,
+    ],
+    extensions: [".gif", ".jpeg", ".jpg", ".png", ".webp"],
+    capabilities: ["upload", "topLevel", "attachment", "banner", "rawDownload"],
+    bookmarkAssetType: "image",
+  },
+  {
+    id: "pdf",
+    mimeTypes: [ASSET_TYPES.APPLICATION_PDF],
+    extensions: [".pdf"],
+    capabilities: ["upload", "topLevel", "attachment", "rawDownload"],
+    bookmarkAssetType: "pdf",
+  },
+  {
+    id: "video",
+    mimeTypes: [
+      ASSET_TYPES.VIDEO_MP4,
+      ASSET_TYPES.VIDEO_WEBM,
+      ASSET_TYPES.VIDEO_MKV,
+    ],
+    extensions: [".mp4", ".webm", ".mkv"],
+    capabilities: ["upload", "attachment", "rawDownload"],
+  },
+  {
+    id: "html",
+    mimeTypes: [ASSET_TYPES.TEXT_HTML],
+    extensions: [".html", ".htm"],
+    capabilities: ["upload", "attachment", "rawDownload"],
+  },
+  {
+    id: "markdown",
+    mimeTypes: ["text/markdown"],
+    extensions: [".md", ".markdown"],
+    capabilities: ["topLevel"],
+  },
+  {
+    id: "zip",
+    mimeTypes: [ASSET_TYPES.APPLICATION_ZIP],
+    extensions: [".zip"],
+    capabilities: ["rawDownload"],
+  },
+];
+
+export function getSupportedContentFormats(
+  capability: ContentSupportCapability,
+) {
+  return CONTENT_SUPPORT_REGISTRY.filter((format) =>
+    format.capabilities.includes(capability),
+  );
+}
+
+export function getSupportedMimeTypes(
+  capability: ContentSupportCapability,
+): Set<string> {
+  return new Set(
+    getSupportedContentFormats(capability).flatMap(
+      (format) => format.mimeTypes,
+    ),
+  );
+}
+
+export function getSupportedMimeTypesForFormat(
+  formatId: Exclude<ContentSupportDefinition["id"], "zip">,
+): Set<string> {
+  const format = CONTENT_SUPPORT_REGISTRY.find(
+    (candidate) => candidate.id === formatId,
+  );
+  return new Set(format?.mimeTypes ?? []);
+}
+
+export function getFilePickerAccept(
+  capability: ContentSupportCapability,
+): string {
+  const values = new Set<string>();
+  for (const format of getSupportedContentFormats(capability)) {
+    format.mimeTypes.forEach((mimeType) => values.add(mimeType));
+    format.extensions.forEach((extension) => values.add(extension));
+  }
+  return [...values].join(",");
+}
+
+export function getDropzoneAccept(
+  capability: ContentSupportCapability,
+): Record<string, string[]> {
+  return Object.fromEntries(
+    getSupportedContentFormats(capability).flatMap((format) =>
+      format.mimeTypes.map((mimeType) => [mimeType, [...format.extensions]]),
+    ),
+  );
+}
+
+export function getBookmarkAssetTypeForMimeType(
+  contentType: string,
+): BookmarkAssetType | null {
+  const format = getSupportedContentFormats("topLevel").find(
+    (candidate) =>
+      candidate.bookmarkAssetType && candidate.mimeTypes.includes(contentType),
+  );
+  return format?.bookmarkAssetType ?? null;
+}
+
+export function getContentFormatForBookmarkAssetType(
+  assetType: BookmarkAssetType,
+) {
+  return CONTENT_SUPPORT_REGISTRY.find(
+    (format) => format.bookmarkAssetType === assetType,
+  );
+}
+
+export function isContentTypeCompatibleWithAttachment(
+  assetType: string,
+  contentType: string | null | undefined,
+): boolean {
+  if (!contentType) {
+    return true;
+  }
+
+  const format = CONTENT_SUPPORT_REGISTRY.find((candidate) =>
+    candidate.mimeTypes.includes(contentType),
+  );
+  if (!format || !format.capabilities.includes("attachment")) {
+    return false;
+  }
+
+  switch (assetType) {
+    case "bannerImage":
+    case "screenshot":
+    case "assetScreenshot":
+      return format.id === "image";
+    case "pdf":
+      return format.id === "pdf";
+    case "video":
+      return format.id === "video";
+    case "precrawledArchive":
+      return format.id === "html";
+    case "userUploaded":
+      return true;
+    default:
+      return false;
+  }
+}
+
+export function isMarkdownFile(fileName: string, mimeType?: string): boolean {
+  const format = CONTENT_SUPPORT_REGISTRY.find(
+    (candidate) => candidate.id === "markdown",
+  );
+  if (!format) {
+    return false;
+  }
+  return (
+    (mimeType ? format.mimeTypes.includes(mimeType) : false) ||
+    format.extensions.some((extension) =>
+      fileName.toLowerCase().endsWith(extension),
+    )
+  );
+}

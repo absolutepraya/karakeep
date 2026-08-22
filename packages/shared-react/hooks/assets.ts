@@ -72,3 +72,21 @@ export function useDetachBookmarkAsset(
     }),
   );
 }
+
+export function useDeleteUnattachedAsset(
+  opts?: Parameters<
+    TRPCApi["assets"]["deleteUnattachedAsset"]["mutationOptions"]
+  >[0],
+) {
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+  return useMutation(
+    api.assets.deleteUnattachedAsset.mutationOptions({
+      ...opts,
+      onSuccess: (res, req, meta, context) => {
+        queryClient.invalidateQueries(api.assets.list.pathFilter());
+        return opts?.onSuccess?.(res, req, meta, context);
+      },
+    }),
+  );
+}

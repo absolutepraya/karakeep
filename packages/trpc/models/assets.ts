@@ -2,9 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { assets } from "@karakeep/db/schema";
+import { assets, AssetTypes } from "@karakeep/db/schema";
 import { deleteAsset } from "@karakeep/shared/assetdb";
 import serverConfig from "@karakeep/shared/config";
+import { isContentTypeCompatibleWithAttachment } from "@karakeep/shared/content-support";
 import { createSignedToken } from "@karakeep/shared/signedTokens";
 import { zAssetSignedTokenSchema } from "@karakeep/shared/types/assets";
 import { zAssetTypesSchema } from "@karakeep/shared/types/bookmarks";
@@ -103,6 +104,17 @@ export class Asset {
         message: "You can't attach this type of asset",
       });
     }
+    if (
+      !isContentTypeCompatibleWithAttachment(
+        input.asset.assetType,
+        asset.asset.contentType,
+      )
+    ) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Asset content type does not match the attachment type",
+      });
+    }
 
     const [updatedAsset] = await ctx.db
       .update(assets)
@@ -118,6 +130,35 @@ export class Asset {
       assetType: mapDBAssetTypeToUserType(updatedAsset.assetType),
       fileName: updatedAsset.fileName,
     };
+  }
+
+  static async deleteUnattached(ctx: AuthedContext, assetId: string) {
+    const asset = await Asset.fromId(ctx, assetId);
+    asset.ensureOwnership();
+    if (
+      asset.asset.bookmarkId !== null ||
+      asset.asset.assetType !== AssetTypes.UNKNOWN
+    ) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Asset is already attached",
+      });
+    }
+
+    const deleted = await ctx.db
+      .delete(assets)
+      .where(
+        and(
+          eq(assets.id, assetId),
+          eq(assets.userId, ctx.user.id),
+          eq(assets.assetType, AssetTypes.UNKNOWN),
+        ),
+      );
+    if (deleted.changes === 0) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+    }
+
+    await deleteAsset({ userId: ctx.user.id, assetId }).catch(() => undefined);
   }
 
   static async replaceAsset(
@@ -144,6 +185,17 @@ export class Asset {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "You can't attach this type of asset",
+      });
+    }
+    if (
+      !isContentTypeCompatibleWithAttachment(
+        mapDBAssetTypeToUserType(oldAsset.asset.assetType),
+        newAsset.asset.contentType,
+      )
+    ) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Asset content type does not match the attachment type",
       });
     }
 

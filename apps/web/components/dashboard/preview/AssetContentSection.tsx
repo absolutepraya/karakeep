@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "@/lib/i18n/client";
 
 import { BookmarkTypes, ZBookmark } from "@karakeep/shared/types/bookmarks";
+import { getContentFormatForBookmarkAssetType } from "@karakeep/shared/content-support";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 
 // 20 MB
@@ -111,7 +112,9 @@ export function AssetContentSection({ bookmark }: { bookmark: ZBookmark }) {
   if (bookmark.content.type != BookmarkTypes.ASSET) {
     throw new Error("Invalid content type");
   }
-  switch (bookmark.content.assetType) {
+  switch (
+    getContentFormatForBookmarkAssetType(bookmark.content.assetType)?.id
+  ) {
     case "image":
       return <ImageContentSection bookmark={bookmark} />;
     case "pdf":

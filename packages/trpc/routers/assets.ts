@@ -56,6 +56,12 @@ export const assetsAppRouter = router({
     .mutation(async ({ input, ctx }) => {
       return await Asset.attachAsset(ctx, input);
     }),
+  deleteUnattachedAsset: assetsProcedure
+    .input(z.object({ assetId: z.string() }))
+    .output(z.void())
+    .mutation(async ({ input, ctx }) => {
+      await Asset.deleteUnattached(ctx, input.assetId);
+    }),
   replaceAsset: assetsProcedure
     .input(
       z.object({

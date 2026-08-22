@@ -15,6 +15,7 @@ import {
 
 import type { ZApiKeyScope } from "@karakeep/shared/types/apiKeys";
 import { API_KEY_FULL_ACCESS_SCOPE } from "@karakeep/shared/types/apiKeys";
+import { BOOKMARK_ASSET_TYPES } from "@karakeep/shared/content-support";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
 function createdAtField() {
@@ -410,7 +411,7 @@ export const bookmarkAssets = sqliteTable("bookmarkAssets", {
     .primaryKey()
     .$defaultFn(() => createId())
     .references(() => bookmarks.id, { onDelete: "cascade" }),
-  assetType: text("assetType", { enum: ["image", "pdf"] }).notNull(),
+  assetType: text("assetType", { enum: [...BOOKMARK_ASSET_TYPES] }).notNull(),
   assetId: text("assetId").notNull(),
   content: text("content"),
   metadata: text("metadata"),

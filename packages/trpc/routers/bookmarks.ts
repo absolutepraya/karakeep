@@ -29,8 +29,8 @@ import {
   QuotaService,
   triggerSearchReindex,
 } from "@karakeep/shared-server";
-import { SUPPORTED_BOOKMARK_ASSET_TYPES } from "@karakeep/shared/assetdb";
 import serverConfig from "@karakeep/shared/config";
+import { getBookmarkAssetTypeForMimeType } from "@karakeep/shared/content-support";
 import { InferenceClientFactory } from "@karakeep/shared/inference";
 import { buildSummaryPrompt } from "@karakeep/shared/prompts.server";
 import { EnqueueOptions } from "@karakeep/shared/queueing";
@@ -233,7 +233,37 @@ export const bookmarksAppRouter = router({
         }
       }
 
-      const bookmark = await ctx.db.transaction(
+      let unattachedAssetIdToCleanup: string | null = null;
+      if (input.type === BookmarkTypes.ASSET) {
+        const uploadedAsset = await Asset.fromId(ctx, input.assetId);
+        uploadedAsset.ensureOwnership();
+        if (
+          uploadedAsset.asset.bookmarkId === null &&
+          uploadedAsset.asset.assetType === AssetTypes.UNKNOWN
+        ) {
+          unattachedAssetIdToCleanup = input.assetId;
+        }
+        const expectedAssetType = getBookmarkAssetTypeForMimeType(
+          uploadedAsset.asset.contentType ?? "",
+        );
+        if (
+          uploadedAsset.asset.bookmarkId !== null ||
+          uploadedAsset.asset.assetType !== AssetTypes.UNKNOWN ||
+          expectedAssetType !== input.assetType
+        ) {
+          if (unattachedAssetIdToCleanup) {
+            await Asset.deleteUnattached(ctx, unattachedAssetIdToCleanup).catch(
+              () => undefined,
+            );
+          }
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Unsupported or already attached asset",
+          });
+        }
+      }
+
+      const bookmarkTransaction = ctx.db.transaction(
         async (tx) => {
           // Check user quota
           const quotaResult = await QuotaService.canCreateBookmark(
@@ -336,10 +366,9 @@ export const bookmarksAppRouter = router({
               const uploadedAsset = await Asset.fromId(ctx, input.assetId);
               uploadedAsset.ensureOwnership();
               if (
-                !uploadedAsset.asset.contentType ||
-                !SUPPORTED_BOOKMARK_ASSET_TYPES.has(
-                  uploadedAsset.asset.contentType,
-                )
+                getBookmarkAssetTypeForMimeType(
+                  uploadedAsset.asset.contentType ?? "",
+                ) !== input.assetType
               ) {
                 throw new TRPCError({
                   code: "BAD_REQUEST",
@@ -398,6 +427,17 @@ export const bookmarksAppRouter = router({
           behavior: "immediate",
         },
       );
+      let bookmark;
+      try {
+        bookmark = await bookmarkTransaction;
+      } catch (error) {
+        if (unattachedAssetIdToCleanup) {
+          await Asset.deleteUnattached(ctx, unattachedAssetIdToCleanup).catch(
+            () => undefined,
+          );
+        }
+        throw error;
+      }
 
       bookmarkCreationCounter.labels(input.source ?? "unknown").inc();
       addLogFields<"bookmark.create">({
