@@ -1,4 +1,11 @@
-import { copyFile, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
@@ -167,6 +174,31 @@ async function trimWithImageMagick(destination) {
   }
 }
 
+async function padToSquare(destination) {
+  const image = sharp(destination);
+  const { width, height } = await image.metadata();
+
+  if (!width || !height || width === height) {
+    return;
+  }
+
+  const size = Math.max(width, height);
+  const horizontalPadding = size - width;
+  const verticalPadding = size - height;
+  const padded = await image
+    .extend({
+      top: Math.floor(verticalPadding / 2),
+      bottom: Math.ceil(verticalPadding / 2),
+      left: Math.floor(horizontalPadding / 2),
+      right: Math.ceil(horizontalPadding / 2),
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png({ compressionLevel: 9, palette: false })
+    .toBuffer();
+
+  await writeFile(destination, padded);
+}
+
 export async function generateAssets({
   outputRoot = repoRoot,
   writeIco = true,
@@ -278,6 +310,10 @@ export async function generateAssets({
 
     if (output.trim) {
       await trimWithImageMagick(destination);
+    }
+
+    if (output.padToSquare) {
+      await padToSquare(destination);
     }
   }
 

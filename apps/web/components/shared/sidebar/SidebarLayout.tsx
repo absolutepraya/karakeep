@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import ErrorFallback from "@/components/dashboard/ErrorFallback";
 import Header from "@/components/dashboard/header/Header";
 import DemoModeBanner from "@/components/DemoModeBanner";
-import LoadingSpinner from "@/components/ui/spinner";
+import { FadeArc } from "@/components/loading-ui/fade-arc";
 import ValidAccountCheck from "@/components/utils/ValidAccountCheck";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -32,7 +32,18 @@ export default function SidebarLayout({
               small visual gap so the last mobile row can scroll clear of it. */}
           <div className="min-h-30 container p-4 pb-[calc(env(safe-area-inset-bottom)+6.5rem)] sm:p-5 sm:pb-5">
             <ErrorBoundary fallback={<ErrorFallback />}>
-              <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
+              <Suspense
+                fallback={
+                  <div className="min-h-30 flex items-center justify-center">
+                    <FadeArc
+                      aria-label="Loading bookmark cards"
+                      className="size-8 text-primary"
+                    />
+                  </div>
+                }
+              >
+                {children}
+              </Suspense>
             </ErrorBoundary>
           </div>
           {mobileSidebar}

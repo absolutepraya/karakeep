@@ -8,7 +8,7 @@ default_base = "origin/main"
 # Setup prepares isolated dependencies and local state only. It does not start
 # a development server or any long-running service.
 setup = [
-  "pnpm install --frozen-lockfile",
+  "mise exec node@24 -- corepack pnpm install --frozen-lockfile",
   "bash \"$WT_ROOT_PATH/scripts/setup-worktree.sh\"",
   "ln -sfn ../../.env apps/web/.env",
   "ln -sfn ../../.env apps/workers/.env",

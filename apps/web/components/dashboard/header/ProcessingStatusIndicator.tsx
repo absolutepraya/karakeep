@@ -8,7 +8,6 @@ import {
   CloudOff,
   FileDown,
   Globe,
-  LoaderCircle,
   RefreshCw,
   Sparkles,
   Tags,
@@ -17,6 +16,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import ActionConfirmingDialog from "@/components/ui/action-confirming-dialog";
+import { FadeArc } from "@/components/loading-ui/fade-arc";
 import {
   Popover,
   PopoverContent,
@@ -494,7 +494,7 @@ export default function ProcessingStatusIndicator() {
             )}
             {processing.preparingCount > 0 && (
               <span className="flex items-center gap-1 text-sm font-medium tabular-nums">
-                <LoaderCircle className="size-3.5 animate-spin text-primary" />
+                <FadeArc aria-hidden="true" className="size-3.5 text-primary" />
                 {processing.preparingCount}
               </span>
             )}
@@ -580,8 +580,9 @@ export default function ProcessingStatusIndicator() {
               className="mt-2 border-t border-border/70 pt-2"
             >
               <div className="flex items-center gap-2 px-2 py-1">
-                <LoaderCircle
-                  className={`size-4 text-primary ${processing.preparingCount > 0 ? "animate-spin" : ""}`}
+                <FadeArc
+                  aria-label="Processing activity"
+                  className="size-4 text-primary"
                 />
                 <p
                   id="processing-activity-heading"
