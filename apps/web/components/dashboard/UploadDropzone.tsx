@@ -4,17 +4,25 @@ import React, { useCallback, useState } from "react";
 import { toast } from "@/components/ui/sonner";
 import { BOOKMARK_DRAG_MIME } from "@/lib/bookmark-drag";
 import useUpload from "@/lib/hooks/upload-file";
+import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { TRPCClientError } from "@trpc/client";
 import DropZone from "react-dropzone";
 
 import { useCreateBookmarkWithPostHook } from "@karakeep/shared-react/hooks/bookmarks";
+import { useDeleteUnattachedAsset } from "@karakeep/shared-react/hooks/assets";
+import {
+  getBookmarkAssetTypeForMimeType,
+  getDropzoneAccept,
+  isMarkdownFile,
+} from "@karakeep/shared/content-support";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
 import LoadingSpinner from "../ui/spinner";
 import BookmarkAlreadyExistsToast from "../utils/BookmarkAlreadyExistsToast";
 
 export function useUploadAsset() {
+  const { mutateAsync: deleteUnattachedAsset } = useDeleteUnattachedAsset();
   const { mutateAsync: createBookmark } = useCreateBookmarkWithPostHook({
     onSuccess: (resp) => {
       if (resp.alreadyExists) {
@@ -33,14 +41,21 @@ export function useUploadAsset() {
 
   const { mutateAsync: runUploadAsset } = useUpload({
     onSuccess: async (resp) => {
-      const assetType =
-        resp.contentType === "application/pdf" ? "pdf" : "image";
+      const assetType = getBookmarkAssetTypeForMimeType(resp.contentType);
+      if (!assetType) {
+        throw new Error(
+          `${resp.fileName}: this file can only be added as an attachment`,
+        );
+      }
       await createBookmark({
         ...resp,
         type: BookmarkTypes.ASSET,
         assetType,
         source: "web",
       });
+    },
+    onSuccessError: async (resp) => {
+      await deleteUnattachedAsset({ assetId: resp.assetId });
     },
     onError: (err, req) => {
       toast({
@@ -53,7 +68,7 @@ export function useUploadAsset() {
   return useCallback(
     async (file: File) => {
       // Handle markdown files as text bookmarks
-      if (file.type === "text/markdown" || file.name.endsWith(".md")) {
+      if (isMarkdownFile(file.name, file.type)) {
         try {
           const content = await file.text();
           await createBookmark({
@@ -72,7 +87,7 @@ export function useUploadAsset() {
         return runUploadAsset(file);
       }
     },
-    [runUploadAsset],
+    [createBookmark, deleteUnattachedAsset, runUploadAsset],
   );
 }
 
@@ -112,6 +127,7 @@ export default function UploadDropzone({
 }) {
   const [numUploading, setNumUploading] = useState(0);
   const [numUploaded, setNumUploaded] = useState(0);
+  const { t } = useTranslation();
   const uploadAssets = useUploadAssets({
     onFileUpload: () => {
       setNumUploaded((c) => c + 1);
@@ -136,7 +152,16 @@ export default function UploadDropzone({
   return (
     <DropZone
       noClick
+      accept={getDropzoneAccept("topLevel")}
       onDrop={onDrop}
+      onDropRejected={(fileRejections) => {
+        fileRejections.forEach(({ file }) => {
+          toast({
+            description: `${file.name}: ${t("common.only_images_pdf_markdown_top_level")}`,
+            variant: "destructive",
+          });
+        });
+      }}
       onDragEnter={(e) => {
         // Don't show overlay for internal bookmark card drags
         if (!e.dataTransfer.types.includes(BOOKMARK_DRAG_MIME)) {

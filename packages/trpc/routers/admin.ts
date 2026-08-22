@@ -21,6 +21,7 @@ import {
   zAdminMaintenanceTaskSchema,
 } from "@karakeep/shared-server";
 import serverConfig from "@karakeep/shared/config";
+import { BOOKMARK_ASSET_TYPES } from "@karakeep/shared/content-support";
 import logger from "@karakeep/shared/logger";
 import { PluginManager, PluginType } from "@karakeep/shared/plugins";
 import { getSearchClient } from "@karakeep/shared/search";
@@ -756,7 +757,7 @@ export const adminAppRouter = router({
           .nullable(),
         assetInfo: z
           .object({
-            assetType: z.enum(["image", "pdf"]),
+            assetType: z.enum(BOOKMARK_ASSET_TYPES),
             hasContent: z.boolean(),
             fileName: z.string().nullable(),
           })

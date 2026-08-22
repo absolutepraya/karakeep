@@ -23,10 +23,12 @@ import {
 
 import {
   useAttachBookmarkAsset,
+  useDeleteUnattachedAsset,
   useDetachBookmarkAsset,
   useReplaceBookmarkAsset,
 } from "@karakeep/shared-react/hooks/assets";
 import { BookmarkTypes, ZBookmark } from "@karakeep/shared/types/bookmarks";
+import { getFilePickerAccept } from "@karakeep/shared/content-support";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 import {
   humanFriendlyNameForAssertType,
@@ -42,7 +44,7 @@ export default function AttachmentBox({
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
-  const { mutate: attachAsset, isPending: isAttaching } =
+  const { mutateAsync: attachAsset, isPending: isAttaching } =
     useAttachBookmarkAsset({
       onSuccess: () => {
         toast({
@@ -57,7 +59,7 @@ export default function AttachmentBox({
       },
     });
 
-  const { mutate: replaceAsset, isPending: isReplacing } =
+  const { mutateAsync: replaceAsset, isPending: isReplacing } =
     useReplaceBookmarkAsset({
       onSuccess: () => {
         toast({
@@ -87,12 +89,16 @@ export default function AttachmentBox({
       },
     });
 
+  const { mutateAsync: deleteUnattachedAsset } = useDeleteUnattachedAsset();
   const { mutate: uploadAsset } = useUpload({
     onError: (e) => {
       toast({
         description: e.error,
         variant: "destructive",
       });
+    },
+    onSuccessError: async (resp) => {
+      await deleteUnattachedAsset({ assetId: resp.assetId });
     },
   });
 
@@ -126,15 +132,15 @@ export default function AttachmentBox({
                     <FilePickerButton
                       title="Attach a Banner"
                       loading={isAttaching}
-                      accept=".jgp,.JPG,.jpeg,.png,.webp"
+                      accept={getFilePickerAccept("banner")}
                       multiple={false}
                       variant="none"
                       size="none"
                       className="rounded-md p-1 hover:text-foreground"
                       onFileSelect={(file) =>
                         uploadAsset(file, {
-                          onSuccess: (resp) => {
-                            attachAsset({
+                          onSuccess: async (resp) => {
+                            await attachAsset({
                               bookmarkId: bookmark.id,
                               asset: {
                                 id: resp.assetId,
@@ -155,10 +161,11 @@ export default function AttachmentBox({
                   variant="none"
                   size="none"
                   className="rounded-md p-1 hover:text-foreground"
+                  accept={getFilePickerAccept("attachment")}
                   onFileSelect={(file) =>
                     uploadAsset(file, {
-                      onSuccess: (resp) => {
-                        attachAsset({
+                      onSuccess: async (resp) => {
+                        await attachAsset({
                           bookmarkId: bookmark.id,
                           asset: {
                             id: resp.assetId,
@@ -220,15 +227,15 @@ export default function AttachmentBox({
                     <FilePickerButton
                       title="Replace"
                       loading={isReplacing}
-                      accept=".jgp,.JPG,.jpeg,.png,.webp"
+                      accept={getFilePickerAccept("attachment")}
                       multiple={false}
                       variant="none"
                       size="none"
                       className="flex items-center gap-2 rounded-md p-1 hover:text-foreground"
                       onFileSelect={(file) =>
                         uploadAsset(file, {
-                          onSuccess: (resp) => {
-                            replaceAsset({
+                          onSuccess: async (resp) => {
+                            await replaceAsset({
                               bookmarkId: bookmark.id,
                               oldAssetId: asset.id,
                               newAssetId: resp.assetId,

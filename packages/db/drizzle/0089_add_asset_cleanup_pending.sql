@@ -1,0 +1,1 @@
+ALTER TABLE `assets` ADD `cleanupPending` integer DEFAULT false NOT NULL;

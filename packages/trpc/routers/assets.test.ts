@@ -129,4 +129,154 @@ describe("Asset Routes", () => {
         }),
     ).rejects.toThrow(/You can't attach this type of asset/);
   });
+
+  test<CustomTestContext>("rejects attachment roles that do not match the asset MIME type", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].assets;
+    const userId = await apiCallers[0].users.whoami().then((u) => u.id);
+    const bookmark = await apiCallers[0].bookmarks.createBookmark({
+      url: "https://attachment-types.example",
+      type: BookmarkTypes.LINK,
+    });
+
+    await db.insert(assets).values({
+      id: "video-attachment",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId,
+      contentType: "video/mp4",
+    });
+
+    await expect(
+      api.attachAsset({
+        bookmarkId: bookmark.id,
+        asset: { id: "video-attachment", assetType: "bannerImage" },
+      }),
+    ).rejects.toThrow(/does not match the attachment type/);
+
+    await api.attachAsset({
+      bookmarkId: bookmark.id,
+      asset: { id: "video-attachment", assetType: "userUploaded" },
+    });
+
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "video-attachment"),
+      }),
+    ).resolves.toMatchObject({
+      assetType: AssetTypes.USER_UPLOADED,
+      bookmarkId: bookmark.id,
+    });
+  });
+
+  test<CustomTestContext>("protects and deletes unattached assets through the owner-only mutation", async ({
+    apiCallers,
+    db,
+  }) => {
+    const owner = apiCallers[0];
+    const ownerUser = await owner.users.whoami();
+    const otherUser = await apiCallers[1].users.whoami();
+
+    await db.insert(assets).values({
+      id: "other-users-asset",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId: otherUser.id,
+    });
+
+    await expect(
+      owner.assets.deleteUnattachedAsset({ assetId: "other-users-asset" }),
+    ).rejects.toThrow(/Asset not found/);
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "other-users-asset"),
+      }),
+    ).resolves.toBeDefined();
+
+    const bookmark = await owner.bookmarks.createBookmark({
+      url: "https://attached-asset.example",
+      type: BookmarkTypes.LINK,
+    });
+    await db.insert(assets).values({
+      id: "attached-asset",
+      assetType: AssetTypes.BOOKMARK_ASSET,
+      bookmarkId: bookmark.id,
+      userId: ownerUser.id,
+    });
+
+    await expect(
+      owner.assets.deleteUnattachedAsset({ assetId: "attached-asset" }),
+    ).rejects.toThrow(/Asset is already attached/);
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "attached-asset"),
+      }),
+    ).resolves.toBeDefined();
+
+    await db.insert(assets).values({
+      id: "owned-unattached-asset",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId: ownerUser.id,
+    });
+
+    await owner.assets.deleteUnattachedAsset({
+      assetId: "owned-unattached-asset",
+    });
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "owned-unattached-asset"),
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  test<CustomTestContext>("blocks attachment while an asset is pending cleanup and allows retrying cleanup", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].assets;
+    const userId = await apiCallers[0].users.whoami().then((u) => u.id);
+    const bookmark = await apiCallers[0].bookmarks.createBookmark({
+      url: "https://pending-cleanup.example",
+      type: BookmarkTypes.LINK,
+    });
+
+    await db.insert(assets).values({
+      id: "pending-cleanup-asset",
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      userId,
+      contentType: "image/png",
+      cleanupPending: true,
+    });
+
+    await expect(
+      api.attachAsset({
+        bookmarkId: bookmark.id,
+        asset: {
+          id: "pending-cleanup-asset",
+          assetType: "screenshot",
+        },
+      }),
+    ).rejects.toThrow(/unavailable for attachment/);
+
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "pending-cleanup-asset"),
+      }),
+    ).resolves.toMatchObject({
+      assetType: AssetTypes.UNKNOWN,
+      bookmarkId: null,
+      cleanupPending: true,
+    });
+
+    await api.deleteUnattachedAsset({ assetId: "pending-cleanup-asset" });
+    await expect(
+      db.query.assets.findFirst({
+        where: (table, { eq }) => eq(table.id, "pending-cleanup-asset"),
+      }),
+    ).resolves.toBeUndefined();
+  });
 });

@@ -17,57 +17,31 @@ import { z } from "zod";
 import serverConfig from "./config";
 import logger from "./logger";
 import { QuotaApproved } from "./storageQuota";
+import {
+  getSupportedMimeTypes,
+  getSupportedMimeTypesForFormat,
+  getBookmarkAssetTypeForMimeType,
+} from "./content-support";
+
+export { ASSET_TYPES } from "./asset-types";
 
 const ROOT_PATH = serverConfig.assetsDir;
 
-export const enum ASSET_TYPES {
-  IMAGE_GIF = "image/gif",
-  IMAGE_JPEG = "image/jpeg",
-  IMAGE_PNG = "image/png",
-  IMAGE_WEBP = "image/webp",
-  APPLICATION_PDF = "application/pdf",
-  APPLICATION_ZIP = "application/zip",
-  TEXT_HTML = "text/html",
+export const VIDEO_ASSET_TYPES = getSupportedMimeTypesForFormat("video");
+export const IMAGE_ASSET_TYPES = getSupportedMimeTypesForFormat("image");
 
-  VIDEO_MP4 = "video/mp4",
-  VIDEO_WEBM = "video/webm",
-  VIDEO_MKV = "video/x-matroska",
-}
+// The assets that we allow the users to upload.
+export const SUPPORTED_UPLOAD_ASSET_TYPES = getSupportedMimeTypes("upload");
 
-export const VIDEO_ASSET_TYPES: Set<string> = new Set<string>([
-  ASSET_TYPES.VIDEO_MP4,
-  ASSET_TYPES.VIDEO_WEBM,
-  ASSET_TYPES.VIDEO_MKV,
-]);
+// The assets that we allow as a bookmark of type asset.
+export const SUPPORTED_BOOKMARK_ASSET_TYPES = new Set(
+  [...getSupportedMimeTypes("topLevel")].filter(
+    (contentType) => getBookmarkAssetTypeForMimeType(contentType) !== null,
+  ),
+);
 
-export const IMAGE_ASSET_TYPES: Set<string> = new Set<string>([
-  ASSET_TYPES.IMAGE_GIF,
-  ASSET_TYPES.IMAGE_JPEG,
-  ASSET_TYPES.IMAGE_PNG,
-  ASSET_TYPES.IMAGE_WEBP,
-]);
-
-// The assets that we allow the users to upload
-export const SUPPORTED_UPLOAD_ASSET_TYPES: Set<string> = new Set<string>([
-  ...IMAGE_ASSET_TYPES,
-  ...VIDEO_ASSET_TYPES,
-  ASSET_TYPES.TEXT_HTML,
-  ASSET_TYPES.APPLICATION_PDF,
-]);
-
-// The assets that we allow as a bookmark of type asset
-export const SUPPORTED_BOOKMARK_ASSET_TYPES: Set<string> = new Set<string>([
-  ...IMAGE_ASSET_TYPES,
-  ASSET_TYPES.APPLICATION_PDF,
-]);
-
-// The assets that we support saving in the asset db
-export const SUPPORTED_ASSET_TYPES: Set<string> = new Set<string>([
-  ...SUPPORTED_UPLOAD_ASSET_TYPES,
-  ASSET_TYPES.TEXT_HTML,
-  ASSET_TYPES.VIDEO_MP4,
-  ASSET_TYPES.APPLICATION_ZIP,
-]);
+// The assets that can be served as raw downloads.
+export const SUPPORTED_ASSET_TYPES = getSupportedMimeTypes("rawDownload");
 
 export const zAssetMetadataSchema = z.object({
   contentType: z.string(),

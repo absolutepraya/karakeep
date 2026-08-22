@@ -46,12 +46,14 @@ import type {
 } from "@karakeep/shared/types/bookmarks";
 import {
   useAttachBookmarkAsset,
+  useDeleteUnattachedAsset,
   useReplaceBookmarkAsset,
 } from "@karakeep/shared-react/hooks/assets";
 import { useBookmarkGridContext } from "@karakeep/shared-react/hooks/bookmark-grid-context";
 import { useBookmarkListContext } from "@karakeep/shared-react/hooks/bookmark-list-context";
 import { useRecrawlBookmark } from "@karakeep/shared-react/hooks/bookmarks";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
+import { getFilePickerAccept } from "@karakeep/shared/content-support";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 
 import { BookmarkedTextEditor } from "./BookmarkedTextEditor";
@@ -120,13 +122,17 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
 
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
 
+  const { mutateAsync: deleteUnattachedAsset } = useDeleteUnattachedAsset();
   const { mutate: uploadBannerAsset } = useUpload({
     onError: (e) => {
       toast.error(e.error, { id: getBannerSonnerId(bookmark.id) });
     },
+    onSuccessError: async (resp) => {
+      await deleteUnattachedAsset({ assetId: resp.assetId });
+    },
   });
 
-  const { mutate: attachAsset, isPending: isAttaching } =
+  const { mutateAsync: attachAsset, isPending: isAttaching } =
     useAttachBookmarkAsset({
       onSuccess: () => {
         toast.success(t("toasts.bookmarks.update_banner"), {
@@ -138,7 +144,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
       },
     });
 
-  const { mutate: replaceAsset, isPending: isReplacing } =
+  const { mutateAsync: replaceAsset, isPending: isReplacing } =
     useReplaceBookmarkAsset({
       onSuccess: () => {
         toast.success(t("toasts.bookmarks.update_banner"), {
@@ -229,8 +235,8 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
           id: getBannerSonnerId(bookmark.id),
         });
         uploadBannerAsset(file, {
-          onSuccess: (resp) => {
-            replaceAsset({
+          onSuccess: async (resp) => {
+            await replaceAsset({
               bookmarkId: bookmark.id,
               oldAssetId: existingBanner.id,
               newAssetId: resp.assetId,
@@ -242,8 +248,8 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
           id: getBannerSonnerId(bookmark.id),
         });
         uploadBannerAsset(file, {
-          onSuccess: (resp) => {
-            attachAsset({
+          onSuccess: async (resp) => {
+            await attachAsset({
               bookmarkId: bookmark.id,
               asset: {
                 id: resp.assetId,
@@ -566,7 +572,7 @@ export default function BookmarkOptions({ bookmark }: { bookmark: ZBookmark }) {
         ref={bannerFileInputRef}
         onChange={handleBannerFileChange}
         className="hidden"
-        accept=".jpg,.jpeg,.png,.webp"
+        accept={getFilePickerAccept("banner")}
       />
     </>
   );
