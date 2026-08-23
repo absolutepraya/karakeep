@@ -71,6 +71,19 @@ Notes:
 - `pnpm doctor` and `pnpm doctor:staged` are advisory local checks. CI requires a React Doctor score of at least 99 through `pnpm doctor:ci`; see [`docs/react-doctor.md`](docs/react-doctor.md) for the baseline and accepted tool limitations.
 - `knip` is useful for repository cleanup, but is non-blocking in CI.
 
+### Roadmap changes
+
+The issue-linked roadmap source is [`docs/roadmap/roadmap.excalidraw`](docs/roadmap/roadmap.excalidraw). Update it in a PR when the PR changes a roadmap issue's scope, ordering, grouping, or dependencies. An implementation PR does not need a diagram edit when the roadmap structure is unchanged.
+
+Roadmap nodes use explicit issue metadata and dependency arrows. Keep the authored source as the only hand-edited diagram. Generated Excalidraw, SVG, PNG, and the marked Roadmap block in `README.md` are maintained by automation and should not be edited directly.
+
+Run these checks when working on the roadmap:
+
+```bash
+pnpm roadmap:check
+pnpm roadmap:render
+```
+
 ## Change expectations
 
 ### UI / UX changes
