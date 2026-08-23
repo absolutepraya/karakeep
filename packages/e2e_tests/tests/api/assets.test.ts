@@ -3,7 +3,7 @@ import { assert, beforeEach, describe, expect, inject, it } from "vitest";
 import { createKarakeepClient } from "@karakeep/sdk";
 
 import { createTestUser, uploadTestAsset } from "../../utils/api";
-import { createTestPdfFile } from "../../utils/assets";
+import { createTestImageFile, createTestPdfFile } from "../../utils/assets";
 
 describe("Assets API", () => {
   const port = inject("karakeepPort");
@@ -199,7 +199,7 @@ describe("Assets API", () => {
       throw new Error("Bookmark creation failed");
     }
 
-    const file = createTestPdfFile();
+    const file = createTestImageFile();
 
     // Upload the asset
     const uploadResponse1 = await uploadTestAsset(apiKey, port, file);
@@ -226,7 +226,7 @@ describe("Assets API", () => {
     expect(firstAsset).toEqual({
       id: uploadResponse1.assetId,
       assetType: "bannerImage",
-      fileName: "test.pdf",
+      fileName: "test.png",
     });
 
     // Attach second asset
@@ -249,7 +249,7 @@ describe("Assets API", () => {
     expect(secondAsset).toEqual({
       id: uploadResponse2.assetId,
       assetType: "bannerImage",
-      fileName: "test.pdf",
+      fileName: "test.png",
     });
 
     // Get bookmark and verify assets
@@ -269,12 +269,12 @@ describe("Assets API", () => {
         {
           id: uploadResponse1.assetId,
           assetType: "bannerImage",
-          fileName: "test.pdf",
+          fileName: "test.png",
         },
         {
           id: uploadResponse2.assetId,
           assetType: "bannerImage",
-          fileName: "test.pdf",
+          fileName: "test.png",
         },
       ]),
     );
@@ -314,12 +314,12 @@ describe("Assets API", () => {
         {
           id: uploadResponse3.assetId,
           assetType: "bannerImage",
-          fileName: "test.pdf",
+          fileName: "test.png",
         },
         {
           id: uploadResponse2.assetId,
           assetType: "bannerImage",
-          fileName: "test.pdf",
+          fileName: "test.png",
         },
       ]),
     );
@@ -355,7 +355,7 @@ describe("Assets API", () => {
       {
         id: uploadResponse3.assetId,
         assetType: "bannerImage",
-        fileName: "test.pdf",
+        fileName: "test.png",
       },
     ]);
   });

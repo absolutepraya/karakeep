@@ -12,9 +12,11 @@ import DropZone from "react-dropzone";
 import { useCreateBookmarkWithPostHook } from "@karakeep/shared-react/hooks/bookmarks";
 import { useDeleteUnattachedAsset } from "@karakeep/shared-react/hooks/assets";
 import {
+  getTextDocumentTitle,
   getBookmarkAssetTypeForMimeType,
   getDropzoneAccept,
-  isMarkdownFile,
+  isTextDocumentFile,
+  readTextDocument,
 } from "@karakeep/shared/content-support";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 
@@ -67,19 +69,23 @@ export function useUploadAsset() {
 
   return useCallback(
     async (file: File) => {
-      // Handle markdown files as text bookmarks
-      if (isMarkdownFile(file.name, file.type)) {
+      // Handle Markdown and plain-text files as text bookmarks.
+      if (isTextDocumentFile(file.name, file.type)) {
         try {
-          const content = await file.text();
+          const content = await readTextDocument(file);
           await createBookmark({
             type: BookmarkTypes.TEXT,
             text: content,
-            title: file.name.replace(/\.md$/i, ""), // Remove .md extension from title
+            title: getTextDocumentTitle(file.name),
             source: "web",
           });
-        } catch {
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Failed to read text document";
           toast({
-            description: `${file.name}: Failed to read markdown file`,
+            description: `${file.name}: ${message}`,
             variant: "destructive",
           });
         }
@@ -188,7 +194,7 @@ export default function UploadDropzone({
               </div>
             ) : (
               <p className="text-2xl font-bold text-gray-700">
-                Drop Your Image / PDF / Markdown file
+                Drop an image, PDF, Markdown, or plain-text file
               </p>
             )}
           </div>

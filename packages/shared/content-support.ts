@@ -56,8 +56,8 @@ export const CONTENT_SUPPORT_REGISTRY: readonly ContentSupportDefinition[] = [
   },
   {
     id: "markdown",
-    mimeTypes: ["text/markdown"],
-    extensions: [".md", ".markdown"],
+    mimeTypes: ["text/markdown", "text/plain"],
+    extensions: [".md", ".markdown", ".txt"],
     capabilities: ["topLevel"],
   },
   {
@@ -167,17 +167,51 @@ export function isContentTypeCompatibleWithAttachment(
   }
 }
 
-export function isMarkdownFile(fileName: string, mimeType?: string): boolean {
+export function isTextDocumentFile(
+  fileName: string,
+  mimeType?: string,
+): boolean {
   const format = CONTENT_SUPPORT_REGISTRY.find(
     (candidate) => candidate.id === "markdown",
   );
   if (!format) {
     return false;
   }
+  const normalizedMimeType = mimeType?.trim().toLowerCase() ?? "";
+  if (format.mimeTypes.includes(normalizedMimeType)) {
+    return true;
+  }
+
+  const hasGenericMimeType =
+    normalizedMimeType === "" ||
+    normalizedMimeType === "application/octet-stream";
   return (
-    (mimeType ? format.mimeTypes.includes(mimeType) : false) ||
+    hasGenericMimeType &&
     format.extensions.some((extension) =>
       fileName.toLowerCase().endsWith(extension),
     )
   );
+}
+
+/**
+ * @deprecated Use isTextDocumentFile for Markdown and plain-text documents.
+ */
+export function isMarkdownFile(fileName: string, mimeType?: string): boolean {
+  return isTextDocumentFile(fileName, mimeType);
+}
+
+export function getTextDocumentTitle(fileName: string): string {
+  const title = fileName.replace(/\.(?:md|markdown|txt)$/i, "");
+  return title || fileName;
+}
+
+export async function readTextDocument(file: {
+  arrayBuffer: () => Promise<ArrayBuffer>;
+}): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error("Text document must be UTF-8");
+  }
 }

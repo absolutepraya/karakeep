@@ -6,8 +6,10 @@ import {
   getBookmarkAssetTypeForMimeType,
   getFilePickerAccept,
   getSupportedMimeTypes,
+  getTextDocumentTitle,
   isContentTypeCompatibleWithAttachment,
-  isMarkdownFile,
+  isTextDocumentFile,
+  readTextDocument,
 } from "./content-support";
 
 describe("content support registry", () => {
@@ -46,14 +48,43 @@ describe("content support registry", () => {
     expect(getDropzoneAccept("topLevel")).toMatchObject({
       "image/jpeg": [".gif", ".jpeg", ".jpg", ".png", ".webp"],
       "application/pdf": [".pdf"],
-      "text/markdown": [".md", ".markdown"],
+      "text/markdown": [".md", ".markdown", ".txt"],
+      "text/plain": [".md", ".markdown", ".txt"],
     });
   });
 
-  it("recognizes Markdown by MIME type or extension for the text bookmark path", () => {
-    expect(isMarkdownFile("notes.md", "application/octet-stream")).toBe(true);
-    expect(isMarkdownFile("notes.markdown", "text/markdown")).toBe(true);
-    expect(isMarkdownFile("notes.txt", "text/plain")).toBe(false);
+  it("recognizes text documents by MIME type or safe extension fallback", () => {
+    expect(isTextDocumentFile("notes.md", "application/octet-stream")).toBe(
+      true,
+    );
+    expect(isTextDocumentFile("notes.markdown", "text/markdown")).toBe(true);
+    expect(isTextDocumentFile("notes.txt", "text/plain")).toBe(true);
+    expect(isTextDocumentFile("notes.txt", "application/pdf")).toBe(false);
+    expect(isTextDocumentFile("notes.bin", "application/octet-stream")).toBe(
+      false,
+    );
+  });
+
+  it("derives a non-empty title from each supported text extension", () => {
+    expect(getTextDocumentTitle("notes.md")).toBe("notes");
+    expect(getTextDocumentTitle("notes.markdown")).toBe("notes");
+    expect(getTextDocumentTitle("notes.txt")).toBe("notes");
+    expect(getTextDocumentTitle(".txt")).toBe(".txt");
+  });
+
+  it("reads valid UTF-8 without changing the source", async () => {
+    const source = "# Notes\n\nEmoji: 🦦\n\n- [ ] preserve Markdown";
+    const file = new File([new TextEncoder().encode(source)], "notes.md");
+
+    await expect(readTextDocument(file)).resolves.toBe(source);
+  });
+
+  it("rejects text files that are not valid UTF-8", async () => {
+    const file = new File([new Uint8Array([0xc3, 0x28])], "notes.txt");
+
+    await expect(readTextDocument(file)).rejects.toThrow(
+      "Text document must be UTF-8",
+    );
   });
 
   it("matches attached asset roles to their renderable MIME types", () => {
