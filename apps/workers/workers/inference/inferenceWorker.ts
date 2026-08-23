@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { workerStatsCounter } from "metrics";
 import { withWorkerEventLog, withWorkerTracing } from "workerTracing";
 
 import type { ZOpenAIRequest } from "@karakeep/shared-server";
 import { db } from "@karakeep/db";
-import { bookmarks } from "@karakeep/db/schema";
+import { bookmarkTranscripts, bookmarks } from "@karakeep/db/schema";
 import {
   addLogFields,
   OpenAIQueue,
@@ -27,6 +27,19 @@ async function attemptMarkStatus(
   }
   try {
     const request = zOpenAIRequestSchema.parse(jobData);
+    if (
+      request.type === "summarize" &&
+      request.summarySource === "transcript" &&
+      request.transcriptRevision !== undefined
+    ) {
+      const transcript = await db.query.bookmarkTranscripts.findFirst({
+        where: eq(bookmarkTranscripts.bookmarkId, request.bookmarkId),
+        columns: { revision: true },
+      });
+      if (transcript?.revision !== request.transcriptRevision) {
+        return;
+      }
+    }
     await db
       .update(bookmarks)
       .set({
@@ -35,7 +48,14 @@ async function attemptMarkStatus(
           : {}),
         ...(request.type === "tag" ? { taggingStatus: status } : {}),
       })
-      .where(eq(bookmarks.id, request.bookmarkId));
+      .where(
+        request.type === "summarize" && status === "success"
+          ? and(
+              eq(bookmarks.id, request.bookmarkId),
+              eq(bookmarks.summaryStale, false),
+            )
+          : eq(bookmarks.id, request.bookmarkId),
+      );
   } catch (e) {
     logger.error(`Something went wrong when marking the tagging status: ${e}`);
   }

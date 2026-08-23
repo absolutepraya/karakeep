@@ -1,4 +1,4 @@
-import { and, desc, eq, like, lt, lte, or } from "drizzle-orm";
+import { and, desc, eq, isNull, like, lt, lte, or } from "drizzle-orm";
 import { z } from "zod";
 
 import type { DB } from "@karakeep/db";
@@ -32,6 +32,7 @@ export class HighlightsRepo {
         bookmarkId: input.bookmarkId,
         startOffset: input.startOffset,
         endOffset: input.endOffset,
+        transcriptRevision: input.transcriptRevision,
         color: input.color,
         text: input.text,
         note: input.note,
@@ -42,9 +43,20 @@ export class HighlightsRepo {
     return result;
   }
 
-  async getForBookmark(bookmarkId: string): Promise<Highlight[]> {
+  async getForBookmark(
+    bookmarkId: string,
+    transcriptRevision?: number,
+  ): Promise<Highlight[]> {
     return await this.db.query.highlights.findMany({
-      where: eq(highlights.bookmarkId, bookmarkId),
+      where: and(
+        eq(highlights.bookmarkId, bookmarkId),
+        transcriptRevision === undefined
+          ? undefined
+          : or(
+              isNull(highlights.transcriptRevision),
+              eq(highlights.transcriptRevision, transcriptRevision),
+            ),
+      ),
       orderBy: [desc(highlights.createdAt), desc(highlights.id)],
     });
   }

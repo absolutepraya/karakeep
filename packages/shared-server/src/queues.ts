@@ -120,6 +120,8 @@ export function buildCrawlIdempotencyKey(payload: ZCrawlLinkRequest): string {
 export const zOpenAIRequestSchema = z.object({
   bookmarkId: z.string(),
   type: z.enum(["summarize", "tag"]).default("tag"),
+  summarySource: z.enum(["web", "transcript"]).optional(),
+  transcriptRevision: z.number().int().nonnegative().optional(),
   // Precomputed embedding so tagging can find similar bookmarks via
   // search({vector}) without waiting for the vector to be indexed. Only set on
   // the embed -> tag path.
@@ -252,6 +254,24 @@ export type ZVideoRequest = z.infer<typeof zvideoRequestSchema>;
 
 export const VideoWorkerQueue = createDeferredQueue<ZVideoRequest>(
   "video_queue",
+  {
+    defaultJobArgs: {
+      numRetries: 5,
+    },
+    keepFailedJobs: false,
+  },
+);
+
+// Provider-neutral transcript ingestion. The first provider is YouTube, but
+// the queue payload intentionally identifies only the bookmark so future
+// media providers can share the same persistence and retry contract.
+export const zTranscriptRequestSchema = z.object({
+  bookmarkId: z.string(),
+});
+export type ZTranscriptRequest = z.infer<typeof zTranscriptRequestSchema>;
+
+export const TranscriptQueue = createDeferredQueue<ZTranscriptRequest>(
+  "transcript_queue",
   {
     defaultJobArgs: {
       numRetries: 5,

@@ -36,6 +36,13 @@ describe("content support registry", () => {
     );
     expect([...getSupportedMimeTypes("rawDownload")]).toEqual([
       ...getSupportedMimeTypes("upload"),
+      "application/json",
+      "application/ttml+xml",
+      "application/x-subrip",
+      "text/plain",
+      "text/ssa",
+      "text/vtt",
+      "text/x-ssa",
       "application/zip",
     ]);
     expect(getFilePickerAccept("banner")).toBe(

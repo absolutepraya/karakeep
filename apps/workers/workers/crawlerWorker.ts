@@ -58,6 +58,7 @@ import {
   EmbeddingsQueue,
   OpenAIQueue,
   QuotaService,
+  TranscriptQueue,
   setSpanAttributes,
   triggerSearchReindex,
   VideoWorkerQueue,
@@ -89,6 +90,7 @@ import {
 import { getRateLimitClient } from "@karakeep/shared/ratelimiting";
 import { tryCatch } from "@karakeep/shared/tryCatch";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
+import { getYouTubeVideoId } from "@karakeep/shared/youtube";
 import { WebhooksService } from "@karakeep/trpc/models/webhooks.service";
 
 import type {
@@ -2312,7 +2314,10 @@ async function runCrawler(
       } else {
         await OpenAIQueue.enqueue({ bookmarkId, type: "tag" }, enqueueOpts);
       }
-      if (serverConfig.inference.enableAutoSummarization) {
+      const isYouTubeBookmark = getYouTubeVideoId(url) !== null;
+      if (isYouTubeBookmark) {
+        await TranscriptQueue.enqueue({ bookmarkId }, enqueueOpts);
+      } else if (serverConfig.inference.enableAutoSummarization) {
         await OpenAIQueue.enqueue(
           { bookmarkId, type: "summarize" },
           enqueueOpts,

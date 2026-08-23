@@ -2,7 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { getBookmarkDomain } from "network";
 
 import { db } from "@karakeep/db";
-import { bookmarks, customPrompts, users } from "@karakeep/db/schema";
+import {
+  bookmarkTranscripts,
+  bookmarks,
+  customPrompts,
+  users,
+} from "@karakeep/db/schema";
 import {
   addLogFields,
   setSpanAttributes,
@@ -20,7 +25,12 @@ import { Bookmark } from "@karakeep/trpc/models/bookmarks";
 async function fetchBookmarkDetailsForSummary(bookmarkId: string) {
   const bookmark = await db.query.bookmarks.findFirst({
     where: eq(bookmarks.id, bookmarkId),
-    columns: { id: true, userId: true, type: true },
+    columns: {
+      id: true,
+      userId: true,
+      type: true,
+      summaryProvenance: true,
+    },
     with: {
       link: {
         columns: {
@@ -32,6 +42,14 @@ async function fetchBookmarkDetailsForSummary(bookmarkId: string) {
           publisher: true,
           author: true,
           url: true,
+        },
+      },
+      transcript: {
+        columns: {
+          status: true,
+          revision: true,
+          sourceLanguage: true,
+          text: true,
         },
       },
       // If assets (like PDFs with extracted text) should be summarized, extend here
@@ -62,6 +80,24 @@ export async function runSummarization(
   );
 
   const bookmarkData = await fetchBookmarkDetailsForSummary(bookmarkId);
+  const summarySource = job.data.summarySource ?? "web";
+
+  if (bookmarkData.summaryProvenance === "manual") {
+    logger.info(
+      `[inference][${jobId}] Skipping summary for bookmark ${bookmarkId} because the summary is user-owned.`,
+    );
+    return;
+  }
+  if (
+    summarySource === "transcript" &&
+    job.data.transcriptRevision !== undefined &&
+    bookmarkData.transcript?.revision !== job.data.transcriptRevision
+  ) {
+    logger.info(
+      `[inference][${jobId}] Skipping stale transcript summary job for bookmark ${bookmarkId}.`,
+    );
+    return;
+  }
 
   // Check user-level preference
   const userSettings = await db.query.users.findFirst({
@@ -97,20 +133,41 @@ export async function runSummarization(
   if (bookmarkData.type === BookmarkTypes.LINK && bookmarkData.link) {
     const link = bookmarkData.link;
 
-    // Extract plain text content from HTML for summarization
-    let content =
-      (await Bookmark.getBookmarkPlainTextContent(link, bookmarkData.userId)) ??
-      "";
+    if (summarySource === "transcript") {
+      if (
+        bookmarkData.transcript?.status !== "ready" ||
+        !bookmarkData.transcript.text?.trim()
+      ) {
+        throw new Error(
+          `[inference][${jobId}] Transcript is not ready for bookmark ${bookmarkId}`,
+        );
+      }
 
-    if (!link.description && !content) {
-      // No content to infer from; skip summarization
-      logger.info(
-        `[inference] No content found for link "${bookmarkId}". Skipping summary.`,
-      );
-      return;
-    }
+      textToSummarize = `
+Title: ${link.title ?? ""}
+Description: ${link.description ?? ""}
+Transcript${bookmarkData.transcript.sourceLanguage ? ` (${bookmarkData.transcript.sourceLanguage})` : ""}: ${bookmarkData.transcript.text}
+Publisher: ${link.publisher ?? ""}
+Author: ${link.author ?? ""}
+URL: ${link.url ?? ""}
+`;
+    } else {
+      // Extract plain text content from HTML for summarization
+      const content =
+        (await Bookmark.getBookmarkPlainTextContent(
+          link,
+          bookmarkData.userId,
+        )) ?? "";
 
-    textToSummarize = `
+      if (!link.description && !content) {
+        // No content to infer from; skip summarization
+        logger.info(
+          `[inference] No content found for link "${bookmarkId}". Skipping summary.`,
+        );
+        return;
+      }
+
+      textToSummarize = `
 Title: ${link.title ?? ""}
 Description: ${link.description ?? ""}
 Content: ${content}
@@ -118,6 +175,7 @@ Publisher: ${link.publisher ?? ""}
 Author: ${link.author ?? ""}
 URL: ${link.url ?? ""}
 `;
+    }
   } else {
     logger.warn(
       `[inference][${jobId}] Bookmark ${bookmarkId} (type: ${bookmarkData.type}) is not a LINK or TEXT type with content, or content is missing. Skipping summary.`,
@@ -177,10 +235,36 @@ URL: ${link.url ?? ""}
     `[inference][${jobId}] Generated summary for bookmark "${bookmarkId}" using ${summaryResult.totalTokens} tokens.`,
   );
 
+  if (
+    summarySource === "transcript" &&
+    job.data.transcriptRevision !== undefined
+  ) {
+    const currentBookmark = await db.query.bookmarks.findFirst({
+      where: eq(bookmarks.id, bookmarkId),
+      columns: { summaryProvenance: true },
+    });
+    const currentTranscript = await db.query.bookmarkTranscripts.findFirst({
+      where: eq(bookmarkTranscripts.bookmarkId, bookmarkId),
+      columns: { revision: true, status: true },
+    });
+    if (
+      currentBookmark?.summaryProvenance === "manual" ||
+      currentTranscript?.status !== "ready" ||
+      currentTranscript.revision !== job.data.transcriptRevision
+    ) {
+      logger.info(
+        `[inference][${jobId}] Discarding stale transcript summary result for bookmark ${bookmarkId}.`,
+      );
+      return;
+    }
+  }
+
   await db
     .update(bookmarks)
     .set({
       summary: summaryResult.response,
+      summaryProvenance: summarySource,
+      summaryStale: false,
       modifiedAt: new Date(),
     })
     .where(eq(bookmarks.id, bookmarkId));

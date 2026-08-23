@@ -12,6 +12,7 @@ const zHighlightBaseSchema = z.object({
   bookmarkId: z.string(),
   startOffset: z.number(),
   endOffset: z.number(),
+  transcriptRevision: z.number().int().nonnegative().nullable().default(null),
   color: zHighlightColorSchema.default("yellow"),
   text: z.string().nullable(),
   note: z.string().nullable(),

@@ -40,8 +40,11 @@ export class HighlightsService {
     return await this.repo.create(actorUserId(actor), input);
   }
 
-  async getForBookmark(bookmarkId: string): Promise<Highlight[]> {
-    return await this.repo.getForBookmark(bookmarkId);
+  async getForBookmark(
+    bookmarkId: string,
+    transcriptRevision?: number,
+  ): Promise<Highlight[]> {
+    return await this.repo.getForBookmark(bookmarkId, transcriptRevision);
   }
 
   async getAll(

@@ -11,7 +11,7 @@ export type ContentSupportCapability =
   | "rawDownload";
 
 interface ContentSupportDefinition {
-  id: "image" | "pdf" | "video" | "html" | "markdown" | "zip";
+  id: "image" | "pdf" | "video" | "html" | "markdown" | "caption" | "zip";
   mimeTypes: readonly string[];
   extensions: readonly string[];
   capabilities: readonly ContentSupportCapability[];
@@ -59,6 +59,32 @@ export const CONTENT_SUPPORT_REGISTRY: readonly ContentSupportDefinition[] = [
     mimeTypes: ["text/markdown"],
     extensions: [".md", ".markdown"],
     capabilities: ["topLevel"],
+  },
+  {
+    id: "caption",
+    mimeTypes: [
+      "application/json",
+      "application/ttml+xml",
+      "application/x-subrip",
+      "text/plain",
+      "text/ssa",
+      "text/vtt",
+      "text/x-ssa",
+    ],
+    extensions: [
+      ".ass",
+      ".dfxp",
+      ".json3",
+      ".lrc",
+      ".srt",
+      ".srv1",
+      ".srv2",
+      ".srv3",
+      ".ssa",
+      ".ttml",
+      ".vtt",
+    ],
+    capabilities: ["rawDownload"],
   },
   {
     id: "zip",

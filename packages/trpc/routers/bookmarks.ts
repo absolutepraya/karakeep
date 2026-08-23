@@ -287,11 +287,15 @@ export const bookmarksAppRouter = router({
                 favourited: input.favourited,
                 note: input.note,
                 summary: input.summary,
+                summaryProvenance:
+                  input.summary !== undefined ? "manual" : undefined,
+                summaryStale: false,
                 createdAt: input.createdAt,
                 source: input.source,
                 summarizationStatus:
                   input.type === BookmarkTypes.LINK &&
-                  serverConfig.inference.enableAutoSummarization
+                  serverConfig.inference.enableAutoSummarization &&
+                  input.summary === undefined
                     ? "pending"
                     : null,
               })
@@ -638,6 +642,8 @@ export const bookmarksAppRouter = router({
           favourited: boolean;
           note: string | null;
           summary: string | null;
+          summaryProvenance: "web" | "transcript" | "manual" | null;
+          summaryStale: boolean;
           createdAt: Date;
           modifiedAt: Date; // Always update modifiedAt
         }> = {
@@ -657,6 +663,8 @@ export const bookmarksAppRouter = router({
         }
         if (input.summary !== undefined) {
           commonUpdateData.summary = input.summary;
+          commonUpdateData.summaryProvenance = "manual";
+          commonUpdateData.summaryStale = false;
         }
         if (input.createdAt !== undefined) {
           commonUpdateData.createdAt = input.createdAt;
@@ -867,6 +875,7 @@ export const bookmarksAppRouter = router({
         readingProgressOffset: z.number().int().nonnegative(),
         readingProgressAnchor: z.string().max(ANCHOR_TEXT_MAX_LENGTH).nullish(),
         readingProgressPercent: z.number().int().min(0).max(100).nullish(),
+        readingProgressRevision: z.number().int().nonnegative().nullish(),
       }),
     )
     .use(ensureBookmarkAccess)
@@ -890,6 +899,7 @@ export const bookmarksAppRouter = router({
           readingProgressOffset: input.readingProgressOffset,
           readingProgressAnchor: input.readingProgressAnchor ?? null,
           readingProgressPercent: input.readingProgressPercent ?? null,
+          readingProgressRevision: input.readingProgressRevision ?? null,
         })
         .onConflictDoUpdate({
           target: [userReadingProgress.bookmarkId, userReadingProgress.userId],
@@ -897,6 +907,7 @@ export const bookmarksAppRouter = router({
             readingProgressOffset: input.readingProgressOffset,
             readingProgressAnchor: input.readingProgressAnchor ?? null,
             readingProgressPercent: input.readingProgressPercent ?? null,
+            readingProgressRevision: input.readingProgressRevision ?? null,
             modifiedAt: new Date(),
           },
         });
@@ -919,6 +930,7 @@ export const bookmarksAppRouter = router({
         readingProgressOffset: progress?.readingProgressOffset ?? null,
         readingProgressAnchor: progress?.readingProgressAnchor ?? null,
         readingProgressPercent: progress?.readingProgressPercent ?? null,
+        readingProgressRevision: progress?.readingProgressRevision ?? null,
       };
     }),
   getBookmark: bookmarksProcedure
@@ -1530,6 +1542,8 @@ Author: ${bookmark.author ?? ""}
         .update(bookmarks)
         .set({
           summary: summary.response,
+          summaryProvenance: "manual",
+          summaryStale: false,
         })
         .where(eq(bookmarks.id, input.bookmarkId));
       await Promise.all([

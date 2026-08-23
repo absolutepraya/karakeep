@@ -181,6 +181,20 @@
             "type": "string",
             "nullable": true
           },
+          "summaryProvenance": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "web",
+              "transcript",
+              "manual",
+              null
+            ]
+          },
+          "summaryStale": {
+            "type": "boolean",
+            "nullable": true
+          },
           "source": {
             "type": "string",
             "nullable": true,
@@ -427,6 +441,7 @@
                     "bookmarkAsset",
                     "precrawledArchive",
                     "userUploaded",
+                    "captionSource",
                     "avatar",
                     "unknown"
                   ]
@@ -548,6 +563,12 @@
           },
           "endOffset": {
             "type": "number"
+          },
+          "transcriptRevision": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "default": null
           },
           "color": {
             "type": "string",
@@ -1506,6 +1527,20 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "summaryProvenance": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "web",
+                        "transcript",
+                        "manual",
+                        null
+                      ]
+                    },
+                    "summaryStale": {
+                      "type": "boolean",
+                      "nullable": true
+                    },
                     "source": {
                       "type": "string",
                       "nullable": true,
@@ -1648,6 +1683,20 @@
                     },
                     "summary": {
                       "type": "string",
+                      "nullable": true
+                    },
+                    "summaryProvenance": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "web",
+                        "transcript",
+                        "manual",
+                        null
+                      ]
+                    },
+                    "summaryStale": {
+                      "type": "boolean",
                       "nullable": true
                     },
                     "source": {
@@ -2078,6 +2127,7 @@
                       "bookmarkAsset",
                       "precrawledArchive",
                       "userUploaded",
+                      "captionSource",
                       "avatar",
                       "unknown"
                     ],
@@ -2116,6 +2166,7 @@
                         "bookmarkAsset",
                         "precrawledArchive",
                         "userUploaded",
+                        "captionSource",
                         "avatar",
                         "unknown"
                       ]
@@ -3334,6 +3385,12 @@
                   },
                   "endOffset": {
                     "type": "number"
+                  },
+                  "transcriptRevision": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 0,
+                    "default": null
                   },
                   "color": {
                     "type": "string",

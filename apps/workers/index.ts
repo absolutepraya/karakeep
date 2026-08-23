@@ -20,6 +20,7 @@ import {
   shutdownEventLogger,
   shutdownTracing,
   startQueue,
+  TranscriptQueue,
   VideoWorkerQueue,
   WebhookQueue,
 } from "@karakeep/shared-server";
@@ -38,6 +39,7 @@ import { OpenAiWorker } from "./workers/inference/inferenceWorker";
 import { RuleEngineWorker } from "./workers/ruleEngineWorker";
 import { SearchIndexingWorker } from "./workers/searchWorker";
 import { VideoWorker } from "./workers/videoWorker";
+import { TranscriptWorker } from "./workers/transcriptWorker";
 import { WebhookWorker } from "./workers/webhookWorker";
 
 const workerBuilders = {
@@ -68,6 +70,10 @@ const workerBuilders = {
   video: async () => {
     await VideoWorkerQueue.ensureInit();
     return VideoWorker.build();
+  },
+  transcript: async () => {
+    await TranscriptQueue.ensureInit();
+    return TranscriptWorker.build();
   },
   feed: async () => {
     await FeedQueue.ensureInit();

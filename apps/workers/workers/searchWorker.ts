@@ -76,6 +76,12 @@ async function runIndex(
           tag: true,
         },
       },
+      transcript: {
+        columns: {
+          status: true,
+          text: true,
+        },
+      },
     },
   });
 
@@ -94,10 +100,17 @@ async function runIndex(
           url: bookmark.link.url,
           linkTitle: bookmark.link.title,
           description: bookmark.link.description,
-          content: await Bookmark.getBookmarkPlainTextContent(
-            bookmark.link,
-            bookmark.userId,
-          ),
+          content: [
+            await Bookmark.getBookmarkPlainTextContent(
+              bookmark.link,
+              bookmark.userId,
+            ),
+            bookmark.transcript?.status === "ready"
+              ? bookmark.transcript.text
+              : null,
+          ]
+            .filter((content): content is string => Boolean(content?.trim()))
+            .join("\n\n"),
           publisher: bookmark.link.publisher,
           author: bookmark.link.author,
           datePublished: bookmark.link.datePublished,

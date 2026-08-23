@@ -59,12 +59,18 @@ export const highlightsAppRouter = router({
       return await ctx.highlightsService.create(ctx.actor, input);
     }),
   getForBookmark: highlightsProcedure
-    .input(z.object({ bookmarkId: z.string() }))
+    .input(
+      z.object({
+        bookmarkId: z.string(),
+        transcriptRevision: z.number().int().nonnegative().optional(),
+      }),
+    )
     .output(z.object({ highlights: z.array(zHighlightSchema) }))
     .use(ensureBookmarkAccess)
-    .query(async ({ ctx }) => {
+    .query(async ({ input, ctx }) => {
       const highlights = await ctx.highlightsService.getForBookmark(
         ctx.bookmark.id,
+        input.transcriptRevision,
       );
       return { highlights };
     }),
