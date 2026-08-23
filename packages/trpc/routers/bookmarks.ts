@@ -400,6 +400,7 @@ export const bookmarksAppRouter = router({
                 assetId: asset.assetId,
                 fileName: asset.fileName,
                 sourceUrl: asset.sourceUrl,
+                contentType: uploadedAsset.contentType,
               };
               break;
             }

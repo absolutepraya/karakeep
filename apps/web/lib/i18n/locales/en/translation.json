@@ -20,7 +20,7 @@
       "admin": "Admin"
     },
     "something_went_wrong": "Something went wrong",
-    "only_images_pdf_markdown_top_level": "Only images, PDF, Markdown, and plain-text files can become top-level bookmarks.",
+    "only_images_pdf_markdown_top_level": "Only images, PDF, video, Markdown, and plain-text files can become top-level bookmarks.",
     "experimental": "Experimental",
     "search": "Search",
     "tags": "Tags",

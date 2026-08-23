@@ -20,7 +20,13 @@ vi.mock("@/lib/i18n/client", () => ({
   }),
 }));
 vi.mock("@/lib/hooks/upload-file", () => ({
-  default: () => ({ mutateAsync: mocks.uploadAsset }),
+  default: (options: { onSuccess?: (response: unknown) => Promise<void> }) => ({
+    mutateAsync: async (...args: unknown[]) => {
+      const response = await mocks.uploadAsset(...args);
+      await options.onSuccess?.(response);
+      return response;
+    },
+  }),
 }));
 vi.mock("@karakeep/shared-react/hooks/assets", () => ({
   useDeleteUnattachedAsset: () => ({
@@ -136,5 +142,37 @@ describe("UploadDropzone", () => {
     const input = container.querySelector('input[type="file"]');
     expect(input?.getAttribute("accept")).toContain("text/plain");
     expect(input?.getAttribute("accept")).toContain(".txt");
+    expect(input?.getAttribute("accept")).toContain("video/mp4");
+  });
+
+  it("creates a video asset bookmark from an uploaded video", async () => {
+    mocks.uploadAsset.mockResolvedValue({
+      assetId: "asset-video-1",
+      contentType: "video/mp4",
+      fileName: "clip.mp4",
+      size: 1024,
+    });
+    const { container } = render(
+      <UploadDropzone>
+        <div data-drop-target>Drop target</div>
+      </UploadDropzone>,
+    );
+
+    dropFile(
+      container,
+      makeFile(new Uint8Array([0, 1, 2, 3]).buffer, "clip.mp4", "video/mp4"),
+    );
+
+    await waitFor(() => {
+      expect(mocks.createBookmark).toHaveBeenCalledWith({
+        assetId: "asset-video-1",
+        assetType: "video",
+        contentType: "video/mp4",
+        fileName: "clip.mp4",
+        size: 1024,
+        type: "asset",
+        source: "web",
+      });
+    });
   });
 });

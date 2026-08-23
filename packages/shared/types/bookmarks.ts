@@ -77,6 +77,7 @@ export const zBookmarkedAssetSchema = z.object({
   fileName: z.string().nullish(),
   sourceUrl: z.string().nullish(),
   size: z.number().nullish(),
+  contentType: z.string().nullish(),
   content: z.string().nullish(),
 });
 export type ZBookmarkedAsset = z.infer<typeof zBookmarkedAssetSchema>;
@@ -309,6 +310,7 @@ export const zPublicBookmarkSchema = z.object({
       assetUrl: z.string(),
       fileName: z.string().nullish(),
       sourceUrl: z.string().nullish(),
+      contentType: z.string().nullish(),
     }),
   ]),
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import BookmarkFormattedCreatedAt from "@/components/dashboard/bookmarks/BookmarkFormattedCreatedAt";
 import { BookmarkMarkdownComponent } from "@/components/dashboard/bookmarks/BookmarkMarkdownComponent";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SCREENS } from "@/lib/breakpoints";
 import { cn } from "@/lib/utils";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Expand, FileIcon, ImageIcon } from "lucide-react";
+import { Expand, FileIcon, ImageIcon, Video } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 import Masonry from "react-masonry-css";
 
@@ -34,6 +34,54 @@ function TagPill({ tag }: { tag: string }) {
       key={tag}
     >
       {tag}
+    </div>
+  );
+}
+
+function PublicVideoPreview({ bookmark }: { bookmark: ZPublicBookmark }) {
+  if (bookmark.content.type !== BookmarkTypes.ASSET) {
+    throw new Error("Invalid content type");
+  }
+
+  const fileName = bookmark.content.fileName ?? "video";
+  const isMatroska =
+    bookmark.content.contentType === "video/x-matroska" ||
+    bookmark.content.fileName?.toLowerCase().endsWith(".mkv") === true;
+  const [playbackError, setPlaybackError] = useState(isMatroska);
+
+  return (
+    <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
+      {playbackError ? (
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
+          <Video className="h-8 w-8" aria-hidden="true" />
+          <p>This video cannot be played in your browser.</p>
+          <Link
+            href={bookmark.content.assetUrl}
+            download={fileName}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            Download {fileName}
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption -- captions are not yet part of the uploaded-video model */}
+          <video
+            className="h-full w-full object-contain"
+            controls
+            preload="metadata"
+            playsInline
+            aria-label={bookmark.title ?? fileName}
+            onError={() => setPlaybackError(true)}
+          >
+            <source
+              src={bookmark.content.assetUrl}
+              type={bookmark.content.contentType ?? undefined}
+            />
+            Your browser does not support this video format.
+          </video>
+        </>
+      )}
     </div>
   );
 }
@@ -115,7 +163,9 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
       case BookmarkTypes.ASSET:
         return (
           <div className="space-y-3">
-            {bookmark.bannerImageUrl ? (
+            {bookmark.content.assetType === "video" ? (
+              <PublicVideoPreview bookmark={bookmark} />
+            ) : bookmark.bannerImageUrl ? (
               <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
                 <Link href={bookmark.content.assetUrl} target="_blank">
                   {/* oxlint-disable-next-line no-img-element */}

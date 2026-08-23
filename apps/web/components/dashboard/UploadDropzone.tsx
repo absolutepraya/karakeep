@@ -194,7 +194,7 @@ export default function UploadDropzone({
               </div>
             ) : (
               <p className="text-2xl font-bold text-gray-700">
-                Drop an image, PDF, Markdown, or plain-text file
+                Drop an image, PDF, video, Markdown, or plain-text file
               </p>
             )}
           </div>

@@ -24,3 +24,20 @@ export function createTestImageFile(fileName = "test.png"): File {
     type: "image/png",
   });
 }
+
+// Minimal valid containers are enough for the upload MIME sniffer. These
+// fixtures keep the API tests small while still exercising real video types.
+const mp4Content = Buffer.from("AAAAGGZ0eXBpc29tAAAAAGlzb21pc28y", "base64");
+
+const webmContent = Buffer.from(
+  "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAHsEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggElTbuMU6uEHFO7a1OsggHW7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjIuMTIuMTAyV0GNTGF2ZjYyLjEyLjEwMkSJiECPQAAAAAAAFlSua8iuAQAAAAAAAD/XgQFzxYjrTyjvvBhgnZyBACK1nIN1bmSIgQCGhVZfVlA5g4EBI+ODhDuaygDgkLCBELqBEJqBAlWwhFW5gQESVMNnQIBzc6BjwIBnyJpFo4dFTkNPREVSRIeNTGF2ZjYyLjEyLjEwMnNz2mPAi2PFiOtPKO+8GGCdZ8ilRaOHRU5DT0RFUkSHmExhdmM2Mi4yOC4xMDIgbGlidnB4LXZwOWfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDEuMDAwMDAwMDAwAB9DtnWm54EAo6GBAACAgkmDQgAA8AD2ADgkHBhCAAAwYAAAEL///YsqAAAcU7trkbuPs4EAt4r3gQHxggGr8IED",
+  "base64",
+);
+
+export function createTestVideoFile(
+  fileName = "test.mp4",
+  contentType = "video/mp4",
+): File {
+  const content = contentType === "video/webm" ? webmContent : mp4Content;
+  return new File([content], fileName, { type: contentType });
+}

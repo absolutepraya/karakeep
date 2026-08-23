@@ -18,7 +18,7 @@ The migration copies user-owned data from a source server to a destination serve
 
 Notes:
 - Webhook tokens cannot be read via the API, so tokens are not migrated. Re‑add them on the destination if needed.
-- Asset bookmarks are migrated by downloading the original asset and re‑uploading it to the destination. Only images and PDFs are supported for asset bookmarks.
+- Asset bookmarks are migrated by downloading the original asset and re-uploading it to the destination. Images, PDFs, and top-level video assets are supported. MP4 and WebM provide playback and download; MKV is preserved for download.
 - Link bookmarks on the destination may be de‑duplicated if the same URL already exists.
 
 ## Prerequisites

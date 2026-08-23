@@ -14,10 +14,12 @@ import {
 
 describe("content support registry", () => {
   it("keeps the top-level asset contract limited to renderable asset types", () => {
-    expect(BOOKMARK_ASSET_TYPES).toEqual(["image", "pdf"]);
+    expect(BOOKMARK_ASSET_TYPES).toEqual(["image", "pdf", "video"]);
     expect(getBookmarkAssetTypeForMimeType("image/webp")).toBe("image");
     expect(getBookmarkAssetTypeForMimeType("application/pdf")).toBe("pdf");
-    expect(getBookmarkAssetTypeForMimeType("video/mp4")).toBeNull();
+    expect(getBookmarkAssetTypeForMimeType("video/mp4")).toBe("video");
+    expect(getBookmarkAssetTypeForMimeType("video/webm")).toBe("video");
+    expect(getBookmarkAssetTypeForMimeType("video/x-matroska")).toBe("video");
     expect(getBookmarkAssetTypeForMimeType("text/html")).toBeNull();
   });
 
@@ -55,6 +57,9 @@ describe("content support registry", () => {
     expect(getDropzoneAccept("topLevel")).toMatchObject({
       "image/jpeg": [".gif", ".jpeg", ".jpg", ".png", ".webp"],
       "application/pdf": [".pdf"],
+      "video/mp4": [".mp4", ".webm", ".mkv"],
+      "video/webm": [".mp4", ".webm", ".mkv"],
+      "video/x-matroska": [".mp4", ".webm", ".mkv"],
       "text/markdown": [".md", ".markdown", ".txt"],
       "text/plain": [".md", ".markdown", ".txt"],
     });

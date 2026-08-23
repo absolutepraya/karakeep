@@ -1,6 +1,6 @@
 import { ASSET_TYPES } from "./asset-types";
 
-export const BOOKMARK_ASSET_TYPES = ["image", "pdf"] as const;
+export const BOOKMARK_ASSET_TYPES = ["image", "pdf", "video"] as const;
 export type BookmarkAssetType = (typeof BOOKMARK_ASSET_TYPES)[number];
 
 export type ContentSupportCapability =
@@ -46,7 +46,8 @@ export const CONTENT_SUPPORT_REGISTRY: readonly ContentSupportDefinition[] = [
       ASSET_TYPES.VIDEO_MKV,
     ],
     extensions: [".mp4", ".webm", ".mkv"],
-    capabilities: ["upload", "attachment", "rawDownload"],
+    capabilities: ["upload", "topLevel", "attachment", "rawDownload"],
+    bookmarkAssetType: "video",
   },
   {
     id: "html",
