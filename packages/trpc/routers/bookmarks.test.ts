@@ -79,6 +79,26 @@ describe("Bookmark Routes", () => {
     expect(res.content.type).toEqual(BookmarkTypes.LINK);
   });
 
+  test<CustomTestContext>("includes link content asset IDs in single bookmarks", async ({
+    apiCallers,
+    db,
+  }) => {
+    const api = apiCallers[0].bookmarks;
+    const bookmark = await api.createBookmark({
+      url: "https://content-asset.example",
+      type: BookmarkTypes.LINK,
+    });
+
+    await db
+      .update(bookmarkLinks)
+      .set({ contentAssetId: "content-asset-1" })
+      .where(eq(bookmarkLinks.id, bookmark.id));
+
+    const result = await api.getBookmark({ bookmarkId: bookmark.id });
+    assert(result.content.type == BookmarkTypes.LINK);
+    expect(result.content.contentAssetId).toBe("content-asset-1");
+  });
+
   test<CustomTestContext>("rejects a top-level bookmark when the asset MIME type is not renderable and cleans it up", async ({
     apiCallers,
     db,

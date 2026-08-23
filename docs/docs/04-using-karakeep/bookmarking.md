@@ -22,7 +22,7 @@ Everything in Karakeep starts as a bookmark. Here’s how the different types wo
 
 - **Links**: URLs saved from the web or extension. Karakeep grabs metadata, previews, screenshots, and archives when configured.
 - **Text**: Quick notes or snippets you paste in. Great for ideas, quotes, or saving context alongside links.
-- **Media**: Images or PDFs you want to save for later. Karakeep automatically extracts content out of those files and makes them searchable.
+- **Media**: Images, PDFs, or uploaded videos you want to save for later. Images and PDFs are previewable in Karakeep, while MP4 and WebM videos support browser playback and download. MKV files are stored and downloadable, but browser playback is not guaranteed. Media files use the configured global upload-size limit, which defaults to 50 MB.
 
 ## Notes
 
@@ -38,5 +38,5 @@ Everything in Karakeep starts as a bookmark. Here’s how the different types wo
 
 - Store extra context alongside a bookmark: screenshots, page captures, videos, and files you upload.
 - **Screenshots & archives**: fallback when the original page changes or disappear.
-- **Uploaded files**: keep PDFs, notes, or supporting assets right with the link.
+- **Uploaded files**: keep PDFs, videos, notes, or supporting assets right with the link.
 - Manage attachments from the bookmark detail view: upload, download, or detach as needed.

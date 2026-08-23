@@ -22,6 +22,7 @@ import {
   GripVertical,
   Image as ImageIcon,
   NotebookPen,
+  Video,
 } from "lucide-react";
 
 import type { ZBookmark } from "@karakeep/shared/types/bookmarks";
@@ -451,9 +452,12 @@ function CompactView({
           {bookmark.content.type === BookmarkTypes.TEXT && (
             <NotebookPen className="size-5" />
           )}
-          {bookmark.content.type === BookmarkTypes.ASSET && (
-            <ImageIcon className="size-5" />
-          )}
+          {bookmark.content.type === BookmarkTypes.ASSET &&
+            (bookmark.content.assetType === "video" ? (
+              <Video className="size-5" aria-hidden="true" />
+            ) : (
+              <ImageIcon className="size-5" aria-hidden="true" />
+            ))}
           {showTitle && (
             <div className="shrink-1 line-clamp-1 overflow-hidden text-ellipsis break-words text-sm font-semibold tracking-tight">
               {title ?? "Untitled"}

@@ -184,6 +184,7 @@ export class Bookmark extends BareBookmark {
         htmlContent: includeContent
           ? await Bookmark.getBookmarkHtmlContent(link, bookmark.userId)
           : null,
+        contentAssetId: link.contentAssetId,
         crawledAt: link.crawledAt,
         crawlStatus: link.crawlStatus,
         author: link.author,
@@ -208,6 +209,7 @@ export class Bookmark extends BareBookmark {
         fileName: asset.fileName,
         sourceUrl: asset.sourceUrl,
         size: assets.find((a) => a.id == asset.assetId)?.size,
+        contentType: assets.find((a) => a.id == asset.assetId)?.contentType,
         content: includeContent ? asset.content : null,
       };
     }
@@ -614,6 +616,7 @@ export class Bookmark extends BareBookmark {
               fileName: row.bookmarkAssets.fileName,
               sourceUrl: row.bookmarkAssets.sourceUrl ?? null,
               size: null, // This will get filled in the asset loop
+              contentType: null, // This will get filled in the asset loop
               content: input.includeContent
                 ? (row.bookmarkAssets.content ?? null)
                 : null,
@@ -678,6 +681,7 @@ export class Bookmark extends BareBookmark {
             if (row.assets.id == content.assetId) {
               // If this is the bookmark's main aset, caputure its size.
               content.size = row.assets.size;
+              content.contentType = row.assets.contentType;
             }
           }
           acc[bookmarkId].assets.push({
@@ -800,6 +804,7 @@ export class Bookmark extends BareBookmark {
             assetUrl: getPublicSignedAssetUrl(content.assetId),
             fileName: content.fileName,
             sourceUrl: content.sourceUrl,
+            contentType: content.contentType,
           };
         }
         default: {
@@ -837,6 +842,8 @@ export class Bookmark extends BareBookmark {
               }
               return getPublicSignedAssetUrl(screenshotAssetId);
             }
+            case "video":
+              return null;
             default: {
               const _exhaustiveCheck: never = content.assetType;
               return null;

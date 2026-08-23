@@ -44,7 +44,7 @@ List endpoints support cursor-based pagination via `cursor` and `limit` query pa
 Bookmarks can be one of three types:
 - **link** — A URL bookmark with optional crawled metadata.
 - **text** — A plain text note.
-- **asset** — An uploaded file (image or PDF).
+- **asset** — An uploaded file (image, PDF, or video). MP4 and WebM videos support playback and download; MKV files are preserved for download.
 
 <div
   style={{"marginBottom":"2rem"}}
@@ -62,10 +62,9 @@ Bookmarks can be one of three types:
       label={"HTTP: Bearer Auth"}
       value={"bearerAuth"}
     >
-      
-      
-      
-      
+
+
+
       <div>
         <table>
           <tbody>
@@ -94,4 +93,4 @@ Bookmarks can be one of three types:
     </TabItem>
   </SchemaTabs>
 </div>
-      
+

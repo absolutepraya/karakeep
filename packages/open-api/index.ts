@@ -53,7 +53,7 @@ function getOpenApiDocumentation() {
         "Bookmarks can be one of three types:\n" +
         "- **link** — A URL bookmark with optional crawled metadata.\n" +
         "- **text** — A plain text note.\n" +
-        "- **asset** — An uploaded file (image or PDF).\n\n## Rate Limiting\n\nWhen rate limiting is enabled, the API enforces per-IP request limits. " +
+        "- **asset** — An uploaded file (image, PDF, or video). MP4 and WebM videos support playback and download; MKV files are preserved for download.\n\n## Rate Limiting\n\nWhen rate limiting is enabled, the API enforces per-IP request limits. " +
         "If you exceed the allowed number of requests within the time window, the API returns a `429 Too Many Requests` response with a message indicating how many seconds to wait before retrying.",
     },
     tags: [
@@ -80,7 +80,7 @@ function getOpenApiDocumentation() {
       {
         name: "Assets",
         description:
-          "Upload and retrieve binary assets (images, PDFs, screenshots) associated with bookmarks.",
+          "Upload and retrieve binary assets (images, PDFs, videos, screenshots) associated with bookmarks.",
       },
       {
         name: "Users",

@@ -20,7 +20,10 @@
       "admin": "Admin"
     },
     "something_went_wrong": "Something went wrong",
-    "only_images_pdf_markdown_top_level": "Only images, PDF, Markdown, and plain-text files can become top-level bookmarks.",
+    "only_images_pdf_markdown_top_level": "Only images, PDF, video, Markdown, and plain-text files can become top-level bookmarks.",
+    "drop_upload_top_level": "Drop an image, PDF, video, Markdown, or plain-text file",
+    "video_playback_unavailable": "This video format is not supported for in-browser playback. You can download the original file instead.",
+    "video_browser_unsupported": "Your browser does not support this video format.",
     "experimental": "Experimental",
     "search": "Search",
     "tags": "Tags",
@@ -119,6 +122,7 @@
     "replace_banner": "Replace Banner",
     "add_banner": "Add Banner",
     "download": "Download",
+    "download_file": "Download {{fileName}}",
     "sort": {
       "title": "Sort",
       "relevant_first": "Most Relevant First",

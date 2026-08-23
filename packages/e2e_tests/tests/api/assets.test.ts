@@ -3,7 +3,11 @@ import { assert, beforeEach, describe, expect, inject, it } from "vitest";
 import { createKarakeepClient } from "@karakeep/sdk";
 
 import { createTestUser, uploadTestAsset } from "../../utils/api";
-import { createTestImageFile, createTestPdfFile } from "../../utils/assets";
+import {
+  createTestImageFile,
+  createTestPdfFile,
+  createTestVideoFile,
+} from "../../utils/assets";
 
 describe("Assets API", () => {
   const port = inject("karakeepPort");
@@ -48,6 +52,57 @@ describe("Assets API", () => {
 
     expect(resp.status).toBe(200);
   });
+
+  it.each([
+    ["MP4", "test.mp4", "video/mp4"],
+    ["WebM", "test.webm", "video/webm"],
+  ])(
+    "should create a top-level %s video bookmark and serve byte ranges",
+    async (_format, fileName, contentType) => {
+      const uploadResponse = await uploadTestAsset(
+        apiKey,
+        port,
+        createTestVideoFile(fileName, contentType),
+      );
+      expect(uploadResponse.contentType).toBe(contentType);
+
+      const { data: createdBookmark, response: createResponse } =
+        await client.POST("/bookmarks", {
+          body: {
+            type: "asset",
+            title: `${_format} test video`,
+            assetType: "video",
+            assetId: uploadResponse.assetId,
+          },
+        });
+
+      expect(createResponse.status).toBe(201);
+      expect(createdBookmark?.content).toMatchObject({
+        type: "asset",
+        assetType: "video",
+        assetId: uploadResponse.assetId,
+        contentType,
+      });
+
+      const rangeResponse = await fetch(
+        `http://localhost:${port}/api/v1/assets/${uploadResponse.assetId}`,
+        {
+          headers: {
+            authorization: `Bearer ${apiKey}`,
+            Range: "bytes=0-3",
+          },
+        },
+      );
+
+      expect(rangeResponse.status).toBe(206);
+      expect(rangeResponse.headers.get("accept-ranges")).toBe("bytes");
+      expect(rangeResponse.headers.get("content-range")).toMatch(
+        /^bytes 0-3\/\d+$/,
+      );
+      expect(rangeResponse.headers.get("content-length")).toBe("4");
+      expect((await rangeResponse.arrayBuffer()).byteLength).toBe(4);
+    },
+  );
 
   it("should require assets:readwrite to upload an asset", async () => {
     const scopedApiKey = await createTestUser(["assets:read"]);

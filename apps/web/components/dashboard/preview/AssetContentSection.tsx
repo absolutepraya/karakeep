@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/lib/i18n/client";
+import { Download } from "lucide-react";
 
 import { BookmarkTypes, ZBookmark } from "@karakeep/shared/types/bookmarks";
 import { getContentFormatForBookmarkAssetType } from "@karakeep/shared/content-support";
@@ -108,6 +109,64 @@ function ImageContentSection({ bookmark }: { bookmark: ZBookmark }) {
   );
 }
 
+function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
+  if (bookmark.content.type != BookmarkTypes.ASSET) {
+    throw new Error("Invalid content type");
+  }
+
+  const { t } = useTranslation();
+  const assetUrl = getAssetUrl(bookmark.content.assetId);
+  const fileName = bookmark.content.fileName || t("common.video");
+  const isMatroska =
+    bookmark.content.contentType === "video/x-matroska" ||
+    bookmark.content.fileName?.toLowerCase().endsWith(".mkv") === true;
+  const [playbackError, setPlaybackError] = useState(isMatroska);
+
+  useEffect(() => {
+    setPlaybackError(isMatroska);
+  }, [assetUrl, bookmark.content.contentType, isMatroska]);
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-4">
+      {playbackError ? (
+        <div
+          role="alert"
+          className="flex max-w-md flex-col items-center gap-3 text-center text-sm text-muted-foreground"
+        >
+          <p>{t("common.video_playback_unavailable")}</p>
+        </div>
+      ) : (
+        <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption -- captions are not yet part of the uploaded-video model */}
+          <video
+            key={`${assetUrl}:${bookmark.content.contentType ?? ""}`}
+            className="max-h-full max-w-full"
+            controls
+            preload="metadata"
+            playsInline
+            aria-label={bookmark.title || fileName}
+            onError={() => setPlaybackError(true)}
+          >
+            <source
+              src={assetUrl}
+              type={bookmark.content.contentType ?? undefined}
+            />
+            {t("common.video_browser_unsupported")}
+          </video>
+        </div>
+      )}
+      <Link
+        href={assetUrl}
+        download={fileName}
+        className="shadow-xs inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+      >
+        <Download className="size-4" aria-hidden="true" />
+        {t("actions.download_file", { fileName })}
+      </Link>
+    </div>
+  );
+}
+
 export function AssetContentSection({ bookmark }: { bookmark: ZBookmark }) {
   if (bookmark.content.type != BookmarkTypes.ASSET) {
     throw new Error("Invalid content type");
@@ -119,6 +178,8 @@ export function AssetContentSection({ bookmark }: { bookmark: ZBookmark }) {
       return <ImageContentSection bookmark={bookmark} />;
     case "pdf":
       return <PDFContentSection bookmark={bookmark} />;
+    case "video":
+      return <VideoContentSection bookmark={bookmark} />;
     default:
       return <div>Unsupported asset type</div>;
   }
