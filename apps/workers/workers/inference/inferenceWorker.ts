@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { workerStatsCounter } from "metrics";
 import { withWorkerEventLog, withWorkerTracing } from "workerTracing";
 
 import type { ZOpenAIRequest } from "@karakeep/shared-server";
 import { db } from "@karakeep/db";
-import { bookmarks } from "@karakeep/db/schema";
+import { bookmarkTranscripts, bookmarks } from "@karakeep/db/schema";
 import {
   addLogFields,
   OpenAIQueue,
@@ -21,12 +21,42 @@ import { runTagging } from "./tagging";
 async function attemptMarkStatus(
   jobData: object | undefined,
   status: "success" | "failure",
+  summaryWritten = true,
 ) {
   if (!jobData) {
     return;
   }
   try {
     const request = zOpenAIRequestSchema.parse(jobData);
+    if (
+      request.type === "summarize" &&
+      request.summarySource === "transcript" &&
+      request.transcriptRevision !== undefined
+    ) {
+      const transcript = await db.query.bookmarkTranscripts.findFirst({
+        where: eq(bookmarkTranscripts.bookmarkId, request.bookmarkId),
+        columns: { revision: true },
+      });
+      if (transcript?.revision !== request.transcriptRevision) {
+        return;
+      }
+    }
+    if (
+      request.type === "summarize" &&
+      status === "success" &&
+      !summaryWritten
+    ) {
+      await db
+        .update(bookmarks)
+        .set({ summarizationStatus: null })
+        .where(
+          and(
+            eq(bookmarks.id, request.bookmarkId),
+            eq(bookmarks.summarizationStatus, "pending"),
+          ),
+        );
+      return;
+    }
     await db
       .update(bookmarks)
       .set({
@@ -35,7 +65,14 @@ async function attemptMarkStatus(
           : {}),
         ...(request.type === "tag" ? { taggingStatus: status } : {}),
       })
-      .where(eq(bookmarks.id, request.bookmarkId));
+      .where(
+        request.type === "summarize" && status === "success"
+          ? and(
+              eq(bookmarks.id, request.bookmarkId),
+              eq(bookmarks.summaryStale, false),
+            )
+          : eq(bookmarks.id, request.bookmarkId),
+      );
   } catch (e) {
     logger.error(`Something went wrong when marking the tagging status: ${e}`);
   }
@@ -44,18 +81,21 @@ async function attemptMarkStatus(
 export class OpenAiWorker {
   static async build() {
     logger.info("Starting inference worker ...");
-    const worker = (await getQueueClient())!.createRunner<ZOpenAIRequest>(
+    const worker = (await getQueueClient())!.createRunner<
+      ZOpenAIRequest,
+      boolean | undefined
+    >(
       OpenAIQueue,
       {
         run: withWorkerTracing(
           "inferenceWorker.run",
           withWorkerEventLog("inferenceWorker.run", runOpenAI),
         ),
-        onComplete: async (job) => {
+        onComplete: async (job, result) => {
           workerStatsCounter.labels("inference", "completed").inc();
           const jobId = job.id;
           logger.info(`[inference][${jobId}] Completed successfully`);
-          await attemptMarkStatus(job.data, "success");
+          await attemptMarkStatus(job.data, "success", result);
         },
         onError: async (job) => {
           workerStatsCounter.labels("inference", "failed").inc();
@@ -80,7 +120,9 @@ export class OpenAiWorker {
   }
 }
 
-async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
+async function runOpenAI(
+  job: DequeuedJob<ZOpenAIRequest>,
+): Promise<boolean | undefined> {
   const jobId = job.id;
 
   const inferenceClient = InferenceClientFactory.build();
@@ -88,7 +130,7 @@ async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
     logger.debug(
       `[inference][${jobId}] No inference client configured, nothing to do now`,
     );
-    return;
+    return false;
   }
 
   const request = zOpenAIRequestSchema.safeParse(job.data);
@@ -113,11 +155,10 @@ async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
   });
   switch (request.data.type) {
     case "summarize":
-      await runSummarization(bookmarkId, job, inferenceClient);
-      break;
+      return runSummarization(bookmarkId, job, inferenceClient);
     case "tag":
       await runTagging(bookmarkId, job, inferenceClient);
-      break;
+      return undefined;
     default:
       throw new Error(`Unknown inference type: ${request.data.type}`);
   }

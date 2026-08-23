@@ -8,6 +8,7 @@ export const SCREENSHOT_FIRST_QUEUE_WORKERS = [
   "webhook",
   "backup",
   "assetPreprocessing",
+  "transcript",
 ] as const;
 
 export const SCREENSHOT_FIRST_IMPORT_WORKER = "import" as const;

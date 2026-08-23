@@ -15,6 +15,7 @@ import {
   prepareQueue,
   RuleEngineQueue,
   SearchIndexingQueue,
+  TranscriptQueue,
   shutdownEventLogger,
   shutdownTracing,
   startQueue,
@@ -36,6 +37,7 @@ import { OpenAiWorker } from "./workers/inference/inferenceWorker";
 import { ImportWorker } from "./workers/importWorker";
 import { RuleEngineWorker } from "./workers/ruleEngineWorker";
 import { SearchIndexingWorker } from "./workers/searchWorker";
+import { TranscriptWorker } from "./workers/transcriptWorker";
 import { WebhookWorker } from "./workers/webhookWorker";
 
 type QueueWorkerName = (typeof SCREENSHOT_FIRST_QUEUE_WORKERS)[number];
@@ -78,6 +80,10 @@ const workerBuilders = {
     await AssetPreprocessingQueue.ensureInit();
     return AssetPreprocessingWorker.build();
   },
+  transcript: async () => {
+    await TranscriptQueue.ensureInit();
+    return TranscriptWorker.build();
+  },
 } as const;
 
 const enabledWorkers = new Set(serverConfig.workers.enabledWorkers);
@@ -92,6 +98,7 @@ const screenshotFirstWorkers: Record<WorkerName, true> = {
   webhook: true,
   backup: true,
   assetPreprocessing: true,
+  transcript: true,
   import: true,
 };
 

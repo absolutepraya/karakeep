@@ -631,6 +631,20 @@
       "when": 1787422279248,
       "tag": "0089_add_asset_cleanup_pending",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "6",
+      "when": 1787463417833,
+      "tag": "0090_add_transcript_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "6",
+      "when": 1787464761180,
+      "tag": "0091_add_transcript_revision_to_reader_state",
+      "breakpoints": true
     }
   ]
 }

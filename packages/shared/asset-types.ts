@@ -6,6 +6,9 @@ export const enum ASSET_TYPES {
   APPLICATION_PDF = "application/pdf",
   APPLICATION_ZIP = "application/zip",
   TEXT_HTML = "text/html",
+  TEXT_PLAIN = "text/plain",
+  TEXT_VTT = "text/vtt",
+  APPLICATION_SUBRIP = "application/x-subrip",
 
   VIDEO_MP4 = "video/mp4",
   VIDEO_WEBM = "video/webm",

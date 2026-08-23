@@ -59,6 +59,13 @@ type EventLogInternal =
       "bookmark.id"?: string;
     }
   | {
+      ["event.name"]: "transcriptWorker.run";
+      "bookmark.id"?: string;
+      "transcript.provider"?: string;
+      "transcript.source_language"?: string;
+      "transcript.source_files"?: number;
+    }
+  | {
       ["event.name"]: "webhookWorker.run";
       "bookmark.id"?: string;
       "webhook.operation"?: string;

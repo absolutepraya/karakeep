@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { rssFeedImportsTable } from "@karakeep/db/schema";
+import { eq } from "drizzle-orm";
+
+import { bookmarks, rssFeedImportsTable } from "@karakeep/db/schema";
 
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
 import {
@@ -328,6 +330,7 @@ describe("Offline sync routes", () => {
 
   test<CustomTestContext>("creates a text bookmark with its client ID while offline", async ({
     apiCallers,
+    db,
   }) => {
     const owner = apiCallers[0];
     const mutation = {
@@ -357,6 +360,11 @@ describe("Offline sync routes", () => {
         }),
       }),
     );
+    const storedBookmark = await db.query.bookmarks.findFirst({
+      where: eq(bookmarks.id, mutation.bookmarkId),
+      columns: { summaryProvenance: true },
+    });
+    expect(storedBookmark?.summaryProvenance).toBeNull();
   });
 
   test<CustomTestContext>("rejects offline list membership after edit access is revoked", async ({

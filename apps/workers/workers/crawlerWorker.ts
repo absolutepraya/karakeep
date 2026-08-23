@@ -58,6 +58,7 @@ import {
   EmbeddingsQueue,
   OpenAIQueue,
   QuotaService,
+  TranscriptQueue,
   setSpanAttributes,
   triggerSearchReindex,
   VideoWorkerQueue,
@@ -89,6 +90,7 @@ import {
 import { getRateLimitClient } from "@karakeep/shared/ratelimiting";
 import { tryCatch } from "@karakeep/shared/tryCatch";
 import { BookmarkTypes } from "@karakeep/shared/types/bookmarks";
+import { getYouTubeVideoId } from "@karakeep/shared/youtube";
 import { WebhooksService } from "@karakeep/trpc/models/webhooks.service";
 
 import type {
@@ -105,6 +107,14 @@ const tracer = getTracer("@karakeep/workers");
 
 function truncateUrl(url: string): string {
   return url.length > 100 ? url.slice(0, 100) + "..." : url;
+}
+
+function isTranscriptWorkerConfigured() {
+  const enabledWorkers = serverConfig.workers.enabledWorkers;
+  return (
+    (enabledWorkers.length === 0 || enabledWorkers.includes("transcript")) &&
+    !serverConfig.workers.disabledWorkers.includes("transcript")
+  );
 }
 
 /**
@@ -2312,7 +2322,24 @@ async function runCrawler(
       } else {
         await OpenAIQueue.enqueue({ bookmarkId, type: "tag" }, enqueueOpts);
       }
-      if (serverConfig.inference.enableAutoSummarization) {
+      const isYouTubeBookmark = getYouTubeVideoId(url) !== null;
+      if (isYouTubeBookmark) {
+        await TranscriptQueue.enqueue({ bookmarkId }, enqueueOpts);
+        if (
+          !serverConfig.inference.enableAutoSummarization ||
+          !isTranscriptWorkerConfigured()
+        ) {
+          await db
+            .update(bookmarks)
+            .set({ summarizationStatus: null })
+            .where(
+              and(
+                eq(bookmarks.id, bookmarkId),
+                eq(bookmarks.summarizationStatus, "pending"),
+              ),
+            );
+        }
+      } else if (serverConfig.inference.enableAutoSummarization) {
         await OpenAIQueue.enqueue(
           { bookmarkId, type: "summarize" },
           enqueueOpts,

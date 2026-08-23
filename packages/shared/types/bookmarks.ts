@@ -27,6 +27,7 @@ export const zAssetTypesSchema = z.enum([
   "bookmarkAsset",
   "precrawledArchive",
   "userUploaded",
+  "captionSource",
   "avatar",
   "unknown",
 ]);
@@ -112,6 +113,8 @@ export const zBareBookmarkSchema = z.object({
   embeddingStatus: z.enum(["success", "failure", "pending"]).nullable(),
   note: z.string().nullish(),
   summary: z.string().nullish(),
+  summaryProvenance: z.enum(["web", "transcript", "manual"]).nullish(),
+  summaryStale: z.boolean().nullish(),
   source: zBookmarkSourceSchema.nullish(),
   userId: z.string(),
 });

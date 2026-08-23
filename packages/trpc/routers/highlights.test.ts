@@ -162,6 +162,54 @@ describe("Highlight Routes", () => {
     expect(res.highlights.some((h) => h.id === highlight2.id)).toBeTruthy();
   });
 
+  test<CustomTestContext>("filters transcript highlights by revision while keeping page highlights", async ({
+    apiCallers,
+  }) => {
+    const api = apiCallers[0].highlights;
+    const bookmarksApi = apiCallers[0].bookmarks;
+    const bookmark = await bookmarksApi.createBookmark({
+      url: "https://www.youtube.com/watch?v=abc123",
+      type: BookmarkTypes.LINK,
+    });
+
+    const current = await api.create({
+      bookmarkId: bookmark.id,
+      startOffset: 10,
+      endOffset: 20,
+      transcriptRevision: 2,
+      text: "Current transcript highlight",
+      note: null,
+    });
+    await api.create({
+      bookmarkId: bookmark.id,
+      startOffset: 30,
+      endOffset: 40,
+      transcriptRevision: 1,
+      text: "Stale transcript highlight",
+      note: null,
+    });
+    const page = await api.create({
+      bookmarkId: bookmark.id,
+      startOffset: 50,
+      endOffset: 60,
+      text: "Page highlight",
+      note: null,
+    });
+
+    const filtered = await api.getForBookmark({
+      bookmarkId: bookmark.id,
+      transcriptRevision: 2,
+    });
+    expect(filtered.highlights.map((highlight) => highlight.id)).toEqual(
+      expect.arrayContaining([current.id, page.id]),
+    );
+    expect(
+      filtered.highlights.some(
+        (highlight) => highlight.text === "Stale transcript highlight",
+      ),
+    ).toBe(false);
+  });
+
   test<CustomTestContext>("get all highlights with pagination", async ({
     apiCallers,
   }) => {

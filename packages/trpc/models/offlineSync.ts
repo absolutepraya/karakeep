@@ -275,6 +275,8 @@ async function applyBookmarkUpdate(
     favourited?: boolean;
     note?: string;
     summary?: string | null;
+    summaryProvenance?: "manual";
+    summaryStale?: boolean;
     modifiedAt: Date;
   } = { modifiedAt: new Date() };
   let hasCommonUpdate = false;
@@ -297,6 +299,8 @@ async function applyBookmarkUpdate(
   }
   if (fields.summary !== undefined) {
     commonUpdates.summary = fields.summary;
+    commonUpdates.summaryProvenance = "manual";
+    commonUpdates.summaryStale = false;
     hasCommonUpdate = true;
   }
 
@@ -498,6 +502,9 @@ async function applyTextBookmarkCreate(
     favourited: mutation.bookmark.favourited,
     note: mutation.bookmark.note,
     summary: mutation.bookmark.summary,
+    summaryProvenance:
+      mutation.bookmark.summary !== undefined ? "manual" : undefined,
+    summaryStale: false,
     createdAt: mutation.bookmark.createdAt,
     source: "web",
     summarizationStatus: null,

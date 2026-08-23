@@ -16,6 +16,7 @@ import { offlineSyncAppRouter } from "./offlineSync";
 import { rulesAppRouter } from "./rules";
 import { subscriptionsRouter } from "./subscriptions";
 import { tagsAppRouter } from "./tags";
+import { transcriptsAppRouter } from "./transcripts";
 import { usersAppRouter } from "./users";
 import { webhooksAppRouter } from "./webhooks";
 
@@ -25,6 +26,7 @@ export const appRouter = router({
   users: usersAppRouter,
   lists: listsAppRouter,
   tags: tagsAppRouter,
+  transcripts: transcriptsAppRouter,
   prompts: promptsAppRouter,
   admin: adminAppRouter,
   feeds: feedsAppRouter,
