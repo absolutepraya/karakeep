@@ -130,7 +130,7 @@ async function runOpenAI(
     logger.debug(
       `[inference][${jobId}] No inference client configured, nothing to do now`,
     );
-    return undefined;
+    return false;
   }
 
   const request = zOpenAIRequestSchema.safeParse(job.data);

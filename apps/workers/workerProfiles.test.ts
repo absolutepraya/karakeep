@@ -17,6 +17,7 @@ describe("screenshot-first worker profile", () => {
       "webhook",
       "backup",
       "assetPreprocessing",
+      "transcript",
     ]);
     expect(SCREENSHOT_FIRST_QUEUE_WORKERS).not.toContain("embeddings");
     expect(SCREENSHOT_FIRST_QUEUE_WORKERS).not.toContain("video");
