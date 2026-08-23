@@ -184,6 +184,7 @@ export class Bookmark extends BareBookmark {
         htmlContent: includeContent
           ? await Bookmark.getBookmarkHtmlContent(link, bookmark.userId)
           : null,
+        contentAssetId: link.contentAssetId,
         crawledAt: link.crawledAt,
         crawlStatus: link.crawlStatus,
         author: link.author,

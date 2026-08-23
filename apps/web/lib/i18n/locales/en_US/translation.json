@@ -1,6 +1,9 @@
 {
   "common": {
     "something_went_wrong": "Something went wrong",
+    "drop_upload_top_level": "Drop an image, PDF, video, Markdown, or plain-text file",
+    "video_playback_unavailable": "This video format is not supported for in-browser playback. You can download the original file instead.",
+    "video_browser_unsupported": "Your browser does not support this video format.",
     "experimental": "Experimental",
     "search": "Search",
     "tags": "Tags",
@@ -106,6 +109,7 @@
     "replace_banner": "Replace Banner",
     "add_banner": "Add Banner",
     "download": "Download",
+    "download_file": "Download {{fileName}}",
     "rename": "Rename"
   },
   "highlights": {

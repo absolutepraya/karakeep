@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -114,12 +114,17 @@ function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
     throw new Error("Invalid content type");
   }
 
+  const { t } = useTranslation();
   const assetUrl = getAssetUrl(bookmark.content.assetId);
-  const fileName = bookmark.content.fileName ?? "video";
+  const fileName = bookmark.content.fileName || t("common.video");
   const isMatroska =
     bookmark.content.contentType === "video/x-matroska" ||
     bookmark.content.fileName?.toLowerCase().endsWith(".mkv") === true;
   const [playbackError, setPlaybackError] = useState(isMatroska);
+
+  useEffect(() => {
+    setPlaybackError(isMatroska);
+  }, [assetUrl, bookmark.content.contentType, isMatroska]);
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-4">
@@ -128,10 +133,7 @@ function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
           role="alert"
           className="flex max-w-md flex-col items-center gap-3 text-center text-sm text-muted-foreground"
         >
-          <p>
-            This video format is not supported for in-browser playback. You can
-            download the original file instead.
-          </p>
+          <p>{t("common.video_playback_unavailable")}</p>
         </div>
       ) : (
         <div className="flex min-h-0 w-full flex-1 items-center justify-center">
@@ -141,14 +143,14 @@ function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
             controls
             preload="metadata"
             playsInline
-            aria-label={bookmark.title ?? fileName}
+            aria-label={bookmark.title || fileName}
             onError={() => setPlaybackError(true)}
           >
             <source
               src={assetUrl}
               type={bookmark.content.contentType ?? undefined}
             />
-            Your browser does not support this video format.
+            {t("common.video_browser_unsupported")}
           </video>
         </div>
       )}
@@ -158,7 +160,7 @@ function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
         className="shadow-xs inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
       >
         <Download className="size-4" aria-hidden="true" />
-        Download {fileName}
+        {t("actions.download_file", { fileName })}
       </Link>
     </div>
   );

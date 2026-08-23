@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SCREENS } from "@/lib/breakpoints";
+import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Expand, FileIcon, ImageIcon, Video } from "lucide-react";
@@ -43,24 +44,30 @@ function PublicVideoPreview({ bookmark }: { bookmark: ZPublicBookmark }) {
     throw new Error("Invalid content type");
   }
 
-  const fileName = bookmark.content.fileName ?? "video";
+  const { t } = useTranslation();
+  const assetUrl = bookmark.content.assetUrl;
+  const fileName = bookmark.content.fileName || t("common.video");
   const isMatroska =
     bookmark.content.contentType === "video/x-matroska" ||
     bookmark.content.fileName?.toLowerCase().endsWith(".mkv") === true;
   const [playbackError, setPlaybackError] = useState(isMatroska);
+
+  useEffect(() => {
+    setPlaybackError(isMatroska);
+  }, [assetUrl, bookmark.content.contentType, isMatroska]);
 
   return (
     <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
       {playbackError ? (
         <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
           <Video className="h-8 w-8" aria-hidden="true" />
-          <p>This video cannot be played in your browser.</p>
+          <p>{t("common.video_playback_unavailable")}</p>
           <Link
-            href={bookmark.content.assetUrl}
+            href={assetUrl}
             download={fileName}
             className="font-medium text-foreground underline underline-offset-4"
           >
-            Download {fileName}
+            {t("actions.download_file", { fileName })}
           </Link>
         </div>
       ) : (
@@ -71,14 +78,14 @@ function PublicVideoPreview({ bookmark }: { bookmark: ZPublicBookmark }) {
             controls
             preload="metadata"
             playsInline
-            aria-label={bookmark.title ?? fileName}
+            aria-label={bookmark.title || fileName}
             onError={() => setPlaybackError(true)}
           >
             <source
-              src={bookmark.content.assetUrl}
+              src={assetUrl}
               type={bookmark.content.contentType ?? undefined}
             />
-            Your browser does not support this video format.
+            {t("common.video_browser_unsupported")}
           </video>
         </>
       )}

@@ -24,7 +24,7 @@ documents on one extensible binary-asset path.
 - MP4 and WebM are supported for in-browser playback and download.
 - MKV is accepted for storage and download, but is download-first because
   browser playback is not portable.
-- Unsupported codecs use the same explicit download fallback. Marka does not
+- Unsupported codecs use the same explicit download fallback. Karakeep does not
   transcode uploaded videos in this issue.
 - The existing global `MAX_ASSET_SIZE_MB` limit remains authoritative, with a
   default of 50 MB for every uploaded asset type.
