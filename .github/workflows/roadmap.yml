@@ -58,7 +58,9 @@ jobs:
           git diff --exit-code -- README.md
           docs/roadmap/roadmap.generated.excalidraw
           docs/roadmap/roadmap.svg
-          docs/roadmap/roadmap.png
+
+      - name: Check generated PNG
+        run: test -s docs/roadmap/roadmap.png
 
   sync:
     if: github.event_name != 'pull_request'

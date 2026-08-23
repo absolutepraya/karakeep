@@ -254,7 +254,7 @@ Marka's issue-linked roadmap is a human-authored single-canvas dependency map fo
 - When a PR changes a roadmap issue's scope, ordering, grouping, or dependencies, update the authored source diagram in that PR. A normal implementation PR does not need a diagram edit when the roadmap structure is unchanged.
 - Never edit generated roadmap files directly. Use `pnpm roadmap:check` to validate metadata and dependencies, and `pnpm roadmap:render` to render the outputs locally. Rendering uses the Excalidraw export APIs with Excalifont and requires Chromium.
 - Roadmap synchronization runs after pushes to `main`, issue close or reopen events, and manual dispatches. It may commit only generated roadmap files and the marked Roadmap block in `README.md`, never the authored source.
-- The workflow must be deterministic, must not add timestamps, must not create an empty commit, and must fail without partial output when metadata or issue lookups are invalid.
+- The workflow must not add timestamps or create an empty commit, and must fail without partial output when metadata or issue lookups are invalid. Pull request freshness checks compare the deterministic Excalidraw, SVG, and README outputs and verify that the platform-rendered PNG is non-empty; PNG bytes may vary across runner operating systems.
 
 ## Common commands
 
