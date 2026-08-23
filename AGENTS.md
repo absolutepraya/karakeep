@@ -247,12 +247,12 @@ If you edit development or deployment facts, keep these aligned:
 
 ## Roadmap diagram workflow
 
-Marka's issue-linked roadmap is a human-authored dependency canvas with generated status projections. The authored source is `docs/roadmap/roadmap.excalidraw`. Generated files are `docs/roadmap/roadmap.generated.excalidraw`, `docs/roadmap/roadmap.svg`, and `docs/roadmap/roadmap.png`; the generated Roadmap section in `README.md` is also bot-owned.
+Marka's issue-linked roadmap is a human-authored single-canvas dependency map for the current full product and platform issue set. The authored source is `docs/roadmap/roadmap.excalidraw`. Generated files are `docs/roadmap/roadmap.generated.excalidraw`, `docs/roadmap/roadmap.svg`, and `docs/roadmap/roadmap.png`; the generated Roadmap section in `README.md` is also bot-owned.
 
 - A roadmap issue is explicitly represented by one node and one GitHub issue number. Dependency arrows point from prerequisites to dependent issues. Parent or phase grouping is containment, not dependency.
-- Background and border colors are authored track colors. GitHub issue state controls completion styling only: muted original color, neutral border and text, checkmark, and strikethrough. Do not infer status from labels.
+- Background and border colors are authored track colors and remain unchanged when an issue closes. GitHub issue state controls completion styling only: muted issue text, a checkmark, and text-only strikethrough. Never strike or recolor the node rectangle, and do not infer status from labels.
 - When a PR changes a roadmap issue's scope, ordering, grouping, or dependencies, update the authored source diagram in that PR. A normal implementation PR does not need a diagram edit when the roadmap structure is unchanged.
-- Never edit generated roadmap files directly. Use `pnpm roadmap:check` to validate metadata and dependencies, and `pnpm roadmap:render` to render the outputs locally once those commands exist.
+- Never edit generated roadmap files directly. Use `pnpm roadmap:check` to validate metadata and dependencies, and `pnpm roadmap:render` to render the outputs locally. Rendering uses the Excalidraw export APIs with Excalifont and requires Chromium.
 - Roadmap synchronization runs after pushes to `main`, issue close or reopen events, and manual dispatches. It may commit only generated roadmap files and the marked Roadmap block in `README.md`, never the authored source.
 - The workflow must be deterministic, must not add timestamps, must not create an empty commit, and must fail without partial output when metadata or issue lookups are invalid.
 

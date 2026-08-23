@@ -2,25 +2,31 @@
 
 Status: accepted
 
-The #55 file-support roadmap needs to remain understandable as work progresses without turning every issue update into a manual diagram edit. The roadmap is therefore a human-authored Excalidraw dependency canvas whose generated status projection is synchronized from GitHub issue state.
+## Context
+
+Marka needs one public visual roadmap that shows the current full future-facing product and platform issue set while remaining editable in Excalidraw. GitHub Issues remain the source of truth for concrete work and state, while the diagram owns visual structure and dependency meaning.
 
 ## Decision
 
-The authored source is `docs/roadmap/roadmap.excalidraw`. It contains explicit issue-node metadata, stable node identities, and dependency relationships. The initial canvas covers #55 and the current roadmap issues #62 to #69. Arrows point from prerequisites to dependent issues; containment of a child issue under #55 is not itself a dependency.
+The authored source is docs/roadmap/roadmap.excalidraw. The initial single canvas contains the current scoped issues #25, #26, #28, #34, #37, #38, #46, #55, #62 to #69, #72 to #75, and #78. The source stores explicit issue metadata, stable node identities, links, colors, placement, area labels, and hard-prerequisite edges.
 
-The renderer produces `roadmap.generated.excalidraw`, `roadmap.svg`, and `roadmap.png` under `docs/roadmap/`. The root README embeds the PNG inside a marked Roadmap section and links to the SVG and editable source. Generated files and that marked README block are bot-owned. The authored source, node placement, track colors, labels, and dependency layout remain human-owned.
+The roadmap flows from top to bottom. It uses a portrait-friendly layout with simple normal-case area labels: Content support, Reader and media, Collaboration, Public surfaces, and Platform and operations. Grouping and visual spacing are containment only. An arrow means the source issue is a hard prerequisite for the destination issue.
 
-GitHub issue state is the only automated status input. Closed issues retain a faint version of their authored track color and receive neutral styling, a checkmark, and strikethrough. Reopened issues return to their open styling. Labels do not control colors or lifecycle state, and dependent issues do not receive derived blocked styling.
+The source uses Excalidraw's hand-drawn shapes and arrows with Excalifont text. Generated SVG and PNG outputs are exported through Excalidraw's own export APIs in a headless Chromium process. Generated outputs are roadmap.generated.excalidraw, roadmap.svg, and roadmap.png. The root README embeds the PNG and links the source and SVG.
 
-Pull request validation renders in check-only mode. The synchronization workflow renders and commits only generated outputs after pushes to `main`, issue close or reopen events, and manual dispatches. It uses read access to issues and write access to repository contents, never edits the authored source, skips empty commits, and fails without partial output when validation or issue lookup fails. Generated output contains no timestamps.
+GitHub open or closed state is the only automated status input. A closed issue keeps its authored fill and border. Its issue number and title text become muted and receive text-only strikethrough, plus a small checkmark. The rectangle is never struck through or recolored. Reopening restores the open text styling. Labels do not control status, color, or blocked state.
+
+Pull request checks validate the source and generated outputs without committing. Synchronization renders after pushes to main, issue close or reopen events, and manual dispatch. It may commit only generated roadmap outputs and the marked README block. It never edits the authored source, skips empty commits, and fails without partial output when metadata, issue lookup, or rendering fails.
 
 ## Considered options
 
-- Rewriting the authored Excalidraw file in CI was rejected because it would mix human layout changes with generated state and risk overwriting work.
-- Automatically discovering and placing every GitHub issue was rejected because issue placement, scope, and dependencies require human judgment.
-- Using issue labels for colors or status was rejected because labels are not a stable visual contract for this roadmap.
-- Writing dependency relationships back to GitHub was deferred because the diagram is the roadmap model while GitHub remains the issue-state source.
+- Rewriting the authored Excalidraw file in CI was rejected because it would mix human layout changes with generated state.
+- Automatically discovering and placing issues was rejected because scope, placement, and dependencies require human judgment.
+- A custom flat SVG renderer was rejected because it loses Excalidraw's hand-drawn visual language.
+- Using issue labels for colors or status was rejected because labels are not a stable visual contract.
+- Using Now, Next, Later bands or dates was rejected because the full issue graph already communicates direction without adding a second planning model.
+- Writing dependency relationships back to GitHub was deferred because the diagram is the visual dependency model while GitHub remains the issue-state source.
 
 ## Consequences
 
-The README stays current after issue or merge events, while the source diagram remains stable and editable. Contributors must update the source when roadmap structure changes, but ordinary implementation PRs do not need diagram churn. The current board is the only published view for v1; Git history provides the change history, and automatic layout, issue discovery, historical snapshots, and multiple canvases remain out of scope.
+The README stays current after issue or merge events, and the editable source remains human-owned. Contributors must update the source when the roadmap scope, structure, labels, or dependencies change. Ordinary implementation PRs do not need diagram churn when the roadmap structure is unchanged. The current canvas is the only published view for now; historical snapshots, automatic layout, automatic issue discovery, and multiple canvases remain out of scope.

@@ -81,8 +81,11 @@ Run these checks when working on the roadmap:
 
 ```bash
 pnpm roadmap:check
+pnpm exec playwright install chromium
 pnpm roadmap:render
 ```
+
+The renderer exports through Excalidraw itself so the committed SVG and PNG retain Excalifont, hand-drawn strokes, and hand-drawn arrows. CI installs Chromium before rendering.
 
 ## Change expectations
 

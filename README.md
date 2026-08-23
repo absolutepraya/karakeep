@@ -20,7 +20,7 @@ Marka is a self-hostable bookmark library built for people who want their saved 
 <!-- ROADMAP:START -->
 ## Roadmap
 
-[![Marka roadmap](./docs/roadmap/roadmap.png)](./docs/roadmap/roadmap.svg)
+[![Marka Roadmap](./docs/roadmap/roadmap.png)](./docs/roadmap/roadmap.svg)
 
 [Open the editable Excalidraw source](./docs/roadmap/roadmap.excalidraw)
 <!-- ROADMAP:END -->
