@@ -23,6 +23,6 @@ CREATE TABLE `bookmarkTranscripts` (
 CREATE INDEX `bookmarkTranscripts_bookmarkId_idx` ON `bookmarkTranscripts` (`bookmarkId`);--> statement-breakpoint
 CREATE INDEX `bookmarkTranscripts_providerItemId_idx` ON `bookmarkTranscripts` (`providerItemId`);--> statement-breakpoint
 CREATE UNIQUE INDEX `bookmarkTranscripts_bookmark_provider_unique` ON `bookmarkTranscripts` (`bookmarkId`,`provider`);--> statement-breakpoint
-ALTER TABLE `assets` ADD `transcriptId` text REFERENCES bookmarkTranscripts(id);--> statement-breakpoint
+ALTER TABLE `assets` ADD `transcriptId` text REFERENCES bookmarkTranscripts(id) ON DELETE cascade;--> statement-breakpoint
 ALTER TABLE `bookmarks` ADD `summaryProvenance` text;--> statement-breakpoint
 ALTER TABLE `bookmarks` ADD `summaryStale` integer DEFAULT false NOT NULL;

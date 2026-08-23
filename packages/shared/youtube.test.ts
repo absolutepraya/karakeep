@@ -40,15 +40,20 @@ describe("YouTube transcript helpers", () => {
           ],
         }),
       ),
-    ).toBe("Hello\n\nworld\n\n!");
+    ).toBe("Hello world\n\nworld!");
     expect(
       normalizeSubtitleText(
-        "[Script Info]\n[Events]\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello\\Nworld",
+        "[Script Info]\n[Events]\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello, world\\Nagain",
       ),
-    ).toBe("Hello\n\nworld");
+    ).toBe("Hello, world\n\nagain");
     expect(normalizeSubtitleText("[00:01.00]Hello\n[00:02.00]World")).toBe(
       "Hello\n\nWorld",
     );
+    expect(
+      normalizeSubtitleText(
+        "WEBVTT - English\n\n00:00:01.000 --> 00:00:02.000\nHello",
+      ),
+    ).toBe("Hello");
     expect(subtitleContentType("captions.vtt")).toBe("text/vtt");
     expect(subtitleContentType("captions.srt")).toBe("application/x-subrip");
   });

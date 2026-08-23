@@ -21,6 +21,7 @@ import { runTagging } from "./tagging";
 async function attemptMarkStatus(
   jobData: object | undefined,
   status: "success" | "failure",
+  summaryWritten = true,
 ) {
   if (!jobData) {
     return;
@@ -39,6 +40,22 @@ async function attemptMarkStatus(
       if (transcript?.revision !== request.transcriptRevision) {
         return;
       }
+    }
+    if (
+      request.type === "summarize" &&
+      status === "success" &&
+      !summaryWritten
+    ) {
+      await db
+        .update(bookmarks)
+        .set({ summarizationStatus: null })
+        .where(
+          and(
+            eq(bookmarks.id, request.bookmarkId),
+            eq(bookmarks.summarizationStatus, "pending"),
+          ),
+        );
+      return;
     }
     await db
       .update(bookmarks)
@@ -64,18 +81,21 @@ async function attemptMarkStatus(
 export class OpenAiWorker {
   static async build() {
     logger.info("Starting inference worker ...");
-    const worker = (await getQueueClient())!.createRunner<ZOpenAIRequest>(
+    const worker = (await getQueueClient())!.createRunner<
+      ZOpenAIRequest,
+      boolean | undefined
+    >(
       OpenAIQueue,
       {
         run: withWorkerTracing(
           "inferenceWorker.run",
           withWorkerEventLog("inferenceWorker.run", runOpenAI),
         ),
-        onComplete: async (job) => {
+        onComplete: async (job, result) => {
           workerStatsCounter.labels("inference", "completed").inc();
           const jobId = job.id;
           logger.info(`[inference][${jobId}] Completed successfully`);
-          await attemptMarkStatus(job.data, "success");
+          await attemptMarkStatus(job.data, "success", result);
         },
         onError: async (job) => {
           workerStatsCounter.labels("inference", "failed").inc();
@@ -100,7 +120,9 @@ export class OpenAiWorker {
   }
 }
 
-async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
+async function runOpenAI(
+  job: DequeuedJob<ZOpenAIRequest>,
+): Promise<boolean | undefined> {
   const jobId = job.id;
 
   const inferenceClient = InferenceClientFactory.build();
@@ -108,7 +130,7 @@ async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
     logger.debug(
       `[inference][${jobId}] No inference client configured, nothing to do now`,
     );
-    return;
+    return undefined;
   }
 
   const request = zOpenAIRequestSchema.safeParse(job.data);
@@ -133,11 +155,10 @@ async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
   });
   switch (request.data.type) {
     case "summarize":
-      await runSummarization(bookmarkId, job, inferenceClient);
-      break;
+      return runSummarization(bookmarkId, job, inferenceClient);
     case "tag":
       await runTagging(bookmarkId, job, inferenceClient);
-      break;
+      return undefined;
     default:
       throw new Error(`Unknown inference type: ${request.data.type}`);
   }

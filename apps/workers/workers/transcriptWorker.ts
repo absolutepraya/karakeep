@@ -200,6 +200,7 @@ async function downloadCaptionArtifacts(
     runProxy,
   );
   const proxy = getProxyAgent(resolvedUrl.toString(), runProxy);
+  await fs.promises.mkdir(TRANSCRIPT_TMP_FOLDER, { recursive: true });
   const directory = await fs.promises.mkdtemp(
     path.join(TRANSCRIPT_TMP_FOLDER, "youtube-"),
   );

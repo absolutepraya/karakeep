@@ -109,6 +109,14 @@ function truncateUrl(url: string): string {
   return url.length > 100 ? url.slice(0, 100) + "..." : url;
 }
 
+function isTranscriptWorkerConfigured() {
+  const enabledWorkers = serverConfig.workers.enabledWorkers;
+  return (
+    (enabledWorkers.length === 0 || enabledWorkers.includes("transcript")) &&
+    !serverConfig.workers.disabledWorkers.includes("transcript")
+  );
+}
+
 /**
  * Redact sensitive query parameters (e.g., tokens) from a URL for safe logging.
  */
@@ -2317,6 +2325,20 @@ async function runCrawler(
       const isYouTubeBookmark = getYouTubeVideoId(url) !== null;
       if (isYouTubeBookmark) {
         await TranscriptQueue.enqueue({ bookmarkId }, enqueueOpts);
+        if (
+          !serverConfig.inference.enableAutoSummarization ||
+          !isTranscriptWorkerConfigured()
+        ) {
+          await db
+            .update(bookmarks)
+            .set({ summarizationStatus: null })
+            .where(
+              and(
+                eq(bookmarks.id, bookmarkId),
+                eq(bookmarks.summarizationStatus, "pending"),
+              ),
+            );
+        }
       } else if (serverConfig.inference.enableAutoSummarization) {
         await OpenAIQueue.enqueue(
           { bookmarkId, type: "summarize" },

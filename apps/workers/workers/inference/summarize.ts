@@ -66,12 +66,12 @@ export async function runSummarization(
   bookmarkId: string,
   job: DequeuedJob<ZOpenAIRequest>,
   inferenceClient: InferenceClient,
-) {
+): Promise<boolean> {
   if (!serverConfig.inference.enableAutoSummarization) {
     logger.debug(
       `[inference][${job.id}] Skipping summarization job for bookmark with id "${bookmarkId}" because it's disabled in the config.`,
     );
-    return;
+    return false;
   }
   const jobId = job.id;
 
@@ -86,7 +86,7 @@ export async function runSummarization(
     logger.info(
       `[inference][${jobId}] Skipping summary for bookmark ${bookmarkId} because the summary is user-owned.`,
     );
-    return;
+    return false;
   }
   if (
     summarySource === "transcript" &&
@@ -96,7 +96,7 @@ export async function runSummarization(
     logger.info(
       `[inference][${jobId}] Skipping stale transcript summary job for bookmark ${bookmarkId}.`,
     );
-    return;
+    return false;
   }
 
   // Check user-level preference
@@ -126,7 +126,7 @@ export async function runSummarization(
     logger.debug(
       `[inference][${jobId}] Skipping summarization job for bookmark with id "${bookmarkId}" because user has disabled auto-summarization.`,
     );
-    return;
+    return false;
   }
 
   let textToSummarize = "";
@@ -138,9 +138,10 @@ export async function runSummarization(
         bookmarkData.transcript?.status !== "ready" ||
         !bookmarkData.transcript.text?.trim()
       ) {
-        throw new Error(
-          `[inference][${jobId}] Transcript is not ready for bookmark ${bookmarkId}`,
+        logger.info(
+          `[inference][${jobId}] Transcript is not ready for bookmark ${bookmarkId}. Skipping summary.`,
         );
+        return false;
       }
 
       textToSummarize = `
@@ -164,7 +165,7 @@ URL: ${link.url ?? ""}
         logger.info(
           `[inference] No content found for link "${bookmarkId}". Skipping summary.`,
         );
-        return;
+        return false;
       }
 
       textToSummarize = `
@@ -180,14 +181,14 @@ URL: ${link.url ?? ""}
     logger.warn(
       `[inference][${jobId}] Bookmark ${bookmarkId} (type: ${bookmarkData.type}) is not a LINK or TEXT type with content, or content is missing. Skipping summary.`,
     );
-    return;
+    return false;
   }
 
   if (!textToSummarize.trim()) {
     logger.info(
       `[inference][${jobId}] No content to summarize for bookmark ${bookmarkId}.`,
     );
-    return;
+    return false;
   }
 
   const prompts = await db.query.customPrompts.findMany({
@@ -255,7 +256,7 @@ URL: ${link.url ?? ""}
       logger.info(
         `[inference][${jobId}] Discarding stale transcript summary result for bookmark ${bookmarkId}.`,
       );
-      return;
+      return false;
     }
   }
 
@@ -273,4 +274,6 @@ URL: ${link.url ?? ""}
     priority: job.priority,
     groupId: bookmarkData.userId,
   });
+
+  return true;
 }

@@ -64,7 +64,7 @@ function normalizeCaptionLines(input: string): string {
     const line = rawLine.trim();
     if (
       !line ||
-      line === "WEBVTT" ||
+      /^WEBVTT(?:\s|$)/i.test(line) ||
       /^NOTE(?:\s|$)/.test(line) ||
       TIMESTAMP_LINE.test(line) ||
       VTT_TIMESTAMP_LINE.test(line) ||
@@ -95,8 +95,8 @@ export function normalizeSubtitleText(input: string): string {
       if (Array.isArray(parsed.events)) {
         return normalizeCaptionLines(
           parsed.events
-            .flatMap((event) =>
-              (event.segs ?? []).map((segment) => segment.utf8 ?? ""),
+            .map((event) =>
+              (event.segs ?? []).map((segment) => segment.utf8 ?? "").join(""),
             )
             .join("\n"),
         );
@@ -109,7 +109,10 @@ export function normalizeSubtitleText(input: string): string {
   const assDialogue = trimmed
     .split(/\r?\n/)
     .filter((line) => /^Dialogue\s*:/i.test(line))
-    .map((line) => line.split(",", 10)[9] ?? "")
+    .map((line) => {
+      const fields = line.replace(/^Dialogue\s*:\s*/i, "");
+      return fields.match(/^(?:[^,]*,){9}(.*)$/)?.[1] ?? "";
+    })
     .join("\n")
     .replace(/\\N/g, "\n");
   if (assDialogue) {

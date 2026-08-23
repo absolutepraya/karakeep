@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -26,7 +26,11 @@ import {
 import { getYouTubeVideoId } from "@karakeep/shared/youtube";
 
 import type { AuthedContext } from "../index";
-import { createScopedAuthedProcedure, router } from "../index";
+import {
+  createRateLimitMiddleware,
+  createScopedAuthedProcedure,
+  router,
+} from "../index";
 import { ensureBookmarkAccess, ensureBookmarkOwnership } from "./bookmarks";
 
 const transcriptsProcedure = createScopedAuthedProcedure("bookmarks");
@@ -136,7 +140,7 @@ export const transcriptsAppRouter = router({
       const summaryIsManual = bookmark?.summaryProvenance === "manual";
 
       await ctx.db.transaction(async (tx) => {
-        await tx
+        const result = await tx
           .update(bookmarkTranscripts)
           .set({
             text: input.text,
@@ -144,7 +148,19 @@ export const transcriptsAppRouter = router({
             revision: nextRevision,
             modifiedAt: new Date(),
           })
-          .where(eq(bookmarkTranscripts.id, transcript.id));
+          .where(
+            and(
+              eq(bookmarkTranscripts.id, transcript.id),
+              eq(bookmarkTranscripts.revision, transcript.revision),
+            ),
+          );
+
+        if (result.changes === 0) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Transcript changed since it was loaded",
+          });
+        }
 
         if (!textChanged) return;
 
@@ -208,7 +224,7 @@ export const transcriptsAppRouter = router({
       const summaryIsManual = bookmark?.summaryProvenance === "manual";
 
       await ctx.db.transaction(async (tx) => {
-        await tx
+        const result = await tx
           .update(bookmarkTranscripts)
           .set({
             text: transcript.sourceTranscript,
@@ -216,7 +232,19 @@ export const transcriptsAppRouter = router({
             revision: nextRevision,
             modifiedAt: new Date(),
           })
-          .where(eq(bookmarkTranscripts.id, transcript.id));
+          .where(
+            and(
+              eq(bookmarkTranscripts.id, transcript.id),
+              eq(bookmarkTranscripts.revision, transcript.revision),
+            ),
+          );
+
+        if (result.changes === 0) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Transcript changed since it was loaded",
+          });
+        }
 
         if (!textChanged || summaryIsManual) return;
 
@@ -254,6 +282,13 @@ export const transcriptsAppRouter = router({
     }),
 
   retry: transcriptsProcedure
+    .use(
+      createRateLimitMiddleware({
+        name: "transcripts.retry",
+        windowMs: 30 * 60 * 1000,
+        maxRequests: 50,
+      }),
+    )
     .input(zRetryTranscriptRequestSchema)
     .output(z.object({ queued: z.literal(true) }))
     .use(ensureBookmarkOwnership)

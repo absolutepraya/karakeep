@@ -503,7 +503,7 @@ async function applyTextBookmarkCreate(
     note: mutation.bookmark.note,
     summary: mutation.bookmark.summary,
     summaryProvenance:
-      mutation.bookmark.summary !== null ? "manual" : undefined,
+      mutation.bookmark.summary !== undefined ? "manual" : undefined,
     summaryStale: false,
     createdAt: mutation.bookmark.createdAt,
     source: "web",
