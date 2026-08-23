@@ -74,6 +74,7 @@ function PublicVideoPreview({ bookmark }: { bookmark: ZPublicBookmark }) {
         <>
           {/* eslint-disable-next-line jsx-a11y/media-has-caption -- captions are not yet part of the uploaded-video model */}
           <video
+            key={`${assetUrl}:${bookmark.content.contentType ?? ""}`}
             className="h-full w-full object-contain"
             controls
             preload="metadata"

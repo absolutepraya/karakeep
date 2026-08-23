@@ -139,6 +139,7 @@ function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
         <div className="flex min-h-0 w-full flex-1 items-center justify-center">
           {/* eslint-disable-next-line jsx-a11y/media-has-caption -- captions are not yet part of the uploaded-video model */}
           <video
+            key={`${assetUrl}:${bookmark.content.contentType ?? ""}`}
             className="max-h-full max-w-full"
             controls
             preload="metadata"
