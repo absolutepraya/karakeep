@@ -14,7 +14,7 @@ The roadmap flows from top to bottom. It uses a portrait-friendly layout with si
 
 The source uses Excalidraw's hand-drawn shapes and arrows with Excalifont text. Generated SVG and PNG outputs are exported through Excalidraw's own export APIs in a headless Chromium process. Generated outputs are roadmap.generated.excalidraw, roadmap.svg, and roadmap.png. The root README embeds the PNG and links the source and SVG.
 
-GitHub open or closed state is the only automated status input. A closed issue keeps its authored fill and border. Its issue number and title text become muted and receive text-only strikethrough, plus a small checkmark. The rectangle is never struck through or recolored. Reopening restores the open text styling. Labels do not control status, color, or blocked state.
+GitHub open or closed state is the only automated status input. A closed issue's generated node uses the neutral gray done fill and border, while its issue number and title text become muted and receive text-only strikethrough, plus a small checkmark. The rectangle is never struck through. Reopening restores the open styling. Labels do not control status, color, or blocked state.
 
 Pull request checks validate the source and deterministic generated outputs without committing, and verify that the platform-rendered PNG is non-empty. PNG bytes are not compared across runners because browser rasterization can vary by operating system. Synchronization renders after pushes to main, issue close or reopen events, and manual dispatch. It may commit only generated roadmap outputs and the marked README block. It never edits the authored source, skips empty commits, and fails without partial output when metadata, issue lookup, or rendering fails.
 

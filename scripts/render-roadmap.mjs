@@ -20,6 +20,8 @@ const EXPECTED_ISSUES = [
   75, 78,
 ];
 const NEUTRAL_TEXT = "#495057";
+const COMPLETED_NODE_FILL = "#e9ecef";
+const COMPLETED_NODE_STROKE = "#adb5bd";
 
 const source = JSON.parse(await readFile(SOURCE_PATH, "utf8"));
 const model = validateScene(source);
@@ -259,9 +261,16 @@ function createGeneratedScene(scene, nodes, states) {
       },
     };
 
-    if (roadmap.kind === "label" && state === "closed") {
+    if (
+      ["label", "issue-number", "issue-number-bold"].includes(roadmap.kind) &&
+      state === "closed"
+    ) {
       next.opacity = 68;
       next.strokeColor = NEUTRAL_TEXT;
+    }
+    if (roadmap.kind === "issue" && state === "closed") {
+      next.backgroundColor = COMPLETED_NODE_FILL;
+      next.strokeColor = COMPLETED_NODE_STROKE;
     }
     return next;
   });
@@ -270,8 +279,18 @@ function createGeneratedScene(scene, nodes, states) {
     if (states.get(node.nodeId) !== "closed") {
       continue;
     }
-    generated.elements.push(createCompletionMarker(node));
-    generated.elements.push(...createTextStrikes(node));
+    generated.elements.push(...createCompletionMarker(node));
+    generated.elements.push(...createTextStrikes(node, node.labelElement));
+    const numberElements = generated.elements.filter(
+      (element) =>
+        element.customData?.roadmap?.nodeId === node.nodeId &&
+        ["issue-number", "issue-number-bold"].includes(
+          element.customData.roadmap.kind,
+        ),
+    );
+    for (const numberElement of numberElements) {
+      generated.elements.push(...createTextStrikes(node, numberElement));
+    }
   }
 
   return generated;
@@ -279,18 +298,42 @@ function createGeneratedScene(scene, nodes, states) {
 
 function createCompletionMarker(node) {
   const rect = node.element;
-  return {
+  const checkbox = {
     ...baseElement(
-      node.nodeId + "-complete",
+      node.nodeId + "-complete-box",
+      "rectangle",
+      rect.x + rect.width - 58,
+      rect.y + 14,
+      30,
+      30,
+    ),
+    strokeColor: COMPLETED_NODE_STROKE,
+    backgroundColor: "#ffffff",
+    strokeWidth: 2,
+    roughness: 1,
+    roundness: { type: 3 },
+    groupIds: [node.nodeId],
+    link: node.url,
+    customData: {
+      roadmap: {
+        kind: "completion-checkbox",
+        nodeId: node.nodeId,
+        status: "closed",
+      },
+    },
+  };
+  const checkmark = {
+    ...baseElement(
+      node.nodeId + "-complete-check",
       "text",
-      rect.x + rect.width - 56,
-      rect.y + 16,
-      34,
-      34,
+      rect.x + rect.width - 58,
+      rect.y + 12,
+      30,
+      30,
     ),
     text: "✓",
     originalText: "✓",
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: 5,
     textAlign: "center",
     verticalAlign: "middle",
@@ -305,25 +348,35 @@ function createCompletionMarker(node) {
       },
     },
   };
+  return [checkbox, checkmark];
 }
 
-function createTextStrikes(node) {
-  const label = node.labelElement;
+function createTextStrikes(node, label) {
   const lines = label.text.split("\n");
   const lineHeight = label.fontSize * label.lineHeight;
-  const firstLineCenter =
-    label.y + label.height / 2 - ((lines.length - 1) * lineHeight) / 2;
+  const lineGap =
+    (lineHeight - label.fontSize * 0.886 + label.fontSize * -0.374) / 2;
+  const verticalOffset = label.fontSize * 0.886 + lineGap;
+  const strikeOffset = label.fontSize * 0.3;
 
   return lines.map((line, index) => {
     const width = Math.min(
-      label.width - 28,
-      Math.max(42, line.length * label.fontSize * 0.52),
+      label.width - 20,
+      Math.max(32, line.length * label.fontSize * 0.48),
     );
     const x = label.x + (label.width - width) / 2;
-    const y = firstLineCenter + index * lineHeight + label.fontSize * 0.12;
+    const y =
+      label.y + verticalOffset + index * lineHeight - strikeOffset;
 
     return {
-      ...baseElement(node.nodeId + "-strike-" + index, "line", x, y, width, 0),
+      ...baseElement(
+        node.nodeId + "-strike-" + label.id + "-" + index,
+        "line",
+        x,
+        y,
+        width,
+        0,
+      ),
       strokeColor: NEUTRAL_TEXT,
       strokeWidth: 2,
       roughness: 2,
@@ -336,6 +389,7 @@ function createTextStrikes(node) {
         roadmap: {
           kind: "completion-strike",
           nodeId: node.nodeId,
+          textElementId: label.id,
           status: "closed",
         },
       },
