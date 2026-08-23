@@ -10,7 +10,7 @@ Marka needs one public visual roadmap that shows the current full future-facing 
 
 The authored source is docs/roadmap/roadmap.excalidraw. The initial single canvas contains the current scoped issues #25, #26, #28, #34, #37, #38, #46, #55, #62 to #69, #72 to #75, and #78. The source stores explicit issue metadata, stable node identities, links, colors, placement, area labels, and hard-prerequisite edges.
 
-The roadmap flows from top to bottom. It uses a portrait-friendly layout with simple normal-case area labels: Content support, Reader and media, Collaboration, Public surfaces, and Platform and operations. Grouping and visual spacing are containment only. An arrow means the source issue is a hard prerequisite for the destination issue.
+The roadmap flows from top to bottom. It uses a portrait-friendly layout with simple normal-case area labels: Content support, Reader and media, Collaboration, Public surfaces, and Platform and operations. A compact legend below the title maps authored fill colors to those areas; colors are grouping cues only, not status or priority. Grouping and visual spacing are containment only. An arrow means the source issue is a hard prerequisite for the destination issue.
 
 The source uses Excalidraw's hand-drawn shapes and arrows with Excalifont text. Generated SVG and PNG outputs are exported through Excalidraw's own export APIs in a headless Chromium process. Generated outputs are roadmap.generated.excalidraw, roadmap.svg, and roadmap.png. The root README embeds the PNG and links the source and SVG.
 
