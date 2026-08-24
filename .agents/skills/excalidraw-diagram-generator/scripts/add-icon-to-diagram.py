@@ -208,7 +208,10 @@ def finalize_edit_path(work_path: Path, final_path: Path | None) -> None:
         return
 
     if final_path.exists():
-        final_path.unlink()
+        raise FileExistsError(
+            f"Cannot finalize {work_path}: {final_path} was recreated; "
+            "the edit file was preserved"
+        )
 
     work_path.rename(final_path)
 
@@ -320,7 +323,7 @@ def add_icon_to_diagram(
     print(f"  Added {len(transformed_elements)} elements (total: {original_count} -> {len(diagram['elements'])})")
     
     # Save diagram
-    print(f"Saving diagram")
+    print("Saving diagram")
     with open(diagram_path, 'w', encoding='utf-8') as f:
         json.dump(diagram, f, indent=2, ensure_ascii=False)
     
@@ -404,4 +407,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

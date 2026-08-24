@@ -25,6 +25,10 @@ on:
       - reopened
   workflow_dispatch:
 
+concurrency:
+  group: roadmap-sync-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   issues: read
@@ -102,4 +106,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "${generated_files[@]}"
           git commit -m "chore: sync roadmap artifacts"
+          git pull --rebase origin main
           git push origin HEAD:main

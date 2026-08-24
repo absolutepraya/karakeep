@@ -74,6 +74,25 @@ function validateScene(scene) {
       "Every source text element must use Excalifont (fontFamily 5)",
     );
   }
+  const textGeometryFields = [
+    "x",
+    "y",
+    "width",
+    "height",
+    "fontSize",
+    "lineHeight",
+  ];
+  const invalidText = textElements.find((element) =>
+    textGeometryFields.some((field) => !Number.isFinite(element[field])),
+  );
+  if (invalidText) {
+    throw new Error(
+      "Source text element " +
+        (invalidText.id || "<unknown>") +
+        " must define finite " +
+        textGeometryFields.join(", "),
+    );
+  }
 
   const nodes = scene.elements
     .filter((element) => element.customData?.roadmap?.kind === "issue")

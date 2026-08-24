@@ -8,7 +8,7 @@ Splits an Excalidraw library file (`*.excalidrawlib`) into individual icon JSON 
 
 ### Prerequisites
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - No additional dependencies required (uses only standard library)
 
 ### Usage
@@ -21,7 +21,7 @@ python split-excalidraw-library.py <path-to-library-directory>
 
 1. **Create library directory**:
    ```bash
-   mkdir -p skills/excalidraw-diagram-generator/libraries/aws-architecture-icons
+   mkdir -p .agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons
    ```
 
 2. **Download and place library file**:
@@ -32,7 +32,7 @@ python split-excalidraw-library.py <path-to-library-directory>
 
 3. **Run the script**:
    ```bash
-   python skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
+   python .agents/skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py .agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
    ```
 
 ### Output Structure
@@ -40,7 +40,7 @@ python split-excalidraw-library.py <path-to-library-directory>
 The script creates the following structure in the library directory:
 
 ```
-skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
+.agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
   aws-architecture-icons.excalidrawlib  # Original file (kept)
   reference.md                          # Generated: Quick reference table
   icons/                                # Generated: Individual icon files
@@ -69,7 +69,7 @@ skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
 
 1. Download desired Excalidraw libraries from https://libraries.excalidraw.com/
 2. Run this script on each library file
-3. Move the generated folders to `../libraries/`
+3. Keep the generated folders under `.agents/skills/excalidraw-diagram-generator/libraries/`
 4. The AI assistant will use `reference.md` files to locate and use icons efficiently
 
 ### Library Sources (Examples — verify availability)
@@ -103,7 +103,7 @@ Adds a specific icon from a split Excalidraw library into an existing `.excalidr
 
 ### Prerequisites
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - A diagram file (`.excalidraw`)
 - A split icon library directory (created by `split-excalidraw-library.py`)
 
@@ -153,7 +153,7 @@ Adds a straight arrow between two points in an existing `.excalidraw` diagram. S
 
 ### Prerequisites
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - A diagram file (`.excalidraw`)
 
 ### Usage

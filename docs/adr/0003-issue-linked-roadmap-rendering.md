@@ -29,4 +29,4 @@ Pull request checks validate the source and deterministic generated outputs with
 
 ## Consequences
 
-The README stays current after issue or merge events, and the editable source remains human-owned. Contributors must update the source when the roadmap scope, structure, labels, or dependencies change. Ordinary implementation PRs do not need diagram churn when the roadmap structure is unchanged. The current canvas is the only published view for now; historical snapshots, automatic layout, automatic issue discovery, and multiple canvases remain out of scope.
+The README stays current after issue or merge events, and the editable source remains human-owned. Every PR that implements or materially changes an issue represented on the roadmap must review and update the authored source, including its node text, containment, ordering, or dependencies as applicable, then regenerate and commit the outputs. The current canvas is the only published view for now; historical snapshots, automatic layout, automatic issue discovery, and multiple canvases remain out of scope.

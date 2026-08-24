@@ -6,14 +6,14 @@ This script splits an Excalidraw library file (*.excalidrawlib) into individual
 icon JSON files and generates a reference.md file for easy lookup.
 
 The script expects the following structure:
-  skills/excalidraw-diagram-generator/libraries/{icon-set-name}/
+  .agents/skills/excalidraw-diagram-generator/libraries/{icon-set-name}/
     {icon-set-name}.excalidrawlib  (place this file first)
 
 Usage:
     python split-excalidraw-library.py <path-to-library-directory>
 
 Example:
-    python split-excalidraw-library.py skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
+    python .agents/skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py .agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
 """
 
 import json
@@ -46,6 +46,22 @@ def sanitize_filename(name: str) -> str:
     filename = filename.strip('-')
 
     return filename
+
+
+def proposed_filename(item: dict, used_filenames: set[str]) -> str:
+    """Return a deterministic, case-insensitively unique icon filename."""
+    name = item.get('name') or item.get('id') or 'unnamed'
+    stem = sanitize_filename(str(name))
+    if not stem:
+        stem = sanitize_filename(str(item.get('id') or 'unnamed')) or 'unnamed'
+
+    candidate = f'{stem}.json'
+    suffix = 2
+    while candidate.casefold() in used_filenames:
+        candidate = f'{stem}-{suffix}.json'
+        suffix += 1
+    used_filenames.add(candidate.casefold())
+    return candidate
 
 
 def find_library_file(directory: Path) -> Path:
@@ -115,15 +131,16 @@ def split_library(library_dir: str) -> None:
     # Process each library item (icon)
     library_items = library_data['libraryItems']
     icon_list = []
+    used_filenames = set()
 
     print(f"Processing {len(library_items)} icons...")
 
     for item in library_items:
         # Get icon name
-        icon_name = item.get('name', 'Unnamed')
+        icon_name = item.get('name') or item.get('id') or 'Unnamed'
 
         # Create sanitized filename
-        filename = sanitize_filename(icon_name) + '.json'
+        filename = proposed_filename(item, used_filenames)
 
         # Save icon data
         icon_path = icons_dir / filename
@@ -171,7 +188,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: python split-excalidraw-library.py <path-to-library-directory>")
         print("\nExample:")
-        print("  python split-excalidraw-library.py skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/")
+        print("  python .agents/skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py .agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/")
         print("\nNote: The directory should contain a .excalidrawlib file.")
         sys.exit(1)
 

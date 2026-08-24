@@ -131,10 +131,12 @@ Create the `.excalidraw` file with appropriate elements:
 - **Size**: `width`, `height`
 - **Style**: `strokeColor`, `backgroundColor`, `fillStyle`
 - **Font**: `fontFamily: 5` (Excalifont - **required for all text elements**)
-- **Text**: Embedded text for labels
+- **Text**: Separate `type: "text"` elements bound to their shape with `containerId` and the shape's `boundElements`
 - **Connections**: `points` array for arrows
 
 **Important**: All text elements must use `fontFamily: 5` (Excalifont) for consistent visual appearance.
+
+Shape labels must use Excalidraw's bound-text format. Do not put a `text` field on a rectangle, ellipse, or diamond. Create a separate text element with matching `containerId` and add its ID to the shape's `boundElements`.
 
 ### Step 5: Format the Output
 
@@ -318,10 +320,10 @@ For specialized diagrams (e.g., AWS/GCP/Azure architecture diagrams), you can us
    
    1. Visit https://libraries.excalidraw.com/
    2. Search for "[AWS Architecture Icons/etc.]" and download the .excalidrawlib file
-   3. Create directory: skills/excalidraw-diagram-generator/libraries/[icon-set-name]/
+   3. Create directory: .agents/skills/excalidraw-diagram-generator/libraries/[icon-set-name]/
    4. Place the downloaded file in that directory
    5. Run the splitter script:
-      python skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py skills/excalidraw-diagram-generator/libraries/[icon-set-name]/
+      python .agents/skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py .agents/skills/excalidraw-diagram-generator/libraries/[icon-set-name]/
    
    This will split the library into individual icon files for efficient use.
    After setup is complete, I can create your diagram using the actual AWS/cloud icons.
@@ -334,7 +336,7 @@ For specialized diagrams (e.g., AWS/GCP/Azure architecture diagrams), you can us
 
 **Step 1: Create Library Directory**
 ```bash
-mkdir -p skills/excalidraw-diagram-generator/libraries/aws-architecture-icons
+mkdir -p .agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons
 ```
 
 **Step 2: Download Library**
@@ -352,13 +354,13 @@ mkdir -p skills/excalidraw-diagram-generator/libraries/aws-architecture-icons
 
 **Step 4: Run Splitter Script**
 ```bash
-python skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
+python .agents/skills/excalidraw-diagram-generator/scripts/split-excalidraw-library.py .agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
 ```
 
 **Step 5: Verify Setup**
 After running the script, verify the following structure exists:
 ```
-skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
+.agents/skills/excalidraw-diagram-generator/libraries/aws-architecture-icons/
   aws-architecture-icons.excalidrawlib  (original)
   reference.md                          (generated - icon lookup table)
   icons/                                (generated - individual icon files)
@@ -385,7 +387,7 @@ The repository includes Python scripts that handle icon integration automaticall
 
 2. **Add icons using Python script**:
    ```bash
-   python skills/excalidraw-diagram-generator/scripts/add-icon-to-diagram.py \
+   python .agents/skills/excalidraw-diagram-generator/scripts/add-icon-to-diagram.py \
      <diagram-path> <icon-name> <x> <y> [--label "Text"] [--library-path PATH]
    ```
    - Edit via `.excalidraw.edit` is enabled by default to avoid overwrite issues; pass `--no-use-edit-suffix` to disable.
@@ -405,7 +407,7 @@ The repository includes Python scripts that handle icon integration automaticall
 
 3. **Add connecting arrows**:
    ```bash
-   python skills/excalidraw-diagram-generator/scripts/add-arrow.py \
+   python .agents/skills/excalidraw-diagram-generator/scripts/add-arrow.py \
      <diagram-path> <from-x> <from-y> <to-x> <to-y> [--label "Text"] [--style solid|dashed|dotted] [--color HEX]
    ```
    - Edit via `.excalidraw.edit` is enabled by default to avoid overwrite issues; pass `--no-use-edit-suffix` to disable.
@@ -455,7 +457,7 @@ Only use this if Python scripts are unavailable:
 
 1. **Check for libraries**: 
    ```
-   List directory: skills/excalidraw-diagram-generator/libraries/
+   List directory: .agents/skills/excalidraw-diagram-generator/libraries/
    Look for subdirectories containing reference.md files
    ```
 
@@ -589,9 +591,9 @@ python scripts/add-arrow.py my-aws-diagram.excalidraw 565 330 650 350 --label "S
 See bundled references for:
 - `references/excalidraw-schema.md` - Complete Excalidraw JSON schema
 - `references/element-types.md` - Detailed element type specifications
-- `templates/flowchart-template.json` - Basic flowchart starter
-- `templates/relationship-template.json` - Relationship diagram starter
-- `templates/mindmap-template.json` - Mind map starter
+- `templates/flowchart-template.excalidraw` - Basic flowchart starter
+- `templates/relationship-template.excalidraw` - Relationship diagram starter
+- `templates/mindmap-template.excalidraw` - Mind map starter
 - `scripts/split-excalidraw-library.py` - Tool to split `.excalidrawlib` files
 - `scripts/README.md` - Documentation for library tools
 - `scripts/.gitignore` - Prevents local Python artifacts from being committed
