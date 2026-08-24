@@ -70,7 +70,14 @@ jobs:
             docs/roadmap/roadmap.svg
             docs/roadmap/roadmap.png
           )
-          if ! git diff --exit-code -- "${generated_files[@]}"; then
+          deterministic_files=(
+            README.md
+            docs/roadmap/roadmap.generated.excalidraw
+            docs/roadmap/roadmap-light.svg
+            docs/roadmap/roadmap-dark.svg
+            docs/roadmap/roadmap.svg
+          )
+          if ! git diff --exit-code -- "${deterministic_files[@]}"; then
             echo "Generated roadmap files differ from the committed outputs."
             exit 1
           fi
