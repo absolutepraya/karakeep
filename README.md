@@ -92,7 +92,13 @@ The personal VPS compose project is `/home/praya/marka`, configured through `KAR
 <!-- ROADMAP:START -->
 ## Roadmap
 
-[![Marka Roadmap](./docs/roadmap/roadmap.png)](./docs/roadmap/roadmap.svg)
+<a href="./docs/roadmap/roadmap.excalidraw">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/roadmap/roadmap-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./docs/roadmap/roadmap-light.png">
+    <img src="./docs/roadmap/roadmap-light.png" alt="Marka Roadmap">
+  </picture>
+</a>
 
 [Open the editable Excalidraw source](./docs/roadmap/roadmap.excalidraw)
 <!-- ROADMAP:END -->

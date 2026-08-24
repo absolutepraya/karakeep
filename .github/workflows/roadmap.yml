@@ -61,10 +61,22 @@ jobs:
         run: >-
           git diff --exit-code -- README.md
           docs/roadmap/roadmap.generated.excalidraw
+          docs/roadmap/roadmap-light.svg
+          docs/roadmap/roadmap-light.png
+          docs/roadmap/roadmap-dark.svg
+          docs/roadmap/roadmap-dark.png
           docs/roadmap/roadmap.svg
+          docs/roadmap/roadmap.png
 
-      - name: Check generated PNG
-        run: test -s docs/roadmap/roadmap.png
+      - name: Check generated PNGs
+        run: |
+          set -euo pipefail
+          for file in \
+            docs/roadmap/roadmap-light.png \
+            docs/roadmap/roadmap-dark.png \
+            docs/roadmap/roadmap.png; do
+            test -s "$file"
+          done
 
   sync:
     if: github.event_name != 'pull_request'
@@ -95,6 +107,10 @@ jobs:
           generated_files=(
             README.md
             docs/roadmap/roadmap.generated.excalidraw
+            docs/roadmap/roadmap-light.svg
+            docs/roadmap/roadmap-light.png
+            docs/roadmap/roadmap-dark.svg
+            docs/roadmap/roadmap-dark.png
             docs/roadmap/roadmap.svg
             docs/roadmap/roadmap.png
           )
