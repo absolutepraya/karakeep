@@ -245,6 +245,18 @@ If you edit development or deployment facts, keep these aligned:
 - `docs/docs/02-installation/11-guided-docker-setup.md`
 - relevant pages under `docs/docs/**`
 
+## Roadmap diagram workflow
+
+Marka's issue-linked roadmap is a human-authored single-canvas dependency map for the current full product and platform issue set. The authored source is `docs/roadmap/roadmap.excalidraw`. Generated files are `docs/roadmap/roadmap.generated.excalidraw`, `docs/roadmap/roadmap.svg`, and `docs/roadmap/roadmap.png`; the generated Roadmap section in `README.md` is also bot-owned.
+
+- A roadmap issue is explicitly represented by one node and one GitHub issue number. Dependency arrows point from prerequisites to dependent issues. Parent or phase grouping is shown as `⊂ #parent` in the issue-number text and is containment, not dependency.
+- A compact legend below the title maps authored fill colors to the five roadmap areas. Colors are visual grouping cues only, not status, priority, or progress.
+- Authored background and border colors are track colors. In generated output, GitHub issue state controls completion styling: closed nodes use the neutral gray done color, with muted issue text, a checkmark, and text-only strikethrough. Never strike the node rectangle, and do not infer status from labels.
+- Every PR for an issue represented on the roadmap must review and update the authored source diagram in that PR, including its node text, containment, ordering, or dependencies as applicable. Run `pnpm roadmap:check` and `pnpm roadmap:render`, and commit the generated outputs with the source.
+- Never edit generated roadmap files directly. Use `pnpm roadmap:check` to validate metadata and dependencies, and `pnpm roadmap:render` to render the outputs locally. Rendering uses the Excalidraw export APIs with Excalifont and requires Chromium.
+- Roadmap synchronization runs after pushes to `main`, issue close or reopen events, and manual dispatches. It may commit only generated roadmap files and the marked Roadmap block in `README.md`, never the authored source.
+- The workflow must not add timestamps or create an empty commit, and must fail without partial output when metadata or issue lookups are invalid. Pull request freshness checks compare the deterministic Excalidraw, SVG, and README outputs and verify that the platform-rendered PNG is non-empty; PNG bytes may vary across runner operating systems.
+
 ## Common commands
 
 ```bash

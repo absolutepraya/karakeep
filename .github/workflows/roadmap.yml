@@ -1,0 +1,110 @@
+name: Roadmap
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/roadmap.yml"
+      - "docs/roadmap/**"
+      - "scripts/render-roadmap.mjs"
+      - "README.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/roadmap.yml"
+      - "docs/roadmap/**"
+      - "scripts/render-roadmap.mjs"
+      - "README.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  issues:
+    types:
+      - closed
+      - reopened
+  workflow_dispatch:
+
+concurrency:
+  group: roadmap-sync-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Check roadmap metadata
+        run: pnpm roadmap:check
+
+      - name: Render roadmap
+        run: pnpm roadmap:render
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Check generated roadmap files
+        run: >-
+          git diff --exit-code -- README.md
+          docs/roadmap/roadmap.generated.excalidraw
+          docs/roadmap/roadmap.svg
+
+      - name: Check generated PNG
+        run: test -s docs/roadmap/roadmap.png
+
+  sync:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: main
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Render roadmap
+        run: pnpm roadmap:render
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Commit generated roadmap files
+        run: |
+          set -euo pipefail
+          generated_files=(
+            README.md
+            docs/roadmap/roadmap.generated.excalidraw
+            docs/roadmap/roadmap.svg
+            docs/roadmap/roadmap.png
+          )
+          if git diff --quiet -- "${generated_files[@]}"; then
+            echo "Roadmap outputs are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "${generated_files[@]}"
+          git commit -m "chore: sync roadmap artifacts"
+          git pull --rebase origin main
+          git push origin HEAD:main

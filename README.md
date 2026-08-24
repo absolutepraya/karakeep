@@ -17,6 +17,14 @@
 
 Marka is a self-hostable bookmark library built for people who want their saved knowledge close, searchable, and under their control.
 
+<!-- ROADMAP:START -->
+## Roadmap
+
+[![Marka Roadmap](./docs/roadmap/roadmap.png)](./docs/roadmap/roadmap.svg)
+
+[Open the editable Excalidraw source](./docs/roadmap/roadmap.excalidraw)
+<!-- ROADMAP:END -->
+
 ## What you can do
 
 - Save links, notes, images, PDFs, and web pages in one place
