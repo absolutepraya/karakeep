@@ -1,7 +1,10 @@
 {
   "common": {
     "something_went_wrong": "Something went wrong",
-    "drop_upload_top_level": "Drop an image, PDF, video, Markdown, or plain-text file",
+    "drop_upload_top_level": "Drop an image, PDF, video, audio, Markdown, or plain-text file",
+    "audio_playback_unavailable": "This audio format is not supported for in-browser playback. You can download the original file instead.",
+    "audio_browser_unsupported": "Your browser does not support this audio format.",
+    "audio_playback_speed": "Playback speed",
     "video_playback_unavailable": "This video format is not supported for in-browser playback. You can download the original file instead.",
     "video_browser_unsupported": "Your browser does not support this video format.",
     "experimental": "Experimental",
@@ -30,6 +33,7 @@
     "screenshot": "Screenshot",
     "pdf": "Archived PDF",
     "video": "Video",
+    "audio": "Audio",
     "archive": "Archive",
     "home": "Home",
     "title": "Title",

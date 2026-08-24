@@ -1,6 +1,6 @@
 import { ASSET_TYPES } from "./asset-types";
 
-export const BOOKMARK_ASSET_TYPES = ["image", "pdf", "video"] as const;
+export const BOOKMARK_ASSET_TYPES = ["image", "pdf", "video", "audio"] as const;
 export type BookmarkAssetType = (typeof BOOKMARK_ASSET_TYPES)[number];
 
 export type ContentSupportCapability =
@@ -11,7 +11,15 @@ export type ContentSupportCapability =
   | "rawDownload";
 
 interface ContentSupportDefinition {
-  id: "image" | "pdf" | "video" | "html" | "markdown" | "caption" | "zip";
+  id:
+    | "image"
+    | "pdf"
+    | "video"
+    | "audio"
+    | "html"
+    | "markdown"
+    | "caption"
+    | "zip";
   mimeTypes: readonly string[];
   extensions: readonly string[];
   capabilities: readonly ContentSupportCapability[];
@@ -48,6 +56,21 @@ export const CONTENT_SUPPORT_REGISTRY: readonly ContentSupportDefinition[] = [
     extensions: [".mp4", ".webm", ".mkv"],
     capabilities: ["upload", "topLevel", "attachment", "rawDownload"],
     bookmarkAssetType: "video",
+  },
+  {
+    id: "audio",
+    mimeTypes: [
+      ASSET_TYPES.AUDIO_MPEG,
+      ASSET_TYPES.AUDIO_MP4,
+      ASSET_TYPES.AUDIO_AAC,
+      ASSET_TYPES.AUDIO_WAV,
+      ASSET_TYPES.AUDIO_X_WAV,
+      ASSET_TYPES.AUDIO_OGG,
+      ASSET_TYPES.AUDIO_OPUS,
+    ],
+    extensions: [".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".opus"],
+    capabilities: ["upload", "topLevel", "attachment", "rawDownload"],
+    bookmarkAssetType: "audio",
   },
   {
     id: "html",

@@ -17,6 +17,7 @@ import {
   BookmarkTypes,
   MAX_NUM_BOOKMARKS_PER_PAGE,
 } from "@karakeep/shared/types/bookmarks";
+import { getBookmarkAssetTypeForMimeType } from "@karakeep/shared/content-support";
 
 export const bookmarkCmd = new Command()
   .name("bookmarks")
@@ -159,7 +160,7 @@ bookmarkCmd
   )
   .option(
     "--asset <file>",
-    "the file path of an asset (image or pdf) to add. Specify multiple times to add multiple assets",
+    "the file path of an asset (image, PDF, video, or audio) to add. Specify multiple times to add multiple assets",
     collect<string>,
     [],
   )
@@ -265,7 +266,10 @@ bookmarkCmd
             assetId: string;
             contentType: string;
           };
-          const assetType = contentType === "application/pdf" ? "pdf" : "image";
+          const assetType = getBookmarkAssetTypeForMimeType(contentType);
+          if (!assetType) {
+            throw new Error(`Unsupported asset type: ${contentType}`);
+          }
 
           const bookmark = await api.bookmarks.createBookmark.mutate({
             type: BookmarkTypes.ASSET,

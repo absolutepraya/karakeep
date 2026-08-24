@@ -861,7 +861,7 @@ export interface components {
             /** @enum {string} */
             type: "asset";
             /** @enum {string} */
-            assetType: "image" | "pdf" | "video";
+            assetType: "image" | "pdf" | "video" | "audio";
             assetId: string;
             fileName?: string | null;
             sourceUrl?: string | null;
@@ -1092,7 +1092,7 @@ export interface operations {
               /** @enum {string} */
               type: "asset";
               /** @enum {string} */
-              assetType: "image" | "pdf" | "video";
+              assetType: "image" | "pdf" | "video" | "audio";
               assetId: string;
               fileName?: string;
               sourceUrl?: string;

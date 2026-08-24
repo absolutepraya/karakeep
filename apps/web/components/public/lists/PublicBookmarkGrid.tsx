@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SCREENS } from "@/lib/breakpoints";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { AudioPlayer } from "@/components/dashboard/preview/AudioPlayer";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Expand, FileIcon, ImageIcon, Video } from "lucide-react";
 import { useInView } from "react-intersection-observer";
@@ -90,6 +91,24 @@ function PublicVideoPreview({ bookmark }: { bookmark: ZPublicBookmark }) {
           </video>
         </>
       )}
+    </div>
+  );
+}
+
+function PublicAudioPreview({ bookmark }: { bookmark: ZPublicBookmark }) {
+  if (bookmark.content.type !== BookmarkTypes.ASSET) {
+    throw new Error("Invalid content type");
+  }
+
+  return (
+    <div className="w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
+      <AudioPlayer
+        src={bookmark.content.assetUrl}
+        fileName={bookmark.content.fileName}
+        contentType={bookmark.content.contentType}
+        title={bookmark.title}
+        compact
+      />
     </div>
   );
 }
@@ -173,6 +192,8 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
           <div className="space-y-3">
             {bookmark.content.assetType === "video" ? (
               <PublicVideoPreview bookmark={bookmark} />
+            ) : bookmark.content.assetType === "audio" ? (
+              <PublicAudioPreview bookmark={bookmark} />
             ) : bookmark.bannerImageUrl ? (
               <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/70 bg-muted/30">
                 <Link href={bookmark.content.assetUrl} target="_blank">

@@ -28,6 +28,7 @@ export { ASSET_TYPES } from "./asset-types";
 const ROOT_PATH = serverConfig.assetsDir;
 
 export const VIDEO_ASSET_TYPES = getSupportedMimeTypesForFormat("video");
+export const AUDIO_ASSET_TYPES = getSupportedMimeTypesForFormat("audio");
 export const IMAGE_ASSET_TYPES = getSupportedMimeTypesForFormat("image");
 
 // The assets that we allow the users to upload.

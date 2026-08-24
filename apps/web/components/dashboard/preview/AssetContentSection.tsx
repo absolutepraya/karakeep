@@ -16,6 +16,8 @@ import { BookmarkTypes, ZBookmark } from "@karakeep/shared/types/bookmarks";
 import { getContentFormatForBookmarkAssetType } from "@karakeep/shared/content-support";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 
+import { AudioPlayer } from "./AudioPlayer";
+
 // 20 MB
 const BIG_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -180,6 +182,17 @@ export function AssetContentSection({ bookmark }: { bookmark: ZBookmark }) {
       return <PDFContentSection bookmark={bookmark} />;
     case "video":
       return <VideoContentSection bookmark={bookmark} />;
+    case "audio":
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          <AudioPlayer
+            src={getAssetUrl(bookmark.content.assetId)}
+            fileName={bookmark.content.fileName}
+            contentType={bookmark.content.contentType}
+            title={bookmark.title}
+          />
+        </div>
+      );
     default:
       return <div>Unsupported asset type</div>;
   }

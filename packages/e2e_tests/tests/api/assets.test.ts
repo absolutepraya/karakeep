@@ -5,6 +5,7 @@ import { createKarakeepClient } from "@karakeep/sdk";
 import { createTestUser, uploadTestAsset } from "../../utils/api";
 import {
   createTestImageFile,
+  createTestAudioFile,
   createTestPdfFile,
   createTestVideoFile,
 } from "../../utils/assets";
@@ -103,6 +104,51 @@ describe("Assets API", () => {
       expect((await rangeResponse.arrayBuffer()).byteLength).toBe(4);
     },
   );
+
+  it("should create a top-level audio bookmark and serve byte ranges", async () => {
+    const uploadResponse = await uploadTestAsset(
+      apiKey,
+      port,
+      createTestAudioFile(),
+    );
+    expect(uploadResponse.contentType).toBe("audio/x-wav");
+
+    const { data: createdBookmark, response: createResponse } =
+      await client.POST("/bookmarks", {
+        body: {
+          type: "asset",
+          title: "Audio test",
+          assetType: "audio",
+          assetId: uploadResponse.assetId,
+        },
+      });
+
+    expect(createResponse.status).toBe(201);
+    expect(createdBookmark?.content).toMatchObject({
+      type: "asset",
+      assetType: "audio",
+      assetId: uploadResponse.assetId,
+      contentType: "audio/x-wav",
+    });
+
+    const rangeResponse = await fetch(
+      `http://localhost:${port}/api/v1/assets/${uploadResponse.assetId}`,
+      {
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+          Range: "bytes=0-3",
+        },
+      },
+    );
+
+    expect(rangeResponse.status).toBe(206);
+    expect(rangeResponse.headers.get("accept-ranges")).toBe("bytes");
+    expect(rangeResponse.headers.get("content-range")).toMatch(
+      /^bytes 0-3\/\d+$/,
+    );
+    expect(rangeResponse.headers.get("content-length")).toBe("4");
+    expect((await rangeResponse.arrayBuffer()).byteLength).toBe(4);
+  });
 
   it("should require assets:readwrite to upload an asset", async () => {
     const scopedApiKey = await createTestUser(["assets:read"]);

@@ -13,4 +13,12 @@ export const enum ASSET_TYPES {
   VIDEO_MP4 = "video/mp4",
   VIDEO_WEBM = "video/webm",
   VIDEO_MKV = "video/x-matroska",
+
+  AUDIO_MPEG = "audio/mpeg",
+  AUDIO_MP4 = "audio/mp4",
+  AUDIO_AAC = "audio/aac",
+  AUDIO_WAV = "audio/wav",
+  AUDIO_X_WAV = "audio/x-wav",
+  AUDIO_OGG = "audio/ogg",
+  AUDIO_OPUS = "audio/opus",
 }
