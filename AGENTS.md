@@ -174,6 +174,7 @@ The personal VPS compose directory is `/home/praya/marka`, not `/marka` or the r
 
 Optional root `.env` keys:
 - `KARAKEEP_PROD_SSH_USER`
+- `KARAKEEP_PROD_COMPOSE_PROJECT` (defaults to `karakeep`)
 - `KARAKEEP_PROD_COMPOSE_SERVICE`
 - `KARAKEEP_PROD_EXPORT_IMAGE`
 

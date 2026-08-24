@@ -164,10 +164,13 @@ Required root `.env` keys:
 
 Optional root `.env` keys:
 - `KARAKEEP_PROD_SSH_USER`
+- `KARAKEEP_PROD_COMPOSE_PROJECT` (defaults to `karakeep`)
 - `KARAKEEP_PROD_COMPOSE_SERVICE`
 - `KARAKEEP_PROD_EXPORT_IMAGE`
 
 For the personal VPS, set `KARAKEEP_PROD_COMPOSE_DIR=/home/praya/marka`. The root `/marka` path and the retired `/home/praya/karakeep` path are not the production compose directory.
+
+Set `KARAKEEP_PROD_COMPOSE_PROJECT` to the Compose project name used by the production stack. The personal VPS keeps the compatibility project name `karakeep`; the helper does not infer this value from the compose directory name.
 
 A production-state pull still populates only that workspace's SQLite/assets state. Its local search/vector data belongs to the workspace's own `MEILI_INDEX_PREFIX` namespace in the shared local Meilisearch container.
 

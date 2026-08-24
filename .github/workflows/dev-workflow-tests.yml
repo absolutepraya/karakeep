@@ -8,6 +8,8 @@ on:
       - "scripts/setup-worktree.sh"
       - "scripts/dev-infra.sh"
       - "scripts/dev-infra.test.sh"
+      - "scripts/pull-prod-state.sh"
+      - "scripts/pull-prod-state.test.sh"
       - "packages/plugins/lib/meiliIndexName.ts"
       - "packages/plugins/lib/meiliIndexName.test.ts"
       - "packages/plugins/search-meilisearch/**"
@@ -23,6 +25,8 @@ on:
       - "scripts/setup-worktree.sh"
       - "scripts/dev-infra.sh"
       - "scripts/dev-infra.test.sh"
+      - "scripts/pull-prod-state.sh"
+      - "scripts/pull-prod-state.test.sh"
       - "packages/plugins/lib/meiliIndexName.ts"
       - "packages/plugins/lib/meiliIndexName.test.ts"
       - "packages/plugins/search-meilisearch/**"
@@ -46,12 +50,15 @@ jobs:
 
       - name: Check Bash syntax
         run: |
-          for script in start-dev.sh stop-dev.sh scripts/setup-worktree.sh scripts/dev-infra.sh scripts/dev-infra.test.sh; do
+          for script in start-dev.sh stop-dev.sh scripts/setup-worktree.sh scripts/dev-infra.sh scripts/dev-infra.test.sh scripts/pull-prod-state.sh scripts/pull-prod-state.test.sh; do
             bash -n "$script"
           done
 
       - name: Run shared dev infrastructure tests
         run: bash scripts/dev-infra.test.sh
+
+      - name: Run production-state pull tests
+        run: bash scripts/pull-prod-state.test.sh
 
       - name: Run Meilisearch namespace tests
         run: pnpm --filter @karakeep/plugins test --run
