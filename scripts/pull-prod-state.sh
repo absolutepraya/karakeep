@@ -67,6 +67,7 @@ if ((${#missing[@]} > 0)); then
 fi
 
 prod_service="${KARAKEEP_PROD_COMPOSE_SERVICE:-web}"
+prod_project="${KARAKEEP_PROD_COMPOSE_PROJECT:-karakeep}"
 export_image="${KARAKEEP_PROD_EXPORT_IMAGE:-alpine:3.20}"
 timestamp="$(date +%Y%m%d-%H%M%S)"
 # DATA_DIR is loaded from the root .env above.
@@ -89,6 +90,7 @@ Prod state pull plan
   ssh host: $KARAKEEP_PROD_SSH_HOST
   ssh user: ${KARAKEEP_PROD_SSH_USER:+set}
   prod compose dir: $KARAKEEP_PROD_COMPOSE_DIR
+  prod compose project: $prod_project
   prod service: $prod_service
   local DATA_DIR: $data_dir
   local backup: $backup_dir
@@ -121,24 +123,25 @@ set -euo pipefail
 cd "$KARAKEEP_PROD_COMPOSE_DIR"
 
 service="${KARAKEEP_PROD_COMPOSE_SERVICE:-web}"
+project="${KARAKEEP_PROD_COMPOSE_PROJECT:-karakeep}"
 export_image="${KARAKEEP_PROD_EXPORT_IMAGE:-alpine:3.20}"
 mode="${KARAKEEP_PULL_MODE:-full}"
-container_id="$(docker compose ps -q "$service")"
+container_id="$(docker compose -p "$project" ps -q "$service")"
 
 if [ -z "$container_id" ]; then
-  echo "error: service is not running: $service" >&2
+  echo "error: service is not running: $service (Compose project: $project, directory: $KARAKEEP_PROD_COMPOSE_DIR)" >&2
   exit 1
 fi
 
 paused="false"
 cleanup_remote() {
   if [ "$paused" = "true" ]; then
-    docker compose unpause "$service" >/dev/null 2>&1 || true
+    docker compose -p "$project" unpause "$service" >/dev/null 2>&1 || true
   fi
 }
 trap cleanup_remote EXIT
 
-docker compose pause "$service" >/dev/null
+docker compose -p "$project" pause "$service" >/dev/null
 paused="true"
 
 docker run --rm --volumes-from "$container_id":ro "$export_image" sh -c '"'"'
@@ -154,7 +157,7 @@ printf 'Downloading prod %s state...\n' "$mode"
 # shellcheck disable=SC2029
 ssh \
   "$ssh_target" \
-  "KARAKEEP_PROD_COMPOSE_DIR=$(quote_remote "$KARAKEEP_PROD_COMPOSE_DIR") KARAKEEP_PROD_COMPOSE_SERVICE=$(quote_remote "$prod_service") KARAKEEP_PROD_EXPORT_IMAGE=$(quote_remote "$export_image") KARAKEEP_PULL_MODE=$(quote_remote "$mode") bash -s" \
+  "KARAKEEP_PROD_COMPOSE_DIR=$(quote_remote "$KARAKEEP_PROD_COMPOSE_DIR") KARAKEEP_PROD_COMPOSE_PROJECT=$(quote_remote "$prod_project") KARAKEEP_PROD_COMPOSE_SERVICE=$(quote_remote "$prod_service") KARAKEEP_PROD_EXPORT_IMAGE=$(quote_remote "$export_image") KARAKEEP_PULL_MODE=$(quote_remote "$mode") bash -s" \
   >"$archive_path" <<<"$remote_script"
 
 tar -tf "$archive_path" >/dev/null
