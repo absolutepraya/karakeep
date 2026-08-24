@@ -17,14 +17,6 @@
 
 Marka is a self-hostable bookmark library built for people who want their saved knowledge close, searchable, and under their control.
 
-<!-- ROADMAP:START -->
-## Roadmap
-
-[![Marka Roadmap](./docs/roadmap/roadmap.png)](./docs/roadmap/roadmap.svg)
-
-[Open the editable Excalidraw source](./docs/roadmap/roadmap.excalidraw)
-<!-- ROADMAP:END -->
-
 ## What you can do
 
 - Save links, notes, images, PDFs, and web pages in one place
@@ -96,6 +88,14 @@ pnpm prod:pull-state --dry-run
 The command reads the root `.env`, connects to the personal VPS, and replaces the current worktree's local data only when run without `--dry-run`. It backs up the existing `DATA_DIR` before restoring the full production `/data` volume.
 
 The personal VPS compose project is `/home/praya/marka`, configured through `KARAKEEP_PROD_COMPOSE_DIR`. The service and export image have documented defaults in the script, while machine-specific values belong in `.env` and must not be committed.
+
+<!-- ROADMAP:START -->
+## Roadmap
+
+[![Marka Roadmap](./docs/roadmap/roadmap.png)](./docs/roadmap/roadmap.svg)
+
+[Open the editable Excalidraw source](./docs/roadmap/roadmap.excalidraw)
+<!-- ROADMAP:END -->
 
 ## License
 
