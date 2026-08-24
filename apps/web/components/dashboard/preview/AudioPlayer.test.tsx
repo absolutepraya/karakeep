@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AudioPlayer } from "./AudioPlayer";
 
@@ -20,6 +20,8 @@ vi.mock("@/lib/i18n/client", () => ({
 }));
 
 describe("AudioPlayer", () => {
+  afterEach(cleanup);
+
   it("renders an accessible metadata-preloaded audio player and download action", () => {
     render(
       <AudioPlayer
@@ -62,8 +64,38 @@ describe("AudioPlayer", () => {
     );
     expect(
       screen
-        .getByLabelText("actions.download_file:song.mp3")
+        .getByRole("link", { name: "actions.download_file:song.mp3" })
         .getAttribute("download"),
     ).toBe("song.mp3");
+  });
+
+  it("resets the fallback when the audio source changes", () => {
+    const { rerender } = render(
+      <AudioPlayer
+        src="/api/assets/audio-1"
+        fileName="song.mp3"
+        contentType="audio/mpeg"
+      />,
+    );
+
+    fireEvent.error(screen.getByLabelText("song.mp3"));
+    expect(screen.getByRole("alert")).toBeTruthy();
+
+    rerender(
+      <AudioPlayer
+        src="/api/assets/audio-2"
+        fileName="new-song.mp3"
+        contentType="audio/mpeg"
+      />,
+    );
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByLabelText("new-song.mp3")).toBeTruthy();
+    expect(
+      screen
+        .getByLabelText("new-song.mp3")
+        .querySelector("source")
+        ?.getAttribute("src"),
+    ).toBe("/api/assets/audio-2");
   });
 });

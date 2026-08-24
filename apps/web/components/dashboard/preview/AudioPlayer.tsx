@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -33,9 +33,19 @@ export function AudioPlayer({
   const audioRef = useRef<HTMLAudioElement>(null);
   const rateId = useId();
   const [playbackRate, setPlaybackRate] = useState("1");
-  const [playbackError, setPlaybackError] = useState(false);
+  const [playbackErrorSource, setPlaybackErrorSource] = useState<string | null>(
+    null,
+  );
   const resolvedFileName = fileName || t("common.audio");
   const accessibleName = title || resolvedFileName;
+  const sourceKey = `${src}:${contentType ?? ""}`;
+  const playbackError = playbackErrorSource === sourceKey;
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = Number(playbackRate);
+    }
+  }, [sourceKey, playbackRate]);
 
   const handlePlaybackRateChange = (value: string) => {
     setPlaybackRate(value);
@@ -82,7 +92,7 @@ export function AudioPlayer({
         controls
         preload="metadata"
         aria-label={accessibleName}
-        onError={() => setPlaybackError(true)}
+        onError={() => setPlaybackErrorSource(sourceKey)}
       >
         <source src={src} type={contentType ?? undefined} />
         {t("common.audio_browser_unsupported")}
