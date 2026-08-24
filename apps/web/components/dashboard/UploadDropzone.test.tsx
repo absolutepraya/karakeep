@@ -143,6 +143,8 @@ describe("UploadDropzone", () => {
     expect(input?.getAttribute("accept")).toContain("text/plain");
     expect(input?.getAttribute("accept")).toContain(".txt");
     expect(input?.getAttribute("accept")).toContain("video/mp4");
+    expect(input?.getAttribute("accept")).toContain("audio/mpeg");
+    expect(input?.getAttribute("accept")).toContain(".mp3");
   });
 
   it("creates a video asset bookmark from an uploaded video", async () => {
@@ -169,6 +171,37 @@ describe("UploadDropzone", () => {
         assetType: "video",
         contentType: "video/mp4",
         fileName: "clip.mp4",
+        size: 1024,
+        type: "asset",
+        source: "web",
+      });
+    });
+  });
+
+  it("creates an audio asset bookmark from an uploaded audio file", async () => {
+    mocks.uploadAsset.mockResolvedValue({
+      assetId: "asset-audio-1",
+      contentType: "audio/mpeg",
+      fileName: "song.mp3",
+      size: 1024,
+    });
+    const { container } = render(
+      <UploadDropzone>
+        <div data-drop-target>Drop target</div>
+      </UploadDropzone>,
+    );
+
+    dropFile(
+      container,
+      makeFile(new Uint8Array([0, 1, 2, 3]).buffer, "song.mp3", "audio/mpeg"),
+    );
+
+    await waitFor(() => {
+      expect(mocks.createBookmark).toHaveBeenCalledWith({
+        assetId: "asset-audio-1",
+        assetType: "audio",
+        contentType: "audio/mpeg",
+        fileName: "song.mp3",
         size: 1024,
         type: "asset",
         source: "web",

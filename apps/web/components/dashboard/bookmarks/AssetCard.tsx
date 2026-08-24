@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { FileText, Video } from "lucide-react";
+import { AudioLines, FileText, Video } from "lucide-react";
 
 import type { ZBookmarkTypeAsset } from "@karakeep/shared/types/bookmarks";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
@@ -70,6 +70,17 @@ function AssetImage({
           className={cn(className, "flex items-center justify-center")}
         >
           <Video size={80} aria-hidden="true" />
+        </Link>
+      );
+    }
+    case "audio": {
+      return (
+        <Link
+          href={`/dashboard/preview/${bookmark.id}`}
+          aria-label={`Preview ${bookmarkedAsset.fileName ?? "audio"}`}
+          className={cn(className, "flex items-center justify-center")}
+        >
+          <AudioLines size={80} aria-hidden="true" />
         </Link>
       );
     }

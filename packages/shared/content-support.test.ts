@@ -14,12 +14,15 @@ import {
 
 describe("content support registry", () => {
   it("keeps the top-level asset contract limited to renderable asset types", () => {
-    expect(BOOKMARK_ASSET_TYPES).toEqual(["image", "pdf", "video"]);
+    expect(BOOKMARK_ASSET_TYPES).toEqual(["image", "pdf", "video", "audio"]);
     expect(getBookmarkAssetTypeForMimeType("image/webp")).toBe("image");
     expect(getBookmarkAssetTypeForMimeType("application/pdf")).toBe("pdf");
     expect(getBookmarkAssetTypeForMimeType("video/mp4")).toBe("video");
     expect(getBookmarkAssetTypeForMimeType("video/webm")).toBe("video");
     expect(getBookmarkAssetTypeForMimeType("video/x-matroska")).toBe("video");
+    expect(getBookmarkAssetTypeForMimeType("audio/mpeg")).toBe("audio");
+    expect(getBookmarkAssetTypeForMimeType("audio/mp4")).toBe("audio");
+    expect(getBookmarkAssetTypeForMimeType("audio/x-wav")).toBe("audio");
     expect(getBookmarkAssetTypeForMimeType("text/html")).toBeNull();
   });
 
@@ -33,6 +36,13 @@ describe("content support registry", () => {
       "video/mp4",
       "video/webm",
       "video/x-matroska",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/aac",
+      "audio/wav",
+      "audio/x-wav",
+      "audio/ogg",
+      "audio/opus",
       "text/html",
     ]);
     expect(getSupportedMimeTypes("attachment")).toEqual(
@@ -54,12 +64,15 @@ describe("content support registry", () => {
     );
     expect(getFilePickerAccept("attachment")).toContain("video/mp4");
     expect(getFilePickerAccept("attachment")).toContain(".mkv");
+    expect(getFilePickerAccept("attachment")).toContain("audio/mpeg");
+    expect(getFilePickerAccept("attachment")).toContain(".mp3");
     expect(getDropzoneAccept("topLevel")).toMatchObject({
       "image/jpeg": [".gif", ".jpeg", ".jpg", ".png", ".webp"],
       "application/pdf": [".pdf"],
       "video/mp4": [".mp4", ".webm", ".mkv"],
       "video/webm": [".mp4", ".webm", ".mkv"],
       "video/x-matroska": [".mp4", ".webm", ".mkv"],
+      "audio/mpeg": [".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".opus"],
       "text/markdown": [".md", ".markdown", ".txt"],
       "text/plain": [".md", ".markdown", ".txt"],
     });
@@ -114,6 +127,9 @@ describe("content support registry", () => {
     ).toBe(true);
     expect(
       isContentTypeCompatibleWithAttachment("userUploaded", "video/x-matroska"),
+    ).toBe(true);
+    expect(
+      isContentTypeCompatibleWithAttachment("userUploaded", "audio/mpeg"),
     ).toBe(true);
   });
 });

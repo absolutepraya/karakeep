@@ -844,6 +844,8 @@ export class Bookmark extends BareBookmark {
             }
             case "video":
               return null;
+            case "audio":
+              return null;
             default: {
               const _exhaustiveCheck: never = content.assetType;
               return null;

@@ -16,6 +16,7 @@ This split keeps #62 small and independently shippable, allows text and media wo
 | PDF | Yes | Yes, PDF preview | Yes | Complete for top-level PDF bookmarks | Yes |
 | Markdown | Yes, converted to a text bookmark | Yes, text reader | No asset attachment | Complete through the text bookmark path | N/A |
 | Video | Yes | Yes, video asset bookmark | Yes | MP4/WebM native playback; MKV download fallback | Yes |
+| Audio | Yes | Yes, audio asset bookmark | Yes | Native browser playback with speed control; download fallback | Yes |
 | HTML | Yes, attachment only | No, rejected before upload | Yes, generic or precrawled attachment | Raw attachment only, with existing link/archive paths remaining separate | Yes |
 | ZIP | No | No | No | No preview or reader | Yes, internal asset use |
 

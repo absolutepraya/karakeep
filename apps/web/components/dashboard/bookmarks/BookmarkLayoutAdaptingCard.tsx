@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import {
   Check,
+  AudioLines,
   GripVertical,
   Image as ImageIcon,
   NotebookPen,
@@ -455,6 +456,8 @@ function CompactView({
           {bookmark.content.type === BookmarkTypes.ASSET &&
             (bookmark.content.assetType === "video" ? (
               <Video className="size-5" aria-hidden="true" />
+            ) : bookmark.content.assetType === "audio" ? (
+              <AudioLines className="size-5" aria-hidden="true" />
             ) : (
               <ImageIcon className="size-5" aria-hidden="true" />
             ))}
