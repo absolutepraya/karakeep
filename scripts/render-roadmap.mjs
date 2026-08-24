@@ -1,9 +1,17 @@
-import { access, readFile, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 import { chromium } from "playwright";
+import sharp from "sharp";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE_PATH = path.join(ROOT, "docs/roadmap/roadmap.excalidraw");
@@ -11,17 +19,56 @@ const GENERATED_PATH = path.join(
   ROOT,
   "docs/roadmap/roadmap.generated.excalidraw",
 );
-const SVG_PATH = path.join(ROOT, "docs/roadmap/roadmap.svg");
-const PNG_PATH = path.join(ROOT, "docs/roadmap/roadmap.png");
+const ROADMAP_DIR = path.join(ROOT, "docs/roadmap");
+const OUTPUT_PATHS = {
+  lightSvg: path.join(ROADMAP_DIR, "roadmap-light.svg"),
+  lightPng: path.join(ROADMAP_DIR, "roadmap-light.png"),
+  darkSvg: path.join(ROADMAP_DIR, "roadmap-dark.svg"),
+  darkPng: path.join(ROADMAP_DIR, "roadmap-dark.png"),
+  legacySvg: path.join(ROADMAP_DIR, "roadmap.svg"),
+  legacyPng: path.join(ROADMAP_DIR, "roadmap.png"),
+};
 const README_PATH = path.join(ROOT, "README.md");
 const DEFAULT_REPOSITORY = "absolutepraya/marka";
+const FRAME_WIDTH = 3;
+const FRAME_RADIUS = 24;
 const EXPECTED_ISSUES = [
   25, 26, 28, 34, 37, 38, 46, 55, 62, 63, 64, 65, 66, 67, 68, 69, 72, 73, 74,
   75, 78,
 ];
-const NEUTRAL_TEXT = "#495057";
-const COMPLETED_NODE_FILL = "#e9ecef";
-const COMPLETED_NODE_STROKE = "#adb5bd";
+const LIGHT_THEME = {
+  id: "light",
+  foreground: "#212529",
+  mutedForeground: "#495057",
+  completedNodeFill: "#e9ecef",
+  completedNodeStroke: "#adb5bd",
+  colorMap: new Map(),
+};
+const DARK_THEME = {
+  id: "dark",
+  foreground: "#f8f9fa",
+  mutedForeground: "#adb5bd",
+  completedNodeFill: "#343a40",
+  completedNodeStroke: "#868e96",
+  colorMap: new Map([
+    ["#c3fae8", "#0b5345"],
+    ["#d0ebff", "#164e73"],
+    ["#d3f9d8", "#1f6f3d"],
+    ["#e5dbff", "#4c2a85"],
+    ["#e9ecef", "#343a40"],
+    ["#fff3bf", "#6b4f00"],
+    ["#087f5b", "#63e6be"],
+    ["#1f2937", "#f8f9fa"],
+    ["#212529", "#f8f9fa"],
+    ["#228be6", "#74c0fc"],
+    ["#2f9e44", "#8ce99a"],
+    ["#6741d9", "#b197fc"],
+    ["#f08c00", "#ffd43b"],
+    ["#495057", "#ced4da"],
+    ["#868e96", "#adb5bd"],
+    ["#adb5bd", "#868e96"],
+  ]),
+};
 
 const source = JSON.parse(await readFile(SOURCE_PATH, "utf8"));
 const model = validateScene(source);
@@ -43,19 +90,44 @@ if (!process.argv.includes("--render")) {
 }
 
 const states = await fetchIssueStates(model.nodes);
-const generated = createGeneratedScene(source, model.nodes, states);
-const rendered = await renderWithExcalidraw(generated);
+const generated = createGeneratedScene(
+  source,
+  model.nodes,
+  states,
+  LIGHT_THEME,
+);
+const themedScenes = {
+  light: generated,
+  dark: createGeneratedScene(source, model.nodes, states, DARK_THEME),
+};
+const rendered = {
+  light: await renderWithExcalidraw(themedScenes.light, LIGHT_THEME),
+  dark: await renderWithExcalidraw(themedScenes.dark, DARK_THEME),
+};
+await validateRenderedOutputs(rendered);
 const readme = await updateReadme();
-
-await writeFile(GENERATED_PATH, JSON.stringify(generated, null, 2) + "\n");
-await writeFile(SVG_PATH, rendered.svg);
-await writeFile(PNG_PATH, rendered.png);
-await writeFile(README_PATH, readme);
+const outputFiles = [
+  {
+    path: GENERATED_PATH,
+    data: JSON.stringify(generated, null, 2) + "\n",
+  },
+  { path: OUTPUT_PATHS.lightSvg, data: rendered.light.svg },
+  { path: OUTPUT_PATHS.lightPng, data: rendered.light.png },
+  { path: OUTPUT_PATHS.darkSvg, data: rendered.dark.svg },
+  { path: OUTPUT_PATHS.darkPng, data: rendered.dark.png },
+  { path: OUTPUT_PATHS.legacySvg, data: rendered.light.svg },
+  { path: OUTPUT_PATHS.legacyPng, data: rendered.light.png },
+  { path: README_PATH, data: readme },
+];
+await writeOutputSet(outputFiles);
 
 console.log("Rendered roadmap for " + model.nodes.length + " issues");
-console.log("  " + path.relative(ROOT, GENERATED_PATH));
-console.log("  " + path.relative(ROOT, SVG_PATH));
-console.log("  " + path.relative(ROOT, PNG_PATH));
+for (const output of outputFiles) {
+  if (output.path === README_PATH) {
+    continue;
+  }
+  console.log("  " + path.relative(ROOT, output.path));
+}
 
 function validateScene(scene) {
   if (
@@ -263,8 +335,9 @@ async function fetchIssueStates(nodes) {
   return new Map(entries);
 }
 
-function createGeneratedScene(scene, nodes, states) {
+function createGeneratedScene(scene, nodes, states, theme) {
   const generated = structuredClone(scene);
+  applyThemeColors(generated, theme);
   generated.elements = generated.elements.map((element) => {
     const roadmap = element.customData?.roadmap;
     if (!roadmap?.nodeId || !states.has(roadmap.nodeId)) {
@@ -285,11 +358,11 @@ function createGeneratedScene(scene, nodes, states) {
       state === "closed"
     ) {
       next.opacity = 68;
-      next.strokeColor = NEUTRAL_TEXT;
+      next.strokeColor = theme.mutedForeground;
     }
     if (roadmap.kind === "issue" && state === "closed") {
-      next.backgroundColor = COMPLETED_NODE_FILL;
-      next.strokeColor = COMPLETED_NODE_STROKE;
+      next.backgroundColor = theme.completedNodeFill;
+      next.strokeColor = theme.completedNodeStroke;
     }
     return next;
   });
@@ -298,8 +371,10 @@ function createGeneratedScene(scene, nodes, states) {
     if (states.get(node.nodeId) !== "closed") {
       continue;
     }
-    generated.elements.push(...createCompletionMarker(node));
-    generated.elements.push(...createTextStrikes(node, node.labelElement));
+    generated.elements.push(...createCompletionMarker(node, theme));
+    generated.elements.push(
+      ...createTextStrikes(node, node.labelElement, theme),
+    );
     const numberElements = generated.elements.filter(
       (element) =>
         element.customData?.roadmap?.nodeId === node.nodeId &&
@@ -308,14 +383,33 @@ function createGeneratedScene(scene, nodes, states) {
         ),
     );
     for (const numberElement of numberElements) {
-      generated.elements.push(...createTextStrikes(node, numberElement));
+      generated.elements.push(...createTextStrikes(node, numberElement, theme));
     }
   }
 
   return generated;
 }
 
-function createCompletionMarker(node) {
+function applyThemeColors(scene, theme) {
+  if (theme.colorMap.size === 0) {
+    return;
+  }
+
+  scene.elements = scene.elements.map((element) => ({
+    ...element,
+    strokeColor: mapThemeColor(element.strokeColor, theme),
+    backgroundColor: mapThemeColor(element.backgroundColor, theme),
+  }));
+}
+
+function mapThemeColor(color, theme) {
+  if (!color) {
+    return color;
+  }
+  return theme.colorMap.get(color.toLowerCase()) ?? color;
+}
+
+function createCompletionMarker(node, theme) {
   const rect = node.element;
   const checkbox = {
     ...baseElement(
@@ -326,8 +420,8 @@ function createCompletionMarker(node) {
       30,
       30,
     ),
-    strokeColor: COMPLETED_NODE_STROKE,
-    backgroundColor: "#ffffff",
+    strokeColor: theme.completedNodeStroke,
+    backgroundColor: theme.completedNodeFill,
     strokeWidth: 2,
     roughness: 1,
     roundness: { type: 3 },
@@ -356,7 +450,7 @@ function createCompletionMarker(node) {
     fontFamily: 5,
     textAlign: "center",
     verticalAlign: "middle",
-    strokeColor: NEUTRAL_TEXT,
+    strokeColor: theme.mutedForeground,
     groupIds: [node.nodeId],
     link: node.url,
     customData: {
@@ -370,7 +464,7 @@ function createCompletionMarker(node) {
   return [checkbox, checkmark];
 }
 
-function createTextStrikes(node, label) {
+function createTextStrikes(node, label, theme) {
   const lines = label.text.split("\n");
   const lineHeight = label.fontSize * label.lineHeight;
   const lineGap =
@@ -384,8 +478,7 @@ function createTextStrikes(node, label) {
       Math.max(32, line.length * label.fontSize * 0.48),
     );
     const x = label.x + (label.width - width) / 2;
-    const y =
-      label.y + verticalOffset + index * lineHeight - strikeOffset;
+    const y = label.y + verticalOffset + index * lineHeight - strikeOffset;
 
     return {
       ...baseElement(
@@ -396,7 +489,7 @@ function createTextStrikes(node, label) {
         width,
         0,
       ),
-      strokeColor: NEUTRAL_TEXT,
+      strokeColor: theme.mutedForeground,
       strokeWidth: 2,
       roughness: 2,
       points: [
@@ -416,21 +509,77 @@ function createTextStrikes(node, label) {
   });
 }
 
-async function renderWithExcalidraw(scene) {
+async function renderWithExcalidraw(scene, theme) {
   const bundle = await esbuild.build({
     stdin: {
-      contents:
-        "import { exportToSvg, exportToCanvas } from " +
-        "'@excalidraw/excalidraw';" +
-        "window.__renderRoadmap = async (scene) => {" +
-        "const appState = {...scene.appState, exportWithDarkMode:false," +
-        "exportBackground:true, viewBackgroundColor:'#ffffff'};" +
-        "const options = {elements:scene.elements, appState, files:scene.files || {}," +
-        "exportPadding:100};" +
-        "const svg = await exportToSvg(options);" +
-        "const canvas = await exportToCanvas(options);" +
-        "return {svg:svg.outerHTML, png:canvas.toDataURL('image/png')};" +
-        "};",
+      contents: `
+        import { exportToSvg, exportToCanvas } from '@excalidraw/excalidraw';
+
+        function roundedPath(context, x, y, width, height, radius) {
+          const safeRadius = Math.min(radius, width / 2, height / 2);
+          context.beginPath();
+          context.moveTo(x + safeRadius, y);
+          context.arcTo(x + width, y, x + width, y + height, safeRadius);
+          context.arcTo(x + width, y + height, x, y + height, safeRadius);
+          context.arcTo(x, y + height, x, y, safeRadius);
+          context.arcTo(x, y, x + width, y, safeRadius);
+          context.closePath();
+        }
+
+        function frameCanvas(sourceCanvas, frame) {
+          const canvas = document.createElement('canvas');
+          canvas.width = sourceCanvas.width;
+          canvas.height = sourceCanvas.height;
+          const context = canvas.getContext('2d');
+          if (!context) {
+            throw new Error('Unable to create a canvas context for roadmap framing');
+          }
+
+          context.save();
+          roundedPath(context, 0, 0, canvas.width, canvas.height, frame.radius);
+          context.clip();
+          context.drawImage(sourceCanvas, 0, 0);
+          context.restore();
+
+          context.save();
+          const inset = frame.width / 2;
+          roundedPath(
+            context,
+            inset,
+            inset,
+            canvas.width - frame.width,
+            canvas.height - frame.width,
+            frame.radius,
+          );
+          context.strokeStyle = frame.color;
+          context.lineWidth = frame.width;
+          context.stroke();
+          context.restore();
+          return canvas;
+        }
+
+        window.__renderRoadmap = async (scene, frame) => {
+          const appState = {
+            ...scene.appState,
+            exportWithDarkMode: false,
+            exportBackground: false,
+            viewBackgroundColor: '#ffffff',
+          };
+          const options = {
+            elements: scene.elements,
+            appState,
+            files: scene.files || {},
+            exportPadding: 100,
+          };
+          const svg = await exportToSvg(options);
+          const canvas = await exportToCanvas(options);
+          const framedCanvas = frameCanvas(canvas, frame);
+          return {
+            svg: svg.outerHTML,
+            png: framedCanvas.toDataURL('image/png'),
+          };
+        };
+      `,
       resolveDir: ROOT,
       sourcefile: "roadmap-export-entry.js",
     },
@@ -466,19 +615,147 @@ async function renderWithExcalidraw(scene) {
     await page.setContent("<!doctype html><html><body></body></html>");
     await page.addScriptTag({ content: bundle.outputFiles[0].text });
     const result = await page.evaluate(
-      (value) => window.__renderRoadmap(value),
-      scene,
+      ([value, frame]) => window.__renderRoadmap(value, frame),
+      [
+        scene,
+        {
+          color: theme.foreground,
+          width: FRAME_WIDTH,
+          radius: FRAME_RADIUS,
+        },
+      ],
     );
     const prefix = "data:image/png;base64,";
     if (!result.png.startsWith(prefix)) {
       throw new Error("Excalidraw PNG export did not return a PNG data URL");
     }
     return {
-      svg: result.svg,
+      svg: addSvgFrame(result.svg, theme),
       png: Buffer.from(result.png.slice(prefix.length), "base64"),
     };
   } finally {
     await browser.close();
+  }
+}
+
+function addSvgFrame(svg, theme) {
+  const dimensions = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  if (!dimensions) {
+    throw new Error("Excalidraw SVG is missing a numeric viewBox");
+  }
+  const width = Number(dimensions[1]);
+  const height = Number(dimensions[2]);
+  const clipId = "roadmap-" + theme.id + "-frame-clip";
+  const safeRadius = Math.min(FRAME_RADIUS, width / 2, height / 2);
+  const clipPath =
+    '<clipPath id="' +
+    clipId +
+    '" clipPathUnits="userSpaceOnUse"><rect x="0" y="0" width="' +
+    width +
+    '" height="' +
+    height +
+    '" rx="' +
+    safeRadius +
+    '" /></clipPath>';
+  const root = svg.match(/^<svg\b[^>]*>/)?.[0];
+  if (!root) {
+    throw new Error("Excalidraw SVG is missing its root element");
+  }
+  const clipped = svg.replace(
+    root,
+    root.slice(0, -1) + ' clip-path="url(#' + clipId + ')">',
+  );
+  const clippedRoot = clipped.match(/^<svg\b[^>]*>/)?.[0];
+  if (!clippedRoot) {
+    throw new Error("Excalidraw SVG is missing its framed root element");
+  }
+  const withClipPath = clipped.includes("<defs>")
+    ? clipped.replace("<defs>", "<defs>" + clipPath)
+    : clipped.replace(
+        clippedRoot,
+        clippedRoot + "<defs>" + clipPath + "</defs>",
+      );
+  const inset = FRAME_WIDTH / 2;
+  const frame =
+    '<rect x="' +
+    inset +
+    '" y="' +
+    inset +
+    '" width="' +
+    (width - FRAME_WIDTH) +
+    '" height="' +
+    (height - FRAME_WIDTH) +
+    '" rx="' +
+    safeRadius +
+    '" fill="none" stroke="' +
+    theme.foreground +
+    '" stroke-width="' +
+    FRAME_WIDTH +
+    '" />';
+  return withClipPath.replace("</svg>", frame + "</svg>");
+}
+
+async function validateRenderedOutputs(rendered) {
+  for (const [themeId, output] of Object.entries(rendered)) {
+    if (
+      !output.svg.includes("<clipPath") ||
+      !output.svg.includes('fill="none"')
+    ) {
+      throw new Error("The " + themeId + " SVG is missing its rounded frame");
+    }
+    if (output.svg.includes('fill="#ffffff"')) {
+      throw new Error("The " + themeId + " SVG has an opaque white background");
+    }
+    if (!Buffer.isBuffer(output.png) || output.png.length === 0) {
+      throw new Error("The " + themeId + " PNG is empty");
+    }
+
+    const { data, info } = await sharp(output.png)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const corners = [
+      [0, 0],
+      [info.width - 1, 0],
+      [0, info.height - 1],
+      [info.width - 1, info.height - 1],
+    ];
+    for (const [x, y] of corners) {
+      const alpha = data[(y * info.width + x) * 4 + 3];
+      if (alpha !== 0) {
+        throw new Error(
+          "The " +
+            themeId +
+            " PNG corner at " +
+            x +
+            "," +
+            y +
+            " is not transparent",
+        );
+      }
+    }
+  }
+}
+
+async function writeOutputSet(files) {
+  const temporaryDirectory = await mkdtemp(path.join(ROOT, ".roadmap-render-"));
+  try {
+    await Promise.all(
+      files.map((file) =>
+        writeFile(
+          path.join(temporaryDirectory, path.basename(file.path)),
+          file.data,
+        ),
+      ),
+    );
+    for (const file of files) {
+      await rename(
+        path.join(temporaryDirectory, path.basename(file.path)),
+        file.path,
+      );
+    }
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
   }
 }
 
@@ -507,8 +784,16 @@ async function updateReadme() {
   const block =
     "<!-- ROADMAP:START -->\n" +
     "## Roadmap\n\n" +
-    "[![Marka Roadmap](./docs/roadmap/roadmap.png)]" +
-    "(./docs/roadmap/roadmap.svg)\n\n" +
+    '<a href="./docs/roadmap/roadmap.excalidraw">\n' +
+    "  <picture>\n" +
+    '    <source media="(prefers-color-scheme: dark)" ' +
+    'srcset="./docs/roadmap/roadmap-dark.png">\n' +
+    '    <source media="(prefers-color-scheme: light)" ' +
+    'srcset="./docs/roadmap/roadmap-light.png">\n' +
+    '    <img src="./docs/roadmap/roadmap-light.png" ' +
+    'alt="Marka Roadmap">\n' +
+    "  </picture>\n" +
+    "</a>\n\n" +
     "[Open the editable Excalidraw source](./docs/roadmap/roadmap.excalidraw)\n" +
     "<!-- ROADMAP:END -->";
   const marker = /<!-- ROADMAP:START -->[\s\S]*?<!-- ROADMAP:END -->/;
