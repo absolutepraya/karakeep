@@ -111,7 +111,7 @@ describe("Assets API", () => {
       port,
       createTestAudioFile(),
     );
-    expect(uploadResponse.contentType).toBe("audio/x-wav");
+    expect(uploadResponse.contentType).toBe("audio/wav");
 
     const { data: createdBookmark, response: createResponse } =
       await client.POST("/bookmarks", {
@@ -128,7 +128,7 @@ describe("Assets API", () => {
       type: "asset",
       assetType: "audio",
       assetId: uploadResponse.assetId,
-      contentType: "audio/x-wav",
+      contentType: "audio/wav",
     });
 
     const rangeResponse = await fetch(
