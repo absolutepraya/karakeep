@@ -137,8 +137,7 @@ export interface Highlight {
 }
 
 interface HTMLHighlighterProps {
-  htmlContent?: string;
-  children?: React.ReactNode;
+  htmlContent: string;
   style?: React.CSSProperties;
   className?: string;
   highlights?: Highlight[];
@@ -154,7 +153,6 @@ const BookmarkHTMLHighlighter = forwardRef<
 >(function BookmarkHTMLHighlighter(
   {
     htmlContent,
-    children,
     className,
     style,
     highlights = [],
@@ -409,18 +407,14 @@ const BookmarkHTMLHighlighter = forwardRef<
     <div>
       <div
         ref={contentRef}
-        {...(htmlContent !== undefined
-          ? { dangerouslySetInnerHTML: { __html: htmlContent } }
-          : {})}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
         onPointerUp={handlePointerUp}
         className={cn(
           "prose prose-neutral max-w-none break-words dark:prose-invert [&_code]:break-all [&_img]:h-auto [&_img]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto",
           className,
         )}
         style={style}
-      >
-        {children}
-      </div>
+      />
       <HighlightForm
         position={menuPosition}
         selectedHighlight={selectedHighlight || pendingHighlight}

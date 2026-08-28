@@ -3,6 +3,7 @@ import { FullPageSpinner } from "@/components/ui/full-page-spinner";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { FileX, RotateCw } from "lucide-react";
 
@@ -23,15 +24,17 @@ import ReadingProgressBanner from "./ReadingProgressBanner";
 function ReaderState({
   title,
   description,
-  action,
   fallbackHref,
   onRetry,
+  retryLabel,
+  openPreviewLabel,
 }: {
   title: string;
   description: string;
-  action?: string;
   fallbackHref?: string;
   onRetry?: () => void;
+  retryLabel: string;
+  openPreviewLabel: string;
 }) {
   return (
     <div
@@ -58,12 +61,12 @@ function ReaderState({
             {onRetry && (
               <Button variant="outline" onClick={onRetry}>
                 <RotateCw className="mr-2 size-4" aria-hidden="true" />
-                Retry
+                {retryLabel}
               </Button>
             )}
             {fallbackHref && (
               <Button asChild>
-                <Link href={fallbackHref}>{action ?? "Open preview"}</Link>
+                <Link href={fallbackHref}>{openPreviewLabel}</Link>
               </Button>
             )}
           </div>
@@ -76,17 +79,40 @@ function ReaderState({
 function ReaderTextContent({
   text,
   format,
+  className,
+  style,
 }: {
   text: string;
   format?: "markdown" | "plain";
+  className?: string;
+  style?: React.CSSProperties;
 }) {
-  if ((format ?? "markdown") === "plain") {
-    return (
-      <pre className="whitespace-pre-wrap break-words font-sans">{text}</pre>
-    );
-  }
-
-  return <MarkdownReadonly allowTodoToggle={false}>{text}</MarkdownReadonly>;
+  return (
+    <div
+      className={cn(
+        "prose prose-neutral max-w-none break-words dark:prose-invert [&_code]:break-all [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto",
+        className,
+      )}
+      style={style}
+    >
+      {(format ?? "markdown") === "plain" ? (
+        <div className="font-sans">
+          {text.split("\n").map((line, index, lines) => (
+            <span
+              key={index}
+              data-reading-block
+              className="block whitespace-pre-wrap break-words"
+            >
+              {line}
+              {index < lines.length - 1 ? "\n" : null}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <MarkdownReadonly allowTodoToggle={false}>{text}</MarkdownReadonly>
+      )}
+    </div>
+  );
 }
 
 export default function ReaderView({
@@ -179,7 +205,7 @@ export default function ReaderView({
     },
   });
 
-  const renderReader = (readerContent: React.ReactNode) => (
+  const renderTrackedReader = (readerContent: React.ReactNode) => (
     <ScrollProgressTracker
       onSavePosition={onSavePosition}
       onScrollPositionChange={onScrollPositionChange}
@@ -196,9 +222,16 @@ export default function ReaderView({
           onDismiss={onDismiss}
         />
       )}
+      {readerContent}
+    </ScrollProgressTracker>
+  );
+
+  const renderHighlightedReader = (htmlContent: string) =>
+    renderTrackedReader(
       <BookmarkHTMLHighlighter
         className={className}
         style={style}
+        htmlContent={htmlContent}
         highlights={highlights?.highlights ?? []}
         readOnly={readOnly}
         onDeleteHighlight={(h) =>
@@ -223,11 +256,8 @@ export default function ReaderView({
             note: h.note ?? null,
           })
         }
-      >
-        {readerContent}
-      </BookmarkHTMLHighlighter>
-    </ScrollProgressTracker>
-  );
+      />,
+    );
 
   let content: React.ReactNode;
   if (isBookmarkLoading) {
@@ -235,26 +265,32 @@ export default function ReaderView({
   } else if (isBookmarkError || !bookmark) {
     content = (
       <ReaderState
-        title="Reader View unavailable"
-        description="The bookmark could not be loaded. Try again or return to the preview."
+        title={t("preview.reader_view_unavailable_title")}
+        description={t("preview.reader_view_unavailable_description")}
         fallbackHref={fallbackHref}
         onRetry={() => void refetchBookmark()}
+        retryLabel={t("preview.retry")}
+        openPreviewLabel={t("preview.open_preview")}
       />
     );
   } else if (bookmark.content.type === BookmarkTypes.TEXT) {
-    content = renderReader(
+    content = renderTrackedReader(
       <ReaderTextContent
         text={bookmark.content.text}
         format={bookmark.content.format}
+        className={className}
+        style={style}
       />,
     );
   } else if (bookmark.content.type === BookmarkTypes.LINK) {
     if (bookmark.content.crawlStatus === "pending") {
       content = (
         <ReaderState
-          title="Reader View is not ready yet"
+          title={t("preview.reader_view_not_ready_title")}
           description={t("preview.crawling_in_progress")}
           fallbackHref={fallbackHref}
+          retryLabel={t("preview.retry")}
+          openPreviewLabel={t("preview.open_preview")}
         />
       );
     } else if (bookmark.content.crawlStatus === "failure") {
@@ -263,69 +299,31 @@ export default function ReaderView({
           title={t("preview.fetch_error_title")}
           description={t("preview.fetch_error_description")}
           fallbackHref={fallbackHref}
+          retryLabel={t("preview.retry")}
+          openPreviewLabel={t("preview.open_preview")}
         />
       );
     } else if (!bookmark.content.htmlContent) {
       content = (
         <ReaderState
-          title="No readable content"
-          description="This bookmark does not have readable content available yet."
+          title={t("preview.no_readable_content_title")}
+          description={t("preview.no_readable_content_description")}
           fallbackHref={fallbackHref}
+          retryLabel={t("preview.retry")}
+          openPreviewLabel={t("preview.open_preview")}
         />
       );
     } else {
-      content = (
-        <ScrollProgressTracker
-          onSavePosition={onSavePosition}
-          onScrollPositionChange={onScrollPositionChange}
-          restorePosition={restorePosition}
-          readingProgressOffset={readingProgressOffset}
-          readingProgressAnchor={readingProgressAnchor}
-          showProgressBar
-          progressBarStyle={progressBarStyle}
-        >
-          {showBanner && (
-            <ReadingProgressBanner
-              percent={bannerPercent}
-              onContinue={onContinue}
-              onDismiss={onDismiss}
-            />
-          )}
-          <BookmarkHTMLHighlighter
-            className={className}
-            style={style}
-            htmlContent={bookmark.content.htmlContent}
-            highlights={highlights?.highlights ?? []}
-            readOnly={readOnly}
-            onDeleteHighlight={(h) => deleteHighlight({ highlightId: h.id })}
-            onUpdateHighlight={(h) =>
-              updateHighlight({
-                highlightId: h.id,
-                color: h.color,
-                note: h.note,
-              })
-            }
-            onHighlight={(h) =>
-              createHighlight({
-                startOffset: h.startOffset,
-                endOffset: h.endOffset,
-                color: h.color,
-                bookmarkId,
-                text: h.text,
-                note: h.note ?? null,
-              })
-            }
-          />
-        </ScrollProgressTracker>
-      );
+      content = renderHighlightedReader(bookmark.content.htmlContent);
     }
   } else {
     content = (
       <ReaderState
-        title="Reader View is not available"
-        description="This content uses a dedicated preview instead of Reader View."
-        action="Open preview"
+        title={t("preview.reader_view_not_available_title")}
+        description={t("preview.reader_view_not_available_description")}
         fallbackHref={fallbackHref}
+        retryLabel={t("preview.retry")}
+        openPreviewLabel={t("preview.open_preview")}
       />
     );
   }

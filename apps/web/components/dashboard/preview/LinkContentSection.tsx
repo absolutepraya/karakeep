@@ -249,11 +249,14 @@ export default function LinkContentSection({
                 <Link
                   href={`/reader/${bookmark.id}`}
                   className={buttonVariants({ variant: "outline" })}
+                  aria-label={t("preview.reader_view")}
                 >
                   <ExpandIcon className="h-4 w-4" />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Open Reader View</TooltipContent>
+              <TooltipContent side="bottom">
+                {t("preview.reader_view")}
+              </TooltipContent>
             </Tooltip>
           </>
         )}

@@ -102,6 +102,9 @@ describe("content support registry", () => {
     expect(getTextDocumentFormat("notes.md")).toBe("markdown");
     expect(getTextDocumentFormat("notes.markdown")).toBe("markdown");
     expect(getTextDocumentFormat("notes.txt")).toBe("plain");
+    expect(getTextDocumentFormat("notes.txt", "text/markdown")).toBe(
+      "markdown",
+    );
   });
 
   it("reads valid UTF-8 without changing the source", async () => {

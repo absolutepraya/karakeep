@@ -258,8 +258,14 @@ export function getTextDocumentTitle(fileName: string): string {
   return title || fileName;
 }
 
-export function getTextDocumentFormat(fileName: string): TextDocumentFormat {
-  return /\.(?:md|markdown)$/i.test(fileName) ? "markdown" : "plain";
+export function getTextDocumentFormat(
+  fileName: string,
+  mimeType?: string,
+): TextDocumentFormat {
+  return mimeType?.trim().toLowerCase() === "text/markdown" ||
+    /\.(?:md|markdown)$/i.test(fileName)
+    ? "markdown"
+    : "plain";
 }
 
 export async function readTextDocument(file: {

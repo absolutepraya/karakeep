@@ -78,7 +78,7 @@ export function useUploadAsset() {
             type: BookmarkTypes.TEXT,
             text: content,
             title: getTextDocumentTitle(file.name),
-            format: getTextDocumentFormat(file.name),
+            format: getTextDocumentFormat(file.name, file.type),
             source: "web",
           });
         } catch (error) {

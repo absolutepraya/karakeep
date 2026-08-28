@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useUpdateBookmark } from "@karakeep/shared-react/hooks/bookmarks";
 import type { ZBookmarkTextFormat } from "@karakeep/shared/types/bookmarks";
+import { useTranslation } from "@/lib/i18n/client";
 
 function PlainTextEditor({
   initialText,
@@ -18,6 +19,7 @@ function PlainTextEditor({
   onSave: (text: string) => void;
 }) {
   const [text, setText] = useState(initialText);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setText(initialText);
@@ -29,11 +31,11 @@ function PlainTextEditor({
         value={text}
         onChange={(event) => setText(event.target.value)}
         className="min-h-0 flex-1 resize-none font-mono"
-        aria-label="Plain text content"
+        aria-label={t("editor.plain_text_content")}
       />
       <div className="flex justify-end">
         <Button onClick={() => onSave(text)} disabled={isSaving}>
-          {isSaving ? "Saving…" : "Save"}
+          {isSaving ? t("actions.saving") : t("actions.save")}
         </Button>
       </div>
     </div>
