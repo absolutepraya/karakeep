@@ -310,8 +310,7 @@ export function scrollToReadingPosition(
       // Find the enclosing paragraph element
       let targetElement: HTMLElement | null = node.parentElement;
       while (targetElement && targetElement !== container) {
-        const tagName = targetElement.tagName.toLowerCase();
-        if (PARAGRAPH_SELECTORS.includes(tagName)) {
+        if (targetElement.matches(PARAGRAPH_SELECTOR_STRING)) {
           break;
         }
         targetElement = targetElement.parentElement;
