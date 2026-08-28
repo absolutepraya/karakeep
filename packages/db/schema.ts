@@ -469,6 +469,9 @@ export const bookmarkTexts = sqliteTable("bookmarkTexts", {
     .references(() => bookmarks.id, { onDelete: "cascade" }),
   text: text("text"),
   sourceUrl: text("sourceUrl"),
+  format: text("format", { enum: ["markdown", "plain"] })
+    .notNull()
+    .default("markdown"),
 });
 
 export const bookmarkAssets = sqliteTable("bookmarkAssets", {

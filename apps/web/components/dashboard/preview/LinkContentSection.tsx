@@ -253,7 +253,7 @@ export default function LinkContentSection({
                   <ExpandIcon className="h-4 w-4" />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="bottom">FullScreen</TooltipContent>
+              <TooltipContent side="bottom">Open Reader View</TooltipContent>
             </Tooltip>
           </>
         )}

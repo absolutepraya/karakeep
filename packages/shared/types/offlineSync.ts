@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   BookmarkTypes,
   MAX_BOOKMARK_TITLE_LENGTH,
+  zBookmarkTextFormatSchema,
   zBookmarkSchema,
 } from "./bookmarks";
 import { zBookmarkListSchema } from "./lists";
@@ -34,6 +35,7 @@ const zOfflineSyncTextBookmarkSchema = z.object({
   type: z.literal(BookmarkTypes.TEXT),
   text: z.string(),
   sourceUrl: z.string().url().optional(),
+  format: zBookmarkTextFormatSchema.optional(),
   title: z.string().max(MAX_BOOKMARK_TITLE_LENGTH).nullish(),
   archived: z.boolean().optional(),
   favourited: z.boolean().optional(),

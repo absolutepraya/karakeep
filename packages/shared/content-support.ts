@@ -3,6 +3,9 @@ import { ASSET_TYPES } from "./asset-types";
 export const BOOKMARK_ASSET_TYPES = ["image", "pdf", "video", "audio"] as const;
 export type BookmarkAssetType = (typeof BOOKMARK_ASSET_TYPES)[number];
 
+export const TEXT_DOCUMENT_FORMATS = ["markdown", "plain"] as const;
+export type TextDocumentFormat = (typeof TEXT_DOCUMENT_FORMATS)[number];
+
 export type ContentSupportCapability =
   | "upload"
   | "topLevel"
@@ -253,6 +256,10 @@ export function isMarkdownFile(fileName: string, mimeType?: string): boolean {
 export function getTextDocumentTitle(fileName: string): string {
   const title = fileName.replace(/\.(?:md|markdown|txt)$/i, "");
   return title || fileName;
+}
+
+export function getTextDocumentFormat(fileName: string): TextDocumentFormat {
+  return /\.(?:md|markdown)$/i.test(fileName) ? "markdown" : "plain";
 }
 
 export async function readTextDocument(file: {

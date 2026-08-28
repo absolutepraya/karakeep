@@ -7,6 +7,7 @@ import {
   getFilePickerAccept,
   getSupportedMimeTypes,
   getTextDocumentTitle,
+  getTextDocumentFormat,
   isContentTypeCompatibleWithAttachment,
   isTextDocumentFile,
   readTextDocument,
@@ -95,6 +96,12 @@ describe("content support registry", () => {
     expect(getTextDocumentTitle("notes.markdown")).toBe("notes");
     expect(getTextDocumentTitle("notes.txt")).toBe("notes");
     expect(getTextDocumentTitle(".txt")).toBe(".txt");
+  });
+
+  it("preserves the authoring format from the filename", () => {
+    expect(getTextDocumentFormat("notes.md")).toBe("markdown");
+    expect(getTextDocumentFormat("notes.markdown")).toBe("markdown");
+    expect(getTextDocumentFormat("notes.txt")).toBe("plain");
   });
 
   it("reads valid UTF-8 without changing the source", async () => {

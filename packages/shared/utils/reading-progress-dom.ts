@@ -25,6 +25,7 @@ const PARAGRAPH_SELECTORS = [
   "h6",
   "li",
   "blockquote",
+  "pre",
 ];
 
 const PARAGRAPH_SELECTOR_STRING = PARAGRAPH_SELECTORS.join(", ");

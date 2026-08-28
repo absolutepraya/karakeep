@@ -13,6 +13,7 @@ import { useCreateBookmarkWithPostHook } from "@karakeep/shared-react/hooks/book
 import { useDeleteUnattachedAsset } from "@karakeep/shared-react/hooks/assets";
 import {
   getTextDocumentTitle,
+  getTextDocumentFormat,
   getBookmarkAssetTypeForMimeType,
   getDropzoneAccept,
   isTextDocumentFile,
@@ -77,6 +78,7 @@ export function useUploadAsset() {
             type: BookmarkTypes.TEXT,
             text: content,
             title: getTextDocumentTitle(file.name),
+            format: getTextDocumentFormat(file.name),
             source: "web",
           });
         } catch (error) {

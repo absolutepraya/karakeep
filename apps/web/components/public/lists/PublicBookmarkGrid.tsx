@@ -158,6 +158,7 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
                     id: bookmark.id,
                     content: {
                       text: bookmark.content.text,
+                      format: bookmark.content.format,
                     },
                   }}
                 </BookmarkMarkdownComponent>
@@ -178,6 +179,7 @@ function BookmarkCard({ bookmark }: { bookmark: ZPublicBookmark }) {
                       id: bookmark.id,
                       content: {
                         text: bookmark.content.text,
+                        format: bookmark.content.format,
                       },
                     }}
                   </BookmarkMarkdownComponent>

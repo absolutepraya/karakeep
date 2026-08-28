@@ -192,6 +192,7 @@ export default function ReaderViewPage() {
                       }}
                       bookmarkId={bookmarkId}
                       readOnly={!isOwner}
+                      fallbackHref={`/dashboard/preview/${bookmarkId}`}
                       progressBarStyle={{ position: "fixed", top: "3.5rem" }}
                     />
                   </div>

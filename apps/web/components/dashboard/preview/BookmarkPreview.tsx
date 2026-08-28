@@ -39,6 +39,7 @@ import SummarizeBookmarkArea from "../bookmarks/SummarizeBookmarkArea";
 import ActionBar from "./ActionBar";
 import { AssetContentSection } from "./AssetContentSection";
 import AttachmentBox from "./AttachmentBox";
+import ContentDownloadButton from "./ContentDownloadButton";
 import HighlightsBox from "./HighlightsBox";
 import LinkContentSection from "./LinkContentSection";
 import { NoteEditor } from "./NoteEditor";
@@ -230,6 +231,7 @@ export default function BookmarkPreview({
               <span>{t("preview.view_original")}</span>
             </Link>
           )}
+          <ContentDownloadButton bookmark={bookmark} className="mt-2" />
         </div>
       </div>
       <DetailSection title="Metadata">

@@ -8,6 +8,7 @@
 - `CONTRIBUTING.md`: contribution rules
 - `docs/operator-setup.md`: operator setup, local development, and deployment
 - `docs/README.md`: docs-site development
+- `CONTEXT.md`: domain vocabulary for bookmark content and viewing surfaces
 - This file, `CLAUDE.md`, and `GEMINI.md`: concise assistant operations context
 
 ## Repository operations
