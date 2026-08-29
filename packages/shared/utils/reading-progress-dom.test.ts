@@ -65,11 +65,13 @@ describe("scrollToReadingPosition", () => {
   test("restores to a data reading block during offset fallback", () => {
     const container = document.createElement("article");
     const block = document.createElement("div");
-    const text = document.createTextNode("Second block");
+    const text = document.createElement("span");
     const scrollIntoView = vi.fn();
 
     block.dataset.readingBlock = "true";
     block.scrollIntoView = scrollIntoView;
+    text.scrollIntoView = vi.fn();
+    text.textContent = "Second block";
     block.append(text);
     container.append(document.createTextNode("First block"), block);
     document.body.append(container);
