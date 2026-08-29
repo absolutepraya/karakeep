@@ -39,7 +39,6 @@ import SummarizeBookmarkArea from "../bookmarks/SummarizeBookmarkArea";
 import ActionBar from "./ActionBar";
 import { AssetContentSection } from "./AssetContentSection";
 import AttachmentBox from "./AttachmentBox";
-import ContentDownloadButton from "./ContentDownloadButton";
 import HighlightsBox from "./HighlightsBox";
 import LinkContentSection from "./LinkContentSection";
 import { NoteEditor } from "./NoteEditor";
@@ -231,7 +230,6 @@ export default function BookmarkPreview({
               <span>{t("preview.view_original")}</span>
             </Link>
           )}
-          <ContentDownloadButton bookmark={bookmark} className="mt-2" />
         </div>
       </div>
       <DetailSection title="Metadata">
@@ -265,12 +263,18 @@ export default function BookmarkPreview({
             <button
               type="button"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="shadow-xs ease-(--ease-out) absolute right-5 top-5 z-10 rounded-full border border-border/70 bg-background/90 p-2 text-muted-foreground transition-[background-color,color,border-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-[0.97]"
+              className="shadow-xs ease-(--ease-out) absolute right-5 top-5 z-10 rounded-full border border-border/70 bg-background/90 p-2 text-muted-foreground transition-[background-color,color,border-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-[0.97] motion-reduce:transition-colors motion-reduce:active:scale-100"
+              aria-label={t(
+                sidebarCollapsed
+                  ? "actions.show_details"
+                  : "actions.hide_details",
+              )}
+              aria-expanded={!sidebarCollapsed}
             >
               {sidebarCollapsed ? (
-                <PanelRightOpen size={20} />
+                <PanelRightOpen size={20} aria-hidden="true" />
               ) : (
-                <PanelRightClose size={20} />
+                <PanelRightClose size={20} aria-hidden="true" />
               )}
             </button>
             {contentSection}

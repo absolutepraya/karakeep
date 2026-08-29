@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FullPageSpinner } from "@/components/ui/full-page-spinner";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/lib/auth/client";
+import { useTranslation } from "@/lib/i18n/client";
 import { useReaderSettings } from "@/lib/readerSettings";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -41,9 +42,14 @@ export default function ReaderViewPage() {
 
   const { data: session } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
   const { settings } = useReaderSettings();
   const [showHighlights, setShowHighlights] = useState(false);
   const isOwner = session?.user?.id === bookmark?.userId;
+  const canUseReader =
+    bookmark?.content.type === BookmarkTypes.TEXT ||
+    bookmark?.content.type === BookmarkTypes.LINK;
+  const canHighlight = bookmark?.content.type === BookmarkTypes.LINK;
 
   const onClose = () => {
     if (window.history.length > 1) {
@@ -71,13 +77,18 @@ export default function ReaderViewPage() {
               size="icon"
               className="rounded-full"
               onClick={onClose}
+              aria-label={t("actions.close_reader")}
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">Reader View</p>
+              <p className="text-sm font-medium text-foreground">
+                {t("preview.reader_view")}
+              </p>
               <p className="truncate text-xs text-muted-foreground">
-                {bookmark ? getBookmarkTitle(bookmark) : "Loading article…"}
+                {bookmark
+                  ? getBookmarkTitle(bookmark)
+                  : t("preview.loading_article")}
               </p>
             </div>
           </div>
@@ -94,31 +105,42 @@ export default function ReaderViewPage() {
                   href={sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label="Open original"
+                  aria-label={t("actions.open_original")}
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 </a>
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full"
-              onClick={handlePrint}
-            >
-              <Printer className="h-4 w-4" />
-            </Button>
+            {canUseReader && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                onClick={handlePrint}
+                aria-label={t("actions.print")}
+              >
+                <Printer className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
 
-            <ReaderSettingsPopover variant="ghost" />
+            {canUseReader && <ReaderSettingsPopover variant="ghost" />}
 
-            <Button
-              variant={showHighlights ? "default" : "ghost"}
-              size="icon"
-              className="rounded-full"
-              onClick={() => setShowHighlights(!showHighlights)}
-            >
-              <Highlight className="h-4 w-4" />
-            </Button>
+            {canHighlight && (
+              <Button
+                variant={showHighlights ? "default" : "ghost"}
+                size="icon"
+                className="rounded-full"
+                onClick={() => setShowHighlights(!showHighlights)}
+                aria-label={t(
+                  showHighlights
+                    ? "actions.hide_highlights"
+                    : "actions.show_highlights",
+                )}
+                aria-pressed={showHighlights}
+              >
+                <Highlight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -135,7 +157,7 @@ export default function ReaderViewPage() {
                 setShowHighlights(false);
               }
             }}
-            aria-label="Close highlights sidebar"
+            aria-label={t("actions.close_highlights")}
           />
         )}
 
@@ -159,7 +181,11 @@ export default function ReaderViewPage() {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                     {bookmark.content.type == BookmarkTypes.LINK &&
                       bookmark.content.author && (
-                        <span>By {bookmark.content.author}</span>
+                        <span>
+                          {t("preview.by_author", {
+                            author: bookmark.content.author,
+                          })}
+                        </span>
                       )}
                     {bookmark.content.type == BookmarkTypes.LINK &&
                       bookmark.content.publisher && (
@@ -176,7 +202,7 @@ export default function ReaderViewPage() {
                         orientation="vertical"
                         className="hidden h-4 sm:block"
                       />
-                      <span>Saved for focused reading</span>
+                      <span>{t("preview.saved_for_focused_reading")}</span>
                     </>
                   </div>
                 </header>
@@ -205,11 +231,12 @@ export default function ReaderViewPage() {
         </main>
 
         {/* Highlights Sidebar */}
-        {(highlights || showHighlights) && (
+        {canHighlight && (highlights || showHighlights) && (
           <aside
             aria-hidden={!showHighlights}
+            inert={!showHighlights ? true : undefined}
             className={cn(
-              "ease-(--ease-out) fixed right-0 top-14 z-50 h-[calc(100vh-3.5rem)] w-full border-l border-border/70 bg-card/95 transition-[transform,opacity] duration-200 sm:w-80 lg:bg-card/85 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-card/75 print:hidden",
+              "ease-(--ease-out) fixed right-0 top-14 z-50 h-[calc(100vh-3.5rem)] w-full border-l border-border/70 bg-card/95 transition-[transform,opacity] duration-200 motion-reduce:transform-none motion-reduce:transition-none sm:w-80 lg:bg-card/85 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-card/75 print:hidden",
               showHighlights
                 ? "translate-x-0 opacity-100"
                 : "pointer-events-none translate-x-full opacity-0",
@@ -218,11 +245,13 @@ export default function ReaderViewPage() {
             <div className="flex h-full flex-col">
               <div className="border-b border-border/70 p-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-semibold">Highlights</h2>
+                  <h2 className="font-semibold">{t("common.highlights")}</h2>
                   <div className="flex items-center gap-2">
                     {highlights && (
                       <span className="text-sm text-muted-foreground">
-                        {highlights.highlights.length} saved
+                        {t("preview.highlights_saved", {
+                          count: highlights.highlights.length,
+                        })}
                       </span>
                     )}
                     <Button
@@ -230,8 +259,9 @@ export default function ReaderViewPage() {
                       size="icon"
                       className="h-6 w-6 lg:hidden"
                       onClick={() => setShowHighlights(false)}
+                      aria-label={t("actions.close_highlights")}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </div>

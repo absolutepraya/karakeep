@@ -55,14 +55,18 @@ export function BookmarkMarkdownComponent({
   };
   readOnly?: boolean;
 }) {
+  const { t } = useTranslation();
   const { mutate: updateBookmarkMutator, isPending } = useUpdateBookmark({
     onSuccess: () => {
       toast({
-        description: "Note updated!",
+        description: t("actions.note_updated"),
       });
     },
     onError: () => {
-      toast({ description: "Something went wrong", variant: "destructive" });
+      toast({
+        description: t("common.something_went_wrong"),
+        variant: "destructive",
+      });
     },
   });
 

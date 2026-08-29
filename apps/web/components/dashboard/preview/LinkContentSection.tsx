@@ -39,6 +39,7 @@ import {
 import { READER_FONT_FAMILIES } from "@karakeep/shared/types/readers";
 
 import { contentRendererRegistry } from "./content-renderers";
+import ContentDownloadButton from "./ContentDownloadButton";
 import ReaderSettingsPopover from "./ReaderSettingsPopover";
 import ReaderView from "./ReaderView";
 
@@ -175,7 +176,10 @@ export default function LinkContentSection({
     <div className="flex h-full w-full min-w-0 flex-col items-center overflow-hidden">
       <div className="flex w-full items-center justify-center gap-2 border-b px-3 py-1.5">
         <Select onValueChange={setSection} value={section}>
-          <SelectTrigger className="w-fit">
+          <SelectTrigger
+            className="w-fit"
+            aria-label={t("preview.select_view")}
+          >
             <span className="mr-2">
               <SelectValue />
             </span>
@@ -241,11 +245,12 @@ export default function LinkContentSection({
             </SelectGroup>
           </SelectContent>
         </Select>
+        <ContentDownloadButton bookmark={bookmark} />
         {section === "cached" && (
           <>
             <ReaderSettingsPopover />
             <Tooltip>
-              <TooltipTrigger>
+              <TooltipTrigger asChild>
                 <Link
                   href={`/reader/${bookmark.id}`}
                   className={buttonVariants({ variant: "outline" })}

@@ -166,13 +166,13 @@ export default function ReaderView({
   const { mutate: createHighlight } = useCreateHighlight({
     onSuccess: () => {
       toast({
-        description: "Highlight has been created!",
+        description: t("actions.highlight_created"),
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
-        description: "Something went wrong",
+        description: t("common.something_went_wrong"),
       });
     },
   });
@@ -180,13 +180,13 @@ export default function ReaderView({
   const { mutate: updateHighlight } = useUpdateHighlight({
     onSuccess: () => {
       toast({
-        description: "Highlight has been updated!",
+        description: t("actions.highlight_updated"),
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
-        description: "Something went wrong",
+        description: t("common.something_went_wrong"),
       });
     },
   });
@@ -194,13 +194,13 @@ export default function ReaderView({
   const { mutate: deleteHighlight } = useDeleteHighlight({
     onSuccess: () => {
       toast({
-        description: "Highlight has been deleted!",
+        description: t("actions.highlight_deleted"),
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
-        description: "Something went wrong",
+        description: t("common.something_went_wrong"),
       });
     },
   });

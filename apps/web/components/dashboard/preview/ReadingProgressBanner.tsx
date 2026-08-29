@@ -27,17 +27,17 @@ export default function ReadingProgressBanner({
         <button
           type="button"
           onClick={onContinue}
-          className="shrink-0 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-opacity hover:opacity-80"
+          className="ease-(--ease-out) shrink-0 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-[transform,opacity] duration-150 hover:opacity-80 active:scale-[0.97] motion-reduce:transition-opacity motion-reduce:active:scale-100"
         >
           {t("preview.continue_button")}
         </button>
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground"
-          aria-label="Dismiss"
+          className="ease-(--ease-out) shrink-0 rounded-full p-1 text-muted-foreground transition-[transform,color] duration-150 hover:text-foreground active:scale-[0.97] motion-reduce:transition-colors motion-reduce:active:scale-100"
+          aria-label={t("preview.dismiss")}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
     </div>
