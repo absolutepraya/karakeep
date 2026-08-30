@@ -167,7 +167,11 @@ export default function ReaderSettingsPopover({
                             size="icon"
                             className="h-5 w-5 text-muted-foreground hover:text-foreground"
                             onClick={() => clearLocalOverride("fontFamily")}
-                            aria-label={t("actions.clear_reader_override")}
+                            aria-label={t("actions.clear_reader_override", {
+                              setting: t(
+                                "settings.info.reader_settings.font_family",
+                              ),
+                            })}
                           >
                             <X className="h-3 w-3" aria-hidden="true" />
                           </Button>
@@ -243,7 +247,11 @@ export default function ReaderSettingsPopover({
                             size="icon"
                             className="h-5 w-5 text-muted-foreground hover:text-foreground"
                             onClick={() => clearLocalOverride("fontSize")}
-                            aria-label={t("actions.clear_reader_override")}
+                            aria-label={t("actions.clear_reader_override", {
+                              setting: t(
+                                "settings.info.reader_settings.font_size",
+                              ),
+                            })}
                           >
                             <X className="h-3 w-3" aria-hidden="true" />
                           </Button>
@@ -341,7 +349,11 @@ export default function ReaderSettingsPopover({
                             size="icon"
                             className="h-5 w-5 text-muted-foreground hover:text-foreground"
                             onClick={() => clearLocalOverride("lineHeight")}
-                            aria-label={t("actions.clear_reader_override")}
+                            aria-label={t("actions.clear_reader_override", {
+                              setting: t(
+                                "settings.info.reader_settings.line_height",
+                              ),
+                            })}
                           >
                             <X className="h-3 w-3" aria-hidden="true" />
                           </Button>

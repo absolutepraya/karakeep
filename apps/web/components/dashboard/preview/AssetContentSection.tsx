@@ -167,7 +167,7 @@ function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
           </video>
         </div>
       )}
-      <ContentDownloadButton bookmark={bookmark} />
+      <ContentDownloadButton bookmark={bookmark} fileName={fileName} />
     </div>
   );
 }

@@ -139,7 +139,7 @@
     "increase_font_size": "Increase font size",
     "decrease_line_height": "Decrease line height",
     "increase_line_height": "Increase line height",
-    "clear_reader_override": "Reset to saved value",
+    "clear_reader_override": "Reset {{setting}} to saved value",
     "show_details": "Show details",
     "hide_details": "Hide details",
     "note_updated": "Note updated!",

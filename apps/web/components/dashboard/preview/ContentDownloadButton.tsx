@@ -12,12 +12,15 @@ function safeFileName(fileName: string) {
   return fileName.replace(/[\\/:*?"<>|]/g, "-");
 }
 
-function getDownloadTarget(bookmark: ZBookmark) {
+function getDownloadTarget(bookmark: ZBookmark, fileNameOverride?: string) {
   if (bookmark.content.type === BookmarkTypes.ASSET) {
     return {
       assetId: bookmark.content.assetId,
       fileName:
-        bookmark.content.fileName ?? getBookmarkTitle(bookmark) ?? "download",
+        fileNameOverride ??
+        bookmark.content.fileName ??
+        getBookmarkTitle(bookmark) ??
+        "download",
     };
   }
 
@@ -48,12 +51,14 @@ function getDownloadTarget(bookmark: ZBookmark) {
 export default function ContentDownloadButton({
   bookmark,
   className,
+  fileName: fileNameOverride,
 }: {
   bookmark: ZBookmark;
   className?: string;
+  fileName?: string;
 }) {
   const { t } = useTranslation();
-  const target = getDownloadTarget(bookmark);
+  const target = getDownloadTarget(bookmark, fileNameOverride);
   if (!target) {
     return null;
   }
