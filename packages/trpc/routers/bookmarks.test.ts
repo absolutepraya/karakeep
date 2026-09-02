@@ -837,6 +837,35 @@ describe("Bookmark Routes", () => {
     expect(bookmark.content.text).toEqual("WORLD HELLO");
   });
 
+  test<CustomTestContext>("preserves the text bookmark format", async ({
+    apiCallers,
+  }) => {
+    const api = apiCallers[0].bookmarks;
+    const plainBookmark = await api.createBookmark({
+      text: "plain content",
+      type: BookmarkTypes.TEXT,
+      format: "plain",
+    });
+    const markdownBookmark = await api.createBookmark({
+      text: "**markdown content**",
+      type: BookmarkTypes.TEXT,
+    });
+
+    const plain = await api.getBookmark({ bookmarkId: plainBookmark.id });
+    const markdown = await api.getBookmark({
+      bookmarkId: markdownBookmark.id,
+    });
+
+    expect(plain.content).toMatchObject({
+      type: BookmarkTypes.TEXT,
+      format: "plain",
+    });
+    expect(markdown.content).toMatchObject({
+      type: BookmarkTypes.TEXT,
+      format: "markdown",
+    });
+  });
+
   test<CustomTestContext>("privacy", async ({ apiCallers }) => {
     const user1Bookmark = await apiCallers[0].bookmarks.createBookmark({
       type: BookmarkTypes.LINK,

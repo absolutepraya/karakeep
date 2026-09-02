@@ -1,0 +1,1 @@
+ALTER TABLE `bookmarkTexts` ADD `format` text DEFAULT 'markdown' NOT NULL;

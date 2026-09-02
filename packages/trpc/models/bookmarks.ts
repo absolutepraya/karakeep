@@ -199,6 +199,7 @@ export class Bookmark extends BareBookmark {
         // It's ok to include the text content as it's usually not big and is used to render the text bookmark card.
         text: text.text ?? "",
         sourceUrl: text.sourceUrl,
+        format: text.format ?? "markdown",
       };
     }
     if (bookmark.asset) {
@@ -607,6 +608,7 @@ export class Bookmark extends BareBookmark {
               type: BookmarkTypes.TEXT,
               text: row.bookmarkTexts.text ?? "",
               sourceUrl: row.bookmarkTexts.sourceUrl ?? null,
+              format: row.bookmarkTexts.format ?? "markdown",
             };
           } else if (row.bookmarkAssets) {
             content = {
@@ -794,6 +796,7 @@ export class Bookmark extends BareBookmark {
           return {
             type: BookmarkTypes.TEXT,
             text: content.text,
+            format: content.format ?? "markdown",
           };
         }
         case BookmarkTypes.ASSET: {

@@ -645,6 +645,13 @@
       "when": 1787464761180,
       "tag": "0091_add_transcript_revision_to_reader_state",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "6",
+      "when": 1787827120457,
+      "tag": "0092_add_text_bookmark_format",
+      "breakpoints": true
     }
   ]
 }

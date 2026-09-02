@@ -550,6 +550,7 @@ export async function enqueueMutation(
             type: BookmarkTypes.TEXT,
             text: parsedMutation.data.bookmark.text,
             sourceUrl: parsedMutation.data.bookmark.sourceUrl ?? null,
+            format: parsedMutation.data.bookmark.format ?? "markdown",
           },
         };
         await Promise.all([

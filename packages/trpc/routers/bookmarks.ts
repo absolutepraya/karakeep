@@ -344,6 +344,7 @@ export const bookmarksAppRouter = router({
                     id: bookmark.id,
                     text: input.text,
                     sourceUrl: input.sourceUrl,
+                    format: input.format ?? "markdown",
                   })
                   .returning()
               )[0];
@@ -351,6 +352,7 @@ export const bookmarksAppRouter = router({
                 type: BookmarkTypes.TEXT,
                 text: text.text ?? "",
                 sourceUrl: text.sourceUrl,
+                format: text.format,
               };
               break;
             }

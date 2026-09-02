@@ -21,3 +21,9 @@ This split keeps #62 small and independently shippable, allows text and media wo
 | ZIP | No | No | No | No preview or reader | Yes, internal asset use |
 
 The attachment column does not imply playback, focused reading, or a dedicated renderer. Generic uploaded attachments are downloadable raw assets unless a later issue adds the corresponding surface.
+
+## Focused viewing contract
+
+Bookmark types remain `LINK`, `TEXT`, `ASSET`, and `UNKNOWN`. Video, audio, PDF, image, and future Office files remain asset subtypes rather than new top-level bookmark types. `TEXT` content carries a Markdown or plain-text format, defaulting to Markdown for existing rows and older clients.
+
+Reader View is the default focused surface for cached HTML links and text bookmarks. Plain text preserves its source whitespace without Markdown interpretation. PDFs and other binary assets stay in their dedicated preview surfaces and expose download actions to every authorized viewer. Full-fidelity Office viewing and editing remain separate future capabilities under #72 and #73.

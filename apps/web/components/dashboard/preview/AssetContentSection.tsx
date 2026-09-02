@@ -10,13 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/lib/i18n/client";
-import { Download } from "lucide-react";
 
 import { BookmarkTypes, ZBookmark } from "@karakeep/shared/types/bookmarks";
 import { getContentFormatForBookmarkAssetType } from "@karakeep/shared/content-support";
 import { getAssetUrl } from "@karakeep/shared/utils/assetUtils";
 
 import { AudioPlayer } from "./AudioPlayer";
+import ContentDownloadButton from "./ContentDownloadButton";
 
 // 20 MB
 const BIG_FILE_SIZE = 20 * 1024 * 1024;
@@ -71,7 +71,7 @@ function PDFContentSection({ bookmark }: { bookmark: ZBookmark }) {
 
   return (
     <div className="flex h-full flex-col items-center gap-2">
-      <div className="flex w-full items-center justify-center gap-4">
+      <div className="flex w-full items-center justify-center gap-2">
         <Select onValueChange={setSection} value={section}>
           <SelectTrigger className="w-fit">
             <SelectValue />
@@ -85,6 +85,7 @@ function PDFContentSection({ bookmark }: { bookmark: ZBookmark }) {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <ContentDownloadButton bookmark={bookmark} />
       </div>
       {content}
     </div>
@@ -95,9 +96,14 @@ function ImageContentSection({ bookmark }: { bookmark: ZBookmark }) {
   if (bookmark.content.type != BookmarkTypes.ASSET) {
     throw new Error("Invalid content type");
   }
+  const { t } = useTranslation();
   return (
     <div className="relative h-full min-w-full">
-      <Link href={getAssetUrl(bookmark.content.assetId)} target="_blank">
+      <Link
+        href={getAssetUrl(bookmark.content.assetId)}
+        target="_blank"
+        aria-label={t("actions.open_original")}
+      >
         <Image
           alt="asset"
           fill={true}
@@ -107,6 +113,10 @@ function ImageContentSection({ bookmark }: { bookmark: ZBookmark }) {
           src={getAssetUrl(bookmark.content.assetId)}
         />
       </Link>
+      <ContentDownloadButton
+        bookmark={bookmark}
+        className="absolute right-4 top-4 z-10"
+      />
     </div>
   );
 }
@@ -157,14 +167,7 @@ function VideoContentSection({ bookmark }: { bookmark: ZBookmark }) {
           </video>
         </div>
       )}
-      <Link
-        href={assetUrl}
-        download={fileName}
-        className="shadow-xs inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-      >
-        <Download className="size-4" aria-hidden="true" />
-        {t("actions.download_file", { fileName })}
-      </Link>
+      <ContentDownloadButton bookmark={bookmark} fileName={fileName} />
     </div>
   );
 }

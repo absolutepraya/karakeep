@@ -96,8 +96,13 @@ export default function ReaderSettingsPopover({
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button variant={variant} size="icon" className="relative">
-              <Settings className="h-4 w-4" />
+            <Button
+              variant={variant}
+              size="icon"
+              className="relative"
+              aria-label={t("actions.settings")}
+            >
+              <Settings className="h-4 w-4" aria-hidden="true" />
               {(hasSessionChanges || hasLocalOverrides) && (
                 <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
               )}
@@ -112,7 +117,7 @@ export default function ReaderSettingsPopover({
         side="bottom"
         align="center"
         collisionPadding={32}
-        className="flex w-[22rem] flex-col overflow-hidden rounded-2xl p-0"
+        className="flex w-[calc(100vw-2rem)] max-w-[22rem] flex-col overflow-hidden rounded-2xl p-0 motion-reduce:animate-none motion-reduce:transition-none"
         style={{
           maxHeight: "var(--radix-popover-content-available-height)",
         }}
@@ -129,7 +134,7 @@ export default function ReaderSettingsPopover({
                     {t("settings.info.reader_settings.title")}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Tune typography for a calmer reading experience.
+                    {t("settings.info.reader_settings.description")}
                   </p>
                 </div>
               </div>
@@ -162,8 +167,13 @@ export default function ReaderSettingsPopover({
                             size="icon"
                             className="h-5 w-5 text-muted-foreground hover:text-foreground"
                             onClick={() => clearLocalOverride("fontFamily")}
+                            aria-label={t("actions.clear_reader_override", {
+                              setting: t(
+                                "settings.info.reader_settings.font_family",
+                              ),
+                            })}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -237,8 +247,13 @@ export default function ReaderSettingsPopover({
                             size="icon"
                             className="h-5 w-5 text-muted-foreground hover:text-foreground"
                             onClick={() => clearLocalOverride("fontSize")}
+                            aria-label={t("actions.clear_reader_override", {
+                              setting: t(
+                                "settings.info.reader_settings.font_size",
+                              ),
+                            })}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -262,6 +277,7 @@ export default function ReaderSettingsPopover({
                   variant="outline"
                   size="icon"
                   className="h-7 w-7 bg-transparent"
+                  aria-label={t("actions.decrease_font_size")}
                   onClick={() =>
                     updateSession({
                       fontSize: Math.max(
@@ -282,6 +298,7 @@ export default function ReaderSettingsPopover({
                   max={READER_SETTING_CONSTRAINTS.fontSize.max}
                   min={READER_SETTING_CONSTRAINTS.fontSize.min}
                   step={READER_SETTING_CONSTRAINTS.fontSize.step}
+                  aria-label={t("settings.info.reader_settings.font_size")}
                   className={`flex-1 ${
                     hasLocalOverride("fontSize") &&
                     sessionOverrides.fontSize === undefined
@@ -293,6 +310,7 @@ export default function ReaderSettingsPopover({
                   variant="outline"
                   size="icon"
                   className="h-7 w-7 bg-transparent"
+                  aria-label={t("actions.increase_font_size")}
                   onClick={() =>
                     updateSession({
                       fontSize: Math.min(
@@ -331,8 +349,13 @@ export default function ReaderSettingsPopover({
                             size="icon"
                             className="h-5 w-5 text-muted-foreground hover:text-foreground"
                             onClick={() => clearLocalOverride("lineHeight")}
+                            aria-label={t("actions.clear_reader_override", {
+                              setting: t(
+                                "settings.info.reader_settings.line_height",
+                              ),
+                            })}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -356,6 +379,7 @@ export default function ReaderSettingsPopover({
                   variant="outline"
                   size="icon"
                   className="h-7 w-7 bg-transparent"
+                  aria-label={t("actions.decrease_line_height")}
                   onClick={() =>
                     updateSession({
                       lineHeight: Math.max(
@@ -379,6 +403,7 @@ export default function ReaderSettingsPopover({
                   max={READER_SETTING_CONSTRAINTS.lineHeight.max}
                   min={READER_SETTING_CONSTRAINTS.lineHeight.min}
                   step={READER_SETTING_CONSTRAINTS.lineHeight.step}
+                  aria-label={t("settings.info.reader_settings.line_height")}
                   className={`flex-1 ${
                     hasLocalOverride("lineHeight") &&
                     sessionOverrides.lineHeight === undefined
@@ -390,6 +415,7 @@ export default function ReaderSettingsPopover({
                   variant="outline"
                   size="icon"
                   className="h-7 w-7 bg-transparent"
+                  aria-label={t("actions.increase_line_height")}
                   onClick={() =>
                     updateSession({
                       lineHeight: Math.min(

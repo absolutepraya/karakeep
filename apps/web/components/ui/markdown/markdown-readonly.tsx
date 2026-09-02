@@ -26,10 +26,12 @@ export function MarkdownReadonly({
   children: markdown,
   className,
   onSave,
+  allowTodoToggle = true,
 }: {
   children: string;
   className?: string;
   onSave?: (markdown: string) => void;
+  allowTodoToggle?: boolean;
 }) {
   /**
    * This method is triggered when a checkbox is toggled from the masonry view
@@ -73,9 +75,10 @@ export function MarkdownReadonly({
           props.type === "checkbox" ? (
             <input
               checked={props.checked}
-              onChange={handleTodoClick}
+              onChange={allowTodoToggle ? handleTodoClick : undefined}
               type="checkbox"
               className="todo-checkbox"
+              disabled={!allowTodoToggle}
             />
           ) : (
             <input {...props} readOnly />

@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { BOOKMARK_ASSET_TYPES } from "../content-support";
+import {
+  BOOKMARK_ASSET_TYPES,
+  TEXT_DOCUMENT_FORMATS,
+} from "../content-support";
 import { zCursorV2 } from "./pagination";
 import { zAttachedByEnumSchema, zBookmarkTagSchema } from "./tags";
 
@@ -12,6 +15,9 @@ export const enum BookmarkTypes {
   ASSET = "asset",
   UNKNOWN = "unknown",
 }
+
+export const zBookmarkTextFormatSchema = z.enum(TEXT_DOCUMENT_FORMATS);
+export type ZBookmarkTextFormat = z.infer<typeof zBookmarkTextFormatSchema>;
 
 export const zSortOrder = z.enum(["asc", "desc", "relevance"]);
 export type ZSortOrder = z.infer<typeof zSortOrder>;
@@ -67,6 +73,9 @@ export const zBookmarkedTextSchema = z.object({
   type: z.literal(BookmarkTypes.TEXT),
   text: z.string(),
   sourceUrl: z.string().nullish(),
+  // Optional on the wire for compatibility with bookmarks created before
+  // Markdown and plain text were distinguished.
+  format: zBookmarkTextFormatSchema.optional(),
 });
 export type ZBookmarkedText = z.infer<typeof zBookmarkedTextSchema>;
 
@@ -187,6 +196,7 @@ export const zNewBookmarkRequestSchema = z.intersection(
       type: z.literal(BookmarkTypes.TEXT),
       text: z.string(),
       sourceUrl: z.string().optional(),
+      format: zBookmarkTextFormatSchema.optional(),
     }),
     z.object({
       type: z.literal(BookmarkTypes.ASSET),
@@ -302,6 +312,7 @@ export const zPublicBookmarkSchema = z.object({
     z.object({
       type: z.literal(BookmarkTypes.TEXT),
       text: z.string(),
+      format: zBookmarkTextFormatSchema.optional(),
     }),
     z.object({
       type: z.literal(BookmarkTypes.ASSET),

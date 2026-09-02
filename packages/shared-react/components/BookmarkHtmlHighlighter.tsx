@@ -406,7 +406,6 @@ const BookmarkHTMLHighlighter = forwardRef<
   return (
     <div>
       <div
-        role="presentation"
         ref={contentRef}
         dangerouslySetInnerHTML={{ __html: htmlContent }}
         onPointerUp={handlePointerUp}

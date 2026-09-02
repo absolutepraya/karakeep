@@ -102,6 +102,7 @@ describe("UploadDropzone", () => {
         type: "text",
         text: source,
         title: "notes",
+        format: "plain",
         source: "web",
       });
     });
